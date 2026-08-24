@@ -35,9 +35,11 @@
     hideNav();
     return el('section', { class: 'splash' }, [
       el('div', { class: 'splash-lang' }, [langSwitch({ compact: true })]),
-      el('div', { class: 'splash-logo', html: icons.logo, style: { width: '92px', height: '92px', margin: '0 auto 16px' } }),
-      el('h1', {}, 'Tenth Tone'),
-      el('p', {}, 'شارك لحظتك مع العالم'),
+      el('div', { class: 'splash-hero' }, [
+        el('div', { class: 'splash-logo', html: icons.logo, style: { width: '96px', height: '96px', margin: '0 auto 16px' } }),
+        el('h1', {}, 'Tenth Tone'),
+        el('p', {}, 'شارك لحظتك مع العالم'),
+      ]),
       el('div', { class: 'actions' }, [
         el('button', { class: 'btn', onclick: () => go('/login') }, 'تسجيل الدخول'),
         el('button', { class: 'btn btn-outline', onclick: () => go('/register') }, 'إنشاء حساب جديد'),
@@ -536,13 +538,46 @@
         ]),
       ]);
 
-      // Right info
+      // Right info — show plain text always; hashtags revealed on "see more"
+      const fullDesc = v.desc || '';
+      // Split into plain text part and hashtag part
+      const hashtagMatch = fullDesc.match(/(#\S+(\s+#\S+)*\s*)$/);
+      const plainText = hashtagMatch ? fullDesc.slice(0, hashtagMatch.index).trimEnd() : fullDesc;
+      const hashtagText = hashtagMatch ? hashtagMatch[0].trim() : '';
+      let descEl;
+      if (hashtagText) {
+        const seeMoreBtn = el('span', { class: 'see-more-btn', style: { fontWeight: '700', cursor: 'pointer', opacity: '0.75', marginInlineStart: '4px', fontSize: '13px' } }, 'عرض المزيد');
+        const seeLessBtn = el('span', { class: 'see-less-btn', style: { display: 'none', fontWeight: '700', cursor: 'pointer', opacity: '0.75', marginInlineStart: '4px', fontSize: '13px' } }, 'عرض أقل');
+        const hashtagSpan = el('span', { class: 'desc-hashtags', style: { display: 'none', color: '#5cf', marginInlineStart: '4px' } }, hashtagText);
+        descEl = el('p', { class: 'desc', style: { margin: '4px 0', fontSize: '14px', lineHeight: '1.4' } }, [
+          el('span', { class: 'desc-text' }, plainText),
+          seeMoreBtn,
+          hashtagSpan,
+          seeLessBtn,
+        ]);
+        seeMoreBtn.onclick = (e) => {
+          e.stopPropagation();
+          hashtagSpan.style.display = 'inline';
+          seeMoreBtn.style.display = 'none';
+          seeLessBtn.style.display = 'inline';
+        };
+        seeLessBtn.onclick = (e) => {
+          e.stopPropagation();
+          hashtagSpan.style.display = 'none';
+          seeLessBtn.style.display = 'none';
+          seeMoreBtn.style.display = 'inline';
+        };
+      } else {
+        descEl = el('p', { class: 'desc', style: { margin: '4px 0', fontSize: '14px', lineHeight: '1.4' } }, plainText);
+      }
+
       const info = el('div', { class: 'feed-info' }, [
         el('div', { class: 'feed-user-row', style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' } }, [
+          avatar(v.user.avatar, v.user.name, 26),
           el('p', { class: 'username', style: { margin: 0 } }, v.user.handle),
           el('span', { class: 'hot-tag' }, '🔥 HOT')
         ]),
-        el('p', { class: 'desc' }, v.desc),
+        descEl,
         musicRow,
       ]);
       item.appendChild(info);
@@ -1230,15 +1265,13 @@
   V.inbox = () => {
     bottomNav('inbox');
     const root = el('section', { class: 'inbox' });
-    root.appendChild(topBar({ title: 'البريد', back: false, right: el('button', { class: 'icon-btn', html: icons.search, onclick: () => go('/discover') }) }));
-    // Action quick row with modernized vibrant badges
-    const actions = el('div', { class: 'inbox-actions-row' }, [
-      el('button', { class: 'inbox-action', onclick: () => go('/notifications') }, [el('span', { class: 'inbox-action-icon iai-1', html: icons.heartOutline }), el('span', {}, 'إعجابات')]),
-      el('button', { class: 'inbox-action', onclick: () => go('/notifications') }, [el('span', { class: 'inbox-action-icon iai-2', html: icons.user }), el('span', {}, 'متابعون')]),
-      el('button', { class: 'inbox-action', onclick: () => go('/notifications') }, [el('span', { class: 'inbox-action-icon iai-3', html: icons.mail }), el('span', {}, 'رسائل')]),
-      el('button', { class: 'inbox-action', onclick: () => go('/notifications') }, [el('span', { class: 'inbox-action-icon iai-4', html: icons.bell }), el('span', {}, 'إشعارات')]),
+    
+    // Add Notifications bell icon to the top nav bar
+    const notifBtn = el('button', { class: 'icon-btn', onclick: () => go('/notifications'), style: { position: 'relative' } }, [
+      svg('bell'),
+      el('div', { class: 'badge', style: { position: 'absolute', top: '4px', right: '4px', background: 'var(--danger)', color: '#fff', fontSize: '10px', padding: '2px 5px', borderRadius: '10px', fontWeight: 'bold' } }, '9')
     ]);
-    root.appendChild(actions);
+    root.appendChild(topBar({ title: 'البريد', back: false, right: notifBtn }));
 
     // Compact, sleek New group + new DM action buttons
     const cta = el('div', { style: { padding: '4px 16px 12px', display: 'flex', gap: '8px', justifyContent: 'flex-start' } }, [
@@ -1996,7 +2029,14 @@
     }
     // Fallback to mock + load real
     render(DB.notifications.map(n => ({ id: n.id, type: n.type, actor: { id: '_', name: n.user.name, avatar_url: n.user.avatar }, payload: { text: n.text }, created_at: new Date().toISOString() })));
-    (async () => { try { if (window.API) render(await window.API.fetchNotifications()); } catch (e) {} })();
+    (async () => { 
+      try { 
+        if (window.API) {
+          const apiNotifs = await window.API.fetchNotifications();
+          if (apiNotifs && apiNotifs.length > 0) render(apiNotifs);
+        }
+      } catch (e) {} 
+    })();
     return root;
   };
 

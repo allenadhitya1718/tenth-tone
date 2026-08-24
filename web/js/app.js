@@ -2,7 +2,7 @@
 (function () {
   const app = document.getElementById('app');
 
-  const PUBLIC_PATHS = ['/', '/login', '/register', '/otp', '/forgot', '/reset'];
+  const PUBLIC_PATHS = ['/', '/login', '/register', '/otp', '/forgot', '/reset', '/home'];
 
   const routes = [
     { p: /^\/?$/, v: () => Views.splash() },
@@ -67,8 +67,8 @@
       location.hash = '#/login';
       return;
     }
-    // If already signed-in and at the splash → skip straight to home
-    if (session && path === '/') {
+    // Skip straight to home
+    if (path === '/') {
       location.hash = '#/home';
       return;
     }
@@ -81,7 +81,7 @@
           const node = r.v(q, m);
           if (node) app.appendChild(node);
           // Translate the freshly-rendered view to English when that language is active
-          try { if (window.I18N) window.I18N.apply(app); } catch (e) {}
+          try { if (window.I18N) window.I18N.apply(document.body); } catch (e) {}
           window.scrollTo(0, 0);
         } catch (e) {
           console.error('render error', e);

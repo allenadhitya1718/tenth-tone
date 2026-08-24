@@ -159,6 +159,7 @@ window.H = (function () {
     const nav = document.getElementById('bottom-nav');
     if (!nav) return;
     nav.hidden = false;
+    nav.style.display = '';
     const items = [
       { key: 'home', label: 'الرئيسية', icon: active === 'home' ? 'homeFill' : 'home', go: '/home' },
       { key: 'discover', label: 'استكشف', icon: 'search', go: '/discover' },
@@ -178,12 +179,14 @@ window.H = (function () {
     });
     if (active === 'home') nav.classList.add('dark');
     else nav.classList.remove('dark');
+    try { if (window.I18N) window.I18N.apply(nav); } catch (e) {}
   }
 
   function hideNav() {
     const nav = document.getElementById('bottom-nav');
     if (!nav) return;
     nav.hidden = true;
+    nav.style.display = 'none';
     nav.innerHTML = '';
     nav.classList.remove('dark');
   }

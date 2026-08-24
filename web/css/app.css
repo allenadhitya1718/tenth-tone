@@ -33,7 +33,7 @@ html, body {
   height: 100%;
   background: #000;
   color: var(--text);
-  font-family: 'Cairo', system-ui, sans-serif;
+  font-family: 'Inter', 'Tajawal', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
   user-select: none;
@@ -61,6 +61,8 @@ input, textarea, [contenteditable="true"] {
   display: flex; flex-direction: column;
 }
 
+[hidden], [hidden="true"], .bottom-nav[hidden] { display: none !important; }
+
 /* === Bottom Nav === */
 .bottom-nav {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
@@ -72,6 +74,7 @@ input, textarea, [contenteditable="true"] {
   padding-bottom: var(--safe-bottom);
   z-index: 50;
 }
+.bottom-nav[hidden] { display: none !important; }
 .bottom-nav.dark { background: #000; border-top-color: #1a1a1a; }
 .bn-item {
   background: transparent; border: 0; color: var(--muted);
@@ -306,7 +309,7 @@ input, textarea, [contenteditable="true"] {
 .feed-action.liked .feed-action-icon { animation: like-pop 0.35s cubic-bezier(.36,.07,.19,.97) both; }
 
 .feed-info {
-  position: absolute; left: 16px; bottom: calc(110px + var(--safe-bottom)); z-index: 4;
+  position: absolute; left: 16px; bottom: calc(62px + var(--safe-bottom)); z-index: 4;
   color: #fff; max-width: calc(100% - 90px);
   text-align: left;
 }
@@ -804,13 +807,24 @@ input, textarea, [contenteditable="true"] {
 /* === Splash === */
 .splash {
   height: 100%; background: linear-gradient(180deg, #6c2bd9 0%, #2a0a6c 100%);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  color: #fff; gap: 14px; padding: 40px 24px;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+  color: #fff; padding: calc(var(--safe-top) + 20px) 24px calc(var(--safe-bottom) + 28px);
+  position: relative;
+  text-align: center;
 }
+.splash .splash-hero {
+  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.splash-logo { width: 96px; height: 96px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; }
+.splash-logo svg { width: 100%; height: 100%; }
 .splash .mark { width: 110px; height: 110px; border-radius: 30px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 800; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); }
-.splash h1 { font-size: 28px; margin: 16px 0 0; }
-.splash p { opacity: 0.9; margin: 4px 0 0; }
-.splash .actions { width: 100%; max-width: 320px; margin-top: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 14px; }
+.splash h1 { font-size: 28px; margin: 12px 0 0; font-weight: 800; }
+.splash p { opacity: 0.9; margin: 6px 0 0; font-size: 15px; }
+.splash .actions { width: 100%; max-width: 340px; margin-top: auto; display: flex; flex-direction: column; gap: 12px; padding-bottom: 8px; }
 .splash .btn { background: #fff; color: var(--primary); }
 .splash .btn-outline { color: #fff; border-color: rgba(255,255,255,0.4); background: transparent; }
 
