@@ -67,9 +67,9 @@
       location.hash = '#/login';
       return;
     }
-    // Skip straight to home
+    // Redirect root to login if no session, else home
     if (path === '/') {
-      location.hash = '#/home';
+      location.hash = session ? '#/home' : '#/login';
       return;
     }
 
