@@ -53,8 +53,6 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
-      - name: Add Android platform (Capacitor)
-        run: npx cap add android
 
       - name: Sync web assets to Android project
         run: npx cap sync android
