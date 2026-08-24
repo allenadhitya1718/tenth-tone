@@ -4,6 +4,12 @@
   const DB = window.DB;
   const V = window.Views = {};
 
+  function isVideoUrl(u) {
+    if (!u || typeof u !== 'string') return false;
+    return /\.(mp4|mov|webm|m4v|m3u8)(\?|$)/i.test(u) || u.includes('geeksforgeeks') || u.includes('/sample/') || u.includes('.mp4') || u.includes('videos/') || u.includes('mixkit') || u.includes('w3schools') || u.startsWith('blob:') || u.startsWith('data:video');
+  }
+  window.H.isVideoUrl = isVideoUrl;
+
   // ===== Language switch (Arabic ⇄ English) =====
   // Small segmented control. Works anywhere window.I18N is loaded.
   function langSwitch(opts) {
@@ -29,7 +35,7 @@
     hideNav();
     return el('section', { class: 'splash' }, [
       el('div', { class: 'splash-lang' }, [langSwitch({ compact: true })]),
-      el('div', { class: 'mark' }, 'T'),
+      el('div', { class: 'splash-logo', html: icons.logo, style: { width: '92px', height: '92px', margin: '0 auto 16px' } }),
       el('h1', {}, 'Tenth Tone'),
       el('p', {}, 'شارك لحظتك مع العالم'),
       el('div', { class: 'actions' }, [
@@ -44,16 +50,38 @@
     hideNav();
     let showPass = false;
     const root = el('section', { class: 'auth-screen' });
+
+    // Background floating doodles (16 varied icons)
+    const doodles = el('div', { class: 'auth-doodles' }, [
+      el('div', { class: 'auth-doodle', html: icons.music }),
+      el('div', { class: 'auth-doodle', html: icons.sparkle }),
+      el('div', { class: 'auth-doodle', html: icons.heart }),
+      el('div', { class: 'auth-doodle', html: icons.video }),
+      el('div', { class: 'auth-doodle', html: icons.gift }),
+      el('div', { class: 'auth-doodle', html: icons.bookmark }),
+      el('div', { class: 'auth-doodle', html: icons.flash }),
+      el('div', { class: 'auth-doodle', html: icons.camera }),
+      el('div', { class: 'auth-doodle', html: icons.mic }),
+      el('div', { class: 'auth-doodle', html: icons.heart }),
+      el('div', { class: 'auth-doodle', html: icons.music }),
+      el('div', { class: 'auth-doodle', html: icons.sparkle }),
+      el('div', { class: 'auth-doodle', html: icons.timer }),
+      el('div', { class: 'auth-doodle', html: icons.gift }),
+      el('div', { class: 'auth-doodle', html: icons.sticker }),
+      el('div', { class: 'auth-doodle', html: icons.play }),
+    ]);
+    root.appendChild(doodles);
+
     const error = el('div', { class: 'error-box', hidden: true });
-    root.appendChild(el('div', { class: 'splash-lang', style: { alignSelf: 'flex-end' } }, [langSwitch({ compact: true })]));
+    root.appendChild(el('div', { class: 'splash-lang', style: { alignSelf: 'flex-end', position: 'relative', zIndex: 2 } }, [langSwitch({ compact: true })]));
     root.appendChild(el('div', { class: 'auth-logo' }, [
-      el('div', { class: 'mark' }, 'T'),
+      el('div', { class: 'auth-logo-svg', html: icons.logo, style: { width: '80px', height: '80px', margin: '0 auto 12px' } }),
       el('h1', {}, 'مرحبًا بعودتك'),
       el('p', {}, 'سجّل دخولك للمتابعة'),
     ]));
     const idIn = el('input', { class: 'input', placeholder: 'البريد الإلكتروني أو رقم الهاتف' });
-    const passIn = el('input', { class: 'input', type: 'password', placeholder: 'كلمة المرور' });
-    const togglePass = el('button', { class: 'icon-btn', type: 'button', html: icons.eyeOff, style: { position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)' }, onclick: () => {
+    const passIn = el('input', { class: 'input input-with-toggle', type: 'password', placeholder: 'كلمة المرور' });
+    const togglePass = el('button', { class: 'password-toggle-btn', type: 'button', html: icons.eyeOff, onclick: () => {
       showPass = !showPass;
       passIn.type = showPass ? 'text' : 'password';
       togglePass.innerHTML = showPass ? icons.eye : icons.eyeOff;
@@ -114,19 +142,46 @@
   V.register = () => {
     hideNav();
     const root = el('section', { class: 'auth-screen' });
+    const doodles = el('div', { class: 'auth-doodles' }, [
+      el('div', { class: 'auth-doodle', html: icons.music }),
+      el('div', { class: 'auth-doodle', html: icons.sparkle }),
+      el('div', { class: 'auth-doodle', html: icons.heart }),
+      el('div', { class: 'auth-doodle', html: icons.video }),
+      el('div', { class: 'auth-doodle', html: icons.gift }),
+    ]);
+    root.appendChild(doodles);
     root.appendChild(topBar({ title: 'إنشاء حساب', onBack: () => go('/login') }));
     const wrap = el('div', { style: { padding: '8px 4px' } });
+
+    function makePassField(placeholder) {
+      const inp = el('input', { class: 'input input-with-toggle', type: 'password', placeholder });
+      let show = false;
+      const btn = el('button', { class: 'password-toggle-btn', type: 'button', html: icons.eyeOff, onclick: () => {
+        show = !show;
+        inp.type = show ? 'text' : 'password';
+        btn.innerHTML = show ? icons.eye : icons.eyeOff;
+      } });
+      const container = el('div', { style: { position: 'relative' } }, [inp, btn]);
+      return { inp, container };
+    }
+
+    const passObj = makePassField('كلمة المرور');
+    const confirmObj = makePassField('تأكيد كلمة المرور');
+
     const fields = {
       email: el('input', { class: 'input', type: 'email', placeholder: 'البريد الإلكتروني' }),
       phone: el('input', { class: 'input', type: 'tel', placeholder: 'رقم الهاتف' }),
-      pass: el('input', { class: 'input', type: 'password', placeholder: 'كلمة المرور' }),
-      confirm: el('input', { class: 'input', type: 'password', placeholder: 'تأكيد كلمة المرور' }),
+      pass: passObj.inp,
+      confirm: confirmObj.inp,
     };
     const error = el('div', { class: 'error-box', hidden: true });
     wrap.appendChild(el('h2', { class: 'auth-title' }, 'انضم إلى Tenth Tone'));
     wrap.appendChild(el('p', { class: 'auth-subtitle' }, 'بإنشاء حساب أنت توافق على الشروط وسياسة الخصوصية.'));
     wrap.appendChild(error);
-    Object.values(fields).forEach(f => wrap.appendChild(el('div', { class: 'input-wrap' }, [f])));
+    wrap.appendChild(el('div', { class: 'input-wrap' }, [fields.email]));
+    wrap.appendChild(el('div', { class: 'input-wrap' }, [fields.phone]));
+    wrap.appendChild(el('div', { class: 'input-wrap' }, [passObj.container]));
+    wrap.appendChild(el('div', { class: 'input-wrap' }, [confirmObj.container]));
     const regBtn = el('button', { class: 'btn btn-pill', onclick: async () => {
       const errs = [];
       const hasEmail = /.+@.+\..+/.test(fields.email.value);
@@ -164,7 +219,9 @@
     const root = el('section', { class: 'auth-screen' });
     root.appendChild(topBar({ title: 'التحقق' }));
     const wrap = el('div', { style: { padding: '14px 4px', textAlign: 'center' } });
-    wrap.appendChild(el('div', { class: 'auth-logo' }, [el('div', { class: 'mark' }, '✓')]));
+    wrap.appendChild(el('div', { class: 'auth-logo' }, [
+      el('div', { class: 'auth-logo-svg', html: icons.logo, style: { width: '72px', height: '72px', margin: '0 auto 10px' } })
+    ]));
     wrap.appendChild(el('h2', { class: 'auth-title' }, 'أدخل رمز التحقق'));
     wrap.appendChild(el('p', { class: 'auth-subtitle' }, 'أرسلنا لك رمزًا مكونًا من 6 أرقام'));
     const inputs = [];
@@ -275,12 +332,26 @@
     const wrap = el('div', { style: { padding: '14px 4px' } });
     wrap.appendChild(el('h2', { class: 'auth-title' }, 'أدخل كلمة مرور جديدة'));
     wrap.appendChild(el('p', { class: 'auth-subtitle' }, '8 أحرف على الأقل، تشمل رقمًا ورمزًا.'));
-    const p1 = el('input', { class: 'input', type: 'password', placeholder: 'كلمة المرور الجديدة' });
-    const p2 = el('input', { class: 'input', type: 'password', placeholder: 'تأكيد كلمة المرور' });
+    function makePassField(placeholder) {
+      const inp = el('input', { class: 'input input-with-toggle', type: 'password', placeholder });
+      let show = false;
+      const btn = el('button', { class: 'password-toggle-btn', type: 'button', html: icons.eyeOff, onclick: () => {
+        show = !show;
+        inp.type = show ? 'text' : 'password';
+        btn.innerHTML = show ? icons.eye : icons.eyeOff;
+      } });
+      const container = el('div', { style: { position: 'relative' } }, [inp, btn]);
+      return { inp, container };
+    }
+
+    const p1Obj = makePassField('كلمة المرور الجديدة');
+    const p2Obj = makePassField('تأكيد كلمة المرور');
+    const p1 = p1Obj.inp;
+    const p2 = p2Obj.inp;
     const err = el('div', { class: 'error-box', hidden: true });
     wrap.appendChild(err);
-    wrap.appendChild(el('div', { class: 'input-wrap' }, [p1]));
-    wrap.appendChild(el('div', { class: 'input-wrap' }, [p2]));
+    wrap.appendChild(el('div', { class: 'input-wrap' }, [p1Obj.container]));
+    wrap.appendChild(el('div', { class: 'input-wrap' }, [p2Obj.container]));
     const resetBtn = el('button', { class: 'btn btn-pill', onclick: async () => {
       if (p1.value.length < 8) { err.textContent = 'كلمة المرور 8 أحرف على الأقل'; err.hidden = false; return; }
       if (p1.value !== p2.value) { err.textContent = 'كلمتا المرور غير متطابقتين'; err.hidden = false; return; }
@@ -309,14 +380,7 @@
     const tab = (params && params.q && params.q.tab) || 'foryou';
     const root = el('section', { class: 'feed' });
 
-    // Top: search + map shortcut + tabs
-    root.appendChild(el('button', { class: 'icon-btn feed-search-btn', html: icons.search, onclick: () => go('/discover') }));
-    root.appendChild(el('button', {
-      class: 'icon-btn', title: 'خريطة الأصدقاء',
-      html: icons.map,
-      style: { position: 'absolute', top: 'calc(12px + var(--safe-top))', insetInlineStart: '52px', zIndex: 6, color: '#fff' },
-      onclick: () => go('/map'),
-    }));
+    // Top: tabs
     const tabs = el('div', { class: 'feed-tabs' }, [
       el('button', { class: 'feed-tab' + (tab === 'following' ? ' active' : ''), onclick: () => go('/home?tab=following') }, 'متابعون'),
       el('button', { class: 'feed-tab' + (tab === 'foryou' ? ' active' : ''), onclick: () => go('/home?tab=foryou') }, 'لك'),
@@ -329,25 +393,35 @@
 
     // Adapt DB row to the shape the renderer expects.
     // Prefer the actual video file URL so the feed plays real video.
-    const adapt = v => ({
-      id: v.id,
-      bg: v.video_url || v.thumbnail || (DB.videos[0] && DB.videos[0].bg),
-      poster: v.thumbnail || v.video_url || '',
-      desc: v.description || '',
-      music: v.music || 'الأصلي',
-      likes: v.likes_count || 0,
-      comments: v.comments_count || 0,
-      shares: v.shares_count || 0,
-      saves: 0,
-      liked: !!v.liked,
-      saved: !!v.saved,
-      user: {
-        id: v.user && v.user.id,
-        handle: v.user && (v.user.handle ? '@' + v.user.handle : '@user'),
-        name: (v.user && v.user.name) || 'مستخدم',
-        avatar: (v.user && v.user.avatar_url) || '',
-      },
-    });
+    const adapt = (v, idx) => {
+      idx = idx || 0;
+      const vList = (DB && DB.videos) || [];
+      const fallbackItem = vList[idx % (vList.length || 1)] || {};
+      const videoList = (DB && DB.VIDEO_BG) || [];
+      const fallbackBg = videoList[idx % (videoList.length || 1)] || fallbackItem.bg || 'videos/feed-1.mp4';
+      const rawUrl = (v && v.video_url && isVideoUrl(v.video_url)) ? v.video_url : fallbackBg;
+      return {
+        id: (v && v.id) || ('v-' + idx),
+        bg: isVideoUrl(rawUrl) ? rawUrl : fallbackBg,
+        video_url: isVideoUrl(rawUrl) ? rawUrl : fallbackBg,
+        poster: (v && (v.thumbnail || v.poster)) || fallbackItem.thumbnail || '',
+        thumbnail: (v && (v.thumbnail || v.poster)) || fallbackItem.thumbnail || '',
+        desc: (v && v.description) || fallbackItem.desc || 'Tenth Tone Video #fyp',
+        music: (v && v.music) || fallbackItem.music || 'الأصلي',
+        likes: (v && v.likes_count) || (1200 + idx * 150),
+        comments: (v && v.comments_count) || (45 + idx * 8),
+        shares: (v && v.shares_count) || (12 + idx * 3),
+        saves: (20 + idx * 4),
+        liked: !!(v && v.liked),
+        saved: !!(v && v.saved),
+        user: {
+          id: (v && v.user && v.user.id) || ('u-' + idx),
+          handle: (v && v.user && v.user.handle ? '@' + v.user.handle : '@creator'),
+          name: (v && v.user && v.user.name) || 'مستخدم',
+          avatar: (v && v.user && v.user.avatar_url) || (DB.AVATARS && DB.AVATARS[idx % DB.AVATARS.length]) || ('https://i.pravatar.cc/200?u=creator-' + idx),
+        },
+      };
+    };
 
     let list = tab === 'following' ? DB.videos.slice(0, 6) : DB.videos;
 
@@ -357,7 +431,7 @@
         if (!window.API) return;
         const real = await window.API.fetchFeed({ tab });
         if (real && real.length) {
-          list = real.map(adapt);
+          list = real.map((r, i) => adapt(r, i));
           scroll.innerHTML = '';
           renderItems();
         } else if (tab === 'following' && (!real || !real.length)) {
@@ -370,47 +444,147 @@
       } catch (e) { console.warn('feed fetch failed, showing mock:', e); }
     })();
 
-    function renderItems() { list.forEach(v => renderItem(v)); }
-    function isVideoUrl(u) { return typeof u === 'string' && /\.(mp4|mov|webm|m4v)(\?|$)/i.test(u); }
-    function renderItem(v) {
-      const isVideo = isVideoUrl(v.bg);
-      const item = el('div', { class: 'feed-item', style: isVideo ? {} : { backgroundImage: `url(${v.bg})` } });
+    function renderItems() { list.forEach((v, i) => renderItem(v, i)); }
+    function renderItem(v, idx) {
+      const fallbackUrl = (DB.VIDEO_BG && DB.VIDEO_BG[idx % DB.VIDEO_BG.length]) || 'videos/feed-1.mp4';
+      const videoSrc = (v.video_url && isVideoUrl(v.video_url)) ? v.video_url : ((v.bg && isVideoUrl(v.bg)) ? v.bg : fallbackUrl);
+      const isVideo = !!videoSrc;
+      // Show dark sleek backdrop while video streams
+      const item = el('div', { class: 'feed-item', style: { background: '#000' } });
       if (isVideo) {
-        const video = Object.assign(document.createElement('video'), {
-          src: v.bg, autoplay: true, muted: true, loop: true, playsInline: true, preload: 'metadata',
-        });
+        const video = document.createElement('video');
+        video.src = videoSrc;
+        video.autoplay = true;
+        video.muted = true;
+        video.defaultMuted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.preload = 'auto';
         video.setAttribute('playsinline', '');
-        video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000';
-        item.appendChild(video);
-        // Tap to toggle play/pause + sound (first tap unmutes)
-        item.addEventListener('click', (e) => {
-          if (e.target.closest('.feed-actions') || e.target.closest('.feed-info')) return;
-          if (video.muted) { video.muted = false; return; }
-          video.paused ? video.play() : video.pause();
+        video.setAttribute('webkit-playsinline', '');
+        video.setAttribute('muted', '');
+        video.setAttribute('autoplay', '');
+        video.setAttribute('loop', '');
+        video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;z-index:1;pointer-events:none;';
+
+        const playBadge = el('div', {
+          class: 'play-badge',
+          html: icons.play,
+          style: {
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(0,0,0,0.5)',
+            display: 'none', alignItems: 'center', justifyContent: 'center', color: '#fff',
+            zIndex: 3, pointerEvents: 'none',
+          }
         });
-        // Pause when scrolled away (basic IntersectionObserver)
+        item.appendChild(video);
+        item.appendChild(playBadge);
+
+        video.addEventListener('error', () => {
+          if (!video._retried) {
+            video._retried = true;
+            video.src = (DB.VIDEO_BG && DB.VIDEO_BG[(idx + 1) % DB.VIDEO_BG.length]) || 'videos/feed-1.mp4';
+            video.play().catch(() => {});
+          }
+        });
+
+        // Direct autoplay handler
+        video.addEventListener('canplay', () => { video.play().catch(() => {}); });
+        video.addEventListener('loadeddata', () => { video.play().catch(() => {}); });
+        // Initial play attempt
+        video.play().catch(() => {});
+
+        // Tap on feed item to toggle play/pause + unmute
+        item.addEventListener('click', (e) => {
+          if (e.target.closest('.feed-actions') || e.target.closest('.feed-info') || e.target.closest('.feed-tabs')) return;
+          if (video.muted) { video.muted = false; }
+          if (video.paused) {
+            video.play().then(() => { playBadge.style.display = 'none'; }).catch(() => {});
+          } else {
+            video.pause();
+            playBadge.style.display = 'flex';
+          }
+        });
+
+        // IntersectionObserver for vertical scrolling autoplay
         const io = new IntersectionObserver(entries => {
-          entries.forEach(e => { if (e.isIntersecting) video.play().catch(() => {}); else video.pause(); });
-        }, { threshold: 0.6 });
+          entries.forEach(e => {
+            if (e.isIntersecting) {
+              video.play().then(() => { playBadge.style.display = 'none'; }).catch(() => {});
+            } else {
+              video.pause();
+            }
+          });
+        }, { threshold: 0.5 });
         io.observe(item);
       }
 
+
+      // Music in vertical layout to the right of the small music button
+      const musicRaw = v.music || 'الأصلي';
+      const musicParts = musicRaw.split(' - ');
+      const musicTitle = musicParts[0] || musicRaw;
+      const musicAuthor = musicParts[1] || (v.user && v.user.name) || 'Tenth Tone Sound';
+
+      const musicRow = el('div', { class: 'feed-music-row', onclick: (e) => { e.stopPropagation(); toast('🎵 ' + musicRaw); } }, [
+        el('button', { class: 'small-music-btn', title: 'صوت الموسيقى' }, [
+          svg('music'),
+        ]),
+        el('div', { class: 'music-info-vertical' }, [
+          el('span', { class: 'music-title' }, musicTitle),
+          el('span', { class: 'music-author' }, musicAuthor),
+        ]),
+      ]);
+
       // Right info
       const info = el('div', { class: 'feed-info' }, [
-        el('p', { class: 'username' }, v.user.handle),
+        el('div', { class: 'feed-user-row', style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' } }, [
+          el('p', { class: 'username', style: { margin: 0 } }, v.user.handle),
+          el('span', { class: 'hot-tag' }, '🔥 HOT')
+        ]),
         el('p', { class: 'desc' }, v.desc),
-        el('span', { class: 'music' }, [svg('music'), document.createTextNode(' ' + v.music)]),
+        musicRow,
       ]);
       item.appendChild(info);
 
       // Left action bar
       const actions = el('div', { class: 'feed-actions' });
-      // Avatar with follow plus
+      // Avatar with follow/unfollow toggle (synced via window._followedUsers)
+      if (!window._followedUsers) window._followedUsers = {};
+      let followed = !!window._followedUsers[v.user.id];
+      const followBadge = el('span', { class: 'follow-plus' + (followed ? ' followed' : '') }, followed ? '✓' : '+');
       const avBtn = el('div', { class: 'feed-avatar-action' }, [
         avatar(v.user.avatar, v.user.name, 44),
-        el('span', { class: 'follow-plus' }, '+'),
+        followBadge,
       ]);
-      avBtn.onclick = () => go('/profile/' + v.user.id);
+      followBadge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        followed = !followed;
+        window._followedUsers[v.user.id] = followed;
+        followBadge.textContent = followed ? '✓' : '+';
+        followBadge.classList.toggle('followed', followed);
+        followBadge.style.transform = 'translateX(-50%) scale(1.4)';
+        setTimeout(() => { followBadge.style.transform = 'translateX(-50%) scale(1)'; }, 200);
+        // Rich follow toast with avatar + name
+        if (followed) {
+          const existingToast = document.querySelector('.toast');
+          if (existingToast) existingToast.remove();
+          const t = document.createElement('div');
+          t.className = 'toast';
+          t.innerHTML = `
+            <img class="toast-avatar" src="${v.user.avatar}" alt="${v.user.name}" onerror="this.style.display='none'">
+            <div class="toast-text">
+              <span class="toast-title">Started following ${v.user.name}</span>
+              <span class="toast-sub">Tap their profile to see their videos</span>
+            </div>`;
+          document.body.appendChild(t);
+          setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 300); }, 2800);
+        }
+        if (window.API && typeof v.user.id === 'string' && v.user.id.length > 4) {
+          try { followed ? window.API.follow(v.user.id) : window.API.unfollow(v.user.id); } catch(_) {}
+        }
+      });
+      avBtn.onclick = (e) => { if (!e.target.closest('.follow-plus')) go('/profile/' + v.user.id); };
       actions.appendChild(avBtn);
 
       const likeBtn = el('button', { class: 'feed-action' + (v.liked ? ' liked' : ''), onclick: async () => {
@@ -453,6 +627,18 @@
       ]);
       actions.appendChild(shareBtn);
 
+      // Mini rotating music disc action button
+      const musicDiscBtn = el('button', {
+        class: 'feed-action feed-music-action',
+        style: { marginTop: '4px' },
+        onclick: (e) => { e.stopPropagation(); toast('🎵 ' + musicRaw); }
+      }, [
+        el('div', { class: 'music-disc-mini' }, [
+          el('img', { src: v.user.avatar || (DB.AVATARS && DB.AVATARS[0]), alt: 'music', onerror: (e) => { e.target.style.display = 'none'; } }),
+        ]),
+      ]);
+      actions.appendChild(musicDiscBtn);
+
       item.appendChild(actions);
       scroll.appendChild(item);
     }
@@ -460,40 +646,248 @@
     return root;
   };
 
+  // Helper to render real looping video card previews for profile and discover grids
+  function createVideoCard(v, i, onClick) {
+    const videoSrc = (v && v.video_url && isVideoUrl(v.video_url)) ? v.video_url : ((v && v.bg && isVideoUrl(v.bg)) ? v.bg : ((DB && DB.VIDEO_BG && DB.VIDEO_BG[i % DB.VIDEO_BG.length]) || 'videos/feed-1.mp4'));
+    const posterSrc = (v && (v.thumbnail || v.poster)) || (DB && DB.THUMBNAILS && DB.THUMBNAILS[i % DB.THUMBNAILS.length]) || '';
+
+    const card = el('div', { class: 'video-card', onclick: onClick || (() => go('/home')) });
+
+    const video = document.createElement('video');
+    video.src = videoSrc;
+    if (posterSrc && !posterSrc.endsWith('.mp4')) video.poster = posterSrc;
+    video.autoplay = true;
+    video.muted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.preload = 'auto';
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+    video.setAttribute('muted', '');
+    video.setAttribute('autoplay', '');
+    video.setAttribute('loop', '');
+    video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;';
+
+    video.addEventListener('canplay', () => video.play().catch(() => {}));
+    video.addEventListener('loadeddata', () => video.play().catch(() => {}));
+    video.addEventListener('error', () => {
+      if (!video._retried) {
+        video._retried = true;
+        video.src = (DB && DB.VIDEO_BG && DB.VIDEO_BG[(i + 1) % DB.VIDEO_BG.length]) || 'videos/feed-1.mp4';
+        video.play().catch(() => {});
+      }
+    });
+
+    const overlay = el('div', { class: 'vc-overlay' }, [svg('play'), document.createTextNode(' ' + fmt((v && (v.likes || v.likes_count)) || 0))]);
+
+    card.appendChild(video);
+    card.appendChild(overlay);
+    return card;
+  }
+
   // ===== Discover =====
   V.discover = () => {
     bottomNav('discover');
     const root = el('section', { class: 'discover' });
+    const searchInput = el('input', { type: 'search', placeholder: 'ابحث عن مستخدمين، فيديوهات، أو أصوات' });
     root.appendChild(el('div', { class: 'discover-search' }, [
       el('div', { class: 'input-pill' }, [
         svg('search'),
-        el('input', { type: 'search', placeholder: 'ابحث عن مستخدمين، فيديوهات، أو هاشتاجات' }),
+        searchInput,
       ]),
     ]));
-    const tags = ['الكل', 'فيديوهات', 'حسابات', 'هاشتاجات', 'أصوات'];
+
+    let currentTag = 'all';
+    const tags = [
+      { id: 'all', ar: 'الكل', en: 'All' },
+      { id: 'videos', ar: 'فيديوهات', en: 'Videos' },
+      { id: 'accounts', ar: 'حسابات', en: 'Accounts' },
+      { id: 'sounds', ar: 'أصوات', en: 'Sounds' }
+    ];
     const tagRow = el('div', { class: 'tag-row' });
-    tags.forEach((t, i) => tagRow.appendChild(el('button', { class: 'tag' + (i === 0 ? ' active' : ''), onclick: e => {
-      tagRow.querySelectorAll('.tag').forEach(x => x.classList.remove('active'));
-      e.currentTarget.classList.add('active');
-    } }, t)));
+    tags.forEach((t, i) => {
+      const label = (window.I18N && window.I18N.getLang && window.I18N.getLang() === 'en') ? t.en : t.ar;
+      tagRow.appendChild(el('button', {
+        class: 'tag' + (i === 0 ? ' active' : ''),
+        onclick: e => {
+          tagRow.querySelectorAll('.tag').forEach(x => x.classList.remove('active'));
+          e.currentTarget.classList.add('active');
+          currentTag = t.id;
+          if (searchInput.value.trim()) {
+            doSearch();
+          } else {
+            renderDefault();
+          }
+        }
+      }, label));
+    });
     root.appendChild(tagRow);
 
-    root.appendChild(el('h3', { class: 'section-title' }, 'هاشتاجات رائجة'));
-    const trend = el('div', { class: 'trending-row' });
-    DB.trending.forEach((t, i) => trend.appendChild(el('div', { class: 'trending-item', onclick: () => toast('فلترة بحسب ' + t.tag) }, [
-      el('div', { class: 'trending-rank' }, '#' + (i + 1)),
-      el('div', { class: 'trending-text' }, t.tag),
-      el('div', { class: 'trending-meta' }, t.meta),
-    ])));
-    root.appendChild(trend);
+    const resultsArea = el('div', { class: 'discover-results' });
+    root.appendChild(resultsArea);
 
-    root.appendChild(el('h3', { class: 'section-title' }, 'فيديوهات شائعة'));
-    const grid = el('div', { class: 'video-grid' });
-    DB.videos.forEach(v => grid.appendChild(el('div', { class: 'video-card', onclick: () => go('/home') }, [
-      el('img', { src: v.bg, alt: v.desc, loading: 'lazy' }),
-      el('div', { class: 'vc-overlay' }, [svg('play'), document.createTextNode(' ' + fmt(v.likes))]),
-    ])));
-    root.appendChild(grid);
+    function renderDefault() {
+      resultsArea.innerHTML = '';
+      
+      const showAll = currentTag === 'all';
+      const showVideos = showAll || currentTag === 'videos';
+      const showAccounts = showAll || currentTag === 'accounts';
+      const showSounds = showAll || currentTag === 'sounds';
+
+      // 1. Trending Hashtags (shown in All or Videos)
+      if (showAll || showVideos) {
+        resultsArea.appendChild(el('h3', { class: 'section-title' }, 'هاشتاجات رائجة 🔥'));
+        const trend = el('div', { class: 'trending-row' });
+        DB.trending.forEach((t, i) => trend.appendChild(el('div', { class: 'trending-item', onclick: () => { searchInput.value = t.tag; doSearch(); } }, [
+          el('div', { class: 'trending-rank' }, '#' + (i + 1)),
+          el('div', { class: 'trending-text' }, t.tag),
+          el('div', { class: 'trending-meta' }, t.meta),
+        ])));
+        resultsArea.appendChild(trend);
+      }
+
+      // 2. Featured Creators / Accounts
+      if (showAccounts) {
+        resultsArea.appendChild(el('h3', { class: 'section-title' }, showAll ? 'صُنّاع محتوى مميزون 🌟' : 'جميع الحسابات المقترحة 🌟'));
+        if (showAll) {
+          const creatorsRow = el('div', { style: { display: 'flex', gap: '12px', padding: '6px 16px 16px', overflowX: 'auto' } });
+          DB.users.slice(0, 8).forEach(u => {
+            const item = el('div', {
+              style: { display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '80px', cursor: 'pointer', textAlign: 'center' },
+              onclick: () => go('/profile/' + u.id)
+            }, [
+              avatar(u.avatar, u.name, 60),
+              el('div', { style: { fontSize: '12px', fontWeight: '700', marginTop: '6px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, u.name),
+              el('div', { class: 'muted', style: { fontSize: '10.5px' } }, fmt(u.followers) + ' متابع')
+            ]);
+            creatorsRow.appendChild(item);
+          });
+          resultsArea.appendChild(creatorsRow);
+        } else {
+          // Full list of accounts when 'Accounts' filter is selected
+          const accountsList = el('div', { style: { padding: '0 16px 16px' } });
+          DB.users.forEach(u => {
+            accountsList.appendChild(el('div', { class: 'user-row', style: { cursor: 'pointer', padding: '10px 0', borderBottom: '1px solid var(--border)' }, onclick: () => go('/profile/' + u.id) }, [
+              avatar(u.avatar, u.name, 50),
+              el('div', { style: { flex: 1, minWidth: 0 } }, [
+                el('div', { class: 'name', style: { fontWeight: '700' } }, u.name + (u.verified ? ' ✓' : '')),
+                el('div', { class: 'handle' }, u.handle + ' · ' + fmt(u.followers) + ' متابع'),
+                el('div', { class: 'muted', style: { fontSize: '11px', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, u.bio),
+              ]),
+              el('button', { class: 'btn btn-secondary btn-sm', style: { width: 'auto' }, onclick: (e) => { e.stopPropagation(); go('/profile/' + u.id); } }, 'عرض'),
+            ]));
+          });
+          resultsArea.appendChild(accountsList);
+        }
+      }
+
+      // 3. Trending Sounds
+      if (showSounds) {
+        resultsArea.appendChild(el('h3', { class: 'section-title' }, 'أصوات وموسيقى رائجة 🎵'));
+        const soundsList = el('div', { style: { padding: '0 16px 14px' } });
+        const soundsToDisplay = showAll ? DB.sounds.slice(0, 4) : DB.sounds;
+        soundsToDisplay.forEach(s => {
+          soundsList.appendChild(el('div', { class: 'user-row', style: { padding: '10px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }, onclick: () => toast('صوت: ' + s.title) }, [
+            el('div', { class: 'avatar', style: { display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary-soft)', color: 'var(--primary)' } }, [svg('music')]),
+            el('div', { style: { flex: 1, minWidth: 0 } }, [
+              el('div', { class: 'name', style: { fontSize: '13.5px', fontWeight: '700' } }, s.title),
+              el('div', { class: 'handle', style: { fontSize: '11.5px' } }, s.author_name + ' · ' + fmt(s.usage_count) + ' فيديو · ' + (s.duration || 30) + 'ث'),
+            ]),
+            el('button', { class: 'btn btn-secondary btn-sm', style: { width: 'auto' }, onclick: (e) => { e.stopPropagation(); toast('استخدام هذا الصوت'); go('/camera'); } }, 'استخدام'),
+          ]));
+        });
+        resultsArea.appendChild(soundsList);
+      }
+
+      // 4. Popular Videos Grid
+      if (showVideos) {
+        resultsArea.appendChild(el('h3', { class: 'section-title' }, showAll ? 'فيديوهات شائعة 🎬' : 'جميع الفيديوهات الشائعة 🎬'));
+        const grid = el('div', { class: 'video-grid' });
+        DB.videos.forEach((v, i) => grid.appendChild(createVideoCard(v, i, () => go('/home'))));
+        resultsArea.appendChild(grid);
+      }
+    }
+
+    async function doSearch() {
+      const q = searchInput.value.trim();
+      if (!q) { renderDefault(); return; }
+      resultsArea.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">جاري البحث...</div>';
+
+      const showAll = currentTag === 'all';
+      const showVideos = showAll || currentTag === 'videos';
+      const showAccounts = showAll || currentTag === 'accounts';
+      const showSounds = showAll || currentTag === 'sounds';
+
+      try {
+        let res = window.API ? await window.API.searchAll(q).catch(() => null) : null;
+        if (!res) {
+          // Client-side mock search fallback
+          const qLower = q.toLowerCase();
+          res = {
+            profiles: DB.users.filter(u => u.name.toLowerCase().includes(qLower) || u.handle.toLowerCase().includes(qLower)).map(u => ({ id: u.id, name: u.name, handle: u.handle.replace('@', ''), avatar_url: u.avatar, verified: u.verified })),
+            videos: DB.videos.filter(v => (v.desc && v.desc.toLowerCase().includes(qLower)) || (v.user && v.user.name.toLowerCase().includes(qLower))),
+            sounds: DB.sounds.filter(s => s.title.toLowerCase().includes(qLower) || s.author_name.toLowerCase().includes(qLower))
+          };
+        }
+        resultsArea.innerHTML = '';
+
+        if (showAccounts) {
+          if (res.profiles && res.profiles.length) {
+            resultsArea.appendChild(el('h3', { class: 'section-title' }, 'الحسابات'));
+            res.profiles.forEach(p => {
+              resultsArea.appendChild(el('div', { class: 'user-row', style: { cursor: 'pointer' }, onclick: () => go('/profile/' + p.id) }, [
+                avatar(p.avatar_url, p.name, 44),
+                el('div', { style: { flex: 1, minWidth: 0 } }, [
+                  el('div', { class: 'name' }, p.name + (p.verified ? ' ✓' : '')),
+                  el('div', { class: 'handle' }, '@' + (p.handle || '')),
+                ]),
+                el('button', { class: 'btn btn-secondary btn-sm', style: { width: 'auto' }, onclick: (e) => { e.stopPropagation(); go('/profile/' + p.id); } }, 'عرض'),
+              ]));
+            });
+          }
+        }
+
+        if (showVideos) {
+          if (res.videos && res.videos.length) {
+            resultsArea.appendChild(el('h3', { class: 'section-title' }, 'الفيديوهات'));
+            const grid = el('div', { class: 'video-grid' });
+            res.videos.forEach((v, i) => grid.appendChild(createVideoCard(v, i, () => go('/home'))));
+            resultsArea.appendChild(grid);
+          }
+        }
+
+        if (showSounds) {
+          if (res.sounds && res.sounds.length) {
+            resultsArea.appendChild(el('h3', { class: 'section-title' }, 'الأصوات والموسيقى'));
+            res.sounds.forEach(s => {
+              resultsArea.appendChild(el('div', { class: 'user-row', style: { cursor: 'pointer' }, onclick: () => toast('صوت: ' + s.title) }, [
+                el('div', { class: 'avatar', style: { display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary-soft)', color: 'var(--primary)' } }, [svg('music')]),
+                el('div', { style: { flex: 1, minWidth: 0 } }, [
+                  el('div', { class: 'name' }, s.title),
+                  el('div', { class: 'handle' }, s.author_name + ' · ' + fmt(s.usage_count || 0) + ' فيديو'),
+                ]),
+                el('button', { class: 'btn btn-secondary btn-sm', style: { width: 'auto' }, onclick: (e) => { e.stopPropagation(); toast('استخدام هذا الصوت'); go('/camera'); } }, 'استخدام'),
+              ]));
+            });
+          }
+        }
+
+        if (!resultsArea.children.length) {
+          resultsArea.appendChild(el('div', { class: 'empty-state', style: { padding: '40px', textAlign: 'center', color: 'var(--muted)' } }, 'لا توجد نتائج للبحث'));
+        }
+      } catch (err) {
+        console.warn('search failed:', err);
+        renderDefault();
+      }
+    }
+
+    let tSearch;
+    searchInput.addEventListener('input', () => {
+      clearTimeout(tSearch);
+      tSearch = setTimeout(doSearch, 300);
+    });
+
+    renderDefault();
     return root;
   };
 
@@ -614,37 +1008,95 @@
       if (timer) { clearInterval(timer); timer = null; }
     }
 
-    root.appendChild(el('div', { class: 'camera-top' }, [
-      el('button', { class: 'icon-btn', html: icons.x, onclick: () => { stopAll(); go('/create'); }, style: { color: '#fff' } }),
-      el('button', { class: 'icon-btn', html: icons.flash, style: { color: '#fff' } }),
-    ]));
-    root.appendChild(el('div', { class: 'camera-side' }, [
-      el('button', { class: 'camera-side-btn', onclick: async () => { facingMode = facingMode === 'user' ? 'environment' : 'user'; await startCamera(); } }, [svg('flip'), el('span', {}, 'قلب')]),
-      el('button', { class: 'camera-side-btn' }, [svg('timer'), el('span', {}, 'مؤقت')]),
-      el('button', { class: 'camera-side-btn' }, [svg('filter'), el('span', {}, 'فلاتر')]),
-      el('button', { class: 'camera-side-btn' }, [svg('music'), el('span', {}, 'موسيقى')]),
-      el('button', { class: 'camera-side-btn' }, [svg('sparkle'), el('span', {}, 'مؤثرات')]),
-    ]));
-
-    const recBtn = el('button', { class: 'record-btn', onclick: () => {
-      if (!recorder || recorder.state === 'inactive') startRec(); else stopRec();
-    } }, [el('div', { class: 'inner' })]);
-
-    const durations = el('div', { class: 'camera-durations' }, [
-      el('span', { onclick: e => setMax(60, e) }, '60 ث'),
-      el('span', { class: 'active', onclick: e => setMax(15, e) }, '15 ث'),
-      el('span', { onclick: e => setMax(3, e) }, '3 ث'),
-    ]);
-    function setMax(n, e) { maxSecs = n; durations.querySelectorAll('span').forEach(s => s.classList.remove('active')); e.currentTarget.classList.add('active'); }
-
-    root.appendChild(el('div', { class: 'camera-bottom' }, [
-      durations,
-      el('div', { class: 'camera-record' }, [
-        el('button', { class: 'icon-btn', html: icons.image, style: { color: '#fff' }, onclick: () => { stopAll(); go('/upload'); } }),
-        recBtn,
-        el('button', { class: 'icon-btn', html: icons.flip, style: { color: '#fff' }, onclick: async () => { facingMode = facingMode === 'user' ? 'environment' : 'user'; await startCamera(); } }),
+    root.appendChild(el('div', { class: 'camera-top', style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', position: 'absolute', top: 0, width: '100%', zIndex: 10 } }, [
+      el('button', { class: 'icon-btn', html: icons.x, onclick: () => { stopAll(); go('/create'); }, style: { color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)' } }),
+      el('button', { class: 'camera-sound-pill', onclick: () => openSoundPicker(), style: { display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '6px 14px', borderRadius: '999px', fontSize: '14px', fontWeight: 'bold', backdropFilter: 'blur(8px)', cursor: 'pointer', gap: '6px' } }, [
+        svg('music'),
+        el('span', { class: 'sound-name' }, 'أضف صوتًا'),
       ]),
-      el('div', { class: 'text-center', style: { color: '#fff', marginTop: '6px' } }, [dur]),
+      el('div', { style: { display: 'flex', gap: '16px' } }, [
+        el('button', { class: 'icon-btn', html: icons.search, style: { color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.5)' } })
+      ])
+    ]));
+    let selectedSound = null;
+    const soundPill = root.querySelector('.camera-sound-pill');
+
+    async function openSoundPicker() {
+      const sheet = el('div', { class: 'gift-sheet', style: { maxHeight: '60vh', overflowY: 'auto' } });
+      const close = () => { sheet.remove(); bd.remove(); };
+      const bd = el('div', { class: 'backdrop', onclick: close });
+      sheet.appendChild(el('div', { class: 'modal-head', style: { padding: '12px', textAlign: 'center', fontWeight: 700 } }, 'اختر صوتًا للفيديو 🎵'));
+      const list = el('div', { style: { padding: '8px' } });
+      sheet.appendChild(list);
+
+      try {
+        let sounds = window.API ? await window.API.fetchSounds().catch(() => []) : [];
+        if (!sounds || !sounds.length) {
+          sounds = DB.sounds || [];
+        }
+        list.innerHTML = '';
+        sounds.forEach(s => {
+          list.appendChild(el('div', { class: 'user-row', style: { cursor: 'pointer', padding: '10px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)' }, onclick: () => {
+            selectedSound = s;
+            window._ttSelectedSound = s;
+            soundPill.querySelector('.sound-name').textContent = s.title;
+            soundPill.style.display = 'inline-flex';
+            toast('تم اختيار: ' + s.title);
+            close();
+          } }, [
+            el('div', { class: 'avatar', style: { display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--primary-soft)', color: 'var(--primary)' } }, [svg('music')]),
+            el('div', { style: { flex: 1, minWidth: 0 } }, [
+              el('div', { class: 'name', style: { color: '#fff' } }, s.title),
+              el('div', { class: 'handle', style: { color: 'rgba(255,255,255,0.6)' } }, s.author_name + ' · ' + (s.duration || 30) + 'ث'),
+            ]),
+            el('button', { class: 'btn btn-secondary btn-sm', style: { width: 'auto' } }, 'اختيار'),
+          ]));
+        });
+      } catch (err) {
+        list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">تعذر تحميل الأصوات</div>';
+      }
+      document.body.appendChild(bd);
+      document.body.appendChild(sheet);
+    }
+
+    root.appendChild(el('div', { class: 'camera-side', style: { position: 'absolute', right: '12px', top: '80px', display: 'flex', flexDirection: 'column', gap: '16px', zIndex: 10 } }, [
+      el('button', { class: 'camera-side-btn', style: { background: 'transparent', border: 'none', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }, onclick: async () => { facingMode = facingMode === 'user' ? 'environment' : 'user'; await startCamera(); } }, [svg('flip'), el('span', { style: { fontSize: '10px', fontWeight: 'bold' } }, 'قلب')]),
+      el('button', { class: 'camera-side-btn', style: { background: 'transparent', border: 'none', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textShadow: '0 1px 2px rgba(0,0,0,0.5)' } }, [svg('sparkle'), el('span', { style: { fontSize: '10px', fontWeight: 'bold' } }, 'تجميل')]),
+      el('button', { class: 'camera-side-btn', style: { background: 'transparent', border: 'none', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }, onclick: () => toast('مؤقت التسجيل') }, [svg('timer'), el('span', { style: { fontSize: '10px', fontWeight: 'bold' } }, 'مؤقت')]),
+      el('button', { class: 'camera-side-btn', style: { background: 'transparent', border: 'none', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }, onclick: () => toast('الفلاتر') }, [svg('filter'), el('span', { style: { fontSize: '10px', fontWeight: 'bold' } }, 'فلاتر')]),
+      el('button', { class: 'camera-side-btn', style: { background: 'transparent', border: 'none', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textShadow: '0 1px 2px rgba(0,0,0,0.5)' }, onclick: () => toast('فلاش') }, [svg('flash'), el('span', { style: { fontSize: '10px', fontWeight: 'bold' } }, 'فلاش')]),
+    ]));
+
+    const recBtn = el('button', { class: 'record-btn', style: { width: '80px', height: '80px', borderRadius: '50%', background: 'transparent', border: '4px solid #fe2c55', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }, onclick: () => {
+      if (!recorder || recorder.state === 'inactive') startRec(); else stopRec();
+    } }, [el('div', { class: 'inner', style: { width: '64px', height: '64px', borderRadius: '50%', background: '#fe2c55', transition: 'all 0.2s' } })]);
+
+    const speedRow = el('div', { class: 'camera-speed', style: { display: 'flex', justifyContent: 'center', gap: '20px', color: '#fff', fontSize: '14px', fontWeight: 'bold', textShadow: '0 1px 2px rgba(0,0,0,0.5)', paddingBottom: '16px' } }, [
+      el('span', {}, '0.3x'), el('span', {}, '0.5x'), el('span', { style: { color: '#ffaa00' } }, '1x'), el('span', {}, '2x'), el('span', {}, '3x')
+    ]);
+
+    const durationsRow = el('div', { class: 'camera-durations', style: { display: 'flex', justifyContent: 'center', gap: '24px', color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: 'bold', marginTop: '16px' } }, [
+      el('span', { onclick: e => setMax(60, e) }, '60s'),
+      el('span', { class: 'active', style: { color: '#fff' }, onclick: e => setMax(15, e) }, '15s'),
+      el('span', { onclick: e => setMax(3, e) }, 'Photo'),
+    ]);
+    function setMax(n, e) { maxSecs = n; durationsRow.querySelectorAll('span').forEach(s => s.style.color = 'rgba(255,255,255,0.7)'); e.currentTarget.style.color = '#fff'; }
+
+    root.appendChild(el('div', { class: 'camera-bottom', style: { position: 'absolute', bottom: 'calc(20px + var(--safe-bottom))', width: '100%', display: 'flex', flexDirection: 'column' } }, [
+      speedRow,
+      el('div', { class: 'camera-record', style: { display: 'flex', justifyContent: 'space-around', alignItems: 'center', width: '100%', padding: '0 24px' } }, [
+        el('button', { style: { background: 'transparent', border: 'none', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }, onclick: () => toast('مؤثرات') }, [
+          el('div', { style: { width: '36px', height: '36px', borderRadius: '8px', background: '#333' } }),
+          el('span', { style: { fontSize: '11px', fontWeight: 'bold' } }, 'مؤثرات')
+        ]),
+        recBtn,
+        el('button', { style: { background: 'transparent', border: 'none', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }, onclick: () => { stopAll(); go('/upload'); } }, [
+          el('div', { style: { width: '36px', height: '36px', borderRadius: '8px', background: '#333' } }),
+          el('span', { style: { fontSize: '11px', fontWeight: 'bold' } }, 'رفع')
+        ]),
+      ]),
+      durationsRow,
+      el('div', { class: 'text-center', style: { color: '#fff', marginTop: '12px', fontSize: '14px', fontWeight: 'bold', textShadow: '0 1px 2px rgba(0,0,0,0.5)' } }, [dur]),
     ]));
     return root;
   };
@@ -747,7 +1199,16 @@
       errBox.hidden = true; btn.disabled = true; btn.textContent = isDraft ? 'جاري الحفظ...' : 'جاري النشر...';
       try {
         if (window.API) {
-          await window.API.publishVideo({ file: chosenFile, description: desc, music: 'الأصلي', privacy: 'public', is_draft: isDraft });
+          const sound = window._ttSelectedSound || null;
+          await window.API.publishVideo({
+            file: chosenFile,
+            description: desc,
+            music: sound ? (sound.title + ' - ' + sound.author_name) : 'الأصلي',
+            sound_id: sound ? sound.id : null,
+            privacy: 'public',
+            is_draft: isDraft
+          });
+          window._ttSelectedSound = null;
         }
         toast(isDraft ? 'تم الحفظ كمسودة' : 'تم النشر بنجاح');
         go('/profile');
@@ -770,18 +1231,25 @@
     bottomNav('inbox');
     const root = el('section', { class: 'inbox' });
     root.appendChild(topBar({ title: 'البريد', back: false, right: el('button', { class: 'icon-btn', html: icons.search, onclick: () => go('/discover') }) }));
-    // Action quick row
+    // Action quick row with modernized vibrant badges
     const actions = el('div', { class: 'inbox-actions-row' }, [
-      el('button', { class: 'inbox-action', onclick: () => go('/notifications') }, [el('span', { class: 'inbox-action-icon iai-1', html: icons.heart }), el('span', {}, 'إعجابات')]),
-      el('button', { class: 'inbox-action', onclick: () => go('/notifications') }, [el('span', { class: 'inbox-action-icon iai-2', html: icons.user }), el('span', {}, 'متابعون جدد')]),
-      el('button', { class: 'inbox-action', onclick: () => go('/notifications') }, [el('span', { class: 'inbox-action-icon iai-3', html: icons.comment }), el('span', {}, 'تعليقات')]),
+      el('button', { class: 'inbox-action', onclick: () => go('/notifications') }, [el('span', { class: 'inbox-action-icon iai-1', html: icons.heartOutline }), el('span', {}, 'إعجابات')]),
+      el('button', { class: 'inbox-action', onclick: () => go('/notifications') }, [el('span', { class: 'inbox-action-icon iai-2', html: icons.user }), el('span', {}, 'متابعون')]),
+      el('button', { class: 'inbox-action', onclick: () => go('/notifications') }, [el('span', { class: 'inbox-action-icon iai-3', html: icons.mail }), el('span', {}, 'رسائل')]),
       el('button', { class: 'inbox-action', onclick: () => go('/notifications') }, [el('span', { class: 'inbox-action-icon iai-4', html: icons.bell }), el('span', {}, 'إشعارات')]),
     ]);
     root.appendChild(actions);
-    // New group + new DM action
-    const cta = el('div', { style: { padding: '8px 16px', display: 'flex', gap: '8px' } }, [
-      el('button', { class: 'btn btn-secondary btn-sm', onclick: () => go('/chat-new/group') }, [svg('user'), document.createTextNode(' مجموعة جديدة')]),
-      el('button', { class: 'btn btn-secondary btn-sm', onclick: () => go('/chat-new/dm') }, [svg('plus'), document.createTextNode(' محادثة جديدة')]),
+
+    // Compact, sleek New group + new DM action buttons
+    const cta = el('div', { style: { padding: '4px 16px 12px', display: 'flex', gap: '8px', justifyContent: 'flex-start' } }, [
+      el('button', { class: 'btn btn-secondary btn-sm', style: { padding: '6px 12px', fontSize: '12px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'auto', fontWeight: '700' }, onclick: () => go('/chat-new/group') }, [
+        el('span', { style: { display: 'flex', alignItems: 'center', width: '14px', height: '14px' }, html: icons.user }),
+        document.createTextNode('مجموعة جديدة')
+      ]),
+      el('button', { class: 'btn btn-secondary btn-sm', style: { padding: '6px 12px', fontSize: '12px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'auto', fontWeight: '700' }, onclick: () => go('/chat-new/dm') }, [
+        el('span', { style: { display: 'flex', alignItems: 'center', width: '14px', height: '14px' }, html: icons.plus }),
+        document.createTextNode('محادثة جديدة')
+      ]),
     ]);
     root.appendChild(cta);
 
@@ -810,7 +1278,12 @@
 
     renderChats(DB.chats.map(c => ({ id: c.id, title: c.user.name, avatar: c.user.avatar, last_message: { text: c.last, created_at: new Date().toISOString() }, created_at: new Date().toISOString() })));
     (async () => {
-      try { if (window.API) renderChats(await window.API.fetchChats()); } catch (e) { console.warn('chats:', e); }
+      try { 
+        if (window.API) {
+          const apiChats = await window.API.fetchChats();
+          if (apiChats && apiChats.length > 0) renderChats(apiChats);
+        }
+      } catch (e) { console.warn('chats:', e); }
     })();
 
     return root;
@@ -842,14 +1315,20 @@
     wrap.appendChild(errBox);
 
     const selected = new Set();
-    let allUsers = [];
+    let allUsers = (DB && DB.users) ? DB.users.map(u => ({ id: u.id, name: u.name, handle: u.handle.replace('@', ''), avatar_url: u.avatar, verified: u.verified })) : [];
     let myId = null;
     (async () => { try { const u = await window.SB.getUser(); myId = u && u.id; renderUsers(); } catch (e) {} })();
 
     async function search(q) {
       try {
-        if (window.API) allUsers = await window.API.searchProfiles(q || '');
-      } catch (e) { allUsers = []; }
+        if (window.API) {
+          const res = await window.API.searchProfiles(q || '');
+          if (res && res.length) allUsers = res;
+          else if (!q) allUsers = DB.users.map(u => ({ id: u.id, name: u.name, handle: u.handle.replace('@', ''), avatar_url: u.avatar, verified: u.verified }));
+        }
+      } catch (e) {
+        if (!q && DB && DB.users) allUsers = DB.users.map(u => ({ id: u.id, name: u.name, handle: u.handle.replace('@', ''), avatar_url: u.avatar, verified: u.verified }));
+      }
       renderUsers();
     }
     function renderUsers() {
@@ -857,7 +1336,7 @@
       // Filter out current user so they can't try to DM themselves
       const filtered = allUsers.filter(u => u.id !== myId);
       if (!filtered.length) {
-        userList.appendChild(el('div', { style: { padding: '40px', textAlign: 'center', color: 'var(--muted)' } }, 'لا يوجد مستخدمون آخرون بعد. ادعُ صديقاً للانضمام.'));
+        userList.appendChild(el('div', { style: { padding: '40px', textAlign: 'center', color: 'var(--muted)' } }, 'لا يوجد مستخدمون آخرون'));
         return;
       }
       filtered.forEach(u => {
@@ -866,7 +1345,7 @@
           if (isGroup) { isSel ? selected.delete(u.id) : selected.add(u.id); renderUsers(); }
           else { goCreateDm(u.id); }
         } }, [
-          el('div', { class: 'avatar' }, [Object.assign(document.createElement('img'), { src: u.avatar_url || '' })]),
+          avatar(u.avatar_url || u.avatar, u.name, 44),
           el('div', { style: { flex: 1, minWidth: 0 } }, [
             el('div', { class: 'name' }, u.name + (u.verified ? ' ✓' : '')),
             el('div', { class: 'handle' }, '@' + (u.handle || '')),
@@ -1064,6 +1543,73 @@
     // Cleanup walkie channel when leaving chat
     window.addEventListener('hashchange', () => { if (walkie) try { walkie.close(); } catch (e) {} }, { once: true });
 
+    async function handleSend() {
+      const text = inputField.value.trim();
+      const file = fileInput.files[0];
+      if (!text && !file) return;
+      const tempMsg = {
+        from_user_id: myUserId || 'me',
+        text,
+        created_at: new Date().toISOString(),
+        type: file ? (file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'voice') : 'text',
+        attachment_url: file ? URL.createObjectURL(file) : null
+      };
+      appendMessage(tempMsg);
+      inputField.value = '';
+      msgs.scrollTop = msgs.scrollHeight;
+
+      // Save to mockChat in memory so when returning to chat it stays
+      if (mockChat && mockChat.messages) {
+        mockChat.messages.push({ id: 'm' + Date.now(), from: 'me', text, time: 'الآن' });
+        mockChat.last = text;
+      }
+
+      if (window.API && typeof id === 'string' && id.length >= 30) {
+        try { await window.API.sendMessage({ chatId: id, text, type: tempMsg.type, file }); fileInput.value = ''; }
+        catch (e) { toast('تعذر الإرسال'); }
+      } else {
+        // Mock Auto-Reply simulation for amazing interactivity
+        setTimeout(() => {
+          const replies = [
+            'تمام يا غالي! اتفقنا 👍',
+            'يعطيك العافية، فكرة رائعة جداً 🔥',
+            'إن شاء الله، نلتقي قريب وننسق البث القادم 🚀',
+            'تسلم من ذوقك يا كابتن ❤️',
+            'أكيد، الحين أراجع المقطع وأرد عليك 🎬',
+            'ألف شكر على رسالتك وتفاعلك الجميل 🌹'
+          ];
+          const replyText = replies[Math.floor(Math.random() * replies.length)];
+          const replyMsg = {
+            from_user_id: 'them',
+            text: replyText,
+            created_at: new Date().toISOString(),
+            type: 'text'
+          };
+          appendMessage(replyMsg);
+          msgs.scrollTop = msgs.scrollHeight;
+          if (mockChat && mockChat.messages) {
+            mockChat.messages.push({ id: 'm' + Date.now(), from: mockChat.user.id, text: replyText, time: 'الآن' });
+            mockChat.last = replyText;
+          }
+        }, 1200);
+      }
+    }
+
+    inputField.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSend();
+      }
+    });
+
+    const sendBtn = el('button', {
+      class: 'comment-send-btn',
+      type: 'button',
+      html: icons.send,
+      title: 'إرسال',
+      onclick: handleSend
+    });
+
     const inputBar = el('div', { class: 'chat-input' }, [
       el('button', { class: 'icon-btn', html: icons.paperclip, onclick: () => fileInput.click(), title: 'إرفاق ملف' }),
       fileInput, videoInput,
@@ -1071,19 +1617,7 @@
       pttBtn,                                                                                  // push-to-talk
       el('button', { class: 'icon-btn', html: icons.video, onclick: () => videoInput.click(), title: 'إرسال مقطع فيديو' }),
       el('button', { class: 'icon-btn', html: icons.image, onclick: () => fileInput.click(), title: 'صورة' }),
-      el('button', { class: 'icon-btn', html: icons.arrowL, onclick: async () => {
-        const text = inputField.value.trim();
-        const file = fileInput.files[0];
-        if (!text && !file) return;
-        const tempMsg = { from_user_id: myUserId || 'me', text, created_at: new Date().toISOString(), type: file ? (file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'voice') : 'text' };
-        appendMessage(tempMsg);
-        inputField.value = '';
-        msgs.scrollTop = msgs.scrollHeight;
-        if (window.API && typeof id === 'string' && id.length >= 30) {
-          try { await window.API.sendMessage({ chatId: id, text, type: tempMsg.type, file }); fileInput.value = ''; }
-          catch (e) { toast('تعذر الإرسال'); }
-        }
-      } }),
+      sendBtn,
     ]);
     root.appendChild(inputBar);
 
@@ -1125,10 +1659,7 @@
             const grid = fresh.querySelector('.video-grid');
             if (grid) {
               grid.innerHTML = '';
-              videos.forEach(v => grid.appendChild(el('div', { class: 'video-card' }, [
-                el('img', { src: v.thumbnail || v.video_url || '', loading: 'lazy' }),
-                el('div', { class: 'vc-overlay' }, [svg('play'), document.createTextNode(' ' + fmt(v.likes_count || 0))]),
-              ])));
+              videos.forEach((v, i) => grid.appendChild(createVideoCard(v, i, () => go('/home'))));
             }
           }
         }
@@ -1168,7 +1699,6 @@
         if (messageBtn) messageBtn.onclick = async () => {
           try { const id = await window.API.openOrCreateDm(p.id); go('/chat/' + id); } catch (e) { toast('تعذر فتح المحادثة'); }
         };
-
         // Add "Request to track location" button (3rd action)
         const actionsRow = fresh.querySelector('.profile-actions');
         if (actionsRow && p.id) {
@@ -1208,10 +1738,7 @@
         const grid = fresh.querySelector('.video-grid');
         if (videos.length && grid) {
           grid.innerHTML = '';
-          videos.forEach(v => grid.appendChild(el('div', { class: 'video-card' }, [
-            el('img', { src: v.thumbnail || v.video_url || '', loading: 'lazy' }),
-            el('div', { class: 'vc-overlay' }, [svg('play'), document.createTextNode(' ' + fmt(v.likes_count || 0))]),
-          ])));
+          videos.forEach((v, i) => grid.appendChild(createVideoCard(v, i, () => go('/home'))));
         }
         root.replaceWith(fresh);
       } catch (e) { console.warn('userProfile load:', e); }
@@ -1226,13 +1753,13 @@
       el('button', { class: 'icon-btn', html: icons.moreV }),
     ]));
     root.appendChild(el('div', { class: 'profile-top' }, [
-      el('div', { class: 'profile-avatar' }, [Object.assign(document.createElement('img'), { src: u.avatar })]),
+      el('div', { class: 'profile-avatar' }, [avatar(u.avatar, u.name, 96)]),
       el('p', { class: 'profile-name' }, u.name + (u.verified ? ' ✓' : '')),
       el('p', { class: 'profile-handle' }, u.handle),
       el('div', { class: 'profile-stats' }, [
         el('div', { class: 'profile-stat', onclick: () => go('/list/following') }, [el('div', { class: 'n' }, fmt(u.following || 0)), el('div', { class: 'l' }, 'متابَعين')]),
         el('div', { class: 'profile-stat', onclick: () => go('/list/followers') }, [el('div', { class: 'n' }, fmt(u.followers || 0)), el('div', { class: 'l' }, 'متابعون')]),
-        el('div', { class: 'profile-stat' }, [el('div', { class: 'n' }, fmt(u.likes || 0)), el('div', { class: 'l' }, 'إعجابات')]),
+        el('div', { class: 'profile-stat', onclick: () => toast('إجمالي الإعجابات: ' + fmt(u.likes || 0)) }, [el('div', { class: 'n' }, fmt(u.likes || 0)), el('div', { class: 'l' }, 'إعجابات')]),
       ]),
       el('p', { class: 'profile-bio' }, u.bio),
       isMe
@@ -1240,22 +1767,64 @@
             el('button', { class: 'btn btn-secondary', onclick: () => go('/profile/edit') }, 'تعديل البروفايل'),
             el('button', { class: 'btn btn-secondary', onclick: () => go('/wallet') }, 'المحفظة'),
           ])
-        : el('div', { class: 'profile-actions' }, [
-            el('button', { class: 'btn' }, 'متابعة'),
-            el('button', { class: 'btn btn-secondary' }, 'مراسلة'),
-          ]),
+        : (() => {
+            if (!window._followedUsers) window._followedUsers = {};
+            const alreadyFollowed = !!window._followedUsers[u.id];
+            const followBtn = el('button', {
+              class: 'btn' + (alreadyFollowed ? ' btn-following' : ''),
+            }, alreadyFollowed ? 'Following' : 'Follow');
+            followBtn.addEventListener('click', () => {
+              if (!window._followedUsers) window._followedUsers = {};
+              const isNowFollowing = !window._followedUsers[u.id];
+              window._followedUsers[u.id] = isNowFollowing;
+              followBtn.textContent = isNowFollowing ? 'Following' : 'Follow';
+              followBtn.classList.toggle('btn-following', isNowFollowing);
+              if (window.API && u.id && u.id.length > 4) {
+                try { isNowFollowing ? window.API.follow(u.id) : window.API.unfollow(u.id); } catch(_) {}
+              }
+            });
+            return el('div', { class: 'profile-actions' }, [
+              followBtn,
+              el('button', { class: 'btn btn-secondary' }, 'مراسلة'),
+            ]);
+          })(),
     ]));
-    const tabs = el('div', { class: 'profile-tabs' }, [
-      el('button', { class: 'profile-tab active' }, 'فيديوهات'),
-      el('button', { class: 'profile-tab' }, 'معجَب بها'),
-      isMe ? el('button', { class: 'profile-tab' }, 'محفوظ') : null,
-    ].filter(Boolean));
-    root.appendChild(tabs);
     const grid = el('div', { class: 'video-grid', style: { padding: '4px' } });
-    DB.videos.forEach(v => grid.appendChild(el('div', { class: 'video-card', onclick: () => go('/home') }, [
-      el('img', { src: v.bg, alt: v.desc, loading: 'lazy' }),
-      el('div', { class: 'vc-overlay' }, [svg('play'), document.createTextNode(' ' + fmt(v.likes))]),
-    ])));
+
+    function renderGrid(type) {
+      grid.innerHTML = '';
+      let list = [];
+      if (type === 'videos') {
+        list = isMe ? (DB.myVideos && DB.myVideos.length ? DB.myVideos : DB.videos.slice(0, 6)) : DB.videos.slice(0, 6);
+      } else if (type === 'liked') {
+        list = DB.videos.slice(2, 8);
+      } else if (type === 'saved') {
+        list = DB.videos.slice(4, 10);
+      }
+      list.forEach((v, i) => grid.appendChild(createVideoCard(v, i, () => go('/home'))));
+    }
+
+    const tabs = el('div', { class: 'profile-tabs' });
+    const tabConfigs = [
+      { id: 'videos', label: 'فيديوهات' },
+      { id: 'liked', label: 'معجَب بها' },
+      ...(isMe ? [{ id: 'saved', label: 'محفوظ' }] : [])
+    ];
+
+    tabConfigs.forEach((t, i) => {
+      const btn = el('button', {
+        class: 'profile-tab' + (i === 0 ? ' active' : ''),
+        onclick: () => {
+          tabs.querySelectorAll('.profile-tab').forEach(x => x.classList.remove('active'));
+          btn.classList.add('active');
+          renderGrid(t.id);
+        }
+      }, t.label);
+      tabs.appendChild(btn);
+    });
+
+    root.appendChild(tabs);
+    renderGrid('videos');
     root.appendChild(grid);
     return root;
   }
@@ -1486,21 +2055,28 @@
     })();
 
     const cInput = el('input', { placeholder: 'أضف تعليقًا...' });
+    const sendCommentBtn = el('button', { class: 'comment-send-btn', type: 'button', html: icons.send, onclick: async () => {
+      const text = cInput.value.trim(); if (!text) return;
+      cInput.value = '';
+      if (window.API && typeof id === 'string' && id.length >= 30) {
+        try {
+          const c = await window.API.postComment(id, text);
+          renderComment(c);
+          counter.textContent = (parseInt(counter.textContent) + 1) + ' تعليق';
+        } catch (e) { toast('تعذر النشر'); }
+      } else {
+        renderComment({ user: { name: DB.me.name, avatar: DB.me.avatar }, text, created_at: new Date().toISOString(), likes: 0 });
+      }
+    } });
+    cInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendCommentBtn.click();
+      }
+    });
     sheet.appendChild(el('div', { class: 'comments-input' }, [
       cInput,
-      el('button', { class: 'icon-btn', html: icons.arrowL, onclick: async () => {
-        const text = cInput.value.trim(); if (!text) return;
-        cInput.value = '';
-        if (window.API && typeof id === 'string' && id.length >= 30) {
-          try {
-            const c = await window.API.postComment(id, text);
-            renderComment(c);
-            counter.textContent = (parseInt(counter.textContent) + 1) + ' تعليق';
-          } catch (e) { toast('تعذر النشر'); }
-        } else {
-          renderComment({ user: { name: DB.me.name, avatar: DB.me.avatar }, text, created_at: new Date().toISOString(), likes: 0 });
-        }
-      } }),
+      sendCommentBtn,
     ]));
     root.appendChild(el('div', { class: 'backdrop', onclick: () => back() }));
     root.appendChild(sheet);
@@ -1706,22 +2282,72 @@
 
   V.liveHostList = () => {
     bottomNav('home');
-    const root = el('section', { class: 'discover' });
-    root.appendChild(topBar({ title: 'بثوث مباشرة', dark: false, back: false, right: el('button', { class: 'icon-btn', html: icons.x, onclick: () => go('/home') }) }));
-    const grid = el('div', { class: 'video-grid' }); root.appendChild(grid);
+    const root = el('section', { class: 'discover', style: { padding: '12px' } });
+    root.appendChild(topBar({ title: 'البثوث المباشرة 🔴', dark: false, back: false, right: el('button', { class: 'icon-btn', html: icons.x, onclick: () => go('/home') }) }));
+    
+    // Category chips
+    const catRow = el('div', { class: 'tag-row', style: { padding: '4px 4px 12px' } });
+    const cats = ['الكل', 'موسيقى', 'سوالف', 'ألعاب', 'رياضة', 'طبخ'];
+    let activeCat = 'الكل';
+    cats.forEach((c, idx) => {
+      const btn = el('button', {
+        class: 'tag' + (idx === 0 ? ' active' : ''),
+        onclick: (e) => {
+          catRow.querySelectorAll('.tag').forEach(x => x.classList.remove('active'));
+          btn.classList.add('active');
+          activeCat = c;
+          render(activeCat === 'الكل' ? DB.lives : DB.lives.filter(l => l.tag === activeCat || l.title.includes(activeCat)));
+        }
+      }, c);
+      catRow.appendChild(btn);
+    });
+    root.appendChild(catRow);
+
+    const grid = el('div', { class: 'video-grid', style: { gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', padding: '0 4px 20px' } });
+    root.appendChild(grid);
+
     function render(lives) {
       grid.innerHTML = '';
-      if (!lives.length) { grid.appendChild(el('div', { class: 'empty-state', style: { padding: '40px', gridColumn: '1/-1', textAlign: 'center', color: 'var(--muted)' } }, 'لا توجد بثوث الآن')); return; }
-      lives.forEach(l => grid.appendChild(el('div', { class: 'video-card', onclick: () => go('/live/' + l.id) }, [
-        el('img', { src: l.thumbnail || l.bg || (DB.videos[0] && DB.videos[0].bg) }),
-        el('div', { class: 'vc-overlay', style: { background: 'linear-gradient(180deg, rgba(239,68,68,0.5), rgba(0,0,0,0.7))' } }, [
-          el('span', { style: { background: '#ef4444', padding: '2px 6px', borderRadius: '4px', marginEnd: '6px', fontSize: '10px' } }, 'مباشر'),
-          document.createTextNode(fmt(l.viewer_count || l.viewers || 0) + ' 👁'),
-        ]),
-      ])));
+      if (!lives || !lives.length) {
+        grid.appendChild(el('div', { class: 'empty-state', style: { padding: '40px', gridColumn: '1/-1', textAlign: 'center', color: 'var(--muted)' } }, 'لا توجد بثوث في هذا القسم الآن'));
+        return;
+      }
+      lives.forEach(l => {
+        const card = el('div', {
+          class: 'video-card',
+          style: { borderRadius: '14px', aspectRatio: '3/4', position: 'relative', overflow: 'hidden', boxShadow: '0 4px 14px rgba(0,0,0,0.1)' },
+          onclick: () => go('/live/' + l.id)
+        }, [
+          el('img', { src: l.thumbnail || l.bg, style: { width: '100%', height: '100%', objectFit: 'cover' }, loading: 'lazy' }),
+          // Top live badge & viewer count
+          el('div', { style: { position: 'absolute', top: '8px', insetInlineStart: '8px', display: 'flex', gap: '6px', alignItems: 'center', zIndex: 2 } }, [
+            el('span', { style: { background: 'linear-gradient(135deg, #ef4444, #ff0050)', color: '#fff', padding: '3px 8px', borderRadius: '999px', fontSize: '10.5px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 8px rgba(239,68,68,0.5)' } }, [
+              el('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: '#fff', display: 'inline-block' } }),
+              document.createTextNode('مباشر')
+            ]),
+            el('span', { style: { background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)', color: '#fff', padding: '3px 8px', borderRadius: '999px', fontSize: '10.5px', fontWeight: '600' } }, fmt(l.viewer_count || l.viewers || 0) + ' 👁'),
+          ]),
+          // Bottom overlay with host avatar and title
+          el('div', {
+            style: {
+              position: 'absolute', bottom: 0, left: 0, right: 0, padding: '24px 10px 10px',
+              background: 'linear-gradient(180deg, transparent, rgba(0,0,0,0.85))',
+              color: '#fff', display: 'flex', alignItems: 'center', gap: '8px'
+            }
+          }, [
+            avatar(l.host && l.host.avatar, l.host && l.host.name, 32),
+            el('div', { style: { flex: 1, minWidth: 0 } }, [
+              el('div', { style: { fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, l.host ? l.host.name : 'مضيف'),
+              el('div', { style: { fontSize: '10.5px', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }, l.title || 'بث مباشر')
+            ])
+          ])
+        ]);
+        grid.appendChild(card);
+      });
     }
+
     render(DB.lives);
-    (async () => { try { if (window.API) render(await window.API.fetchLiveStreams()); } catch (e) {} })();
+    (async () => { try { if (window.API) { const real = await window.API.fetchLiveStreams(); if (real && real.length) render(real); } } catch (e) {} })();
     return root;
   };
 
@@ -2138,19 +2764,25 @@
     }
 
     async function refresh() {
-      if (!map || !window.API) return;
+      if (!map) return;
       try {
-        const [friends, tracked] = await Promise.all([
-          window.API.fetchFriendLocations().catch(() => []),
-          window.API.fetchTrackedLocations().catch(() => []),
-        ]);
+        let friends = [], tracked = [];
+        if (window.API) {
+          const res = await Promise.all([
+            window.API.fetchFriendLocations().catch(() => []),
+            window.API.fetchTrackedLocations().catch(() => []),
+          ]);
+          friends = res[0] || [];
+          tracked = res[1] || [];
+        }
+
         const trackedIds = new Set(tracked.map(t => t.user_id));
         const seen = new Set();
         const sheetItems = []; // for the bottom sheet
 
         function placePin(l, color) {
           if (l.lat == null || l.lng == null) return;
-          const profile = l.profiles || { id: l.user_id };
+          const profile = l.profiles || { id: l.user_id, name: l.name, avatar_url: l.avatar, handle: l.handle };
           seen.add(l.user_id);
           sheetItems.push({ profile, l, color });
           if (markers.has(l.user_id)) {
@@ -2165,9 +2797,31 @@
           }
         }
 
-        // Tracked-via-permit get purple border, friends get green
-        tracked.forEach(l => placePin(l, '#6c2bd9'));
-        friends.forEach(l => { if (!trackedIds.has(l.user_id)) placePin(l, '#4ade80'); });
+        // Fallback to rich mock friends if no real data
+        if (friends.length === 0 && tracked.length === 0 && DB && DB.users) {
+          const mockLocations = [
+            { user_id: 'u1', name: 'سارة أحمد', handle: 'sarah_art', avatar: DB.users[0].avatar, lat: 24.7136, lng: 46.6753, accuracy: 12, updated_at: new Date(Date.now() - 3 * 60000).toISOString() },
+            { user_id: 'u2', name: 'عمر خالد', handle: 'omar_dev', avatar: DB.users[1].avatar, lat: 24.7240, lng: 46.6850, accuracy: 15, updated_at: new Date(Date.now() - 8 * 60000).toISOString() },
+            { user_id: 'u3', name: 'نورة الدوسري', handle: 'noura_style', avatar: DB.users[2].avatar, lat: 24.7010, lng: 46.6620, accuracy: 20, updated_at: new Date(Date.now() - 14 * 60000).toISOString() },
+            { user_id: 'u4', name: 'فيصل القحطاني', handle: 'faisal_fit', avatar: DB.users[3].avatar, lat: 24.7350, lng: 46.7000, accuracy: 10, updated_at: new Date(Date.now() - 25 * 60000).toISOString() },
+            { user_id: 'u5', name: 'ريم العتيبي', handle: 'reem_foodie', avatar: DB.users[4].avatar, lat: 24.6920, lng: 46.6900, accuracy: 18, updated_at: new Date(Date.now() - 32 * 60000).toISOString() },
+            { user_id: 'u6', name: 'خالد المطيري', handle: 'khaled_photo', avatar: DB.users[5].avatar, lat: 24.7400, lng: 46.6500, accuracy: 14, updated_at: new Date(Date.now() - 45 * 60000).toISOString() }
+          ];
+          mockLocations.forEach((l, idx) => {
+            placePin({
+              user_id: l.user_id,
+              lat: l.lat,
+              lng: l.lng,
+              accuracy: l.accuracy,
+              updated_at: l.updated_at,
+              profiles: { id: l.user_id, name: l.name, avatar_url: l.avatar, handle: l.handle }
+            }, idx % 2 === 0 ? '#6c2bd9' : '#4ade80');
+          });
+        } else {
+          // Tracked-via-permit get purple border, friends get green
+          tracked.forEach(l => placePin(l, '#6c2bd9'));
+          friends.forEach(l => { if (!trackedIds.has(l.user_id)) placePin(l, '#4ade80'); });
+        }
 
         // Remove pins for users not in the latest data
         for (const [uid, marker] of markers) {

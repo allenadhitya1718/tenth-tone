@@ -9,6 +9,7 @@
     "ios:open": "npx cap open ios"
   },
   "dependencies": {
+    "@capacitor/android": "^6.2.1",
     "@capacitor/app": "^6.0.2",
     "@capacitor/camera": "^6.1.2",
     "@capacitor/core": "^6.2.1",

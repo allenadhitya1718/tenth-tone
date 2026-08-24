@@ -1,0 +1,193 @@
+name: Android build (Play Store AAB + side-load APK)
+
+# Triggers:
+#   - Every push to main → unsigned debug APK uploaded as artifact (smoke test only)
+#   - Tag like v1.0.0 → signed RELEASE AAB + signed RELEASE APK (Play Store ready)
+#   - Manual dispatch from GitHub UI
+#
+# Required GitHub secrets for the signed release builds (set in
+#   Settings → Secrets and variables → Actions):
+#
+#   ANDROID_KEYSTORE_BASE64    — base64 of your upload-keystore.jks file
+#   ANDROID_KEYSTORE_PASSWORD  — the keystore password
+#   ANDROID_KEY_ALIAS          — alias of the upload key inside the keystore
+#   ANDROID_KEY_PASSWORD       — the alias's password
+#
+# Generate the keystore once with keytool (see PLAY_STORE_CHECKLIST.md).
+# If the secrets are NOT set, the release build falls back to a debug-
+# signed APK so the workflow still completes — but those won't be
+# accepted by Play Console.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      JAVA_VERSION: '21'
+      NODE_VERSION: '20'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Add Android platform (Capacitor)
+        run: npx cap add android
+
+      - name: Sync web assets to Android project
+        run: npx cap sync android
+
+      - name: Patch app name, versionCode, and permissions
+        run: |
+          BUILD_NUM=$(date +%s | tail -c 8)
+          echo "VERSION_CODE=$BUILD_NUM" >> $GITHUB_ENV
+          sed -i "s/versionCode 1/versionCode $BUILD_NUM/" android/app/build.gradle || true
+          sed -i 's|<string name="app_name">.*</string>|<string name="app_name">Tenth Tone</string>|' android/app/src/main/res/values/strings.xml || true
+          sed -i 's|<string name="title_activity_main">.*</string>|<string name="title_activity_main">Tenth Tone</string>|' android/app/src/main/res/values/strings.xml || true
+          # Allow camera, mic, location, internet — Capacitor adds most by default but be explicit
+          PERM_FILE=android/app/src/main/AndroidManifest.xml
+          if ! grep -q "android.permission.RECORD_AUDIO" $PERM_FILE; then
+            sed -i 's|<uses-permission android:name="android.permission.INTERNET" />|<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.CAMERA" />\n    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />\n    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />|' $PERM_FILE
+          fi
+
+      # ── Detect whether the user has uploaded a signing keystore ──
+      # The workflow happily builds debug-signed artifacts even without
+      # secrets, so first-time pushes don't fail. Play Console needs the
+      # signed-with-real-keystore version produced by the tag path.
+      - name: Detect signing secrets
+        id: signing
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ] \
+             && [ -n "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ] \
+             && [ -n "${{ secrets.ANDROID_KEY_ALIAS }}" ] \
+             && [ -n "${{ secrets.ANDROID_KEY_PASSWORD }}" ]; then
+            echo "have_signing=true"  >> $GITHUB_OUTPUT
+            echo "Signing secrets present — will produce a Play-Store-ready signed release."
+          else
+            echo "have_signing=false" >> $GITHUB_OUTPUT
+            echo "::warning::No signing secrets — release builds will be unsigned. Add ANDROID_KEYSTORE_BASE64 + 3 password secrets for Play Console builds."
+          fi
+
+      - name: Decode upload keystore
+        if: steps.signing.outputs.have_signing == 'true'
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > $RUNNER_TEMP/upload-keystore.jks
+          # Sanity-check that the decoded file is a real keystore
+          if ! file $RUNNER_TEMP/upload-keystore.jks | grep -qi 'data\|Java KeyStore'; then
+            echo "::error::Decoded keystore does not look like a JKS file. Did you base64-encode upload-keystore.jks correctly?"
+            exit 1
+          fi
+          echo "Keystore decoded OK (size: $(stat -c%s $RUNNER_TEMP/upload-keystore.jks) bytes)"
+
+      # ── Debug APK on every push (smoke test) ──
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      # ── Release AAB + APK on tag pushes (Play Store ready) ──
+      - name: Build signed release AAB (Play Store)
+        if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.have_signing == 'true'
+        working-directory: android
+        run: |
+          ./gradlew bundleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file=$RUNNER_TEMP/upload-keystore.jks \
+            -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.ANDROID_KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
+
+      - name: Build signed release APK (side-load)
+        if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.have_signing == 'true'
+        working-directory: android
+        run: |
+          ./gradlew assembleRelease --no-daemon \
+            -Pandroid.injected.signing.store.file=$RUNNER_TEMP/upload-keystore.jks \
+            -Pandroid.injected.signing.store.password="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.ANDROID_KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.ANDROID_KEY_PASSWORD }}"
+
+      # ── Fallback: unsigned release build if no secrets yet (so PR builds don't fail) ──
+      - name: Build unsigned release APK (no keystore present)
+        if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.have_signing == 'false'
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: List built artifacts
+        run: |
+          echo "=== Debug APKs ==="
+          find android -name "*.apk" -path "*/debug/*" -exec ls -lh {} \;
+          echo "=== Release APKs ==="
+          find android -name "*.apk" -path "*/release/*" -exec ls -lh {} \; || true
+          echo "=== Release AABs ==="
+          find android -name "*.aab" -exec ls -lh {} \; || true
+
+      # ── Artifacts ──
+      - name: Upload debug APK (every build)
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenth-tone-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+      - name: Upload signed release AAB (Play Store)
+        if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.have_signing == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenth-tone-release-aab-${{ env.VERSION_CODE }}
+          path: android/app/build/outputs/bundle/release/*.aab
+          retention-days: 90
+
+      - name: Upload signed release APK (side-load testing)
+        if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.have_signing == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenth-tone-release-apk-${{ env.VERSION_CODE }}
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 90
+
+      - name: Upload unsigned release APK (fallback, NOT for Play Store)
+        if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.have_signing == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenth-tone-release-apk-unsigned
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## Android build summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Trigger: \`${{ github.ref }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Version code: \`${{ env.VERSION_CODE }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Signing secrets present: \`${{ steps.signing.outputs.have_signing }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.signing.outputs.have_signing }}" == "true" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "- ✅ Play-Store-ready AAB produced — download from artifacts and upload to Play Console" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "- ⚠️  Tag build produced UNSIGNED APK — add keystore secrets for a Play-Store-ready build" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ℹ️  Push build produced debug APK only (push a tag like v1.0.0 for release artifacts)" >> $GITHUB_STEP_SUMMARY
+          fi

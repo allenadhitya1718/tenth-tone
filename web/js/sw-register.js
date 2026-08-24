@@ -1,23 +1,12 @@
-/* === Service worker registration & install prompt === */
+/* === Service worker registration & cache reset === */
 (function () {
   if (!('serviceWorker' in navigator)) return;
-  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
 
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then((reg) => {
-      // Listen for new SW available
-      reg.addEventListener('updatefound', () => {
-        const sw = reg.installing;
-        if (!sw) return;
-        sw.addEventListener('statechange', () => {
-          if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-            // A new version is available — auto-skip-waiting on next reload
-            sw.postMessage('SKIP_WAITING');
-          }
-        });
-      });
-    }).catch((err) => console.warn('SW register failed:', err));
+  // Unregister existing service worker in dev so changes always reflect immediately
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    for (let reg of regs) { reg.update(); }
   });
+})();
 
   // Optional Android install prompt — show a small toast (Chrome only)
   let deferredPrompt = null;

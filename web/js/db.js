@@ -8,7 +8,7 @@
   async function uid() { const u = await window.SB.getUser(); return u ? u.id : null; }
 
   // ---------- Videos ----------
-  API.publishVideo = async ({ file, thumbnail_url, description, music, privacy = 'public', is_draft = false }) => {
+  API.publishVideo = async ({ file, thumbnail_url, description, music, sound_id = null, privacy = 'public', is_draft = false }) => {
     const c = await client();
     const userId = await uid();
     if (!userId) throw new Error('not signed in');
@@ -25,7 +25,7 @@
 
     const { data, error } = await c.from('videos').insert({
       user_id: userId, description: description || '', music: music || null,
-      video_url, thumbnail: thumbnail_url || video_url, privacy, is_draft,
+      sound_id, video_url, thumbnail: thumbnail_url || video_url, privacy, is_draft,
     }).select().single();
     if (error) throw error;
     return data;
@@ -33,23 +33,59 @@
 
   API.fetchFeed = async ({ tab = 'foryou', limit = 20, offset = 0 } = {}) => {
     const c = await client();
-    let q = c.from('videos').select(`
-      id, description, music, video_url, thumbnail, privacy,
-      likes_count, comments_count, shares_count, views_count, created_at,
-      user:profiles!videos_user_id_fkey ( id, name, handle, avatar_url, verified )
-    `).eq('is_draft', false).eq('privacy', 'public').order('created_at', { ascending: false });
+    let data = [];
 
-    if (tab === 'following') {
-      const me = await uid();
-      if (!me) return [];
-      const { data: f } = await c.from('follows').select('followed_id').eq('follower_id', me);
-      const ids = (f || []).map(r => r.followed_id);
-      if (!ids.length) return [];
-      q = q.in('user_id', ids);
+    if (tab === 'foryou') {
+      try {
+        const { data: rpcData, error: rpcErr } = await c.rpc('fetch_fyp_feed', { p_limit: limit, p_offset: offset });
+        if (!rpcErr && rpcData && rpcData.length) {
+          data = rpcData.map(r => ({
+            id: r.id,
+            description: r.description,
+            music: r.music,
+            sound_id: r.sound_id,
+            video_url: r.video_url,
+            thumbnail: r.thumbnail,
+            privacy: r.privacy,
+            likes_count: r.likes_count,
+            comments_count: r.comments_count,
+            shares_count: r.shares_count,
+            views_count: r.views_count,
+            created_at: r.created_at,
+            user: {
+              id: r.user_id,
+              name: r.user_name,
+              handle: r.user_handle,
+              avatar_url: r.user_avatar_url,
+              verified: r.user_verified,
+            },
+          }));
+        }
+      } catch (err) {
+        console.warn('FYP RPC fallback to standard query:', err);
+      }
     }
 
-    const { data, error } = await q.range(offset, offset + limit - 1);
-    if (error) throw error;
+    if (!data.length) {
+      let q = c.from('videos').select(`
+        id, description, music, sound_id, video_url, thumbnail, privacy,
+        likes_count, comments_count, shares_count, views_count, created_at,
+        user:profiles!videos_user_id_fkey ( id, name, handle, avatar_url, verified )
+      `).eq('is_draft', false).eq('privacy', 'public').order('created_at', { ascending: false });
+
+      if (tab === 'following') {
+        const me = await uid();
+        if (!me) return [];
+        const { data: f } = await c.from('follows').select('followed_id').eq('follower_id', me);
+        const ids = (f || []).map(r => r.followed_id);
+        if (!ids.length) return [];
+        q = q.in('user_id', ids);
+      }
+
+      const { data: fetched, error } = await q.range(offset, offset + limit - 1);
+      if (error) throw error;
+      data = fetched || [];
+    }
 
     // Mark which videos current user already liked / saved
     const me = await uid();
@@ -64,6 +100,28 @@
       data.forEach(v => { v.liked = likeSet.has(v.id); v.saved = saveSet.has(v.id); });
     }
     return data || [];
+  };
+
+  API.fetchSounds = async () => {
+    const c = await client();
+    const { data, error } = await c.from('sounds').select('*').order('usage_count', { ascending: false }).limit(50);
+    if (error && error.code !== 'PGRST116') return [];
+    return data || [];
+  };
+
+  API.searchAll = async (query) => {
+    const c = await client();
+    const term = `%${query.replace(/[%_]/g, '\\$&')}%`;
+    const [profilesRes, videosRes, soundsRes] = await Promise.all([
+      c.from('profiles').select('id, name, handle, avatar_url, verified, followers_count').or(`name.ilike.${term},handle.ilike.${term}`).limit(20),
+      c.from('videos').select('id, description, thumbnail, video_url, likes_count, created_at, user:profiles!videos_user_id_fkey(id,name,handle,avatar_url)').ilike('description', term).eq('is_draft', false).limit(20),
+      c.from('sounds').select('*').or(`title.ilike.${term},author_name.ilike.${term}`).limit(20),
+    ]);
+    return {
+      profiles: profilesRes.data || [],
+      videos: videosRes.data || [],
+      sounds: soundsRes.data || [],
+    };
   };
 
   API.fetchUserVideos = async (userId) => {
@@ -736,6 +794,25 @@
     const { error } = await c.from('videos').delete().eq('id', videoId);
     if (error) throw error;
     await c.from('admin_logs').insert({ admin_id: await uid(), action: 'delete_video', target_type: 'video', target_id: videoId });
+  };
+
+  API.adminFetchComments = async ({ search = '' } = {}) => {
+    const c = await client();
+    let q = c.from('comments').select(`
+      id, text, video_id, created_at,
+      user:profiles!comments_user_id_fkey ( id, name, handle, avatar_url )
+    `).order('created_at', { ascending: false }).limit(200);
+    if (search) q = q.ilike('text', `%${search}%`);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data || [];
+  };
+
+  API.adminDeleteComment = async (commentId) => {
+    const c = await client();
+    const { error } = await c.from('comments').delete().eq('id', commentId);
+    if (error) throw error;
+    await c.from('admin_logs').insert({ admin_id: await uid(), action: 'delete_comment', target_type: 'comment', target_id: commentId });
   };
 
   API.adminFetchReports = async ({ status = 'pending', target_type = '' } = {}) => {

@@ -53,7 +53,7 @@
     const r = el('div', { class: 'adm-login' });
     const card = el('div', { class: 'card' });
     card.appendChild(el('div', { style: { display: 'flex', justifyContent: 'center', marginBottom: '10px' } }, [admLangSwitch()]));
-    card.appendChild(el('div', { class: 'mark' }, 'T'));
+    card.appendChild(el('div', { class: 'auth-logo-svg', html: icons.logo, style: { width: '64px', height: '64px', margin: '0 auto 12px' } }));
     card.appendChild(el('h1', {}, 'لوحة التحكم'));
     card.appendChild(el('p', {}, 'سجّل دخولك للوصول إلى لوحة الإدارة'));
     const inputStyle = { width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '12px', fontSize: '14px', outline: 0 };
@@ -88,7 +88,7 @@
     // sidebar
     const side = el('aside', { class: 'adm-sidebar' });
     side.appendChild(el('div', { class: 'adm-brand' }, [
-      el('div', { class: 'mark' }, 'T'),
+      el('div', { class: 'adm-logo-svg', html: icons.logoMark, style: { width: '38px', height: '38px', flexShrink: '0' } }),
       el('div', {}, [el('div', { class: 'name' }, 'Tenth Tone'), el('div', { class: 'sub' }, 'Admin Panel')]),
     ]));
     // Back-to-app link (so admins can hop back to the user-facing PWA)
@@ -634,32 +634,76 @@
     const page = el('div', { class: 'adm-page' });
     page.appendChild(pageHeader('التعليقات', 'مراجعة وحذف التعليقات المخالفة'));
     const tableWrap = el('div', { class: 'table-wrap' });
+    const searchIn = el('input', { placeholder: 'بحث في التعليقات' });
     tableWrap.appendChild(el('div', { class: 'table-toolbar' }, [
-      el('div', { class: 'search', style: { flex: 1 } }, [el('input', { placeholder: 'بحث في التعليقات' })]),
-      el('select', {}, [el('option', {}, 'الكل'), el('option', {}, 'مبلَّغ عنها'), el('option', {}, 'محذوفة')]),
+      el('div', { class: 'search', style: { flex: 1 } }, [searchIn]),
     ]));
     const table = el('table', { class: 'table' });
-    table.innerHTML = `<thead><tr><th>المستخدم</th><th>التعليق</th><th>الفيديو</th><th>البلاغات</th><th>التاريخ</th><th></th></tr></thead>`;
+    table.innerHTML = `<thead><tr><th>المستخدم</th><th>التعليق</th><th>الفيديو</th><th>التاريخ</th><th></th></tr></thead>`;
     const tb = el('tbody');
-    const sample = ['شيء جميل! 🔥', 'سلوك مخالف', 'تعليق إعلاني خارجي', 'كلام محرج', 'محتوى مكرر', 'محتوى مخالف للقانون', 'محبة لك يا صديقي', 'أعجبني!', 'أين هذا المكان؟', 'شكراً 🌹'];
-    DB.users.slice(0, 10).forEach((u, i) => {
-      const reps = i % 3 === 0 ? (i + 2) : 0;
-      const tr = el('tr');
-      tr.innerHTML = `
-        <td><div class="user-cell"><div class="av"><img src="${u.avatar}"></div><div><div class="nm">${u.name}</div></div></div></td>
-        <td>${sample[i]}</td>
-        <td><a class="muted" href="#/videos">فيديو #${i + 1}</a></td>
-        <td>${reps ? `<span class="badge danger">${reps}</span>` : '<span class="muted">-</span>'}</td>
-        <td>منذ ${i + 2} ساعة</td>
-        <td><div class="row-actions">
-          <button class="btn-icon btn-ghost" title="حذف"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg></button>
-          <button class="btn-icon btn-ghost" title="تجاهل"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
-        </div></td>`;
-      tb.appendChild(tr);
-    });
     table.appendChild(tb);
     tableWrap.appendChild(table);
     page.appendChild(tableWrap);
+
+    async function load() {
+      tb.innerHTML = '<tr><td colspan="5" style="padding:30px;text-align:center" class="muted">جاري التحميل...</td></tr>';
+      try {
+        if (!window.API) return;
+        const comments = await window.API.adminFetchComments({ search: searchIn.value });
+        tb.innerHTML = '';
+        if (!comments.length) {
+          tb.innerHTML = '<tr><td colspan="5" class="table-empty">لا توجد تعليقات</td></tr>';
+          return;
+        }
+        comments.forEach(c => {
+          const tr = el('tr');
+          const avUrl = (c.user && c.user.avatar_url) || '';
+          const uName = (c.user && c.user.name) || 'مستخدم';
+          const uHandle = (c.user && c.user.handle) ? '@' + c.user.handle : '';
+
+          const delBtn = el('button', { class: 'btn-icon btn-ghost', title: 'حذف' }, [svg('trash')]);
+          delBtn.onclick = async () => {
+            if (!confirm('حذف هذا التعليق نهائيًا؟')) return;
+            try {
+              await window.API.adminDeleteComment(c.id);
+              toast('تم حذف التعليق');
+              tr.remove();
+            } catch (err) {
+              toast('تعذر الحذف: ' + err.message);
+            }
+          };
+
+          tr.appendChild(el('td', {}, [
+            el('div', { class: 'user-cell' }, [
+              el('div', { class: 'av' }, [Object.assign(document.createElement('img'), { src: avUrl })]),
+              el('div', {}, [
+                el('div', { class: 'nm' }, uName),
+                el('div', { class: 'hd' }, uHandle),
+              ]),
+            ]),
+          ]));
+          tr.appendChild(el('td', { style: { maxWidth: '300px', wordBreak: 'break-word' } }, c.text || ''));
+          tr.appendChild(el('td', {}, [
+            el('a', { class: 'muted', href: '#/videos' }, 'فيديو #' + (c.video_id ? c.video_id.slice(0, 8) : '')),
+          ]));
+          tr.appendChild(el('td', { class: 'muted', style: { fontSize: '12px' } }, new Date(c.created_at).toLocaleString('ar-SA')));
+          tr.appendChild(el('td', {}, [
+            el('div', { class: 'row-actions' }, [delBtn]),
+          ]));
+          tb.appendChild(tr);
+        });
+      } catch (err) {
+        tb.innerHTML = '<tr><td colspan="5" class="table-empty">' + (err.message || 'حدث خطأ') + '</td></tr>';
+      }
+    }
+
+    let t;
+    searchIn.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(load, 250);
+    });
+    load();
+
     return page;
   }
 
