@@ -29,7 +29,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      JAVA_VERSION: '21'
+      # Gradle 8.2.1 (see gradle-wrapper.properties) supports Java 19 at most.
+      # On Java 21 it dies with "Unsupported class file major version 65".
+      JAVA_VERSION: '17'
       NODE_VERSION: '20'
 
     steps:
