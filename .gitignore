@@ -44,3 +44,15 @@ flutter/android/app/release
 
 # Web build artifacts (we DO commit flutter/build_web/ for Vercel deploy though)
 web/dist/
+
+# Third-party API key, must never reach the repo
+.pexels-key
+
+# Capacitor Android build output and machine-specific files
+android/local.properties
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/public/
+out/
+web/BUILD_INFO.txt

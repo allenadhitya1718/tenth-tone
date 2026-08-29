@@ -2,10 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "social-app",
+      "name": "tenthtone-web",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5173", "--directory", "C:\\Users\\Syed\\Desktop\\social-app"],
-      "port": 5173
+      "runtimeArgs": ["-m", "http.server", "5500", "--directory", "C:/Users/admin/OneDrive/Desktop/TenthTone-source-v1.1/Tiktok/web"],
+      "port": 5500
     }
   ]
 }

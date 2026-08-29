@@ -22,6 +22,30 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Deep links: verified Android App Links (https://tenthtone.app/...).
+                 Requires .well-known/assetlinks.json served from the domain root
+                 with this app's real signing-certificate SHA-256 fingerprint. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="tenthtone.app" android:pathPrefix="/v/" />
+                <data android:scheme="https" android:host="tenthtone.app" android:pathPrefix="/u/" />
+                <data android:scheme="https" android:host="tenthtone.app" android:pathPrefix="/live/" />
+                <data android:scheme="https" android:host="www.tenthtone.app" android:pathPrefix="/v/" />
+                <data android:scheme="https" android:host="www.tenthtone.app" android:pathPrefix="/u/" />
+                <data android:scheme="https" android:host="www.tenthtone.app" android:pathPrefix="/live/" />
+            </intent-filter>
+
+            <!-- Custom-scheme fallback (tenthtone://v/<id>) — works without
+                 domain verification, used for in-app/OAuth style returns. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tenthtone" />
+            </intent-filter>
+
         </activity>
 
         <provider

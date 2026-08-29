@@ -5,39 +5,66 @@
 
   const root = document.getElementById('admin');
 
+  // Sections map to work an operator actually does. Removed: Wallet & gifts
+  // (the feature is gone), and Roles/Employees (the permission model is a
+  // single is_admin flag, so a roles screen would govern nothing).
   const NAV = [
     { sec: 'الرئيسية', items: [
       { k: 'dashboard', l: 'الرئيسية', i: 'home', go: '#/dashboard' },
       { k: 'analytics', l: 'الإحصائيات', i: 'sparkle', go: '#/analytics' },
     ]},
-    { sec: 'المحتوى', items: [
-      { k: 'users', l: 'إدارة الحسابات', i: 'user', go: '#/users' },
+    { sec: 'الإشراف', items: [
+      { k: 'reports', l: 'البلاغات', i: 'flag', go: '#/reports', badge: 'open_reports' },
+      { k: 'tickets', l: 'الدعم الفني', i: 'mail', go: '#/tickets', badge: 'open_tickets' },
       { k: 'videos', l: 'الفيديوهات', i: 'video', go: '#/videos' },
       { k: 'comments', l: 'التعليقات', i: 'comment', go: '#/comments' },
-      { k: 'reports', l: 'البلاغات', i: 'flag', go: '#/reports' },
-      { k: 'live', l: 'البث المباشر', i: 'eye', go: '#/live' },
+      { k: 'live', l: 'البث المباشر', i: 'eye', go: '#/live', badge: 'live_now' },
     ]},
-    { sec: 'النقدية', items: [
-      { k: 'wallet', l: 'الهدايا والمحفظة', i: 'gift', go: '#/wallet' },
-      { k: 'ads', l: 'الإعلانات', i: 'image', go: '#/ads' },
+    { sec: 'الحسابات', items: [
+      { k: 'users', l: 'إدارة الحسابات', i: 'user', go: '#/users' },
+      { k: 'deletions', l: 'طلبات الحذف', i: 'x', go: '#/deletions', badge: 'pending_deletions' },
+      { k: 'exports', l: 'طلبات البيانات', i: 'download', go: '#/exports', badge: 'pending_exports' },
     ]},
     { sec: 'النظام', items: [
-      { k: 'notif', l: 'الإشعارات', i: 'bell', go: '#/notifications' },
-      { k: 'employees', l: 'الموظفون', i: 'user', go: '#/employees' },
-      { k: 'roles', l: 'الأدوار والصلاحيات', i: 'lock', go: '#/roles' },
-      { k: 'logs', l: 'سجل الأنشطة', i: 'eye', go: '#/logs' },
+      { k: 'notif', l: 'إرسال إشعار', i: 'bell', go: '#/notifications' },
+      { k: 'ads', l: 'الإعلانات', i: 'image', go: '#/ads' },
+      { k: 'storage', l: 'التخزين والحدود', i: 'bookmark', go: '#/storage' },
       { k: 'location', l: 'الموقع الجغرافي', i: 'map', go: '#/location' },
-      { k: 'settings', l: 'الإعدادات', i: 'settings', go: '#/settings' },
+      { k: 'logs', l: 'سجل الأنشطة', i: 'eye', go: '#/logs' },
     ]},
   ];
 
-  const me = { name: 'المشرف الرئيسي', role: 'Super Admin', avatar: 'https://i.pravatar.cc/100?u=admin' };
+  // Live counts shown as badges beside the nav items that have a queue.
+  let QUEUE = {};
+
+  // Filled in from the signed-in account. It used to be a hardcoded name and
+  // a stock photo, so every operator saw the same invented identity.
+  const me = { name: '', role: 'Admin', avatar: '' };
+
+  async function loadMe() {
+    try {
+      const u = await window.SB.getUser();
+      if (!u) return;
+      const p = await window.SB.getProfile(u.id);
+      me.name = (p && p.name) || u.email || '';
+      me.avatar = (p && p.avatar_url) || '';
+      document.querySelectorAll('.adm-user .name').forEach(n => { n.textContent = me.name; });
+      document.querySelectorAll('.adm-user .avatar').forEach(av => {
+        av.innerHTML = '';
+        if (me.avatar) {
+          av.appendChild(Object.assign(document.createElement('img'), { src: me.avatar, alt: '' }));
+        } else {
+          av.appendChild(el('span', { class: 'avatar-fallback' }, (me.name || 'A').trim().charAt(0).toUpperCase()));
+        }
+      });
+    } catch (e) { /* the shell still renders without it */ }
+  }
 
   // Language switch (Arabic ⇄ English) for the admin topbar
   function admLangSwitch() {
     const cur = (window.I18N && window.I18N.getLang()) || 'ar';
     const wrap = el('div', { class: 'lang-switch compact' });
-    [['ar', 'ع'], ['en', 'EN']].forEach(([code, label]) => {
+    [['ar', 'AR'], ['en', 'EN']].forEach(([code, label]) => {
       wrap.appendChild(el('button', {
         type: 'button',
         class: 'lang-opt' + (cur === code ? ' active' : ''),
@@ -101,10 +128,14 @@
       side.appendChild(el('div', { class: 'adm-section-title' }, g.sec));
       const nav = el('nav', { class: 'adm-nav' });
       g.items.forEach(it => {
+                // A count beside the queues that need working, so an operator can see
+        // where the work is without opening every page.
+        const n = it.badge ? Number(QUEUE[it.badge] || 0) : 0;
         nav.appendChild(el('a', { href: it.go, class: 'adm-nav' + (it.k === active ? ' active' : ''), onclick: () => closeSidebar() }, [
           svg(it.i),
           el('span', {}, it.l),
-        ]));
+          n > 0 ? el('span', { class: 'adm-nav-badge' }, n > 99 ? '99+' : String(n)) : null,
+        ].filter(Boolean)));
       });
       // re-class active
       nav.querySelectorAll('a').forEach((a, i) => {
@@ -117,24 +148,107 @@
     // main
     const main = el('main', { class: 'adm-main' });
     const top = el('header', { class: 'adm-topbar' });
-    top.appendChild(el('button', { class: 'icon-btn', html: icons.menu, onclick: toggleSidebar, style: { display: 'none' }, id: 'sidebar-toggle' }));
+    // Visibility belongs to the stylesheet. This used to carry an inline
+    // display:none that no rule could override, so on a phone the sidebar
+    // slid off screen with no way left to open it.
+    top.appendChild(el('button', {
+      class: 'icon-btn adm-menu-btn', html: icons.menu,
+      onclick: toggleSidebar, id: 'sidebar-toggle',
+      title: 'القائمة',
+    }));
     top.appendChild(el('div', { class: 'search' }, [el('input', { placeholder: 'بحث سريع...' })]));
     top.appendChild(el('span', { class: 'spacer' }));
     top.appendChild(admLangSwitch());
-    top.appendChild(el('button', { class: 'icon-btn', html: icons.bell }, [el('span', { class: 'badge' }, '5')]));
-    top.appendChild(el('button', { class: 'icon-btn', html: icons.settings, onclick: () => location.hash = '#/settings' }));
+    // Was a hardcoded 5. Shows the real amount of open work, and disappears
+    // when there is none.
+    const openWork = Number(QUEUE.open_reports || 0) + Number(QUEUE.open_tickets || 0);
+    top.appendChild(el('button', {
+      class: 'icon-btn', html: icons.bell,
+      title: 'العمل المفتوح',
+      onclick: () => { location.hash = '#/reports'; },
+    }, openWork ? [el('span', { class: 'badge' }, String(openWork))] : []));
+    top.appendChild(el('button', { class: 'icon-btn', html: icons.settings, onclick: () => location.hash = '#/storage' }));
     top.appendChild(el('div', { class: 'adm-user' }, [
-      el('div', { class: 'avatar' }, [Object.assign(document.createElement('img'), { src: me.avatar })]),
-      el('div', {}, [el('div', { class: 'name' }, me.name), el('div', { class: 'role' }, me.role)]),
-      svg('chevD', { style: { width: '14px', height: '14px' } }),
+      el('div', { class: 'avatar' }, me.avatar
+        ? [Object.assign(document.createElement('img'), { src: me.avatar, alt: '' })]
+        : [el('span', { class: 'avatar-fallback' }, (me.name || 'A').trim().charAt(0).toUpperCase())]),
+      el('div', { class: 'meta' }, [
+        el('div', { class: 'name' }, me.name),
+        el('div', { class: 'role' }, me.role),
+      ]),
+      el('span', { class: 'chev', html: icons.chevD }),
     ]));
     main.appendChild(top);
     main.appendChild(content);
     shell.appendChild(main);
 
-    function toggleSidebar() { side.classList.toggle('open'); }
-    function closeSidebar() { side.classList.remove('open'); }
+    // Dims the page behind the drawer and gives a tap target to close it.
+    const scrim = el('div', { class: 'adm-scrim', onclick: () => closeSidebar() });
+    shell.appendChild(scrim);
+
+    // On a phone the drawer is a poor primary navigation, so the work an
+    // operator does daily sits in a bottom bar instead. The drawer stays for
+    // everything else, reached through the last slot.
+    shell.appendChild(buildBottomNav(active, toggleSidebar));
+
+    function toggleSidebar() {
+      const open = side.classList.toggle('open');
+      scrim.classList.toggle('on', open);
+      document.body.style.overflow = open ? 'hidden' : '';
+    }
+    function closeSidebar() {
+      side.classList.remove('open');
+      scrim.classList.remove('on');
+      document.body.style.overflow = '';
+    }
     return shell;
+  }
+
+  // Five slots: the four pages an operator opens every day, then the drawer.
+  const BOTTOM_NAV = [
+    { k: 'dashboard', l: 'الرئيسية', i: 'home', go: '#/dashboard' },
+    { k: 'reports', l: 'البلاغات', i: 'flag', go: '#/reports', badge: 'open_reports' },
+    { k: 'tickets', l: 'الدعم', i: 'mail', go: '#/tickets', badge: 'open_tickets' },
+    { k: 'users', l: 'الحسابات', i: 'user', go: '#/users' },
+  ];
+
+  function buildBottomNav(active, openDrawer) {
+    const bar = el('nav', { class: 'adm-bottom', 'aria-label': 'التنقل' });
+    BOTTOM_NAV.forEach(it => {
+      const n = it.badge ? Number(QUEUE[it.badge] || 0) : 0;
+      bar.appendChild(el('a', {
+        href: it.go,
+        class: 'adm-bottom-item' + (it.k === active ? ' active' : ''),
+      }, [
+        el('span', { class: 'ico' }, [
+          svg(it.i),
+          n > 0 ? el('i', { class: 'dot' }, n > 9 ? '9+' : String(n)) : null,
+        ].filter(Boolean)),
+        el('span', { class: 'lbl' }, it.l),
+      ]));
+    });
+    bar.appendChild(el('button', {
+      class: 'adm-bottom-item', onclick: openDrawer, type: 'button',
+    }, [
+      el('span', { class: 'ico' }, [svg('menu')]),
+      el('span', { class: 'lbl' }, 'المزيد'),
+    ]));
+    return bar;
+  }
+
+  // Tables are built per view with no shared builder, so rather than editing
+  // every one, each cell is stamped with its column heading here. The mobile
+  // stylesheet prints that as the label when a row becomes a card.
+  function labelTableCells(root) {
+    (root || document).querySelectorAll('table.table').forEach(tbl => {
+      const heads = [].map.call(tbl.querySelectorAll('thead th'), th => th.textContent.trim());
+      if (!heads.length) return;
+      tbl.querySelectorAll('tbody tr').forEach(tr => {
+        [].forEach.call(tr.children, (td, i) => {
+          if (heads[i]) td.setAttribute('data-label', heads[i]);
+        });
+      });
+    });
   }
 
   // ===== Reusable bits =====
@@ -220,98 +334,202 @@
     return close;
   }
 
-  // ===== Pages =====
+  // ===== Dashboard =====
+  // Everything here is queried. The previous version had a line chart drawn
+  // from seven hardcoded numbers and a donut splitting content into
+  // categories the app does not have.
   function viewDashboard() {
     const page = el('div', { class: 'adm-page' });
     page.appendChild(pageHeader('لوحة التحكم', 'نظرة عامة على المنصة'));
-    const stats = el('div', { class: 'stats-grid' });
-    const c1 = statCard({ label: 'إجمالي المستخدمين', value: '...', icon: 'user', tone: 'primary' });
-    const c2 = statCard({ label: 'إجمالي الفيديوهات', value: '...', icon: 'video', tone: 'info' });
-    const c3 = statCard({ label: 'بثوث مباشرة الآن', value: '...', icon: 'eye', tone: 'success' });
-    const c4 = statCard({ label: 'بلاغات قيد المراجعة', value: '...', icon: 'flag', tone: 'danger' });
-    stats.appendChild(c1); stats.appendChild(c2); stats.appendChild(c3); stats.appendChild(c4);
+
+    // ── Alerts: only things that need a person to act ──
+    const alerts = el('div', { class: 'adm-alerts', style: { display: 'none' } });
+    page.appendChild(alerts);
+
+    const stats = el('div', { class: 'stat-grid' });
     page.appendChild(stats);
-    // Async load real stats
-    (async () => {
-      try {
-        if (!window.API) return;
-        const s = await window.API.adminStats();
-        c1.querySelector('.value').textContent = fmt(s.total_users || 0);
-        c2.querySelector('.value').textContent = fmt(s.total_videos || 0);
-        c3.querySelector('.value').textContent = fmt(s.live_now || 0);
-        c4.querySelector('.value').textContent = fmt(s.pending_reports || 0);
-      } catch (e) { console.warn('admin stats:', e); }
-    })();
 
-    // 2-col: line chart + donut
-    const grid = el('div', { class: 'grid-2' });
-    const left = el('div', { class: 'card' });
-    left.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'النشاط خلال الأسبوع'), el('div', { class: 'actions' }, [el('button', { class: 'btn btn-secondary btn-sm' }, '7 أيام'), el('button', { class: 'btn-ghost btn-sm' }, '30 يوم')])]));
-    left.appendChild(chartLine([1200, 1800, 1400, 2100, 1700, 2500, 2200], ['س', 'أ', 'إ', 'ث', 'ر', 'خ', 'ج']));
-    left.appendChild(el('div', { style: { display: 'flex', justifyContent: 'space-around', color: 'var(--muted)', fontSize: '12px' } },
-      ['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'].map(d => el('span', {}, d))));
-    grid.appendChild(left);
+    // ── Quick commands ──
+    const QUICK = [
+      { l: 'مراجعة البلاغات', i: 'flag', go: '#/reports' },
+      { l: 'الدعم الفني', i: 'mail', go: '#/tickets' },
+      { l: 'إدارة الحسابات', i: 'user', go: '#/users' },
+      { l: 'إرسال إشعار', i: 'bell', go: '#/notifications' },
+      { l: 'التخزين والحدود', i: 'bookmark', go: '#/storage' },
+      { l: 'الإحصائيات', i: 'sparkle', go: '#/analytics' },
+    ];
+    const quick = el('div', { class: 'adm-quick' });
+    QUICK.forEach(q => quick.appendChild(el('a', { class: 'adm-quick-item', href: q.go }, [
+      el('span', { class: 'qi-icon', html: icons[q.i] || icons.sparkle }),
+      el('span', {}, q.l),
+    ])));
+    page.appendChild(el('div', { class: 'adm-card' }, [el('h3', {}, 'إجراءات سريعة'), quick]));
 
-    const right = el('div', { class: 'card' });
-    right.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'توزيع المحتوى')]));
-    right.appendChild(donut([
-      { v: 45, c: '#6c2bd9' }, { v: 28, c: '#8b5bff' }, { v: 17, c: '#ec4899' }, { v: 10, c: '#f59e0b' }
-    ]));
-    right.appendChild(el('div', { style: { padding: '14px 4px', display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' } }, [
-      el('div', { style: { display: 'flex', justifyContent: 'space-between' } }, [el('span', {}, [el('span', { style: { width: '10px', height: '10px', background: '#6c2bd9', display: 'inline-block', marginEnd: '6px', borderRadius: '50%' } }), document.createTextNode(' ترفيه')]), el('strong', {}, '45%')]),
-      el('div', { style: { display: 'flex', justifyContent: 'space-between' } }, [el('span', {}, [el('span', { style: { width: '10px', height: '10px', background: '#8b5bff', display: 'inline-block', marginEnd: '6px', borderRadius: '50%' } }), document.createTextNode(' طبخ')]), el('strong', {}, '28%')]),
-      el('div', { style: { display: 'flex', justifyContent: 'space-between' } }, [el('span', {}, [el('span', { style: { width: '10px', height: '10px', background: '#ec4899', display: 'inline-block', marginEnd: '6px', borderRadius: '50%' } }), document.createTextNode(' رياضة')]), el('strong', {}, '17%')]),
-      el('div', { style: { display: 'flex', justifyContent: 'space-between' } }, [el('span', {}, [el('span', { style: { width: '10px', height: '10px', background: '#f59e0b', display: 'inline-block', marginEnd: '6px', borderRadius: '50%' } }), document.createTextNode(' أخرى')]), el('strong', {}, '10%')]),
-    ]));
-    grid.appendChild(right);
-    page.appendChild(grid);
+    // ── Activity chart (real) ──
+    const chartCard = el('div', { class: 'adm-card' }, [el('h3', {}, 'النشاط خلال 14 يومًا')]);
+    const chartHost = el('div');
+    chartCard.appendChild(chartHost);
+    page.appendChild(chartCard);
 
-    // bottom: top users + activity
+    // ── Two feeds ──
     const grid2 = el('div', { class: 'grid-2', style: { marginTop: '14px' } });
-    const topU = el('div', { class: 'card' });
-    topU.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'أعلى المستخدمين متابعةً'), el('a', { class: 'btn-ghost btn-sm', href: '#/users' }, 'عرض الكل')]));
-    const list = el('div', { class: 'top-list' }); topU.appendChild(list);
-    (async () => {
-      try {
-        const users = await window.API.adminFetchUsers({});
-        users.sort((a, b) => (b.followers_count || 0) - (a.followers_count || 0));
-        list.innerHTML = '';
-        users.slice(0, 6).forEach((u, i) => list.appendChild(el('div', { class: 'top-item' }, [
-          el('div', { class: 'rank' }, '#' + (i + 1)),
-          el('div', { class: 'av' }, [Object.assign(document.createElement('img'), { src: u.avatar_url || '' })]),
-          el('div', { class: 'body' }, [el('div', { class: 'ttl' }, u.name + (u.is_admin ? ' (مشرف)' : '')), el('div', { class: 'sub' }, '@' + (u.handle || ''))]),
-          el('div', { class: 'num' }, fmt(u.followers_count || 0) + ' متابع'),
-        ])));
-      } catch (e) { console.warn('top users:', e); }
-    })();
-    grid2.appendChild(topU);
 
-    const act = el('div', { class: 'card' });
-    act.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'آخر النشاطات'), el('a', { class: 'btn-ghost btn-sm', href: '#/logs' }, 'سجل كامل')]));
-    const al = el('div', { class: 'activity-list' }); act.appendChild(al);
-    (async () => {
-      try {
-        const logs = await window.API.adminFetchLogs({ limit: 8 });
-        al.innerHTML = '';
-        if (!logs.length) { al.appendChild(el('div', { class: 'muted', style: { padding: '12px' } }, 'لا توجد نشاطات بعد')); return; }
-        logs.forEach(L => al.appendChild(el('div', { class: 'activity-item' }, [
-          el('div', { class: 'ai-icon', style: { background: 'var(--primary-soft)', color: 'var(--primary)' }, html: icons.eye }),
-          el('div', { class: 'ai-text' }, [el('b', {}, (L.admin && L.admin.name) || 'مشرف'), document.createTextNode(' · ' + L.action.replace(/_/g, ' '))]),
-          el('div', { class: 'ai-time' }, _ago(L.created_at)),
-        ])));
-      } catch (e) { console.warn('logs:', e); }
-    })();
+    const newest = el('div', { class: 'adm-card' }, [
+      el('div', { class: 'card-h' }, [el('h3', {}, 'أحدث الحسابات'), el('a', { class: 'btn-ghost btn-sm', href: '#/users' }, 'الكل')]),
+    ]);
+    const newestList = el('div', { class: 'top-list' });
+    newest.appendChild(newestList);
+    grid2.appendChild(newest);
+
+    const act = el('div', { class: 'adm-card' }, [
+      el('div', { class: 'card-h' }, [el('h3', {}, 'آخر النشاطات'), el('a', { class: 'btn-ghost btn-sm', href: '#/logs' }, 'السجل')]),
+    ]);
+    const al = el('div', { class: 'activity-list' });
+    act.appendChild(al);
     grid2.appendChild(act);
     page.appendChild(grid2);
 
+    (async () => {
+      // Stats + queues
+      try {
+        const [s, q] = await Promise.all([
+          window.API.adminStats().catch(() => ({})),
+          window.API.adminQueueCounts().catch(() => null),
+        ]);
+        stats.innerHTML = '';
+        stats.appendChild(statCard({ label: 'إجمالي الحسابات', value: fmt(s.total_users || s.users || 0), icon: 'user', tone: 'primary' }));
+        stats.appendChild(statCard({ label: 'إجمالي الفيديوهات', value: fmt(s.total_videos || s.videos || 0), icon: 'video', tone: 'info' }));
+        stats.appendChild(statCard({ label: 'بث مباشر الآن', value: fmt((q && q.live_now) || s.live_now || 0), icon: 'eye', tone: 'success' }));
+        stats.appendChild(statCard({ label: 'عمل مفتوح', value: fmt(q ? (Number(q.open_reports || 0) + Number(q.open_tickets || 0)) : 0), icon: 'flag', tone: 'danger' }));
+
+        // Alerts are derived, not decorative - each one links to the work.
+        if (q) {
+          const items = [];
+          if (q.open_reports) items.push(['بلاغ بانتظار المراجعة: ' + q.open_reports, '#/reports']);
+          if (q.open_tickets) items.push(['بلاغ دعم مفتوح: ' + q.open_tickets, '#/tickets']);
+          if (q.pending_exports) items.push(['طلب بيانات بانتظار المعالجة: ' + q.pending_exports, '#/exports']);
+          if (q.pending_deletions) items.push(['حساب مجدول للحذف: ' + q.pending_deletions, '#/deletions']);
+          try {
+            const ov = await window.API.adminStorageOverview();
+            if (ov && Number(ov.pct_used) >= 80) {
+              items.push(['التخزين ممتلئ بنسبة ' + ov.pct_used + '% — سيتوقف الرفع عند بلوغ السقف', '#/storage']);
+            }
+          } catch (e) {}
+          if (items.length) {
+            alerts.style.display = '';
+            alerts.appendChild(el('div', { class: 'adm-alerts-h' }, [
+              el('span', { class: 'qi-icon', html: icons.bell }),
+              el('strong', {}, 'يحتاج إلى إجراء'),
+            ]));
+            items.forEach(([text, href]) => alerts.appendChild(
+              el('a', { class: 'adm-alert', href }, [el('span', {}, text), el('span', { class: 'chev', html: icons.chevL })])
+            ));
+          }
+        }
+      } catch (e) { console.warn('dashboard stats:', e); }
+
+      // Chart
+      try {
+        const growth = await window.API.adminGrowth(14);
+        chartHost.innerHTML = '';
+        if (!growth.length) {
+          chartHost.appendChild(el('div', { class: 'muted', style: { padding: '18px' } }, 'لا توجد بيانات بعد'));
+        } else {
+          const max = Math.max(1, ...growth.map(r => Math.max(r.signups, r.videos, r.comments)));
+          const chart = el('div', { class: 'adm-chart' });
+          growth.forEach(r => chart.appendChild(el('div', {
+            class: 'adm-chart-col',
+            title: chartTip(r),
+          }, [
+            el('i', { class: 'b1', style: { height: (r.signups / max * 100) + '%' } }),
+            el('i', { class: 'b2', style: { height: (r.videos / max * 100) + '%' } }),
+            el('i', { class: 'b3', style: { height: (r.comments / max * 100) + '%' } }),
+          ])));
+          chartHost.appendChild(chart);
+          chartHost.appendChild(el('div', { class: 'adm-legend' }, [
+            el('span', {}, [el('i', { class: 'b1' }), document.createTextNode(' حسابات')]),
+            el('span', {}, [el('i', { class: 'b2' }), document.createTextNode(' فيديوهات')]),
+            el('span', {}, [el('i', { class: 'b3' }), document.createTextNode(' تعليقات')]),
+          ]));
+        }
+      } catch (e) {
+        chartHost.innerHTML = '<div class="muted" style="padding:18px">' + esc(e.message) + '</div>';
+      }
+
+      // Newest accounts
+      try {
+        const users = await window.API.adminFetchUsers({});
+        users.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        newestList.innerHTML = '';
+        if (!users.length) {
+          newestList.appendChild(el('div', { class: 'muted', style: { padding: '12px' } }, 'لا توجد حسابات بعد'));
+        } else {
+          users.slice(0, 6).forEach(u => newestList.appendChild(el('div', { class: 'top-item' }, [
+            el('div', { class: 'av' }, u.avatar_url
+              ? [Object.assign(document.createElement('img'), { src: u.avatar_url, alt: '' })]
+              : [el('span', { class: 'avatar-fallback' }, (u.name || '?').trim().charAt(0).toUpperCase())]),
+            el('div', { class: 'body' }, [
+              el('div', { class: 'ttl' }, u.name || '—'),
+              el('div', { class: 'sub' }, '@' + (u.handle || '')),
+            ]),
+            el('div', { class: 'num' }, u.is_admin ? 'مشرف' : _ago(u.created_at)),
+          ])));
+        }
+      } catch (e) { console.warn('newest users:', e); }
+
+      // Admin activity log
+      try {
+        const logs = await window.API.adminFetchLogs({ limit: 8 });
+        al.innerHTML = '';
+        if (!logs.length) {
+          al.appendChild(el('div', { class: 'muted', style: { padding: '12px' } }, 'لا توجد نشاطات بعد'));
+        } else {
+          logs.forEach(L => al.appendChild(el('div', { class: 'activity-item' }, [
+            el('div', { class: 'ai-icon', style: { background: 'var(--primary-soft)', color: 'var(--primary)' }, html: icons.eye }),
+            el('div', { class: 'ai-text' }, [
+              el('b', {}, (L.admin && L.admin.name) || 'مشرف'),
+              document.createTextNode(' · ' + String(L.action || '').replace(/_/g, ' ')),
+            ]),
+            el('div', { class: 'ai-time' }, _ago(L.created_at)),
+          ])));
+        }
+      } catch (e) { console.warn('logs:', e); }
+    })();
+
     return page;
   }
-  function _ago(iso) { if (!iso) return ''; const t = Date.now() - new Date(iso).getTime(); const m = Math.floor(t / 60000); if (m < 1) return 'الآن'; if (m < 60) return 'منذ ' + m + 'د'; const h = Math.floor(m / 60); if (h < 24) return 'منذ ' + h + 'س'; return 'منذ ' + Math.floor(h / 24) + 'ي'; }
+
+  // Locale for dates and relative time. Was pinned to 'ar-SA', so every
+  // timestamp stayed Arabic even with the interface in English.
+  function chartTip(r) {
+    const en = admLocale() === 'en-GB';
+    return en
+      ? r.day + ' — accounts ' + r.signups + ' · videos ' + r.videos + ' · comments ' + r.comments
+      : r.day + ' — حسابات ' + r.signups + ' · فيديو ' + r.videos + ' · تعليق ' + r.comments;
+  }
+
+  function admLocale() {
+    try { return (window.I18N && window.I18N.getLang() === 'en') ? 'en-GB' : 'ar-SA'; }
+    catch (e) { return 'ar-SA'; }
+  }
+
+  function _ago(iso) {
+    if (!iso) return '';
+    const en = admLocale() === 'en-GB';
+    const t = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(t / 60000);
+    if (m < 1) return en ? 'now' : 'الآن';
+    if (m < 60) return en ? m + 'm ago' : 'منذ ' + m + 'د';
+    const h = Math.floor(m / 60);
+    if (h < 24) return en ? h + 'h ago' : 'منذ ' + h + 'س';
+    const d = Math.floor(h / 24);
+    return en ? d + 'd ago' : 'منذ ' + d + 'ي';
+  }
 
   // ===== Users =====
   function viewUsers() {
     const page = el('div', { class: 'adm-page' });
-    page.appendChild(pageHeader('إدارة الحسابات', 'بحث، تعديل البروفايل، المحفظة، التحقق، الحظر، الحذف'));
+    page.appendChild(pageHeader('إدارة الحسابات', 'بحث، تعديل البروفايل، الصلاحيات، الحظر، الحذف'));
     const tableWrap = el('div', { class: 'table-wrap' });
     const searchIn = el('input', { placeholder: 'بحث بالاسم أو اسم المستخدم' });
     const statusSel = el('select', {}, [el('option', { value: '' }, 'كل الحالات'), el('option', { value: 'active' }, 'نشط'), el('option', { value: 'banned' }, 'محظور'), el('option', { value: 'admin' }, 'مشرف')]);
@@ -364,7 +582,7 @@
           tr.appendChild(userCell);
           tr.appendChild(el('td', {}, fmt(u.followers_count || 0)));
           tr.appendChild(el('td', {}, [el('span', { class: 'badge ' + status.c }, status.l)]));
-          tr.appendChild(el('td', {}, new Date(u.created_at).toLocaleDateString('ar-SA')));
+          tr.appendChild(el('td', {}, new Date(u.created_at).toLocaleDateString(admLocale())));
           tr.appendChild(el('td', {}, [el('div', { class: 'row-actions' }, [openBtn, banBtn])]));
 
           // Whole row + "إدارة" button → open detail modal
@@ -373,7 +591,7 @@
           openBtn.onclick = openModal;
           banBtn.onclick = async (e) => {
             e.stopPropagation();
-            const days = isBanned ? null : prompt('عدد أيام الحظر (فارغ = دائم):', '7');
+            const days = isBanned ? null : await admAsk('حظر الحساب', 'عدد أيام الحظر (اتركه فارغًا للحظر الدائم)', '7');
             if (days === null && !isBanned) return;
             try { await window.API.adminBanUser(u.id, days === null ? null : (days === '' ? 36500 : parseInt(days))); toast('تم'); load(); }
             catch (err) { toast(err.message); }
@@ -387,7 +605,7 @@
     load();
     return page;
 
-    // ── Full user-management modal: profile editor + wallet + roles + delete ──
+    // ── Full user-management modal: profile editor + roles + delete ──
     async function openUserModal(u) {
       const body = el('div', {}, [el('div', { class: 'muted', style: { padding: '20px', textAlign: 'center' } }, 'جاري التحميل...')]);
       const close = modalAdm('إدارة المستخدم', body, []);
@@ -395,7 +613,6 @@
       try { detail = await window.API.adminFetchUserDetail(u.id); }
       catch (e) { body.innerHTML = ''; body.appendChild(el('div', { class: 'muted', style: { padding: '20px', color: 'var(--danger)' } }, 'تعذر التحميل: ' + (e.message || e))); return; }
       const p = (detail && detail.profile) || u;
-      const w = (detail && detail.wallet) || { balance: 0 };
       const isBanned = p.banned_until && new Date(p.banned_until) > new Date();
 
       body.innerHTML = '';
@@ -407,7 +624,7 @@
         el('div', { style: { flex: 1, minWidth: 0 } }, [
           el('div', { style: { fontWeight: 700, fontSize: '16px' } }, (p.name || '') + (p.verified ? ' ✓' : '')),
           el('div', { class: 'muted', style: { fontSize: '13px' } }, '@' + (p.handle || '')),
-          el('div', { class: 'muted', style: { fontSize: '11.5px', marginTop: '2px' } }, 'انضم: ' + new Date(p.created_at).toLocaleDateString('ar-SA')),
+          el('div', { class: 'muted', style: { fontSize: '11.5px', marginTop: '2px' } }, 'انضم: ' + new Date(p.created_at).toLocaleDateString(admLocale())),
         ]),
         el('div', {}, [
           el('span', { class: 'badge ' + (isBanned ? 'danger' : p.is_admin ? 'primary' : 'success') }, isBanned ? 'محظور' : p.is_admin ? 'مشرف' : 'نشط'),
@@ -453,32 +670,6 @@
       ]);
       body.appendChild(form);
 
-      // ── Wallet panel
-      body.appendChild(el('h4', { style: { margin: '20px 0 6px', fontSize: '13px', color: 'var(--muted)' } }, 'المحفظة'));
-      const balanceEl = el('div', { style: { fontSize: '20px', fontWeight: 800 } }, '🪙 ' + fmt(w.balance || 0));
-      const deltaIn = el('input', { class: 'input', type: 'number', placeholder: 'العدد (سالب للخصم)', style: { width: '140px' } });
-      const reasonIn = el('input', { class: 'input', placeholder: 'السبب (اختياري)', style: { flex: 1 } });
-      const walletRow = el('div', { style: { display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' } }, [
-        deltaIn, reasonIn,
-        el('button', { class: 'btn', onclick: async (e) => {
-          const delta = parseInt(deltaIn.value, 10);
-          if (!Number.isFinite(delta) || delta === 0) { toast('أدخل قيمة صحيحة ≠ 0'); return; }
-          const btn = e.currentTarget; btn.disabled = true; const orig = btn.textContent; btn.textContent = '...';
-          try {
-            const newBal = await window.API.adminAdjustWallet(p.id, delta, reasonIn.value || null);
-            balanceEl.textContent = '🪙 ' + fmt(newBal);
-            deltaIn.value = ''; reasonIn.value = '';
-            toast('تم تعديل الرصيد');
-          } catch (err) { toast(err.message || 'فشل'); }
-          finally { btn.disabled = false; btn.textContent = orig; }
-        } }, 'تطبيق'),
-      ]);
-      body.appendChild(el('div', { style: { background: '#f6f6fa', borderRadius: '8px', padding: '12px' } }, [
-        el('div', { class: 'muted', style: { fontSize: '11.5px', marginBottom: '4px' } }, 'الرصيد الحالي'),
-        balanceEl,
-        el('div', { class: 'muted', style: { fontSize: '11.5px', margin: '10px 0 4px' } }, 'تعديل الرصيد (+ إيداع / − خصم)'),
-        walletRow,
-      ]));
 
       // ── Recent videos thumbnail strip
       if (Array.isArray(detail.recent_videos) && detail.recent_videos.length) {
@@ -506,18 +697,18 @@
       body.appendChild(el('h4', { style: { margin: '20px 0 6px', fontSize: '13px', color: 'var(--muted)' } }, 'إجراءات سريعة'));
       const dangerRow = el('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } }, [
         el('button', { class: 'btn-sm btn-secondary', onclick: async () => {
-          if (!confirm((p.is_admin ? 'إزالة' : 'تعيين') + ' دور المشرف لـ ' + p.name + '?')) return;
+          if (!await admConfirm((p.is_admin ? 'إزالة' : 'تعيين') + ' دور المشرف', p.name)) return;
           try { await window.API.adminToggleAdmin(p.id, !p.is_admin); toast('تم'); close(); load(); }
           catch (err) { toast(err.message); }
         } }, p.is_admin ? 'إزالة الإشراف' : 'تعيين مشرف'),
         el('button', { class: 'btn-sm btn-' + (isBanned ? 'secondary' : 'danger'), onclick: async () => {
-          const days = isBanned ? null : prompt('عدد أيام الحظر (فارغ = دائم):', '7');
+          const days = isBanned ? null : await admAsk('حظر الحساب', 'عدد أيام الحظر (اتركه فارغًا للحظر الدائم)', '7');
           if (days === null && !isBanned) return;
           try { await window.API.adminBanUser(p.id, days === null ? null : (days === '' ? 36500 : parseInt(days))); toast('تم'); close(); load(); }
           catch (err) { toast(err.message); }
         } }, isBanned ? 'إلغاء الحظر' : 'حظر مؤقت'),
         el('button', { class: 'btn-sm btn-danger', style: { marginInlineStart: 'auto' }, onclick: async () => {
-          if (!confirm('حذف حساب ' + p.name + ' نهائيًا؟ هذا الإجراء غير قابل للتراجع.\nسيتم حذف جميع الفيديوهات والمحفظة والتعليقات.')) return;
+          if (!await admConfirm('حذف الحساب نهائيًا', 'سيُحذف حساب ' + p.name + ' وكل فيديوهاته وتعليقاته. لا يمكن التراجع عن هذا.')) return;
           try { await window.API.adminDeleteUser(p.id); toast('تم حذف الحساب'); close(); load(); }
           catch (err) { toast(err.message); }
         } }, '🗑️ حذف الحساب نهائيًا'),
@@ -597,7 +788,7 @@
               el('div', { class: 'vthumb' }, [thumb]),
               el('div', { style: { minWidth: 0, flex: 1 } }, [
                 el('div', { style: { fontWeight: 700, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' } }, descText),
-                el('div', { class: 'muted', style: { fontSize: '11.5px' } }, new Date(v.created_at).toLocaleString('ar-SA')),
+                el('div', { class: 'muted', style: { fontSize: '11.5px' } }, new Date(v.created_at).toLocaleString(admLocale())),
               ]),
             ]),
           ]));
@@ -616,7 +807,7 @@
             if (u) window.open(u, '_blank', 'noopener,noreferrer');
           };
           delBtn.onclick = async () => {
-            if (!confirm('حذف هذا الفيديو نهائيًا؟')) return;
+            if (!await admConfirm('حذف الفيديو', 'سيُحذف المقطع نهائيًا ولا يمكن التراجع.')) return;
             try { await window.API.adminDeleteVideo(v.id); toast('تم الحذف'); load(); }
             catch (e) { toast(e.message); }
           };
@@ -663,7 +854,7 @@
 
           const delBtn = el('button', { class: 'btn-icon btn-ghost', title: 'حذف' }, [svg('trash')]);
           delBtn.onclick = async () => {
-            if (!confirm('حذف هذا التعليق نهائيًا؟')) return;
+            if (!await admConfirm('حذف التعليق', 'سيُحذف التعليق نهائيًا ولا يمكن التراجع.')) return;
             try {
               await window.API.adminDeleteComment(c.id);
               toast('تم حذف التعليق');
@@ -686,7 +877,7 @@
           tr.appendChild(el('td', {}, [
             el('a', { class: 'muted', href: '#/videos' }, 'فيديو #' + (c.video_id ? c.video_id.slice(0, 8) : '')),
           ]));
-          tr.appendChild(el('td', { class: 'muted', style: { fontSize: '12px' } }, new Date(c.created_at).toLocaleString('ar-SA')));
+          tr.appendChild(el('td', { class: 'muted', style: { fontSize: '12px' } }, new Date(c.created_at).toLocaleString(admLocale())));
           tr.appendChild(el('td', {}, [
             el('div', { class: 'row-actions' }, [delBtn]),
           ]));
@@ -742,13 +933,13 @@
             <td><code style="font-size:11px">${(r.target_id || '').slice(0, 8)}</code></td>
             <td>${(r.reporter && r.reporter.name) || '-'}</td>
             <td>${r.reason}</td>
-            <td>${new Date(r.created_at).toLocaleString('ar-SA')}</td>
+            <td>${new Date(r.created_at).toLocaleString(admLocale())}</td>
             <td><div class="row-actions">
               <button class="btn-sm btn-danger" data-act="resolve">حسم بإجراء</button>
               <button class="btn-sm btn-secondary" data-act="dismiss">رفض</button>
             </div></td>`;
           tr.querySelector('[data-act="resolve"]').onclick = async () => {
-            const action = prompt('الإجراء المتخذ (مثال: تم حذف المحتوى / تم تحذير المستخدم):', 'تم حذف المحتوى');
+            const action = await admAsk('إغلاق البلاغ', 'الإجراء المتخذ', 'تم حذف المحتوى');
             if (!action) return;
             try { await window.API.adminResolveReport(r.id, { action, status: 'resolved' }); toast('تم'); load(); }
             catch (e) { toast(e.message); }
@@ -780,7 +971,7 @@
         if (!active.length) { grid.appendChild(el('div', { class: 'empty-state', style: { gridColumn: '1/-1' } }, 'لا توجد بثوث نشطة الآن')); return; }
         active.forEach(l => {
           const card = el('div', { class: 'card', style: { padding: 0, overflow: 'hidden' } });
-          const bg = l.thumbnail || (DB.videos[0] && DB.videos[0].bg) || '';
+          const bg = l.thumbnail || '';   // no demo fallback - an empty tile is honest
           card.appendChild(el('div', { style: { aspectRatio: '16/9', backgroundImage: `url(${bg})`, backgroundSize: 'cover', position: 'relative' } }, [
             el('div', { style: { position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.6))' } }),
             el('div', { style: { position: 'absolute', top: '8px', insetInlineStart: '8px' } }, [el('span', { class: 'badge danger' }, '● مباشر')]),
@@ -789,7 +980,7 @@
           ]));
           const endBtn = el('button', { class: 'btn btn-danger btn-sm' }, 'إنهاء');
           endBtn.onclick = async () => {
-            if (!confirm('إنهاء هذا البث الآن؟')) return;
+            if (!await admConfirm('إنهاء البث', 'سيتوقف البث المباشر فورًا لكل المشاهدين.')) return;
             try { await window.API.adminEndLive(l.id); toast('تم الإنهاء'); l.status = 'banned'; card.remove(); }
             catch (e) { toast(e.message); }
           };
@@ -804,334 +995,6 @@
         });
       } catch (e) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">' + e.message + '</div>'; }
     })();
-    return page;
-  }
-
-  // ===== Ads =====
-  function viewAds() {
-    const page = el('div', { class: 'adm-page' });
-    page.appendChild(pageHeader('الإعلانات', 'إدارة الحملات الإعلانية وتتبع الأداء', [
-      el('button', { class: 'btn', onclick: () => openAdModal() }, [svg('plus'), document.createTextNode(' حملة جديدة')]),
-    ]));
-    const stats = el('div', { class: 'stats-grid' });
-    stats.appendChild(statCard({ label: 'حملات نشطة', value: '24', icon: 'sparkle', tone: 'success' }));
-    stats.appendChild(statCard({ label: 'مشاهدات اليوم', value: '4.2M', icon: 'eye', tone: 'info' }));
-    stats.appendChild(statCard({ label: 'نقرات', value: '128K', delta: '+5.2%', icon: 'arrowR', tone: 'primary' }));
-    stats.appendChild(statCard({ label: 'CTR', value: '3.04%', delta: '+0.1%', icon: 'sparkle', tone: 'warn' }));
-    page.appendChild(stats);
-
-    const tableWrap = el('div', { class: 'table-wrap' });
-    const table = el('table', { class: 'table' });
-    table.innerHTML = `<thead><tr><th>الحملة</th><th>الفئة المستهدفة</th><th>المدة</th><th>المشاهدات</th><th>النقرات</th><th>CTR</th><th>الحالة</th><th></th></tr></thead>`;
-    const tb = el('tbody');
-    const camps = ['عرض رمضان الكبير', 'إطلاق الجيل الجديد', 'تخفيضات الموسم', 'مهرجان الطعام', 'دروس الطبخ المباشرة', 'بطاقات الهدايا', 'استبيان المنتج', 'باقة Premium'];
-    camps.forEach((c, i) => {
-      const status = i === 1 ? ['warn', 'متوقفة'] : i === 5 ? ['muted', 'منتهية'] : ['success', 'نشطة'];
-      const tr = el('tr');
-      tr.innerHTML = `
-        <td><strong>${c}</strong><div class="muted" style="font-size:11.5px">#${1000 + i}</div></td>
-        <td>${i % 2 === 0 ? '18-35 · الرياض' : '20-45 · جدة, الدمام'}</td>
-        <td>${15 - i % 5} يوم متبقي</td>
-        <td>${fmt(120000 + i * 50000)}</td>
-        <td>${fmt(3000 + i * 1700)}</td>
-        <td>${(2 + (i * 0.3) % 4).toFixed(2)}%</td>
-        <td><span class="badge ${status[0]}">${status[1]}</span></td>
-        <td><div class="row-actions">
-          <button class="btn-icon btn-ghost" title="تحرير">${icons.settings}</button>
-          <button class="btn-icon btn-ghost" title="إيقاف">${icons.x}</button>
-        </div></td>`;
-      tb.appendChild(tr);
-    });
-    table.appendChild(tb);
-    tableWrap.appendChild(table);
-    page.appendChild(tableWrap);
-
-    function openAdModal() {
-      const body = el('div', {});
-      body.innerHTML = `
-        <div class="field"><label>عنوان الحملة</label><input placeholder="عنوان الإعلان"/></div>
-        <div class="field"><label>نص الإعلان</label><textarea placeholder="نص قصير وجذاب"></textarea></div>
-        <div class="field"><label>الرابط (URL)</label><input placeholder="https://"/></div>
-        <div class="field-row">
-          <div class="field"><label>تاريخ البداية</label><input type="date"/></div>
-          <div class="field"><label>تاريخ النهاية</label><input type="date"/></div>
-        </div>
-        <div class="field"><label>الفئة المستهدفة</label>
-          <div class="checks">
-            <label class="check"><input type="checkbox"/> 18-24</label>
-            <label class="check"><input type="checkbox" checked/> 25-34</label>
-            <label class="check"><input type="checkbox" checked/> 35-44</label>
-            <label class="check"><input type="checkbox"/> 45+</label>
-          </div>
-        </div>
-        <div class="field"><label>الموقع الجغرافي</label>
-          <select><option>الرياض</option><option>جدة</option><option>الدمام</option><option>كل المملكة</option></select>
-        </div>`;
-      const close = modalAdm('إنشاء حملة إعلانية', body, [
-        el('button', { class: 'btn btn-secondary', onclick: () => close() }, 'إلغاء'),
-        el('button', { class: 'btn', onclick: () => { close(); toast('تم إنشاء الحملة'); } }, 'حفظ ونشر'),
-      ]);
-    }
-    return page;
-  }
-
-  // ===== Notifications =====
-  function viewNotifications() {
-    const page = el('div', { class: 'adm-page' });
-    page.appendChild(pageHeader('الإشعارات', 'إرسال إشعارات عامة أو موجهة لفئات محددة'));
-    const grid = el('div', { class: 'grid-2' });
-    const composer = el('div', { class: 'card' });
-    composer.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'إشعار جديد')]));
-    const cb = el('div', {});
-    cb.innerHTML = `
-      <div class="field"><label>نوع الإشعار</label>
-        <select><option>عام (لجميع المستخدمين)</option><option>موجه (فئة محددة)</option><option>مستخدمون نشطون اليوم</option></select>
-      </div>
-      <div class="field"><label>العنوان</label><input placeholder="عنوان الإشعار" maxlength="100"/></div>
-      <div class="field"><label>المحتوى</label><textarea placeholder="نص الإشعار" maxlength="300"></textarea></div>
-      <div class="field"><label>الفئة المستهدفة (اختياري)</label>
-        <div class="checks">
-          <label class="check"><input type="checkbox"/> الرياض</label>
-          <label class="check"><input type="checkbox"/> جدة</label>
-          <label class="check"><input type="checkbox"/> ذكور</label>
-          <label class="check"><input type="checkbox"/> إناث</label>
-          <label class="check"><input type="checkbox"/> 18-25</label>
-        </div>
-      </div>
-      <div class="field"><label>الجدولة</label>
-        <select><option>إرسال فوري</option><option>جدولة لوقت لاحق</option></select>
-      </div>`;
-    composer.appendChild(cb);
-    composer.appendChild(el('div', { style: { display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '14px' } }, [
-      el('button', { class: 'btn btn-secondary', onclick: () => toast('تم الحفظ كمسودة') }, 'حفظ كمسودة'),
-      el('button', { class: 'btn', onclick: () => toast('تم إرسال الإشعار') }, 'إرسال'),
-    ]));
-    grid.appendChild(composer);
-
-    const recent = el('div', { class: 'card' });
-    recent.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'الإشعارات السابقة')]));
-    [
-      { t: 'تحديث جديد متاح', s: 'لجميع المستخدمين', tm: 'منذ ساعة', users: 12480 },
-      { t: 'تحديات الأسبوع 🎉', s: 'مستخدمون نشطون', tm: 'أمس', users: 4231 },
-      { t: 'هدية ترحيبية', s: 'مستخدمون جدد', tm: 'منذ 3 أيام', users: 982 },
-      { t: 'صيانة مجدولة الليلة', s: 'لجميع المستخدمين', tm: 'منذ أسبوع', users: 12000 },
-    ].forEach(n => recent.appendChild(el('div', { style: { padding: '10px 0', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', gap: '8px' } }, [
-      el('div', {}, [el('div', { style: { fontWeight: 700, fontSize: '13.5px' } }, n.t), el('div', { class: 'muted', style: { fontSize: '11.5px' } }, n.s + ' · وصل لـ ' + fmt(n.users))]),
-      el('div', { class: 'muted', style: { fontSize: '11.5px' } }, n.tm),
-    ])));
-    grid.appendChild(recent);
-    page.appendChild(grid);
-    return page;
-  }
-
-  // ===== Analytics =====
-  function viewAnalytics() {
-    const page = el('div', { class: 'adm-page' });
-    page.appendChild(pageHeader('الإحصائيات والتقارير', 'تتبع التفاعل واستخراج التقارير', [
-      el('button', { class: 'btn btn-secondary' }, [svg('download'), document.createTextNode(' Excel')]),
-      el('button', { class: 'btn btn-secondary' }, [svg('download'), document.createTextNode(' PDF')]),
-      el('select', { style: { background: 'var(--surface)', border: '1px solid var(--border)', padding: '10px', borderRadius: '10px' } }, [el('option', {}, 'آخر 7 أيام'), el('option', {}, 'آخر 30 يوم'), el('option', {}, 'آخر 90 يوم')]),
-    ]));
-    const stats = el('div', { class: 'stats-grid' });
-    stats.appendChild(statCard({ label: 'مستخدمون نشطون يوميًا', value: '128.4K', delta: '+12.3%', icon: 'user', tone: 'primary' }));
-    stats.appendChild(statCard({ label: 'مستخدمون نشطون شهريًا', value: '2.8M', delta: '+8.1%', icon: 'sparkle', tone: 'info' }));
-    stats.appendChild(statCard({ label: 'متوسط الجلسة', value: '24:38', delta: '+3min', icon: 'timer', tone: 'success' }));
-    stats.appendChild(statCard({ label: 'معدل البقاء (DAY30)', value: '38.2%', delta: '+1.4%', icon: 'heart', tone: 'warn' }));
-    page.appendChild(stats);
-
-    const grid = el('div', { class: 'grid-2' });
-    const a = el('div', { class: 'card' });
-    a.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'النمو خلال 30 يومًا')]));
-    a.appendChild(chartLine([800, 900, 1100, 950, 1250, 1300, 1500, 1400, 1700, 1850, 1700, 1900, 2100, 2050, 2300, 2400, 2350, 2600, 2800, 2900, 3100, 3000, 3300, 3500, 3400, 3700, 3900, 4100, 4000, 4300]));
-    grid.appendChild(a);
-
-    const b = el('div', { class: 'card' });
-    b.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'التفاعل')]));
-    b.appendChild(chartBars([
-      { l: 'إعجاب', v: 4200000 }, { l: 'تعليق', v: 1800000 }, { l: 'مشاركة', v: 950000 }, { l: 'حفظ', v: 620000 }, { l: 'متابعة', v: 410000 },
-    ]));
-    grid.appendChild(b);
-    page.appendChild(grid);
-
-    const grid2 = el('div', { class: 'grid-2', style: { marginTop: '14px' } });
-    const c = el('div', { class: 'card' });
-    c.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'أعلى الفيديوهات أداءً')]));
-    const list = el('div', { class: 'top-list' });
-    DB.videos.slice(0, 5).forEach((v, i) => list.appendChild(el('div', { class: 'top-item' }, [
-      el('div', { class: 'rank' }, '#' + (i + 1)),
-      el('div', { class: 'av', style: { width: '32px', height: '46px', borderRadius: '6px' } }, [Object.assign(document.createElement('img'), { src: v.bg })]),
-      el('div', { class: 'body' }, [el('div', { class: 'ttl' }, v.desc.slice(0, 32)), el('div', { class: 'sub' }, v.user.name)]),
-      el('div', { class: 'num' }, fmt(v.likes * 12) + ' 👁'),
-    ])));
-    c.appendChild(list);
-    grid2.appendChild(c);
-
-    const d = el('div', { class: 'card' });
-    d.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'التوزيع الجغرافي')]));
-    [['الرياض', 38], ['جدة', 24], ['الدمام', 15], ['مكة', 11], ['المدينة', 7], ['أخرى', 5]].forEach(([l, v]) => d.appendChild(el('div', { style: { padding: '8px 0' } }, [
-      el('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '4px' } }, [el('span', {}, l), el('strong', {}, v + '%')]),
-      el('div', { style: { height: '6px', background: 'var(--bg)', borderRadius: '3px', overflow: 'hidden' } }, [el('div', { style: { width: v + '%', height: '100%', background: 'linear-gradient(90deg, var(--primary), var(--primary-2))' } })]),
-    ])));
-    grid2.appendChild(d);
-    page.appendChild(grid2);
-
-    return page;
-  }
-
-  // ===== Wallet/Gifts =====
-  function viewWallet() {
-    const page = el('div', { class: 'adm-page' });
-    page.appendChild(pageHeader('الهدايا والمحفظة', 'تتبع الهدايا الافتراضية وتقارير الدخل'));
-    const stats = el('div', { class: 'stats-grid' });
-    stats.appendChild(statCard({ label: 'إيرادات اليوم', value: '$4,820', delta: '+18%', icon: 'gift', tone: 'success' }));
-    stats.appendChild(statCard({ label: 'هدايا مرسلة (اليوم)', value: '12.4K', icon: 'sparkle', tone: 'primary' }));
-    stats.appendChild(statCard({ label: 'مستخدمون يدفعون', value: '3,217', delta: '+4.5%', icon: 'user', tone: 'info' }));
-    stats.appendChild(statCard({ label: 'متوسط قيمة الهدية', value: '🪙 38', icon: 'wallet', tone: 'warn' }));
-    page.appendChild(stats);
-
-    const tabs = el('div', { class: 'tabs' });
-    ['كل الهدايا', 'مرسلة', 'مستلمة', 'إدارة الكتالوج'].forEach((l, i) => tabs.appendChild(el('button', { class: 'tab' + (i === 0 ? ' active' : ''), onclick: e => { tabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); e.currentTarget.classList.add('active'); } }, l)));
-    page.appendChild(tabs);
-
-    const tableWrap = el('div', { class: 'table-wrap' });
-    tableWrap.appendChild(el('div', { class: 'table-toolbar' }, [
-      el('div', { class: 'search', style: { flex: 1 } }, [el('input', { placeholder: 'بحث' })]),
-      el('input', { type: 'date' }),
-    ]));
-    const table = el('table', { class: 'table' });
-    table.innerHTML = `<thead><tr><th>الهدية</th><th>المرسل</th><th>المستلم</th><th>القيمة</th><th>القناة</th><th>التاريخ</th></tr></thead>`;
-    const tb = el('tbody');
-    const giftRows = [];
-    for (let i = 0; i < 12; i++) {
-      const g = DB.gifts[i % DB.gifts.length];
-      const sender = DB.users[i % DB.users.length];
-      const receiver = DB.users[(i + 3) % DB.users.length];
-      const tr = el('tr');
-      tr.innerHTML = `
-        <td><div style="display:flex;gap:8px;align-items:center"><span style="font-size:24px">${g.emoji}</span><span><div style="font-weight:700">${g.name}</div></span></div></td>
-        <td><div class="user-cell"><div class="av"><img src="${sender.avatar}"></div><span>${sender.name}</span></div></td>
-        <td><div class="user-cell"><div class="av"><img src="${receiver.avatar}"></div><span>${receiver.name}</span></div></td>
-        <td><strong>🪙 ${g.price}</strong></td>
-        <td><span class="badge primary">بث مباشر</span></td>
-        <td>منذ ${i + 1} ساعة</td>`;
-      tb.appendChild(tr);
-    }
-    table.appendChild(tb);
-    tableWrap.appendChild(table);
-    tableWrap.appendChild(pagination(847, 12));
-    page.appendChild(tableWrap);
-
-    return page;
-  }
-
-  // ===== Roles =====
-  function viewRoles() {
-    const page = el('div', { class: 'adm-page' });
-    page.appendChild(pageHeader('الأدوار والصلاحيات', 'إدارة الأدوار وتحديد الصلاحيات لكل دور', [
-      el('button', { class: 'btn', onclick: () => openRoleModal() }, [svg('plus'), document.createTextNode(' دور جديد')]),
-    ]));
-    const tableWrap = el('div', { class: 'table-wrap' });
-    const table = el('table', { class: 'table' });
-    table.innerHTML = `<thead><tr><th>الدور</th><th>الموظفون</th><th>الصلاحيات</th><th>تاريخ الإنشاء</th><th></th></tr></thead>`;
-    const tb = el('tbody');
-    const roles = [
-      { n: 'Super Admin', e: 1, p: 'كل الصلاحيات', d: '2024/01/01', sys: true },
-      { n: 'مشرف محتوى', e: 8, p: 'مراجعة، حذف، تحذير', d: '2024/02/12' },
-      { n: 'محلل بيانات', e: 3, p: 'عرض الإحصائيات والتقارير', d: '2024/03/05' },
-      { n: 'دعم فني', e: 6, p: 'الحسابات، البلاغات', d: '2024/04/19' },
-      { n: 'مسوّق', e: 2, p: 'الإعلانات والإشعارات', d: '2024/05/22' },
-    ];
-    roles.forEach(r => {
-      const tr = el('tr');
-      tr.innerHTML = `
-        <td><strong>${r.n}</strong>${r.sys ? '<span class="badge primary" style="margin-inline-start:6px">نظام</span>' : ''}</td>
-        <td>${r.e} موظف</td>
-        <td class="muted">${r.p}</td>
-        <td>${r.d}</td>
-        <td><div class="row-actions">
-          <button class="btn-icon btn-ghost" title="تعديل" data-act="edit">${icons.settings}</button>
-          <button class="btn-icon btn-ghost" title="حذف" data-act="del" ${r.sys ? 'disabled style="opacity:0.4"' : ''}>${icons.x}</button>
-        </div></td>`;
-      tr.querySelector('[data-act="edit"]').onclick = () => openRoleModal(r);
-      tb.appendChild(tr);
-    });
-    table.appendChild(tb);
-    tableWrap.appendChild(table);
-    page.appendChild(tableWrap);
-
-    function openRoleModal(r) {
-      const body = el('div', {});
-      body.innerHTML = `
-        <div class="field"><label>اسم الدور</label><input value="${r ? r.n : ''}"/></div>
-        <div class="field"><label>الوصف</label><textarea>${r ? r.p : ''}</textarea></div>
-        <div class="field"><label>الصلاحيات</label>
-          <div class="checks">
-            ${['عرض المستخدمين','تعديل المستخدمين','حظر المستخدمين','عرض المحتوى','حذف المحتوى','مراجعة البلاغات','إنهاء البث','إدارة الإعلانات','إرسال إشعارات','عرض الإحصائيات','إدارة الموظفين','إدارة الأدوار','إدارة المحفظة','عرض السجل'].map((p, i) => `<label class="check"><input type="checkbox" ${i % 2 === 0 ? 'checked' : ''}/> ${p}</label>`).join('')}
-          </div>
-        </div>`;
-      const close = modalAdm(r ? 'تعديل دور' : 'إنشاء دور جديد', body, [
-        el('button', { class: 'btn btn-secondary', onclick: () => close() }, 'إلغاء'),
-        el('button', { class: 'btn', onclick: () => { close(); toast('تم الحفظ'); } }, 'حفظ'),
-      ]);
-    }
-    return page;
-  }
-
-  // ===== Employees =====
-  function viewEmployees() {
-    const page = el('div', { class: 'adm-page' });
-    page.appendChild(pageHeader('الموظفون', 'إدارة موظفي لوحة التحكم وأدوارهم', [
-      el('button', { class: 'btn', onclick: () => openEmpModal() }, [svg('plus'), document.createTextNode(' موظف جديد')]),
-    ]));
-    const tableWrap = el('div', { class: 'table-wrap' });
-    tableWrap.appendChild(el('div', { class: 'table-toolbar' }, [
-      el('div', { class: 'search', style: { flex: 1 } }, [el('input', { placeholder: 'بحث بالاسم أو البريد' })]),
-      el('select', {}, [el('option', {}, 'كل الأدوار'), el('option', {}, 'Super Admin'), el('option', {}, 'مشرف محتوى'), el('option', {}, 'محلل بيانات'), el('option', {}, 'دعم فني')]),
-      el('select', {}, [el('option', {}, 'كل الحالات'), el('option', {}, 'نشط'), el('option', {}, 'موقوف')]),
-    ]));
-    const table = el('table', { class: 'table' });
-    table.innerHTML = `<thead><tr><th>الموظف</th><th>البريد</th><th>الدور</th><th>الحالة</th><th>آخر دخول</th><th></th></tr></thead>`;
-    const tb = el('tbody');
-    const empRoles = ['Super Admin', 'مشرف محتوى', 'مشرف محتوى', 'محلل بيانات', 'دعم فني', 'مسوّق', 'دعم فني', 'مشرف محتوى'];
-    DB.users.slice(0, 8).forEach((u, i) => {
-      const active = i !== 4;
-      const tr = el('tr');
-      tr.innerHTML = `
-        <td><div class="user-cell"><div class="av"><img src="${u.avatar}"></div><div><div class="nm">${u.name}</div></div></div></td>
-        <td>${u.handle.replace('@', '')}@tenthtone.com</td>
-        <td><span class="badge primary">${empRoles[i]}</span></td>
-        <td><div class="toggle ${active ? 'on' : ''}" data-i="${i}"></div></td>
-        <td>منذ ${(i % 5) + 1} ساعة</td>
-        <td><div class="row-actions">
-          <button class="btn-icon btn-ghost" title="تعديل" data-act="edit">${icons.settings}</button>
-          <button class="btn-icon btn-ghost" title="حذف" data-act="del">${icons.x}</button>
-        </div></td>`;
-      tr.querySelector('.toggle').onclick = e => { e.currentTarget.classList.toggle('on'); toast('تم تحديث الحالة'); };
-      tr.querySelector('[data-act="edit"]').onclick = () => openEmpModal(u, empRoles[i]);
-      tr.querySelector('[data-act="del"]').onclick = () => { if (confirm('حذف هذا الموظف؟')) toast('تم الحذف'); };
-      tb.appendChild(tr);
-    });
-    table.appendChild(tb);
-    tableWrap.appendChild(table);
-    page.appendChild(tableWrap);
-
-    function openEmpModal(u, role) {
-      const body = el('div', {});
-      body.innerHTML = `
-        <div class="field"><label>الاسم الكامل</label><input value="${u ? u.name : ''}"/></div>
-        <div class="field-row">
-          <div class="field"><label>البريد الإلكتروني</label><input type="email" value="${u ? u.handle.replace('@','') + '@tenthtone.com' : ''}"/></div>
-          <div class="field"><label>الهاتف</label><input/></div>
-        </div>
-        <div class="field"><label>الدور</label>
-          <select><option>Super Admin</option><option ${role === 'مشرف محتوى' ? 'selected' : ''}>مشرف محتوى</option><option>محلل بيانات</option><option>دعم فني</option><option>مسوّق</option></select>
-        </div>
-        <div class="field"><label>كلمة المرور المؤقتة</label><input type="text" value="${u ? '' : 'TempP@ss123'}"/><div class="hint">سيُطلب من الموظف تغييرها عند أول دخول</div></div>`;
-      const close = modalAdm(u ? 'تعديل بيانات الموظف' : 'إضافة موظف جديد', body, [
-        el('button', { class: 'btn btn-secondary', onclick: () => close() }, 'إلغاء'),
-        el('button', { class: 'btn', onclick: () => { close(); toast('تم الحفظ'); } }, 'حفظ'),
-      ]);
-    }
     return page;
   }
 
@@ -1171,7 +1034,7 @@
             targetCell.appendChild(el('code', { style: { fontSize: '11px' } }, String(L.target_id).slice(0, 8)));
           }
           tr.appendChild(targetCell);
-          tr.appendChild(el('td', {}, new Date(L.created_at).toLocaleString('ar-SA')));
+          tr.appendChild(el('td', {}, new Date(L.created_at).toLocaleString(admLocale())));
           tb.appendChild(tr);
         });
       } catch (e) { tb.innerHTML = '<tr><td colspan="4" class="table-empty">' + e.message + '</td></tr>'; }
@@ -1179,91 +1042,572 @@
     return page;
   }
 
-  // ===== Location =====
-  function viewLocation() {
+  // ===== Settings =====
+
+  // ===== Prompt / confirm replacements =====
+  // window.prompt is blocked in app webviews and in some embedded browsers,
+  // and when it throws it kills the handler silently. These return promises.
+  function admAsk(title, label, initial = '', multiline = false) {
+    return new Promise(resolve => {
+      const input = multiline
+        ? el('textarea', { class: 'adm-input', rows: '5' })
+        : el('input', { class: 'adm-input' });
+      input.value = initial;
+      let done = false;
+      const finish = (v) => { if (done) return; done = true; close(); resolve(v); };
+      const ok = el('button', { class: 'btn-sm btn-primary', onclick: () => finish(input.value.trim() || null) }, 'تأكيد');
+      const no = el('button', { class: 'btn-sm btn-secondary', onclick: () => finish(null) }, 'إلغاء');
+      const close = modalAdm(title, [
+        el('label', { class: 'adm-label' }, label),
+        input,
+      ], [no, ok]);
+      setTimeout(() => input.focus(), 40);
+      input.addEventListener('keydown', e => { if (e.key === 'Enter' && !multiline) finish(input.value.trim() || null); });
+    });
+  }
+
+  function admConfirm(title, message, confirmLabel = 'تأكيد', danger = false) {
+    return new Promise(resolve => {
+      let done = false;
+      const finish = (v) => { if (done) return; done = true; close(); resolve(v); };
+      const ok = el('button', { class: 'btn-sm ' + (danger ? 'btn-danger' : 'btn-primary'), onclick: () => finish(true) }, confirmLabel);
+      const no = el('button', { class: 'btn-sm btn-secondary', onclick: () => finish(false) }, 'إلغاء');
+      const close = modalAdm(title, [el('p', { class: 'muted', style: { lineHeight: '1.7' } }, message)], [no, ok]);
+    });
+  }
+
+  // A table shell shared by the new queue screens.
+  function queueTable(headers, colspan) {
+    const wrap = el('div', { class: 'table-wrap' });
+    const table = el('table', { class: 'table' });
+    table.innerHTML = '<thead><tr>' + headers.map(h => '<th>' + h + '</th>').join('') + '</tr></thead>';
+    const tb = el('tbody');
+    table.appendChild(tb);
+    wrap.appendChild(table);
+    const busy = (msg) => { tb.innerHTML = '<tr><td colspan="' + colspan + '" style="padding:30px;text-align:center" class="muted">' + msg + '</td></tr>'; };
+    const empty = (msg) => { tb.innerHTML = '<tr><td colspan="' + colspan + '" class="table-empty">' + msg + '</td></tr>'; };
+    return { wrap, tb, busy, empty };
+  }
+
+  function userCell(p) {
+    if (!p) return '<span class="muted">—</span>';
+    return '<div class="cell-user"><strong>' + esc(p.name || p.handle || '—') + '</strong>'
+      + '<span class="muted">@' + esc(p.handle || '') + '</span></div>';
+  }
+
+  const fmtBytes = (b) => {
+    const n = Number(b) || 0;
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+    if (n < 1073741824) return (n / 1048576).toFixed(1) + ' MB';
+    return (n / 1073741824).toFixed(2) + ' GB';
+  };
+
+  // ===== Support desk =====
+  function viewTickets() {
     const page = el('div', { class: 'adm-page' });
-    page.appendChild(pageHeader('الموقع الجغرافي', 'إدارة ميزة مشاركة الموقع ومتابعة المحتوى الشائع'));
-    const grid = el('div', { class: 'grid-2' });
-    const a = el('div', { class: 'card' });
-    a.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'إعدادات المشاركة')]));
-    [
-      { l: 'تفعيل ميزة مشاركة الموقع', d: 'السماح للمستخدمين بمشاركة موقعهم على الخريطة', on: true },
-      { l: 'عرض الخريطة العامة', d: 'إظهار خريطة الأصدقاء داخل التطبيق', on: true },
-      { l: 'المحتوى الشائع حسب الموقع', d: 'عرض الفيديوهات الرائجة حسب المنطقة', on: true },
-      { l: 'مشاركة الموقع تلقائيًا', d: 'افتراضيًا للمستخدمين الجدد', on: false },
-    ].forEach(s => a.appendChild(el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border)', gap: '10px' } }, [
-      el('div', {}, [el('div', { style: { fontWeight: 700, fontSize: '14px' } }, s.l), el('div', { class: 'muted', style: { fontSize: '12px', marginTop: '2px' } }, s.d)]),
-      el('div', { class: 'toggle' + (s.on ? ' on' : ''), onclick: e => { e.currentTarget.classList.toggle('on'); toast('تم التحديث'); } }),
-    ])));
-    grid.appendChild(a);
+    page.appendChild(pageHeader('الدعم الفني', 'البلاغات التي أرسلها المستخدمون من داخل التطبيق'));
 
-    const b = el('div', { class: 'card' });
-    b.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'المحتوى الشائع حسب المنطقة')]));
-    const sel = el('select', { style: { width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '14px' } }, [el('option', {}, 'الرياض'), el('option', {}, 'جدة'), el('option', {}, 'الدمام'), el('option', {}, 'مكة'), el('option', {}, 'المدينة')]);
-    b.appendChild(sel);
-    const list = el('div', { class: 'top-list' });
-    DB.videos.slice(0, 5).forEach((v, i) => list.appendChild(el('div', { class: 'top-item' }, [
-      el('div', { class: 'rank' }, '#' + (i + 1)),
-      el('div', { class: 'av', style: { width: '32px', height: '46px', borderRadius: '6px' } }, [Object.assign(document.createElement('img'), { src: v.bg })]),
-      el('div', { class: 'body' }, [el('div', { class: 'ttl' }, v.desc.slice(0, 30)), el('div', { class: 'sub' }, v.user.name)]),
-      el('div', { class: 'num' }, fmt(v.likes * 12)),
-    ])));
-    b.appendChild(list);
-    grid.appendChild(b);
+    let status = 'open';
+    const tabs = el('div', { class: 'tabs' });
+    [['open', 'مفتوحة'], ['in_progress', 'قيد المعالجة'], ['resolved', 'محلولة'], ['all', 'الكل']]
+      .forEach(([k, l], i) => tabs.appendChild(el('button', {
+        class: 'tab' + (i === 0 ? ' active' : ''),
+        onclick: e => {
+          status = k;
+          tabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          e.currentTarget.classList.add('active');
+          load();
+        },
+      }, l)));
+    page.appendChild(tabs);
 
-    page.appendChild(grid);
+    const CATS = { bug: 'عطل', account: 'حساب', payment: 'دفع', content: 'محتوى', safety: 'أمان', other: 'أخرى' };
+    const STATUS = { open: 'مفتوح', in_progress: 'قيد المعالجة', resolved: 'محلول', closed: 'مغلق' };
+
+    const t = queueTable(['المستخدم', 'النوع', 'الرسالة', 'الجهاز', 'التاريخ', 'الحالة', ''], 7);
+    page.appendChild(t.wrap);
+
+    async function load() {
+      t.busy('جاري التحميل...');
+      let rows = [];
+      try { rows = await window.API.adminFetchTickets(status); }
+      catch (e) { t.empty(e.message); return; }
+      t.tb.innerHTML = '';
+      if (!rows.length) { t.empty('لا توجد بلاغات'); return; }
+      rows.forEach(r => {
+        const tr = el('tr');
+        tr.innerHTML = `
+          <td>${userCell(r.profiles)}</td>
+          <td><span class="chip">${CATS[r.category] || r.category}</span></td>
+          <td class="cell-wrap">${esc((r.message || '').slice(0, 140))}</td>
+          <td><span class="muted" style="font-size:11px">${esc((r.device || '').slice(0, 34))}</span></td>
+          <td><span class="muted">${new Date(r.created_at).toLocaleString(admLocale())}</span></td>
+          <td><span class="badge s-${r.status}">${STATUS[r.status] || r.status}</span></td>
+          <td><div class="row-actions">
+            <button class="btn-sm btn-primary" data-act="reply">رد</button>
+            <button class="btn-sm btn-secondary" data-act="progress">قيد المعالجة</button>
+          </div></td>`;
+        if (r.admin_reply) {
+          const note = el('tr');
+          note.innerHTML = `<td colspan="7" class="cell-reply"><strong>الرد:</strong> ${esc(r.admin_reply)}</td>`;
+          tr.dataset.hasReply = '1';
+          setTimeout(() => tr.after(note), 0);
+        }
+        tr.querySelector('[data-act="reply"]').onclick = async () => {
+          const reply = await admAsk('الرد على البلاغ', 'سيصل الرد إلى المستخدم كإشعار داخل التطبيق.', r.admin_reply || '', true);
+          if (!reply) return;
+          try { await window.API.adminReplyTicket(r.id, reply, 'resolved'); toast('تم إرسال الرد'); load(); }
+          catch (e) { toast(e.message); }
+        };
+        tr.querySelector('[data-act="progress"]').onclick = async () => {
+          try { await window.API.adminSetTicketStatus(r.id, 'in_progress'); toast('تم التحديث'); load(); }
+          catch (e) { toast(e.message); }
+        };
+        t.tb.appendChild(tr);
+      });
+    }
+    load();
     return page;
   }
 
-  // ===== Settings =====
-  function viewSettings() {
+  // ===== Account deletion queue =====
+  function viewDeletions() {
     const page = el('div', { class: 'adm-page' });
-    page.appendChild(pageHeader('الإعدادات', 'إعدادات المنصة العامة'));
-    const grid = el('div', { class: 'grid-2' });
+    page.appendChild(pageHeader('طلبات الحذف', 'حسابات مجدولة للحذف خلال 30 يومًا — يمكن إلغاء الحذف قبل انتهاء المهلة'));
 
-    const a = el('div', { class: 'card' });
-    a.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'عام')]));
-    a.innerHTML += `
-      <div class="field"><label>اسم المنصة</label><input value="Tenth Tone"/></div>
-      <div class="field"><label>الوصف</label><textarea>منصة فيديو اجتماعي بالعربية</textarea></div>
-      <div class="field-row">
-        <div class="field"><label>اللغة الافتراضية</label><select><option>العربية</option><option>English</option></select></div>
-        <div class="field"><label>المنطقة الزمنية</label><select><option>Asia/Riyadh (UTC+3)</option></select></div>
-      </div>`;
-    grid.appendChild(a);
+    const t = queueTable(['الحساب', 'أُوقف في', 'يُحذف في', 'المتبقي', ''], 5);
+    page.appendChild(t.wrap);
 
-    const b = el('div', { class: 'card' });
-    b.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'حدود الفيديو')]));
-    b.innerHTML += `
-      <div class="field-row">
-        <div class="field"><label>الحد الأقصى للمدة (ث)</label><input type="number" value="60"/></div>
-        <div class="field"><label>الحد الأقصى للحجم (MB)</label><input type="number" value="200"/></div>
-      </div>
-      <div class="field-row">
-        <div class="field"><label>صيغ الفيديو المدعومة</label><input value="MP4, MOV"/></div>
-        <div class="field"><label>صيغ الصور</label><input value="JPG, PNG"/></div>
-      </div>`;
-    grid.appendChild(b);
+    async function load() {
+      t.busy('جاري التحميل...');
+      let rows = [];
+      try { rows = await window.API.adminPendingDeletions(); }
+      catch (e) { t.empty(e.message); return; }
+      t.tb.innerHTML = '';
+      if (!rows.length) { t.empty('لا توجد طلبات حذف'); return; }
+      rows.forEach(r => {
+        const urgent = r.days_left <= 3;
+        const tr = el('tr');
+        tr.innerHTML = `
+          <td>${userCell(r)}</td>
+          <td><span class="muted">${r.deactivated_at ? new Date(r.deactivated_at).toLocaleDateString(admLocale()) : '—'}</span></td>
+          <td><span class="muted">${new Date(r.deletion_scheduled_at).toLocaleDateString(admLocale())}</span></td>
+          <td><span class="badge ${urgent ? 's-open' : ''}">${r.days_left} يوم</span></td>
+          <td><div class="row-actions">
+            <button class="btn-sm btn-secondary" data-act="cancel">إلغاء الحذف</button>
+          </div></td>`;
+        tr.querySelector('[data-act="cancel"]').onclick = async () => {
+          const ok = await admConfirm('إلغاء الحذف',
+            'سيُستعاد حساب ' + (r.name || r.handle) + ' ويعود ظاهرًا للجميع. افعل ذلك فقط بناءً على طلب صاحب الحساب.',
+            'إلغاء الحذف');
+          if (!ok) return;
+          try { await window.API.adminCancelDeletion(r.id); toast('تم إلغاء الحذف'); load(); }
+          catch (e) { toast(e.message); }
+        };
+        t.tb.appendChild(tr);
+      });
+    }
+    load();
+    return page;
+  }
 
-    const c = el('div', { class: 'card' });
-    c.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'البث المباشر')]));
-    c.innerHTML += `
-      <div class="field"><label>الحد الأدنى من المتابعين للبث</label><input type="number" value="100"/></div>
-      <div class="field"><label>الحد الأدنى للعمر</label><input type="number" value="18"/></div>`;
-    grid.appendChild(c);
+  // ===== Data export requests =====
+  function viewExports() {
+    const page = el('div', { class: 'adm-page' });
+    page.appendChild(pageHeader('طلبات البيانات', 'طلبات نسخة من البيانات — مطلوبة قانونيًا في بعض الدول'));
 
-    const d = el('div', { class: 'card' });
-    d.appendChild(el('div', { class: 'card-h' }, [el('h3', {}, 'المحفظة والسحب')]));
-    d.innerHTML += `
-      <div class="field"><label>الحد الأدنى للسحب (🪙)</label><input type="number" value="1000"/></div>
-      <div class="field"><label>نسبة العمولة (%)</label><input type="number" value="20"/></div>`;
-    grid.appendChild(d);
+    const t = queueTable(['المستخدم', 'التاريخ', 'الحالة', 'الملف', ''], 5);
+    page.appendChild(t.wrap);
 
-    page.appendChild(grid);
-    page.appendChild(el('div', { style: { marginTop: '16px', display: 'flex', gap: '8px', justifyContent: 'flex-end' } }, [
-      el('button', { class: 'btn btn-secondary' }, 'إلغاء'),
-      el('button', { class: 'btn', onclick: () => toast('تم حفظ الإعدادات') }, 'حفظ التغييرات'),
+    const ST = { pending: 'قيد الانتظار', ready: 'جاهز', failed: 'فشل' };
+
+    async function load() {
+      t.busy('جاري التحميل...');
+      let rows = [];
+      try { rows = await window.API.adminFetchExports(); }
+      catch (e) { t.empty(e.message); return; }
+      t.tb.innerHTML = '';
+      if (!rows.length) { t.empty('لا توجد طلبات'); return; }
+      rows.forEach(r => {
+        const tr = el('tr');
+        tr.innerHTML = `
+          <td>${userCell(r.profiles)}</td>
+          <td><span class="muted">${new Date(r.requested_at).toLocaleString(admLocale())}</span></td>
+          <td><span class="badge s-${r.status}">${ST[r.status] || r.status}</span></td>
+          <td>${r.file_url ? '<a href="' + esc(r.file_url) + '" target="_blank" rel="noopener">تنزيل</a>' : '<span class="muted">—</span>'}</td>
+          <td><div class="row-actions">
+            ${r.status === 'pending' ? '<button class="btn-sm btn-primary" data-act="ready">إرفاق الملف</button><button class="btn-sm btn-secondary" data-act="fail">تعذّر</button>' : ''}
+          </div></td>`;
+        const readyBtn = tr.querySelector('[data-act="ready"]');
+        if (readyBtn) readyBtn.onclick = async () => {
+          const url = await admAsk('إرفاق ملف البيانات', 'ألصق رابط الملف بعد رفعه. سيصل المستخدم إليه من داخل التطبيق.');
+          if (!url) return;
+          try { await window.API.adminCompleteExport(r.id, url); toast('تم'); load(); }
+          catch (e) { toast(e.message); }
+        };
+        const failBtn = tr.querySelector('[data-act="fail"]');
+        if (failBtn) failBtn.onclick = async () => {
+          try { await window.API.adminFailExport(r.id); toast('تم وضع علامة فشل'); load(); }
+          catch (e) { toast(e.message); }
+        };
+        t.tb.appendChild(tr);
+      });
+    }
+    load();
+    return page;
+  }
+
+  // ===== Storage and upload limits =====
+  function viewStorage() {
+    const page = el('div', { class: 'adm-page' });
+    page.appendChild(pageHeader('التخزين والحدود', 'الحد الأقصى للتخزين هو ما يمنع تجاوز الفاتورة — الرفع يتوقف عند بلوغه'));
+
+    const stats = el('div', { class: 'stat-grid' });
+    page.appendChild(stats);
+
+    const bar = el('div', { class: 'usage-bar' }, [el('i')]);
+    const barLabel = el('div', { class: 'muted', style: { fontSize: '12.5px', marginTop: '8px' } }, '');
+    page.appendChild(el('div', { class: 'adm-card' }, [
+      el('h3', {}, 'الاستهلاك'),
+      bar,
+      barLabel,
     ]));
+
+    const bucketWrap = el('div', { class: 'table-wrap' });
+    page.appendChild(bucketWrap);
+
+    // Editable limits
+    const fields = {};
+    const LIMITS = [
+      ['max_video_bytes', 'أقصى حجم للملف', 'MB', 1048576],
+      ['user_daily_uploads', 'حد الرفع اليومي للمستخدم', 'مقطع', 1],
+      ['user_daily_bytes', 'حد الحجم اليومي للمستخدم', 'MB', 1048576],
+      ['global_max_bytes', 'سقف التخزين الكلي', 'MB', 1048576],
+    ];
+    const form = el('div', { class: 'adm-form-grid' });
+    LIMITS.forEach(([k, label, unit, div]) => {
+      const inp = el('input', { class: 'adm-input', type: 'number', min: '1' });
+      fields[k] = { inp, div };
+      form.appendChild(el('div', {}, [
+        el('label', { class: 'adm-label' }, label + ' (' + unit + ')'),
+        inp,
+      ]));
+    });
+    const saveBtn = el('button', { class: 'btn-sm btn-primary' }, 'حفظ الحدود');
+    page.appendChild(el('div', { class: 'adm-card' }, [
+      el('h3', {}, 'حدود الرفع'),
+      el('p', { class: 'muted', style: { fontSize: '12.5px', lineHeight: '1.7', marginBottom: '14px' } },
+        'المشرفون معفون من هذه الحدود. سقف التخزين الكلي يجب أن يبقى أقل من حصة مزوّد التخزين.'),
+      form,
+      saveBtn,
+    ]));
+
+    saveBtn.onclick = async () => {
+      const patch = {};
+      for (const [k, , , div] of LIMITS) {
+        const v = Number(fields[k].inp.value);
+        if (!v || v <= 0) return toast('أدخل قيمة صحيحة');
+        patch[k] = Math.round(v * div);
+      }
+      saveBtn.disabled = true;
+      try { await window.API.updateAppLimits(patch); toast('تم حفظ الحدود'); load(); }
+      catch (e) { toast(e.message); }
+      saveBtn.disabled = false;
+    };
+
+    async function load() {
+      try {
+        const [ov, lim] = await Promise.all([
+          window.API.adminStorageOverview(),
+          window.API.fetchAppLimits(),
+        ]);
+        stats.innerHTML = '';
+        stats.appendChild(statCard({ label: 'المستهلك', value: fmtBytes(ov.total_bytes), icon: 'bookmark', tone: 'primary' }));
+        stats.appendChild(statCard({ label: 'السقف', value: fmtBytes(ov.limit_bytes), icon: 'lock', tone: 'info' }));
+        stats.appendChild(statCard({ label: 'النسبة', value: ov.pct_used + '%', icon: 'sparkle', tone: ov.pct_used > 80 ? 'danger' : 'success' }));
+        stats.appendChild(statCard({ label: 'عدد الملفات', value: (ov.buckets || []).reduce((a, b) => a + Number(b.files || 0), 0), icon: 'video', tone: 'warn' }));
+
+        const pct = Math.min(100, Number(ov.pct_used) || 0);
+        bar.querySelector('i').style.width = pct + '%';
+        bar.classList.toggle('warn', pct > 80);
+        barLabel.textContent = fmtBytes(ov.total_bytes) + ' من ' + fmtBytes(ov.limit_bytes);
+
+        bucketWrap.innerHTML = '';
+        const tb = el('table', { class: 'table' });
+        tb.innerHTML = '<thead><tr><th>المجلد</th><th>الملفات</th><th>الحجم</th></tr></thead>'
+          + '<tbody>' + (ov.buckets || []).map(b =>
+            '<tr><td><strong>' + esc(b.bucket) + '</strong></td><td>' + b.files + '</td><td>' + fmtBytes(b.bytes) + '</td></tr>'
+          ).join('') + '</tbody>';
+        bucketWrap.appendChild(tb);
+
+        if (lim) {
+          for (const [k, , , div] of LIMITS) {
+            fields[k].inp.value = Math.round(lim[k] / div);
+          }
+        }
+      } catch (e) {
+        stats.innerHTML = '';
+        stats.appendChild(el('div', { class: 'muted', style: { padding: '20px' } }, e.message));
+      }
+    }
+    load();
+    return page;
+  }
+
+  // ===== Analytics =====
+  // Was a set of hardcoded sample figures. Every number here now comes from
+  // the database, and the range selector actually changes the query.
+  function viewAnalytics() {
+    const page = el('div', { class: 'adm-page' });
+    let days = 30;
+    const rangeSel = el('select', { class: 'adm-input', style: { width: 'auto' } }, [
+      el('option', { value: '7' }, 'آخر 7 أيام'),
+      el('option', { value: '30', selected: true }, 'آخر 30 يوم'),
+      el('option', { value: '90' }, 'آخر 90 يوم'),
+    ]);
+    rangeSel.addEventListener('change', () => { days = Number(rangeSel.value); load(); });
+
+    const csvBtn = el('button', { class: 'btn btn-secondary' }, 'تصدير CSV');
+    page.appendChild(pageHeader('الإحصائيات', 'أرقام حقيقية من قاعدة البيانات', [csvBtn, rangeSel]));
+
+    const stats = el('div', { class: 'stat-grid' });
+    page.appendChild(stats);
+
+    const chartCard = el('div', { class: 'adm-card' });
+    page.appendChild(chartCard);
+
+    let series = [];
+
+    csvBtn.onclick = () => {
+      if (!series.length) return toast('لا توجد بيانات');
+      const csv = 'day,signups,videos,comments\n'
+        + series.map(r => [r.day, r.signups, r.videos, r.comments].join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'tenthtone-analytics-' + days + 'd.csv';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    };
+
+    async function load() {
+      chartCard.innerHTML = '<div class="muted" style="padding:26px">جاري التحميل...</div>';
+      try {
+        const [s, growth] = await Promise.all([
+          window.API.adminStats().catch(() => null),
+          window.API.adminGrowth(days),
+        ]);
+        series = growth || [];
+
+        const sum = (k) => series.reduce((a, r) => a + Number(r[k] || 0), 0);
+        stats.innerHTML = '';
+        stats.appendChild(statCard({ label: 'إجمالي الحسابات', value: fmt(s ? (s.users || 0) : 0), icon: 'user', tone: 'primary' }));
+        stats.appendChild(statCard({ label: 'حسابات جديدة', value: fmt(sum('signups')), icon: 'sparkle', tone: 'success' }));
+        stats.appendChild(statCard({ label: 'فيديوهات جديدة', value: fmt(sum('videos')), icon: 'video', tone: 'info' }));
+        stats.appendChild(statCard({ label: 'تعليقات جديدة', value: fmt(sum('comments')), icon: 'comment', tone: 'warn' }));
+
+        chartCard.innerHTML = '';
+        chartCard.appendChild(el('h3', {}, 'النمو اليومي'));
+        if (!series.length) {
+          chartCard.appendChild(el('div', { class: 'muted', style: { padding: '20px' } }, 'لا توجد بيانات في هذه الفترة'));
+          return;
+        }
+        const max = Math.max(1, ...series.map(r => Math.max(r.signups, r.videos, r.comments)));
+        const chart = el('div', { class: 'adm-chart' });
+        series.forEach(r => {
+          const col = el('div', { class: 'adm-chart-col', title: chartTip(r) }, [
+            el('i', { class: 'b1', style: { height: (r.signups / max * 100) + '%' } }),
+            el('i', { class: 'b2', style: { height: (r.videos / max * 100) + '%' } }),
+            el('i', { class: 'b3', style: { height: (r.comments / max * 100) + '%' } }),
+          ]);
+          chart.appendChild(col);
+        });
+        chartCard.appendChild(chart);
+        chartCard.appendChild(el('div', { class: 'adm-legend' }, [
+          el('span', {}, [el('i', { class: 'b1' }), document.createTextNode(' حسابات')]),
+          el('span', {}, [el('i', { class: 'b2' }), document.createTextNode(' فيديوهات')]),
+          el('span', {}, [el('i', { class: 'b3' }), document.createTextNode(' تعليقات')]),
+        ]));
+      } catch (e) {
+        chartCard.innerHTML = '<div class="muted" style="padding:26px">' + esc(e.message) + '</div>';
+      }
+    }
+    load();
+    return page;
+  }
+
+  // ===== Location =====
+  // Was four toggles that saved nothing. Shows who is actually sharing right
+  // now, which is the only thing an operator can act on.
+  function viewLocation() {
+    const page = el('div', { class: 'adm-page' });
+    page.appendChild(pageHeader('الموقع الجغرافي', 'الحسابات التي تشارك موقعها حاليًا — تنتهي المشاركة تلقائيًا بعد 8 ساعات'));
+
+    const t = queueTable(['الحساب', 'الظهور', 'آخر تحديث', 'الإحداثيات'], 4);
+    page.appendChild(t.wrap);
+
+    const VIS = { public: 'الجميع', friends: 'الأصدقاء', none: 'لا أحد' };
+
+    async function load() {
+      t.busy('جاري التحميل...');
+      let rows = [];
+      try { rows = await window.API.adminFetchLocations(); }
+      catch (e) { t.empty(e.message); return; }
+      t.tb.innerHTML = '';
+      if (!rows.length) { t.empty('لا أحد يشارك موقعه حاليًا'); return; }
+      rows.forEach(r => {
+        const stale = (Date.now() - new Date(r.updated_at).getTime()) > 8 * 3600 * 1000;
+        const tr = el('tr');
+        tr.innerHTML = `
+          <td>${userCell(r.profiles)}</td>
+          <td><span class="chip">${VIS[r.visibility] || r.visibility}</span></td>
+          <td><span class="muted">${new Date(r.updated_at).toLocaleString(admLocale())}${stale ? ' — منتهية' : ''}</span></td>
+          <td><code style="font-size:11px">${Number(r.lat).toFixed(3)}, ${Number(r.lng).toFixed(3)}</code></td>`;
+        t.tb.appendChild(tr);
+      });
+    }
+    load();
+    return page;
+  }
+
+  // ===== Broadcast a notification =====
+  // The API existed since the beginning and was never connected to the form.
+  function viewNotifications() {
+    const page = el('div', { class: 'adm-page' });
+    page.appendChild(pageHeader('إرسال إشعار', 'يصل الإشعار داخل التطبيق لجميع الحسابات'));
+
+    const title = el('input', { class: 'adm-input', maxlength: '60', placeholder: 'عنوان قصير' });
+    const body = el('textarea', { class: 'adm-input', rows: '4', maxlength: '200', placeholder: 'نص الإشعار' });
+    const count = el('div', { class: 'muted', style: { fontSize: '12px', marginTop: '6px' } }, '');
+    const sendBtn = el('button', { class: 'btn-sm btn-primary', disabled: true }, 'إرسال للجميع');
+
+    const preview = el('div', { class: 'adm-notif-preview' }, [
+      el('div', { class: 'adm-notif-icon', html: icons.bell }),
+      el('div', {}, [
+        el('strong', { class: 'pv-title' }, 'عنوان الإشعار'),
+        el('div', { class: 'muted pv-body' }, 'نص الإشعار سيظهر هنا'),
+      ]),
+    ]);
+
+    const refresh = () => {
+      preview.querySelector('.pv-title').textContent = title.value || 'عنوان الإشعار';
+      preview.querySelector('.pv-body').textContent = body.value || 'نص الإشعار سيظهر هنا';
+      sendBtn.disabled = !(title.value.trim() && body.value.trim());
+    };
+    title.addEventListener('input', refresh);
+    body.addEventListener('input', refresh);
+
+    sendBtn.onclick = async () => {
+      const ok = await admConfirm('إرسال إشعار',
+        'سيصل هذا الإشعار إلى كل حساب في التطبيق. لا يمكن التراجع.', 'إرسال', true);
+      if (!ok) return;
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'جارٍ الإرسال...';
+      try {
+        await window.API.adminBroadcastNotification({ title: title.value.trim(), body: body.value.trim() });
+        toast('تم الإرسال');
+        title.value = ''; body.value = ''; refresh();
+      } catch (e) { toast(e.message); }
+      sendBtn.textContent = 'إرسال للجميع';
+      sendBtn.disabled = false;
+    };
+
+    (async () => {
+      try {
+        const s = await window.API.adminStats();
+        count.textContent = 'سيصل إلى ' + fmt(s.users || 0) + ' حساب';
+      } catch (e) {}
+    })();
+
+    page.appendChild(el('div', { class: 'adm-card' }, [
+      el('h3', {}, 'إشعار جديد'),
+      el('label', { class: 'adm-label' }, 'العنوان'),
+      title,
+      el('label', { class: 'adm-label' }, 'النص'),
+      body,
+      count,
+      el('div', { style: { marginTop: '16px' } }, [sendBtn]),
+    ]));
+
+    page.appendChild(el('div', { class: 'adm-card' }, [
+      el('h3', {}, 'معاينة'),
+      preview,
+    ]));
+
+    return page;
+  }
+
+  // ===== Ads =====
+  // The four ad API functions have always existed; this form never called them.
+  function viewAds() {
+    const page = el('div', { class: 'adm-page' });
+    const newBtn = el('button', { class: 'btn-sm btn-primary' }, 'حملة جديدة');
+    page.appendChild(pageHeader('الإعلانات', 'حملات تظهر داخل الموجز', [newBtn]));
+
+    const t = queueTable(['العنوان', 'الرابط', 'الحالة', 'أُنشئت', ''], 5);
+    page.appendChild(t.wrap);
+
+    newBtn.onclick = () => openAd(null);
+
+    function openAd(row) {
+      const title = el('input', { class: 'adm-input', placeholder: 'عنوان الحملة' });
+      const image = el('input', { class: 'adm-input', placeholder: 'رابط الصورة' });
+      const link = el('input', { class: 'adm-input', placeholder: 'رابط الوجهة' });
+      if (row) { title.value = row.title || ''; image.value = row.image_url || ''; link.value = row.link_url || ''; }
+      const save = el('button', { class: 'btn-sm btn-primary' }, row ? 'حفظ' : 'إنشاء');
+      const cancel = el('button', { class: 'btn-sm btn-secondary', onclick: () => close() }, 'إلغاء');
+      const close = modalAdm(row ? 'تعديل الحملة' : 'حملة جديدة', [
+        el('label', { class: 'adm-label' }, 'العنوان'), title,
+        el('label', { class: 'adm-label' }, 'الصورة'), image,
+        el('label', { class: 'adm-label' }, 'الوجهة'), link,
+      ], [cancel, save]);
+      save.onclick = async () => {
+        if (!title.value.trim()) return toast('أدخل عنوانًا');
+        save.disabled = true;
+        const payload = { title: title.value.trim(), image_url: image.value.trim() || null, link_url: link.value.trim() || null };
+        try {
+          if (row) await window.API.adminUpdateAd(row.id, payload);
+          else await window.API.adminCreateAd({ ...payload, active: true });
+          toast('تم'); close(); load();
+        } catch (e) { toast(e.message); save.disabled = false; }
+      };
+    }
+
+    async function load() {
+      t.busy('جاري التحميل...');
+      let rows = [];
+      try { rows = await window.API.adminFetchAds(); }
+      catch (e) { t.empty(e.message); return; }
+      t.tb.innerHTML = '';
+      if (!rows.length) { t.empty('لا توجد حملات'); return; }
+      rows.forEach(r => {
+        const tr = el('tr');
+        tr.innerHTML = `
+          <td><strong>${esc(r.title || '—')}</strong></td>
+          <td>${r.link_url ? '<a href="' + esc(r.link_url) + '" target="_blank" rel="noopener">فتح</a>' : '<span class="muted">—</span>'}</td>
+          <td><span class="badge ${r.active ? 's-resolved' : ''}">${r.active ? 'نشطة' : 'متوقفة'}</span></td>
+          <td><span class="muted">${r.created_at ? new Date(r.created_at).toLocaleDateString(admLocale()) : '—'}</span></td>
+          <td><div class="row-actions">
+            <button class="btn-sm btn-secondary" data-act="edit">تعديل</button>
+            <button class="btn-sm btn-secondary" data-act="toggle">${r.active ? 'إيقاف' : 'تشغيل'}</button>
+            <button class="btn-sm btn-danger" data-act="del">حذف</button>
+          </div></td>`;
+        tr.querySelector('[data-act="edit"]').onclick = () => openAd(r);
+        tr.querySelector('[data-act="toggle"]').onclick = async () => {
+          try { await window.API.adminUpdateAd(r.id, { active: !r.active }); load(); }
+          catch (e) { toast(e.message); }
+        };
+        tr.querySelector('[data-act="del"]').onclick = async () => {
+          const ok = await admConfirm('حذف الحملة', 'سيُحذف الإعلان نهائيًا.', 'حذف', true);
+          if (!ok) return;
+          try { await window.API.adminDeleteAd(r.id); toast('تم الحذف'); load(); }
+          catch (e) { toast(e.message); }
+        };
+        t.tb.appendChild(tr);
+      });
+    }
+    load();
     return page;
   }
 
@@ -1279,13 +1623,43 @@
     '/ads': () => buildShell('ads', viewAds()),
     '/notifications': () => buildShell('notif', viewNotifications()),
     '/analytics': () => buildShell('analytics', viewAnalytics()),
-    '/wallet': () => buildShell('wallet', viewWallet()),
-    '/roles': () => buildShell('roles', viewRoles()),
-    '/employees': () => buildShell('employees', viewEmployees()),
+    '/tickets': () => buildShell('tickets', viewTickets()),
+    '/deletions': () => buildShell('deletions', viewDeletions()),
+    '/exports': () => buildShell('exports', viewExports()),
+    '/storage': () => buildShell('storage', viewStorage()),
     '/logs': () => buildShell('logs', viewLogs()),
     '/location': () => buildShell('location', viewLocation()),
-    '/settings': () => buildShell('settings', viewSettings()),
   };
+
+  // Fetched after each page render and painted straight onto the existing
+  // sidebar links, so nothing else on the page is disturbed.
+  async function loadQueueCounts() {
+    let q = null;
+    try { q = await window.API.adminQueueCounts(); }
+    catch (e) { return; }        // migration not applied yet - badges stay hidden
+    if (!q) return;
+    QUEUE = q;
+    NAV.forEach(g => g.items.forEach(it => {
+      if (!it.badge) return;
+      const link = document.querySelector('.adm-sidebar a[href="' + it.go + '"]');
+      if (!link) return;
+      const n = Number(q[it.badge] || 0);
+      let b = link.querySelector('.adm-nav-badge');
+      if (!n) { if (b) b.remove(); return; }
+      if (!b) { b = el('span', { class: 'adm-nav-badge' }); link.appendChild(b); }
+      b.textContent = n > 99 ? '99+' : String(n);
+    }));
+  }
+
+  let tableObserver = null;
+  function watchTables(root) {
+    if (tableObserver) tableObserver.disconnect();
+    if (!('MutationObserver' in window)) return;
+    tableObserver = new MutationObserver(() => labelTableCells(root));
+    root.querySelectorAll('table.table tbody').forEach(tb => {
+      tableObserver.observe(tb, { childList: true });
+    });
+  }
 
   let adminChecked = false;
   let isAdmin = false;
@@ -1321,6 +1695,13 @@
       // Translate the freshly-rendered admin view when English is active
       try { if (window.I18N) window.I18N.apply(root); } catch (e2) {}
       window.scrollTo(0, 0);
+      // Rows arrive asynchronously after the view paints, so column labels
+      // are stamped again whenever a table body changes.
+      labelTableCells(root);
+      watchTables(root);
+      // Badges arrive after the page paints. Only the sidebar counters are
+      // touched - re-rendering the page would refetch everything on it.
+      if (path !== '/login-admin') loadQueueCounts();
     } catch (e) {
       console.error(e);
       root.innerHTML = '<div style="padding:40px">خطأ: ' + e.message + '</div>';

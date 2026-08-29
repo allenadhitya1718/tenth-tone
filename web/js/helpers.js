@@ -12,8 +12,14 @@ window.H = (function () {
     }
     (Array.isArray(children) ? children : [children]).forEach(c => {
       if (c == null || c === false) return;
-      if (typeof c === 'string') e.appendChild(document.createTextNode(c));
-      else e.appendChild(c);
+      // Numbers are as ordinary a child as strings. Without this they fall
+      // through to appendChild and throw "parameter 1 is not of type 'Node'",
+      // which surfaces as a broken panel rather than as a type error.
+      if (typeof c === 'string' || typeof c === 'number') {
+        e.appendChild(document.createTextNode(String(c)));
+      } else {
+        e.appendChild(c);
+      }
     });
     return e;
   }
@@ -109,7 +115,19 @@ window.H = (function () {
     settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
     menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>',
     moreH: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="12" r="2"/></svg>',
+    shareBox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="m8 7 4-4 4 4"/><path d="M20 14v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5"/></svg>',
+    pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.8V4h6v6.8l2.4 2.6a1 1 0 0 1-.73 1.68H7.33a1 1 0 0 1-.73-1.68L9 10.8z"/></svg>',
+    mapPin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+    telegram: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.7.8l-4.7-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9L18.2 6c.4-.3-.1-.5-.6-.2L6.6 12.6l-4.7-1.5c-1-.3-1-1 .2-1.5l18.4-7.1c.9-.3 1.6.2 1.4 1.8z"/></svg>',
+    xTwitter: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 3h3.1l-6.8 7.8L22 21h-6.3l-4.9-6.4L5 21H1.9l7.3-8.3L2 3h6.5l4.4 5.9L17.5 3zm-1.1 16.2h1.7L7.7 4.7H5.9l10.5 14.5z"/></svg>',
     moreV: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
+    // Feed rail uses thin outline icons (the filled set above stays for
+    // everywhere else in the app).
+    feedHeart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+    feedComment: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>',
+    feedSend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg>',
+    feedBookmark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>',
+    feedMore: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 10h10"/><path d="M7 14h10"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
 
     // Media & Camera
@@ -142,9 +160,16 @@ window.H = (function () {
     globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>',
     flag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>',
     fire: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>',
+    // Was missing: referenced by the wallet transaction rows and the share
+    // sheet, where `icons.download` resolved to undefined and rendered the
+    // literal text "undefined".
+    download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>',
+    link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
 
     // Social network icons
-    snapchat: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c3.3 0 5.6 2.4 5.6 5.6 0 1.5-.1 2.6-.2 3.4.6.3 1.3.4 1.9.2.6-.2 1 .4.7.9-.5.7-1.7 1.2-2.5 1.4.3.9 1.4 2.4 3.6 3 .5.1.5.7 0 .9-1 .4-2.3.7-3 .8-.1.4-.2.9-.4 1.2-.2.3-.6.4-1 .3-.6-.1-1.2-.3-2-.3-.7 0-1.2.2-1.8.6-.8.5-1.7 1-2.9 1s-2.1-.5-2.9-1c-.6-.4-1.1-.6-1.8-.6-.8 0-1.4.2-2 .3-.4.1-.8 0-1-.3-.2-.3-.3-.8-.4-1.2-.7-.1-2-.4-3-.8-.5-.2-.5-.8 0-.9 2.2-.6 3.3-2.1 3.6-3-.8-.2-2-.7-2.5-1.4-.3-.5.1-1.1.7-.9.6.2 1.3.1 1.9-.2-.1-.8-.2-1.9-.2-3.4C6.4 4.4 8.7 2 12 2z"/></svg>',
+    snapchat: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4c-3.2 0-5.8 2.6-5.8 5.8 0 .9.05 1.75.05 2.4 0 .5-.35.75-.8.6-.4-.13-.8-.3-1.1-.42-.55-.2-1.05.35-.75.85.42.7 1.4 1.15 2.1 1.4.3.1.4.3.3.6-.45 1.3-1.7 2.5-3.25 3-.5.17-.5.8 0 .95.9.28 1.9.45 2.5.5.3.03.45.2.5.5.06.35.14.7.25.95.13.3.45.42.8.36.5-.08 1.1-.2 1.7-.2.85 0 1.45.28 2.05.7.7.5 1.45.95 2.45.95s1.75-.45 2.45-.95c.6-.42 1.2-.7 2.05-.7.6 0 1.2.12 1.7.2.35.06.67-.06.8-.36.11-.25.19-.6.25-.95.05-.3.2-.47.5-.5.6-.05 1.6-.22 2.5-.5.5-.15.5-.78 0-.95-1.55-.5-2.8-1.7-3.25-3-.1-.3 0-.5.3-.6.7-.25 1.68-.7 2.1-1.4.3-.5-.2-1.05-.75-.85-.3.12-.7.29-1.1.42-.45.15-.8-.1-.8-.6 0-.65.05-1.5.05-2.4 0-3.2-2.6-5.8-5.8-5.8z"/></svg>',
     facebook: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
     whatsapp: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.52 3.48A11.9 11.9 0 0 0 12.05 0C5.5 0 .18 5.32.18 11.87c0 2.09.55 4.13 1.6 5.93L0 24l6.34-1.66a11.86 11.86 0 0 0 5.7 1.45h.01c6.55 0 11.87-5.32 11.87-11.87 0-3.17-1.23-6.15-3.4-8.44zM12.05 21.8h-.01a9.86 9.86 0 0 1-5.03-1.38l-.36-.21-3.76.99 1-3.66-.23-.38a9.85 9.85 0 0 1-1.51-5.29c0-5.45 4.43-9.88 9.9-9.88 2.64 0 5.13 1.03 7 2.9a9.83 9.83 0 0 1 2.9 6.99c0 5.45-4.43 9.92-9.9 9.92zm5.43-7.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51l-.57-.01c-.2 0-.52.07-.79.37s-1.04 1.02-1.04 2.49 1.07 2.89 1.22 3.09c.15.2 2.11 3.22 5.11 4.51.71.31 1.27.49 1.7.63.71.23 1.36.2 1.87.12.57-.09 1.76-.72 2-1.41.25-.69.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35z"/></svg>',
   };
@@ -177,8 +202,10 @@ window.H = (function () {
       ]);
       nav.appendChild(btn);
     });
-    if (active === 'home') nav.classList.add('dark');
-    else nav.classList.remove('dark');
+    // The nav used to go black on the Home tab only, so it flipped colour as
+    // you moved between tabs. It now follows the app theme instead: light
+    // theme = white, dark theme = black, on every screen.
+    nav.classList.remove('dark');
     try { if (window.I18N) window.I18N.apply(nav); } catch (e) {}
   }
 
@@ -201,7 +228,33 @@ window.H = (function () {
     ]);
   }
 
+  // Deterministic avatar colours. Every user without a photo used to get the
+  // same purple disc, so a list of people read as a row of identical blobs.
+  // Each name maps to a fixed pair, so the same person is always the same
+  // colour - and it is derived from the ORIGINAL name, not the translated
+  // one, so switching language does not recolour everybody.
+  const AVATAR_COLORS = [
+    ['#6c2bd9', '#a855f7'], // brand purple
+    ['#4f46e5', '#818cf8'], // indigo
+    ['#0284c7', '#38bdf8'], // blue
+    ['#0d9488', '#2dd4bf'], // teal
+    ['#15803d', '#4ade80'], // green
+    ['#b45309', '#fbbf24'], // amber
+    ['#c2410c', '#fb923c'], // orange
+    ['#be123c', '#fb7185'], // rose
+    ['#a21caf', '#e879f9'], // fuchsia
+    ['#475569', '#94a3b8'], // slate
+  ];
+
+  function avatarColors(key) {
+    const k = String(key || '').trim().toLowerCase() || 'tenthtone';
+    let h = 5381;
+    for (let i = 0; i < k.length; i++) h = (((h << 5) + h + k.charCodeAt(i)) >>> 0);
+    return AVATAR_COLORS[h % AVATAR_COLORS.length];
+  }
+
   function avatar(src, alt = '', size = 44) {
+    const pair = avatarColors(alt);
     const w = el('div', {
       class: 'avatar',
       style: {
@@ -209,7 +262,7 @@ window.H = (function () {
         height: size + 'px',
         borderRadius: '50%',
         overflow: 'hidden',
-        background: 'linear-gradient(135deg, #6c2bd9 0%, #a855f7 100%)',
+        background: 'linear-gradient(135deg, ' + pair[0] + ' 0%, ' + pair[1] + ' 100%)',
         flexShrink: '0',
         display: 'inline-flex',
         alignItems: 'center',
@@ -218,7 +271,11 @@ window.H = (function () {
       }
     });
 
-    const fallbackInitial = (alt && alt.trim().charAt(0)) || 'T';
+    // Derive the initial from the DISPLAYED name, so a translated name
+    // ("Khaled") doesn't end up next to an initial from the original
+    // string ("خ").
+    const shownName = (window.I18N && alt) ? window.I18N.t(alt) : alt;
+    const fallbackInitial = (shownName && String(shownName).trim().charAt(0)) || 'T';
     const fallbackDiv = el('div', {
       textContent: fallbackInitial,
       style: {
@@ -252,5 +309,156 @@ window.H = (function () {
     return w;
   }
 
-  return { el, esc, safeUrl, fmt, go, back, toast, modal, icons, svg, bottomNav, hideNav, topBar, avatar };
+  // Shared empty state — shown wherever a screen has no real data yet.
+  // opts: { icon, title, sub, actionLabel, onAction, onDark, isError }
+  function emptyState(opts = {}) {
+    const cls = 'empty-state'
+      + (opts.onDark ? ' on-dark' : '')
+      + (opts.isError ? ' is-error' : '');
+    const children = [];
+    if (opts.icon !== false) {
+      children.push(el('div', { class: 'empty-icon', html: icons[opts.icon] || icons.inbox }));
+    }
+    if (opts.title) children.push(el('div', { class: 'empty-title' }, opts.title));
+    if (opts.sub) children.push(el('div', { class: 'empty-sub' }, opts.sub));
+    if (opts.actionLabel && opts.onAction) {
+      children.push(el('button', { class: 'btn btn-outline', onclick: opts.onAction }, opts.actionLabel));
+    }
+    return el('div', { class: cls }, children);
+  }
+
+  // In-app replacements for window.prompt / window.confirm.
+  // Native dialogs are unavailable in the app webview - calling prompt()
+  // throws, which killed the handler before it could show anything, so the
+  // button looked dead. These return promises instead.
+  function dialog({ title, message, confirmLabel, cancelLabel, danger, field }) {
+    return new Promise(resolve => {
+      const card = el('div', { class: 'dlg' });
+      let done = false;
+      const finish = (v) => { if (done) return; done = true; close(); resolve(v); };
+      const close = modal(card);
+      // Backdrop click resolves as a cancel rather than leaving a dangling promise.
+      const bd = document.querySelector('.backdrop');
+      if (bd) bd.onclick = () => finish(field ? null : false);
+
+      card.appendChild(el('h4', { class: 'dlg-title' }, title));
+      if (message) card.appendChild(el('p', { class: 'dlg-msg' }, message));
+
+      let input = null;
+      if (field) {
+        input = el('input', {
+          class: 'dlg-input',
+          type: field.type || 'text',
+          placeholder: field.placeholder || '',
+          autocomplete: field.type === 'password' ? 'new-password' : 'off',
+        });
+        card.appendChild(input);
+      }
+
+      const err = el('p', { class: 'dlg-err', style: { display: 'none' } });
+      card.appendChild(err);
+
+      const submit = () => {
+        if (!field) return finish(true);
+        const v = input.value.trim();
+        const bad = field.validate ? field.validate(v) : (v ? null : ' ');
+        if (bad) {
+          err.textContent = bad === ' ' ? '' : bad;
+          err.style.display = bad === ' ' ? 'none' : 'block';
+          input.classList.add('bad');
+          input.focus();
+          return;
+        }
+        finish(v);
+      };
+
+      const okBtn = el('button', { class: 'dlg-ok' + (danger ? ' danger' : ''), onclick: submit }, confirmLabel || 'تأكيد');
+      const noBtn = el('button', { class: 'dlg-cancel', onclick: () => finish(field ? null : false) }, cancelLabel || 'إلغاء');
+      card.appendChild(el('div', { class: 'dlg-actions' }, [noBtn, okBtn]));
+
+      if (input) {
+        input.addEventListener('input', () => { input.classList.remove('bad'); err.style.display = 'none'; });
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+        setTimeout(() => input.focus(), 40);
+      }
+      try { if (window.I18N) window.I18N.apply(card); } catch (e) {}
+    });
+  }
+
+  // Resolves to the typed string, or null if cancelled.
+  const ask = (opts) => dialog(Object.assign({ field: {} }, opts, {
+    field: Object.assign({}, opts.field, {
+      type: opts.type, placeholder: opts.placeholder, validate: opts.validate,
+    }),
+  }));
+
+  // Resolves to true / false.
+  const confirmDialog = (opts) => dialog(Object.assign({}, opts, { field: null }));
+
+  // Turns @handles and #hashtags in a piece of text into tappable spans.
+  // Returns an array of nodes rather than HTML, so the text is never parsed
+  // as markup - a caption is user input and must not be able to inject any.
+  function richText(text, opts = {}) {
+    const out = [];
+    const str = String(text == null ? '' : text);
+    if (!str) return out;
+
+    // Handles are ASCII-only, matching what signup allows, so Arabic text
+    // around them is left alone. The @ must not follow a word character, or
+    // the domain half of an email address reads as a mention.
+    const re = /(?:^|[^A-Za-z0-9_.])(@[A-Za-z0-9_](?:[A-Za-z0-9_.]{1,29})?)|(?:^|\s)(#[^\s#@]{1,60})/g;
+    let last = 0, m;
+    while ((m = re.exec(str)) !== null) {
+      const token = m[1] || m[2];
+      const at = m.index + m[0].indexOf(token);
+      if (at > last) out.push(document.createTextNode(str.slice(last, at)));
+      if (m[1]) {
+        // Trailing dots and punctuation belong to the sentence, not the handle.
+        const handle = token.slice(1).replace(/[.]+$/, '');
+        out.push(el('span', {
+          class: 'mention',
+          onclick: (e) => {
+            e.stopPropagation();
+            if (opts.onMention) opts.onMention(handle);
+            else go('/u/' + handle);
+          },
+        }, '@' + handle));
+        if (handle.length !== token.length - 1) {
+          out.push(document.createTextNode(token.slice(handle.length + 1)));
+        }
+      } else {
+        // Same for hashtags: "#dance!" is the tag "dance" and an exclamation.
+        const tag = token.slice(1).replace(/[!?.,:;،؟]+$/, '');
+        if (!tag) { out.push(document.createTextNode(token)); last = at + token.length; continue; }
+        out.push(el('span', {
+          class: 'hashtag',
+          onclick: (e) => {
+            e.stopPropagation();
+            if (opts.onHashtag) opts.onHashtag(tag);
+            else go('/tag/' + encodeURIComponent(tag));
+          },
+        }, '#' + tag));
+        if (tag.length !== token.length - 1) {
+          out.push(document.createTextNode(token.slice(tag.length + 1)));
+        }
+      }
+      last = at + token.length;
+    }
+    if (last < str.length) out.push(document.createTextNode(str.slice(last)));
+    return out;
+  }
+
+  // Convenience: an empty state for a failed load, with a Retry button.
+  function errorState(onRetry, sub) {
+    return emptyState({
+      icon: 'alert',
+      title: 'تعذر التحميل',
+      sub: sub || 'تحقق من اتصالك وحاول مرة أخرى',
+      actionLabel: onRetry ? 'إعادة المحاولة' : null,
+      onAction: onRetry,
+      isError: true,
+    });
+  }
+
+  return { el, esc, safeUrl, fmt, go, back, toast, modal, ask, confirmDialog, richText, icons, svg, bottomNav, hideNav, topBar, avatar, emptyState, errorState };
 })();

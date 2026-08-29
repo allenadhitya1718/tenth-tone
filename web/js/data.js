@@ -429,7 +429,7 @@ window.DB = (function () {
     thumbnail: LIVE_COVERS[i % LIVE_COVERS.length],
   }));
 
-  return {
+  const full = {
     users,
     me,
     videos,
@@ -445,5 +445,32 @@ window.DB = (function () {
     AVATARS,
     THUMBNAILS,
     VIDEO_BG
+  };
+
+  // ── Demo-mode gate ──
+  // Outside demo mode this module exports the SAME SHAPE but with nothing
+  // in it, so any screen that reads DB directly renders empty (and falls
+  // through to its empty state) instead of showing invented content.
+  // Gating here rather than at each call site means a screen can't leak
+  // sample data by forgetting to check the flag.
+  const demo = !(window.TT_CONFIG && window.TT_CONFIG.demoMode === false);
+  if (demo) return full;
+
+  return {
+    users: [],
+    me: { id: 'me', name: '', handle: '', avatar: '', bio: '', followers: 0, following: 0, likes: 0, verified: false },
+    videos: [],
+    myVideos: [],
+    comments: () => [],
+    chats: [],
+    notifications: [],
+    wallet: { balance: 0, coins: 0, transactions: [] },
+    gifts: [],
+    trending: [],
+    sounds: [],
+    lives: [],
+    AVATARS: [],
+    THUMBNAILS: [],
+    VIDEO_BG: [],
   };
 })();

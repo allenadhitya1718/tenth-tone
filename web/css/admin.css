@@ -27,7 +27,10 @@ html, body {
   min-height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: 'Cairo', system-ui, sans-serif;
+  /* Inter carries Latin and the digits, Tajawal picks up Arabic because
+     Inter has no Arabic coverage. One declaration, no language switch,
+     and both are already cached from the app. */
+  font-family: Inter, Tajawal, system-ui, -apple-system, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   user-select: none;
   -webkit-user-select: none;
@@ -70,8 +73,11 @@ input, textarea, select, [contenteditable="true"] {
 .adm-brand .sub { font-size: 11px; color: var(--muted); }
 .adm-section-title { color: var(--muted-2); font-size: 11px; font-weight: 700; padding: 14px 10px 6px; text-transform: uppercase; letter-spacing: 0.6px; }
 .adm-nav { display: flex; flex-direction: column; gap: 2px; }
+/* The links carry class="adm-nav" too, the same class as their container, so
+   the container's flex-direction:column also applied to each link and stacked
+   the icon above the label. Stated explicitly here so it cannot be inherited. */
 .adm-nav a {
-  display: flex; gap: 10px; align-items: center; padding: 10px 12px;
+  display: flex; flex-direction: row; gap: 10px; align-items: center; padding: 10px 12px;
   border-radius: 10px; color: var(--text); font-size: 14px; cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
   position: relative;
@@ -79,6 +85,10 @@ input, textarea, select, [contenteditable="true"] {
 .adm-nav a:hover { background: var(--bg); }
 .adm-nav a.active { background: var(--primary-soft); color: var(--primary); font-weight: 700; }
 .adm-nav a svg { width: 18px; height: 18px; flex-shrink: 0; }
+/* The back-to-app link sits directly in the sidebar rather than inside a
+   <nav>, so the rule above never reached it and its icon rendered at 196px. */
+.adm-sidebar > a.adm-nav { flex-direction: row; }
+.adm-sidebar > a.adm-nav svg { width: 18px; height: 18px; flex-shrink: 0; }
 
 /* === Main === */
 .adm-main { padding: 0; min-width: 0; }
@@ -302,3 +312,360 @@ input, textarea, select, [contenteditable="true"] {
   border-radius: 999px; cursor: pointer; transition: all 140ms ease; line-height: 1;
 }
 .lang-opt.active { background: var(--primary); color: #fff; }
+
+/* ── Queue badges in the sidebar ──
+   A count beside the sections that hold work, so an operator can see where
+   the backlog is without opening every page. */
+.adm-nav-badge {
+  margin-inline-start: auto;
+  min-width: 20px; padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--danger); color: #fff;
+  font-size: 11px; font-weight: 700; text-align: center; line-height: 1.5;
+}
+.adm-nav.active .adm-nav-badge { background: #fff; color: var(--primary); }
+
+/* ── Shared card and form chrome for the newer pages ── */
+.adm-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px; margin-bottom: 18px;
+}
+.adm-card h3 { margin: 0 0 14px; font-size: 15px; font-weight: 700; }
+.adm-label {
+  display: block; margin: 12px 0 6px;
+  font-size: 12.5px; font-weight: 600; color: var(--muted);
+}
+.adm-input {
+  width: 100%; box-sizing: border-box;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px;
+  font-size: 14px; font-family: inherit; color: var(--text);
+}
+.adm-input:focus { outline: none; border-color: var(--primary); }
+textarea.adm-input { resize: vertical; line-height: 1.6; }
+.adm-form-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px; margin-bottom: 16px;
+}
+.stat-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px; margin-bottom: 18px;
+}
+
+/* ── Table extras ── */
+.cell-user { display: flex; flex-direction: column; gap: 2px; }
+.cell-user .muted { font-size: 11.5px; }
+.cell-wrap { max-width: 340px; white-space: normal; line-height: 1.55; }
+.cell-reply {
+  background: var(--primary-soft); font-size: 13px; line-height: 1.6;
+  padding: 10px 14px !important;
+}
+.chip {
+  display: inline-block; padding: 3px 9px; border-radius: 999px;
+  background: var(--bg); border: 1px solid var(--border);
+  font-size: 11.5px; font-weight: 600;
+}
+.badge {
+  display: inline-block; padding: 3px 9px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700;
+  background: var(--bg); color: var(--muted);
+}
+.badge.s-open, .badge.s-pending { background: var(--danger-soft); color: var(--danger); }
+.badge.s-in_progress { background: var(--warn-soft); color: var(--warn); }
+.badge.s-resolved, .badge.s-ready { background: var(--success-soft); color: var(--success); }
+.badge.s-failed { background: var(--danger-soft); color: var(--danger); }
+
+/* ── Storage usage bar ── */
+.usage-bar {
+  height: 10px; border-radius: 999px; overflow: hidden;
+  background: var(--bg); border: 1px solid var(--border);
+}
+.usage-bar i {
+  display: block; height: 100%; width: 0;
+  background: var(--success);
+  transition: width 0.4s ease, background 0.3s ease;
+}
+.usage-bar.warn i { background: var(--danger); }
+
+/* ── Analytics chart ──
+   Three bars per day. Drawn from real rows, so an empty database shows an
+   empty chart rather than an invented trend. */
+.adm-chart {
+  display: flex; align-items: flex-end; gap: 3px;
+  height: 200px; padding: 10px 0;
+  overflow-x: auto;
+}
+.adm-chart-col {
+  flex: 1; min-width: 8px;
+  display: flex; align-items: flex-end; gap: 1px; height: 100%;
+}
+.adm-chart-col i {
+  flex: 1; border-radius: 2px 2px 0 0; min-height: 2px;
+  transition: height 0.35s ease;
+}
+.adm-chart-col i.b1 { background: var(--primary); }
+.adm-chart-col i.b2 { background: var(--info); }
+.adm-chart-col i.b3 { background: var(--warn); }
+.adm-legend { display: flex; gap: 18px; margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+.adm-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: middle; }
+.adm-legend i.b1 { background: var(--primary); }
+.adm-legend i.b2 { background: var(--info); }
+.adm-legend i.b3 { background: var(--warn); }
+
+/* ── Notification preview ── */
+.adm-notif-preview {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 14px; border-radius: 12px;
+  background: var(--bg); border: 1px solid var(--border);
+}
+.adm-notif-icon {
+  flex: none; width: 36px; height: 36px; padding: 8px;
+  border-radius: 10px; background: var(--primary); color: #fff;
+}
+.adm-notif-icon svg { width: 100%; height: 100%; }
+.adm-notif-preview .pv-body { font-size: 13px; margin-top: 3px; line-height: 1.55; }
+
+/* ── Top bar on narrow screens ──
+   The bar is a fixed 64px, but the user block (avatar + name + role) had no
+   width constraint, so at tablet widths the name wrapped onto three lines and
+   pushed to 96px — taller than the bar containing it. */
+.adm-topbar { flex-wrap: nowrap; overflow: hidden; }
+.adm-topbar .search { min-width: 0; }
+.adm-user { flex: none; max-width: 190px; }
+.adm-user .meta { min-width: 0; }
+.adm-user .name,
+.adm-user .role {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 120px; line-height: 1.3;
+}
+.adm-user .avatar { flex: none; }
+
+@media (max-width: 1000px) {
+  /* The name and role are the first things worth losing - the avatar still
+     identifies who is signed in. */
+  .adm-user .name, .adm-user .role, .adm-user .chev { display: none; }
+  .adm-user { max-width: none; padding: 4px; }
+  .adm-topbar { padding: 0 14px; gap: 8px; }
+}
+
+@media (max-width: 620px) {
+  /* Search takes the whole bar on a phone; there is nothing else to show. */
+  .adm-topbar .search { max-width: none; }
+  .adm-page-header h1 { font-size: 19px; }
+  .adm-page-header .sub { font-size: 12px; }
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .adm-card { padding: 16px; }
+}
+
+@media (max-width: 460px) {
+  .stat-grid { grid-template-columns: 1fr; }
+  .adm-page { padding: 12px; }
+}
+
+/* ── Tables on small screens ──
+   Admin tables are wide by nature. Rather than squashing columns until they
+   are unreadable, the table scrolls inside its own card and the page does
+   not scroll sideways. */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table { min-width: 640px; }
+.table th, .table td { white-space: nowrap; }
+.table td.cell-wrap { white-space: normal; }
+
+/* Row actions stack rather than overflow once space runs out. */
+.row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ── Sidebar overlay ──
+   Sliding the sidebar over the page without dimming what is behind it makes
+   it unclear the page is still there underneath. */
+.adm-scrim {
+  position: fixed; inset: 0; background: rgba(10, 10, 20, 0.45);
+  opacity: 0; pointer-events: none; transition: opacity 200ms ease; z-index: 98;
+}
+.adm-scrim.on { opacity: 1; pointer-events: auto; }
+
+/* -- Dashboard: alerts, quick commands, avatar fallback -- */
+.adm-alerts {
+  border: 1px solid var(--warn); border-inline-start-width: 4px;
+  background: var(--warn-soft); border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 18px;
+}
+.adm-alerts-h { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.adm-alerts-h .qi-icon { width: 18px; height: 18px; color: var(--warn); }
+.adm-alerts-h .qi-icon svg { width: 100%; height: 100%; }
+.adm-alert {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 0; font-size: 13.5px; color: var(--text);
+  border-top: 1px solid rgba(0,0,0,0.06); text-decoration: none;
+}
+.adm-alert:first-of-type { border-top: none; }
+.adm-alert:hover { color: var(--primary); }
+.adm-alert .chev { width: 16px; height: 16px; color: var(--muted); flex: none; }
+.adm-alert .chev svg { width: 100%; height: 100%; }
+[dir="ltr"] .adm-alert .chev svg { transform: scaleX(-1); }
+
+.adm-quick { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.adm-quick-item {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 16px 10px; border-radius: 12px; text-align: center;
+  background: var(--bg); border: 1px solid var(--border);
+  font-size: 12.5px; font-weight: 600; color: var(--text); text-decoration: none;
+  transition: transform 0.12s ease, border-color 0.18s ease;
+}
+.adm-quick-item:hover { border-color: var(--primary); color: var(--primary); }
+.adm-quick-item:active { transform: scale(0.98); }
+.qi-icon { width: 22px; height: 22px; color: var(--primary); }
+.qi-icon svg { width: 100%; height: 100%; }
+
+/* Letter disc wherever a real photo is missing, so no broken images appear. */
+.avatar-fallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--primary), #a855f7);
+  color: #fff; font-weight: 700; font-size: 13px;
+}
+.top-item .av, .adm-user .avatar { overflow: hidden; }
+
+/* =========================================================================
+   Mobile layout
+   Below 760px this stops being a desktop admin squeezed into a phone:
+   navigation moves to a bottom bar, table rows become cards, and the top
+   bar drops to the essentials. Tablet and desktop are untouched.
+   ========================================================================= */
+
+.adm-menu-btn { display: none; }
+.adm-bottom { display: none; }
+
+@media (max-width: 760px) {
+  /* --- Navigation --- */
+  .adm-menu-btn { display: inline-flex; align-items: center; justify-content: center; }
+
+  .adm-sidebar {
+    width: min(300px, 86vw);
+    right: calc(-1 * min(300px, 86vw));
+    padding-bottom: 90px;
+  }
+
+  /* Four daily destinations plus the drawer. Sits above the home indicator
+     on iOS via the safe-area inset. */
+  .adm-bottom {
+    position: fixed; inset-inline: 0; bottom: 0; z-index: 97;
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .adm-bottom-item {
+    background: none; border: 0; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 9px 2px 7px; color: var(--muted);
+    font-size: 10.5px; font-weight: 600; text-decoration: none;
+    min-height: 56px;
+  }
+  .adm-bottom-item .ico { position: relative; display: block; line-height: 0; }
+  .adm-bottom-item svg { width: 21px; height: 21px; }
+  .adm-bottom-item.active { color: var(--primary); }
+  .adm-bottom-item .dot {
+    position: absolute; top: -5px; inset-inline-end: -8px;
+    background: var(--danger); color: #fff; font-style: normal;
+    min-width: 15px; height: 15px; border-radius: 8px;
+    font-size: 9.5px; font-weight: 700; line-height: 15px;
+    padding: 0 4px; text-align: center;
+  }
+
+  /* The bar would otherwise cover the last row of every page. */
+  .adm-page { padding: 14px 14px 84px; }
+
+  /* --- Top bar --- */
+  .adm-topbar { padding: 0 10px; gap: 4px; }
+  /* Quick search duplicates the search box each page already has. */
+  .adm-topbar .search { display: none; }
+  .adm-topbar .spacer { flex: 1; }
+
+  /* --- Tables become cards ---
+     A 640px-wide table on a 390px screen means sideways scrolling to read a
+     single row. Each row becomes a card and each cell carries its heading. */
+  .table-wrap { overflow-x: visible; }
+  .table { min-width: 0; width: 100%; border-collapse: separate; border-spacing: 0; }
+  .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; }
+  .table tr {
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--surface); padding: 12px 14px; margin-bottom: 10px;
+  }
+  .table td {
+    white-space: normal; border: 0; padding: 7px 0;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+    font-size: 13.5px;
+  }
+  .table td + td { border-top: 1px dashed var(--border); }
+  .table td::before {
+    content: attr(data-label);
+    flex: 0 0 38%; color: var(--muted); font-size: 12px; font-weight: 600;
+  }
+  /* An actions cell has no heading worth printing and needs the full width. */
+  .table td:empty { display: none; }
+  .table td:last-child:not([data-label]) { padding-top: 12px; }
+  .table td:last-child:not([data-label])::before { display: none; }
+  .row-actions { width: 100%; }
+
+  /* --- Density --- */
+  .stat-grid, .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .adm-card { padding: 15px; }
+  .table-toolbar { flex-wrap: wrap; gap: 8px; }
+  .tabs { overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { white-space: nowrap; }
+}
+
+/* Two stat cards still read fine at 360px, so a single column is reserved
+   for genuinely small screens. */
+@media (max-width: 350px) {
+  .stat-grid, .stats-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  .table td::before { flex-basis: 42%; }
+}
+
+/* =========================================================================
+   Scrollbars
+   The platform default is a 15px bar with stepper arrows that reads as part
+   of the operating system rather than part of the panel. This keeps the same
+   behaviour in a thinner, quieter form. Firefox takes the two standard
+   properties; Chrome and Edge need the pseudo-elements.
+   ========================================================================= */
+* { scrollbar-width: thin; scrollbar-color: #c7cbd6 transparent; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #c7cbd6;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a6abbb;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-corner { background: transparent; }
+
+
+/* =========================================================================
+   Numerals
+   An admin panel is mostly numbers in columns. Proportional digits make them
+   ragged; tabular figures line the columns up and stop counters jittering as
+   they update.
+   ========================================================================= */
+.stat-card .value,
+.stat-grid .value,
+.table td,
+.top-item .num,
+.adm-nav-badge,
+.adm-bottom-item .dot,
+.adm-chart-col,
+.adm-legend,
+input[type="number"] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}

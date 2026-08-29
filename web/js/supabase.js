@@ -65,8 +65,15 @@
     async verifyOtp({ email, phone, token, type = 'email' }) {
       const c = await ready; if (!c) throw new Error('SDK not loaded');
       const params = { token, type };
-      if (email) { params.email = email; params.type = type === 'sms' ? 'sms' : 'email'; }
-      else if (phone) { params.phone = phone; params.type = 'sms'; }
+      if (email) {
+        params.email = email;
+        // Only fall back to a guess when the caller did not name a type.
+        // 'recovery' and 'signup' are both email types and must survive.
+        if (!type || type === 'email' || type === 'sms') params.type = 'email';
+      } else if (phone) {
+        params.phone = phone;
+        params.type = 'sms';
+      }
       const { data, error } = await c.auth.verifyOtp(params);
       if (error) throw error;
       return data;
@@ -79,9 +86,55 @@
       if (error) throw error;
     },
 
+    // Confirms the signed-in user really knows their current password, the way
+    // every real app re-asks before a sensitive change.
+    //
+    // This runs on a THROWAWAY client with persistSession off, so neither a
+    // wrong guess nor a correct one can touch the live session. Signing in on
+    // the shared client would rewrite the stored session as a side effect.
+    async verifyPassword(currentPassword) {
+      const c = await ready; if (!c) throw new Error('SDK not loaded');
+      const { data: u } = await c.auth.getUser();
+      const email = u && u.user && u.user.email;
+      if (!email) throw new Error('no-email');
+      const probe = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      });
+      const { error } = await probe.auth.signInWithPassword({ email, password: currentPassword });
+      try { await probe.auth.signOut({ scope: 'local' }); } catch (e) {}
+      if (!error) return true;
+      // Anything other than a plain rejection is worth surfacing as itself
+      // (rate limiting, network) rather than reporting a wrong password.
+      if (/invalid login credentials/i.test(error.message || '')) return false;
+      throw error;
+    },
+
+    // Ends every other session but this one, after a password change.
+    async signOutOtherDevices() {
+      const c = await ready; if (!c) return;
+      const { error } = await c.auth.signOut({ scope: 'others' });
+      if (error) throw error;
+    },
+
+    async changeEmail(newEmail) {
+      const c = await ready; if (!c) throw new Error('SDK not loaded');
+      const redirectTo = location.origin + '/#/settings';
+      const { error } = await c.auth.updateUser({ email: newEmail }, { emailRedirectTo: redirectTo });
+      if (error) throw error;
+    },
+
     async updatePassword(newPassword) {
       const c = await ready; if (!c) throw new Error('SDK not loaded');
       const { data, error } = await c.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      return data;
+    },
+
+    // Password recovery by code rather than by link. The emailed template must
+    // include {{ .Token }} for a code to be there at all.
+    async verifyRecoveryCode(email, token) {
+      const c = await ready; if (!c) throw new Error('SDK not loaded');
+      const { data, error } = await c.auth.verifyOtp({ email, token, type: 'recovery' });
       if (error) throw error;
       return data;
     },

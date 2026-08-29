@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "REPLACE_WITH_TEAMID.com.tenthtone.tenthTone",
+        "paths": [
+          "/v/*",
+          "/u/*",
+          "/live/*"
+        ]
+      }
+    ]
+  }
+}
