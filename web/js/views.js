@@ -17,6 +17,9 @@
   // the app works whatever Supabase is set to.
   const OTP_LEN = (window.TT_CONFIG && window.TT_CONFIG.otpMaxLength) || 8;
   const OTP_MIN = (window.TT_CONFIG && window.TT_CONFIG.otpMinLength) || 6;
+  // Supabase's own resend window. Anything shorter just walks the user
+  // into "you can only request this after N seconds".
+  const RESEND_COOLDOWN = 60;
   const otpReady = (inputs) => inputs.map(x => x.value).join('').length >= OTP_MIN;
 
   // True for a real database row id (a UUID), false for a demo/placeholder
@@ -344,8 +347,18 @@
   };
 
   // Map Supabase error messages to Arabic
+  // Supabase refuses a repeat send with "For security purposes, you can only
+  // request this after 57 seconds". Pull the number out so the UI can run a
+  // real countdown, instead of printing a figure that never moves.
+  function retryAfterSeconds(e) {
+    const hit = String((e && e.message) || '').match(/after (\d+) seconds?/i);
+    return hit ? parseInt(hit[1], 10) : 0;
+  }
+
   function mapAuthError(e) {
     const m = (e && e.message) || '';
+    const wait = retryAfterSeconds(e);
+    if (wait) return 'انتظر ' + wait + ' ثانية قبل طلب رمز جديد';
     if (/Invalid login credentials/i.test(m)) return 'بيانات الدخول غير صحيحة';
     if (/Email not confirmed/i.test(m)) return 'البريد لم يُفعَّل بعد — تحقق من بريدك';
     if (/User already registered/i.test(m)) return 'البريد مسجَّل مسبقًا';
@@ -355,7 +368,6 @@
     return m || 'حدث خطأ، حاول مجددًا';
   }
 
-  // ===== Register =====
   // ===== Register =====
   // A three-step wizard rather than one wall of fields. The order is
   // deliberate: the birthday comes first because someone under 13 should
@@ -555,16 +567,49 @@
     const otpError = el('div', { class: 'error-box', hidden: true, style: { marginTop: '12px' } });
     wrap.appendChild(otpError);
     const pending = JSON.parse(sessionStorage.getItem('tt-pending-otp') || '{}');
+    // Supabase will not send again for 60 seconds, so the link counts itself
+    // down rather than letting someone press it into an error.
+    const resendLink = el('a', { class: 'auth-link' }, 'إعادة الإرسال');
     wrap.appendChild(el('div', { class: 'otp-resend' }, [
       document.createTextNode('لم يصلك الرمز؟ '),
-      el('a', { class: 'auth-link', onclick: async () => {
-        try {
-          if (pending.email) await window.SB.signInWithOtp({ email: pending.email });
-          else if (pending.phone) await window.SB.signInWithOtp({ phone: pending.phone });
-          toast('تم إرسال الرمز مرة أخرى');
-        } catch (e) { otpError.textContent = mapAuthError(e); otpError.hidden = false; }
-      } }, 'إعادة الإرسال'),
+      resendLink,
     ]));
+
+    let ticking = 0, resendTimer = null;
+    function startCooldown(sec) {
+      ticking = sec;
+      resendLink.classList.add('disabled');
+      clearInterval(resendTimer);
+      const tick = () => {
+        if (ticking <= 0) {
+          clearInterval(resendTimer);
+          resendLink.classList.remove('disabled');
+          resendLink.textContent = 'إعادة الإرسال';
+          try { if (window.I18N) window.I18N.apply(resendLink); } catch (e) {}
+          return;
+        }
+        resendLink.textContent = 'إعادة الإرسال (' + ticking + ')';
+        ticking--;
+      };
+      tick();
+      resendTimer = setInterval(tick, 1000);
+    }
+
+    resendLink.onclick = async () => {
+      if (resendLink.classList.contains('disabled')) return;
+      try {
+        await window.SB.resendSignup(pending.email);
+        toast('تم إرسال الرمز مرة أخرى');
+        startCooldown(RESEND_COOLDOWN);
+      } catch (e) {
+        otpError.textContent = mapAuthError(e);
+        otpError.hidden = false;
+        // If the server named a wait, honour that instead of guessing.
+        startCooldown(retryAfterSeconds(e) || RESEND_COOLDOWN);
+      }
+    };
+    // Signup has just sent one, so the clock is already running server side.
+    startCooldown(RESEND_COOLDOWN);
     const verifyBtn = el('button', { class: 'btn btn-pill', disabled: true, style: { marginTop: '24px' }, onclick: async () => {
       const code = inputs.map(x => x.value).join('');
       if (code.length < OTP_MIN) return;
@@ -5220,10 +5265,10 @@ function autoPlay(video) {
       try {
         await window.SB.resetPassword(email);
         toast('تم إرسال الرمز مرة أخرى');
-        startCooldown(45);
+        startCooldown(RESEND_COOLDOWN);
       } catch (e) { codeErr.textContent = mapAuthError(e); codeErr.hidden = false; }
     };
-    startCooldown(45);
+    startCooldown(RESEND_COOLDOWN);
 
     const verifyBtn = el('button', { class: 'btn btn-pill', disabled: true, style: { marginTop: '22px' } }, 'تحقق');
     step1.appendChild(verifyBtn);

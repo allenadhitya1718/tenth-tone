@@ -1088,6 +1088,11 @@ body.dark .see-more-link { color: var(--primary-2); }
    #991b1b), which glared on the dark theme. Now a tinted panel that takes
    its colour from the theme, with an icon so it reads as a message rather
    than a coloured rectangle. */
+/* A class selector beats the browser's own [hidden] rule, so display:flex
+   below would keep the box on screen even when hidden is set. Every caller
+   toggles .hidden, so state this explicitly or stale errors follow the user
+   from one step of a wizard to the next. */
+.error-box[hidden] { display: none; }
 .error-box {
   display: flex; align-items: flex-start; gap: 9px;
   padding: 11px 13px; margin-bottom: 12px;

@@ -54,10 +54,19 @@
       return data;
     },
 
-    async signInWithOtp({ email, phone }) {
+    // Resend the signup confirmation code.
+    //
+    // This used to call signInWithOtp, which was the wrong flow entirely: that
+    // starts a passwordless login and so makes Supabase send the Magic Link
+    // template, not Confirm signup. The result was an email headed "Magic Link"
+    // carrying a link instead of the six digit code the screen asks for.
+    //
+    // resend re-sends the original signup confirmation, so it uses the Confirm
+    // signup template and the code matches the type 'signup' that the OTP
+    // screen verifies against.
+    async resendSignup(email) {
       const c = await ready; if (!c) throw new Error('SDK not loaded');
-      const params = email ? { email } : { phone };
-      const { data, error } = await c.auth.signInWithOtp(params);
+      const { data, error } = await c.auth.resend({ type: 'signup', email });
       if (error) throw error;
       return data;
     },
