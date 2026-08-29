@@ -2,7 +2,7 @@
 (function () {
   const app = document.getElementById('app');
 
-  const PUBLIC_PATHS = ['/', '/onboarding', '/welcome', '/login', '/register', '/otp', '/forgot', '/reset', '/reset-otp', '/home', '/legal'];
+  const PUBLIC_PATHS = ['/', '/onboarding', '/welcome', '/login', '/register', '/otp', '/forgot', '/reset-otp', '/home', '/legal'];
   // Prefixes that are also public — deep-linked videos must open for
   // signed-out visitors, otherwise a shared link is a dead end.
   const PUBLIC_PREFIXES = ['/v/'];
@@ -21,7 +21,6 @@
     { p: /^\/register$/, v: () => Views.register() },
     { p: /^\/otp$/, v: () => Views.otp() },
     { p: /^\/forgot$/, v: () => Views.forgot() },
-    { p: /^\/reset$/, v: () => Views.reset() },
     { p: /^\/home$/, v: q => Views.home({ q }) },
     // Deep-linked single video: opens the feed with that video pinned first
     { p: /^\/v\/(.+)$/, v: (q, m) => Views.home({ q, videoId: m[1] }) },

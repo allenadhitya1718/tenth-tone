@@ -81,8 +81,10 @@
 
     async resetPassword(email) {
       const c = await ready; if (!c) throw new Error('SDK not loaded');
-      const redirectTo = `${location.origin}/#/reset`;
-      const { error } = await c.auth.resetPasswordForEmail(email, { redirectTo });
+      // No redirect: recovery is by six digit code, verified with
+      // verifyRecoveryCode. A redirect would only make sense for a link,
+      // and the app has no screen that consumes one.
+      const { error } = await c.auth.resetPasswordForEmail(email);
       if (error) throw error;
     },
 
@@ -118,9 +120,18 @@
 
     async changeEmail(newEmail) {
       const c = await ready; if (!c) throw new Error('SDK not loaded');
-      const redirectTo = location.origin + '/#/settings';
-      const { error } = await c.auth.updateUser({ email: newEmail }, { emailRedirectTo: redirectTo });
+      // Code based, like the rest. Supabase mails the new address a token
+      // which verifyEmailChange below exchanges.
+      const { error } = await c.auth.updateUser({ email: newEmail });
       if (error) throw error;
+    },
+
+    // The code sent to the new address after changeEmail.
+    async verifyEmailChange(newEmail, token) {
+      const c = await ready; if (!c) throw new Error('SDK not loaded');
+      const { data, error } = await c.auth.verifyOtp({ email: newEmail, token, type: 'email_change' });
+      if (error) throw error;
+      return data;
     },
 
     async updatePassword(newPassword) {

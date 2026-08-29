@@ -428,42 +428,26 @@
     }
 
     // ── Step 2: how we reach you ──
+    // Email only. The phone option is gone until an SMS provider is set up:
+    // Supabase cannot deliver a code without one, so choosing phone led to a
+    // verification screen that could never be satisfied.
     const emailIn = el('input', { class: 'input', type: 'email', placeholder: 'البريد الإلكتروني', autocomplete: 'email' });
-    const phoneIn = el('input', { class: 'input', type: 'tel', placeholder: 'رقم الهاتف', autocomplete: 'tel' });
 
     function step2() {
       body.innerHTML = '';
-      body.appendChild(el('h2', { class: 'auth-title' }, 'كيف نتواصل معك؟'));
-      body.appendChild(el('p', { class: 'auth-subtitle' }, 'سنرسل رمز تحقق للتأكد أنه أنت'));
+      body.appendChild(el('h2', { class: 'auth-title' }, 'ما بريدك الإلكتروني؟'));
+      body.appendChild(el('p', { class: 'auth-subtitle' }, 'سنرسل رمز تحقق من ست خانات للتأكد أنه أنت'));
       body.appendChild(error);
 
-      const tabs = el('div', { class: 'reg-tabs' });
       const paneWrap = el('div', { class: 'input-wrap' });
-      [['email', 'البريد الإلكتروني'], ['phone', 'رقم الهاتف']].forEach(([k, label]) => {
-        const b = el('button', { class: 'reg-tab' + (data.method === k ? ' on' : ''), onclick: () => {
-          data.method = k;
-          [...tabs.children].forEach(t => t.classList.toggle('on', t.dataset.k === k));
-          paneWrap.innerHTML = '';
-          paneWrap.appendChild(k === 'email' ? emailIn : phoneIn);
-          error.hidden = true;
-        } }, label);
-        b.dataset.k = k;
-        tabs.appendChild(b);
-      });
-      body.appendChild(tabs);
-      paneWrap.appendChild(data.method === 'email' ? emailIn : phoneIn);
+      paneWrap.appendChild(emailIn);
       body.appendChild(paneWrap);
 
       const next = el('button', { class: 'btn btn-pill', onclick: () => {
-        if (data.method === 'email') {
-          if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailIn.value.trim())) return fail('بريد إلكتروني غير صالح');
-          data.email = emailIn.value.trim();
-          data.phone = '';
-        } else {
-          if (!/^[\d\s+()-]{8,}$/.test(phoneIn.value)) return fail('رقم هاتف غير صالح');
-          data.phone = phoneIn.value.replace(/\s/g, '');
-          data.email = '';
-        }
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailIn.value.trim())) return fail('بريد إلكتروني غير صالح');
+        data.email = emailIn.value.trim();
+        data.phone = '';
+        data.method = 'email';
         show(2);
       } }, 'التالي');
       body.appendChild(next);
@@ -658,64 +642,6 @@
       }
     } }, 'إرسال الرمز');
     wrap.appendChild(fbtn);
-    root.appendChild(wrap);
-    return root;
-  };
-
-  // ===== Reset password =====
-  V.reset = () => {
-    hideNav();
-    const root = el('section', { class: 'auth-screen' });
-    root.appendChild(topBar({ title: 'كلمة مرور جديدة' }));
-    const wrap = el('div', { style: { padding: '14px 4px' } });
-    wrap.appendChild(el('h2', { class: 'auth-title' }, 'أدخل كلمة مرور جديدة'));
-    wrap.appendChild(el('p', { class: 'auth-subtitle' }, '8 أحرف على الأقل، تشمل رقمًا ورمزًا.'));
-    function makePassField(placeholder) {
-      const inp = el('input', { class: 'input input-with-toggle', type: 'password', placeholder });
-      let show = false;
-      const btn = el('button', { class: 'password-toggle-btn', type: 'button', html: icons.eyeOff, onclick: () => {
-        show = !show;
-        inp.type = show ? 'text' : 'password';
-        btn.innerHTML = show ? icons.eye : icons.eyeOff;
-      } });
-      const container = el('div', { style: { position: 'relative' } }, [inp, btn]);
-      return { inp, container };
-    }
-
-    const p1Obj = makePassField('كلمة المرور الجديدة');
-    const p2Obj = makePassField('تأكيد كلمة المرور');
-    const p1 = p1Obj.inp;
-    const p2 = p2Obj.inp;
-    const err = el('div', { class: 'error-box', hidden: true });
-    wrap.appendChild(err);
-    wrap.appendChild(el('div', { class: 'input-wrap' }, [p1Obj.container]));
-    wrap.appendChild(el('div', { class: 'input-wrap' }, [p2Obj.container]));
-    const resetBtn = el('button', { class: 'btn btn-pill', onclick: async () => {
-      const rp = passwordChecks(p1.value);
-      if (!rp.every(c => c.ok)) {
-        err.textContent = 'كلمة المرور ضعيفة: ' + rp.filter(c => !c.ok).map(c => c.label).join('، ');
-        err.hidden = false; return;
-      }
-      if (isCommonPassword(p1.value)) {
-        err.textContent = 'هذه كلمة مرور شائعة جدًا، اختر غيرها';
-        err.hidden = false; return;
-      }
-      if (p1.value !== p2.value) { err.textContent = 'كلمتا المرور غير متطابقتين'; err.hidden = false; return; }
-      err.hidden = true;
-      resetBtn.disabled = true;
-      resetBtn.textContent = 'جاري الحفظ...';
-      try {
-        await window.SB.updatePassword(p1.value);
-        toast('تم تحديث كلمة المرور');
-        go('/home');
-      } catch (e) {
-        err.textContent = mapAuthError(e);
-        err.hidden = false;
-        resetBtn.disabled = false;
-        resetBtn.textContent = 'حفظ كلمة المرور';
-      }
-    } }, 'حفظ كلمة المرور');
-    wrap.appendChild(resetBtn);
     root.appendChild(wrap);
     return root;
   };
