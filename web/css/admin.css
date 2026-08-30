@@ -534,10 +534,19 @@ textarea.adm-input { resize: vertical; line-height: 1.6; }
 
 .adm-menu-btn { display: none; }
 .adm-bottom { display: none; }
+/* The brand lives in the sidebar. Below 760px the sidebar slides away,
+   leaving the top bar with no indication of what this is — so the mark
+   appears there instead, and only there. */
+.adm-topbar-brand { display: none; }
 
 @media (max-width: 760px) {
   /* --- Navigation --- */
   .adm-menu-btn { display: inline-flex; align-items: center; justify-content: center; }
+  .adm-topbar-brand {
+    display: inline-flex; width: 34px; height: 34px; flex-shrink: 0;
+    border-radius: 9px; overflow: hidden; margin-inline-start: 2px;
+  }
+  .adm-topbar-brand img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
   .adm-sidebar {
     width: min(300px, 86vw);

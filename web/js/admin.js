@@ -156,6 +156,14 @@
       onclick: toggleSidebar, id: 'sidebar-toggle',
       title: 'القائمة',
     }));
+    // The brand only lives in the sidebar, which is hidden on a phone — so
+    // the top bar was blank apart from a menu button and a language toggle,
+    // with nothing saying which product this even is. Shown only at the
+    // widths where the sidebar is away, so it is not duplicated on desktop.
+    top.appendChild(el('a', {
+      href: '#/', class: 'adm-topbar-brand', title: 'FLYP',
+      html: icons.logoMark,
+    }));
     top.appendChild(el('div', { class: 'search' }, [el('input', { placeholder: 'بحث سريع...' })]));
     top.appendChild(el('span', { class: 'spacer' }));
     top.appendChild(admLangSwitch());
