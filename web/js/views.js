@@ -5415,7 +5415,7 @@ function autoPlay(video) {
           el('img', { src: l.thumbnail || l.bg, style: { width: '100%', height: '100%', objectFit: 'cover' }, loading: 'lazy' }),
           // Top live badge & viewer count
           el('div', { style: { position: 'absolute', top: '8px', insetInlineStart: '8px', display: 'flex', gap: '6px', alignItems: 'center', zIndex: 2 } }, [
-            el('span', { style: { background: 'linear-gradient(135deg, #ef4444, #ff0050)', color: '#fff', padding: '3px 8px', borderRadius: '999px', fontSize: '10.5px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 8px rgba(239,68,68,0.5)' } }, [
+            el('span', { style: { background: 'linear-gradient(135deg, #ef4444, #e8244c)', color: '#fff', padding: '3px 8px', borderRadius: '999px', fontSize: '10.5px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 2px 8px rgba(239,68,68,0.5)' } }, [
               el('span', { style: { width: '6px', height: '6px', borderRadius: '50%', background: '#fff', display: 'inline-block' } }),
               document.createTextNode('مباشر')
             ]),
@@ -5936,15 +5936,15 @@ function autoPlay(video) {
         avatarChild.src = url;
         Object.assign(avatarChild.style, { width: '100%', height: '100%', objectFit: 'cover' });
       } else {
-        avatarChild = el('div', { style: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#6c2bd9', color: '#fff', fontWeight: '700', fontSize: '22px' } }, initial);
+        avatarChild = el('div', { style: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1e56d6', color: '#fff', fontWeight: '700', fontSize: '22px' } }, initial);
       }
 
       return el('div', { style: { minWidth: '200px', textAlign: 'center', fontFamily: 'Cairo, sans-serif' }, dir: 'rtl' }, [
-        el('div', { style: { width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto 8px', border: '3px solid #6c2bd9' } }, [avatarChild]),
+        el('div', { style: { width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto 8px', border: '3px solid #1e56d6' } }, [avatarChild]),
         el('div', { style: { fontWeight: '700', fontSize: '14px' } }, profile.name || ''),
         el('div', { style: { color: '#888', fontSize: '11.5px', marginBottom: '8px' } }, ago(l.updated_at)),
         el('div', { style: { display: 'flex', gap: '6px', justifyContent: 'center' } }, [
-          el('a', { href: safeId ? '#/chat-new/dm?to=' + safeId : '#', style: { flex: '1', background: '#6c2bd9', color: '#fff', padding: '6px 8px', borderRadius: '6px', textDecoration: 'none', fontSize: '12px' } }, '💬 رسالة'),
+          el('a', { href: safeId ? '#/chat-new/dm?to=' + safeId : '#', style: { flex: '1', background: '#1e56d6', color: '#fff', padding: '6px 8px', borderRadius: '6px', textDecoration: 'none', fontSize: '12px' } }, '💬 رسالة'),
           el('a', { href: safeId ? '#/profile/' + safeId : '#', style: { flex: '1', background: '#f3f4f6', color: '#111', padding: '6px 8px', borderRadius: '6px', textDecoration: 'none', fontSize: '12px' } }, '👤 البروفايل'),
         ]),
       ]);
@@ -6005,7 +6005,7 @@ function autoPlay(video) {
           map.setView([lastFix.lat, lastFix.lng], 14);
           if (myMarker) map.removeLayer(myMarker);
           myMarker = window.L.marker([lastFix.lat, lastFix.lng], {
-            icon: makeAvatarIcon(myProfile || { avatar_url: '', name: 'أنت' }, '#6c2bd9', true),
+            icon: makeAvatarIcon(myProfile || { avatar_url: '', name: 'أنت' }, '#1e56d6', true),
             zIndexOffset: 1000,
           });
           if (!ghostMode) myMarker.addTo(map);
@@ -6066,7 +6066,7 @@ function autoPlay(video) {
           el('div', { style: { color: '#888', fontSize: '11.5px' } }, '@' + (it.profile.handle || '') + ' · ' + ago(it.l.updated_at)),
         ]));
 
-        const chatBtn = el('button', { class: 'btn-sm', style: { background: '#6c2bd9', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '12px' } }, '💬');
+        const chatBtn = el('button', { class: 'btn-sm', style: { background: '#1e56d6', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '12px' } }, '💬');
         chatBtn.onclick = async (e) => {
           e.stopPropagation();
           try { const dmId = await window.API.openOrCreateDm(it.profile.id); go('/chat/' + dmId); }
@@ -6131,11 +6131,11 @@ function autoPlay(video) {
               accuracy: l.accuracy,
               updated_at: l.updated_at,
               profiles: { id: l.user_id, name: l.name, avatar_url: l.avatar, handle: l.handle }
-            }, idx % 2 === 0 ? '#6c2bd9' : '#4ade80');
+            }, idx % 2 === 0 ? '#1e56d6' : '#4ade80');
           });
         } else {
           // Tracked-via-permit get purple border, friends get green
-          tracked.forEach(l => placePin(l, '#6c2bd9'));
+          tracked.forEach(l => placePin(l, '#1e56d6'));
           friends.forEach(l => { if (!trackedIds.has(l.user_id)) placePin(l, '#4ade80'); });
         }
 
@@ -6543,7 +6543,7 @@ function autoPlay(video) {
         const isAdmin = await window.API.adminCheckIsAdmin();
         if (!isAdmin) return;
         const adminSec = el('div', { class: 'settings-section', style: { background: 'var(--primary-soft)' } });
-        adminSec.appendChild(el('h3', { style: { color: 'var(--primary)' } }, 'الإدارة'));
+        adminSec.appendChild(el('h3', { style: { color: 'var(--primary-2)' } }, 'الإدارة'));
         const item = el('div', { class: 'settings-item', onclick: () => { window.location.href = '/admin'; } }, [
           el('span', { class: 'si-icon', style: { background: 'var(--primary)', color: '#fff' }, html: icons.settings }),
           el('span', { class: 'si-text', style: { fontWeight: 700 } }, 'فتح لوحة التحكم الإدارية'),

@@ -11,11 +11,29 @@
  */
 window.Compress = (function () {
 
-  const MAX_SIZE_BYTES     = 50 * 1024 * 1024;   // skip compression if under 50 MB
   const TARGET_WIDTH       = 720;                  // max long-edge px
   const TARGET_HEIGHT      = 1280;
-  const TARGET_BITRATE     = 2_500_000;           // 2.5 Mbps video
+
+  // 1.4 Mbps at 720x1280. The previous 2.5 Mbps was set for 1080p and never
+  // actually ran (see SKIP_FLOOR_BYTES below), so in practice clips uploaded
+  // at whatever the phone recorded — measured at ~2.9 Mbps and 1080x1920,
+  // about 5 MB for a 14-second clip. At 720x1280 the frame carries 55% fewer
+  // pixels, so 1.4 Mbps holds similar visible quality on a phone screen and
+  // roughly halves the file.
+  //
+  // Bandwidth is the real cost on a video app — storage is capped at 9 GB by
+  // 0031 and sits at 147 MB, while egress has no cap at all.
+  const TARGET_BITRATE     = 1_400_000;           // 1.4 Mbps video
   const AUDIO_BITRATE      = 128_000;             // 128 kbps audio
+
+  // Used only when a file's duration cannot be read. Nothing this pipeline
+  // produces for a clip worth compressing lands under 2 MB, so below that
+  // there is nothing to gain.
+  const SKIP_FLOOR_BYTES   = 2 * 1024 * 1024;
+
+  // Re-encoding within a whisker of the target costs quality and gains
+  // nothing, so allow this much headroom before bothering.
+  const SKIP_MARGIN        = 1.15;
 
   const MAX_UPLOAD_BYTES   = 60 * 1024 * 1024;    // hard reject above 60 MB (raw, pre-compression);
                                                  // matches the storage bucket cap set in 0031
@@ -35,6 +53,34 @@ window.Compress = (function () {
       v.onerror = () => { URL.revokeObjectURL(url); reject(new Error('تعذر قراءة الفيديو')); };
       v.src = url;
     });
+  }
+
+  // Decides whether re-encoding is worth doing.
+  //
+  // This replaces a flat "skip anything under 50 MB" rule, which meant
+  // compression never ran even once: the storage bucket rejects uploads above
+  // 60 MB, and phone clips capped at 90 seconds land far below 50 MB. Every
+  // video in the library was uploaded exactly as the camera recorded it.
+  //
+  // A fixed threshold cannot work here because the right size depends on
+  // LENGTH. 4 MB is bloated for 10 seconds and already lean for 90. So compare
+  // against what this pipeline would actually produce for THIS clip, and skip
+  // only when the file is already at or below that.
+  async function alreadySmallEnough(file) {
+    let duration = null;
+    try {
+      duration = await readDuration(file);
+    } catch (e) {
+      // Unreadable metadata is not a reason to fail the upload; fall through
+      // to the floor and let the encoder decide.
+    }
+
+    if (duration == null || !isFinite(duration) || duration <= 0) {
+      return file.size <= SKIP_FLOOR_BYTES;
+    }
+
+    const targetBytes = duration * (TARGET_BITRATE + AUDIO_BITRATE) / 8;
+    return file.size <= targetBytes * SKIP_MARGIN;
   }
 
   // Validates a chosen file against size/duration limits before compression/upload.
@@ -195,8 +241,8 @@ window.Compress = (function () {
       return { file, originalSize: file.size, compressedSize: file.size, skipped: true, reason: 'not-video' };
     }
 
-    if (file.size <= MAX_SIZE_BYTES) {
-      // Already small enough — skip
+    if (await alreadySmallEnough(file)) {
+      // Already at or below what re-encoding would produce — skip
       return { file, originalSize: file.size, compressedSize: file.size, skipped: true, reason: 'small-enough' };
     }
 

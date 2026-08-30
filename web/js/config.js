@@ -36,5 +36,28 @@ window.TT_CONFIG = (function () {
   const otpMaxLength = 6;
   const otpMinLength = 6;
 
-  return { demoMode, otpMaxLength, otpMinLength };
+  // ── CAPTCHA ──
+  // Cloudflare Turnstile SITE key. This one is public by design — it appears
+  // in the page for every visitor, exactly like the Supabase anon key. The
+  // matching SECRET key is different: it goes into the Supabase dashboard
+  // (Authentication -> Attack Protection) and must never appear in this repo.
+  //
+  // Leave empty and the whole CAPTCHA layer stays inert — no script is loaded
+  // and no token is sent, so the app behaves exactly as it does today.
+  //
+  // That is deliberate. Turning CAPTCHA on in the Supabase dashboard makes it
+  // MANDATORY server-side immediately: from that moment Supabase rejects any
+  // sign-up, sign-in, or password reset that arrives without a token. Anyone
+  // running an already-installed APK built before this key was set would be
+  // locked out of logging in, and you cannot force them to update.
+  //
+  // So the order matters:
+  //   1. Ship a build carrying this code (inert, key empty) — safe any time.
+  //   2. Create the Turnstile site at Cloudflare, put the site key here,
+  //      put the secret key in the Supabase dashboard.
+  //   3. Rebuild and distribute the APK.
+  //   4. Only once people are on that build, enable it in the dashboard.
+  const captchaSiteKey = '0x4AAAAAAEiD4fQMLJ_1A_JQ';
+
+  return { demoMode, otpMaxLength, otpMinLength, captchaSiteKey };
 })();

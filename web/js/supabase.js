@@ -31,6 +31,19 @@
   })();
 
   // === Public API ===
+  // Supabase enforces CAPTCHA on sign-up, sign-in and password recovery once
+  // it is switched on in the dashboard. Returns undefined while it is off, and
+  // spreading undefined adds no key — so `{ ...(await captchaOpt()) }` leaves
+  // the options object exactly as it was in that case.
+  //
+  // Deliberately a closure function rather than a method on SB: the call sites
+  // would otherwise depend on `this`, which silently becomes undefined the day
+  // somebody destructures `const { signIn } = window.SB`.
+  async function captchaOpt() {
+    if (!window.Captcha || !window.Captcha.enabled()) return undefined;
+    return { captchaToken: await window.Captcha.token() };
+  }
+
   const SB = {
     ready,
     async client() { return await ready; },
@@ -49,7 +62,7 @@
       const cleanHandle = String(handle || '').trim().toLowerCase();
       const meta = { name: cleanName };
       if (/^[a-z0-9._]{3,30}$/.test(cleanHandle)) meta.handle = cleanHandle;
-      const opts = { password, options: { data: meta } };
+      const opts = { password, options: { data: meta, ...(await captchaOpt()) } };
       if (email) opts.email = email; else if (phone) opts.phone = phone;
       const { data, error } = await c.auth.signUp(opts);
       if (error) throw error;
@@ -58,7 +71,7 @@
 
     async signIn({ email, phone, password }) {
       const c = await ready; if (!c) throw new Error('SDK not loaded');
-      const params = { password };
+      const params = { password, options: { ...(await captchaOpt()) } };
       if (email) params.email = email; else if (phone) params.phone = phone;
       const { data, error } = await c.auth.signInWithPassword(params);
       if (error) throw error;
@@ -77,7 +90,7 @@
     // screen verifies against.
     async resendSignup(email) {
       const c = await ready; if (!c) throw new Error('SDK not loaded');
-      const { data, error } = await c.auth.resend({ type: 'signup', email });
+      const { data, error } = await c.auth.resend({ type: 'signup', email, options: { ...(await captchaOpt()) } });
       if (error) throw error;
       return data;
     },
@@ -104,7 +117,7 @@
       // No redirect: recovery is by six digit code, verified with
       // verifyRecoveryCode. A redirect would only make sense for a link,
       // and the app has no screen that consumes one.
-      const { error } = await c.auth.resetPasswordForEmail(email);
+      const { error } = await c.auth.resetPasswordForEmail(email, { ...(await captchaOpt()) });
       if (error) throw error;
     },
 

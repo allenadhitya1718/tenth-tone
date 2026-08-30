@@ -5,18 +5,18 @@
    section bands, big rounded photo cards, white cards at 25px,
    pill buttons, one dark footer. No gradients, no glow.
 
-   One accent: #6c2bd9, the brand purple carried from the app.
+   One accent: #1e56d6, the brand purple carried from the app.
    Radius: containers 25px, media 24px, inner tiles 14px,
    anything interactive is a full pill.
    ========================================================= */
 
 :root {
-  --accent: #6c2bd9;
-  --accent-press: #5a23b8;
-  --accent-ink: #3d1580;
+  --accent: #1e56d6;
+  --accent-press: #1745ae;
+  --accent-ink: #143a94;
 
   --bg: #ffffff;
-  --tint-brand: #f1ebff;
+  --tint-brand: #eaf1fd;
   --tint-warm: #fcf5eb;
   --card: #ffffff;
   --line: #e8e6ef;

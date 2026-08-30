@@ -8,11 +8,11 @@
   --muted: #8a8a8a;
   --muted-2: #b8b8bc;
   --border: #ececec;
-  --primary: #6c2bd9;
-  --primary-2: #8b5bff;
-  --primary-pressed: #5a23b8;
-  --primary-soft: #f1ebff;
-  --selected-overlay: rgba(108, 43, 217, 0.55);
+  --primary: #1e56d6;
+  --primary-2: #4c81e8;
+  --primary-pressed: #1745ae;
+  --primary-soft: #eaf1fd;
+  --selected-overlay: rgba(30, 86, 214, 0.55);
   --danger: #ef4444;
   --warn: #f59e0b;
   --success: #16a34a;
@@ -83,7 +83,7 @@ input, textarea, [contenteditable="true"] {
 .bn-item.active { color: var(--text); }
 .bn-item svg { width: 20px; height: 20px; }
 .bn-create {
-  background: linear-gradient(135deg, #ff0050 0%, #00f2ea 100%);
+  background: linear-gradient(135deg, #1e56d6 0%, #ff0080 100%);
   color: #fff !important;
   width: 44px; height: 32px;
   border-radius: 10px;
@@ -208,22 +208,22 @@ input, textarea, [contenteditable="true"] {
   width: 100%;
   height: 100%;
   display: block;
-  filter: drop-shadow(0 3px 10px rgba(108, 43, 217, 0.25));
+  filter: drop-shadow(0 3px 10px rgba(30, 86, 214, 0.25));
 }
-.auth-doodle:nth-child(1)  { top: 4%;  left: 6%;   width: 48px; height: 48px; color: #8b5bff; transform: rotate(-15deg); animation-duration: 6s; }
+.auth-doodle:nth-child(1)  { top: 4%;  left: 6%;   width: 48px; height: 48px; color: #4c81e8; transform: rotate(-15deg); animation-duration: 6s; }
 .auth-doodle:nth-child(2)  { top: 8%;  right: 8%;  width: 42px; height: 42px; color: #00f2fe; transform: rotate(20deg);  animation-duration: 8s; }
-.auth-doodle:nth-child(3)  { top: 22%; left: 4%;   width: 38px; height: 38px; color: #ff0050; transform: rotate(12deg);  animation-duration: 9s; }
+.auth-doodle:nth-child(3)  { top: 22%; left: 4%;   width: 38px; height: 38px; color: #e8244c; transform: rotate(12deg);  animation-duration: 9s; }
 .auth-doodle:nth-child(4)  { top: 26%; right: 5%;  width: 46px; height: 46px; color: #f59e0b; transform: rotate(-25deg); animation-duration: 7.5s; }
 .auth-doodle:nth-child(5)  { top: 42%; left: 8%;   width: 40px; height: 40px; color: #10b981; transform: rotate(18deg);  animation-duration: 8.5s; }
-.auth-doodle:nth-child(6)  { top: 46%; right: 7%;  width: 44px; height: 44px; color: #6c2bd9; transform: rotate(-10deg); animation-duration: 7s; }
+.auth-doodle:nth-child(6)  { top: 46%; right: 7%;  width: 44px; height: 44px; color: #1e56d6; transform: rotate(-10deg); animation-duration: 7s; }
 .auth-doodle:nth-child(7)  { top: 60%; left: 5%;   width: 36px; height: 36px; color: #ec4899; transform: rotate(30deg);  animation-duration: 6.5s; }
 .auth-doodle:nth-child(8)  { top: 64%; right: 6%;  width: 40px; height: 40px; color: #06b6d4; transform: rotate(-18deg); animation-duration: 9.5s; }
-.auth-doodle:nth-child(9)  { bottom: 22%; left: 7%;  width: 46px; height: 46px; color: #a855f7; transform: rotate(15deg);  animation-duration: 8s; }
+.auth-doodle:nth-child(9)  { bottom: 22%; left: 7%;  width: 46px; height: 46px; color: #5b9bf5; transform: rotate(15deg);  animation-duration: 8s; }
 .auth-doodle:nth-child(10) { bottom: 20%; right: 8%; width: 42px; height: 42px; color: #ef4444; transform: rotate(-22deg); animation-duration: 7s; }
 .auth-doodle:nth-child(11) { bottom: 8%;  left: 12%; width: 44px; height: 44px; color: #14b8a6; transform: rotate(24deg);  animation-duration: 9s; }
 .auth-doodle:nth-child(12) { bottom: 6%;  right: 14%; width: 40px; height: 40px; color: #f97316; transform: rotate(-12deg); animation-duration: 6.5s; }
 .auth-doodle:nth-child(13) { top: 16%; left: 46%;  width: 32px; height: 32px; color: #e11d48; transform: rotate(-8deg);  animation-duration: 7.8s; }
-.auth-doodle:nth-child(14) { bottom: 35%; right: 40%; width: 34px; height: 34px; color: #8b5bff; transform: rotate(16deg); animation-duration: 8.2s; }
+.auth-doodle:nth-child(14) { bottom: 35%; right: 40%; width: 34px; height: 34px; color: #4c81e8; transform: rotate(16deg); animation-duration: 8.2s; }
 .auth-doodle:nth-child(15) { top: 72%; left: 42%;  width: 30px; height: 30px; color: #00f2fe; transform: rotate(-14deg); animation-duration: 6.8s; }
 .auth-doodle:nth-child(16) { bottom: 2%; left: 45%;  width: 36px; height: 36px; color: #ec4899; transform: rotate(22deg);  animation-duration: 9.2s; }
 
@@ -237,10 +237,10 @@ input, textarea, [contenteditable="true"] {
 .auth-logo .mark {
   margin: 0 auto 12px;
   width: 76px; height: 76px; border-radius: 22px;
-  background: linear-gradient(135deg, #6c2bd9 0%, #8b5bff 100%);
+  background: linear-gradient(135deg, #1e56d6 0%, #4c81e8 100%);
   display: flex; align-items: center; justify-content: center;
   color: #fff; font-weight: 800; font-size: 32px;
-  box-shadow: 0 12px 30px rgba(108,43,217,0.35);
+  box-shadow: 0 12px 30px rgba(30, 86, 214,0.35);
 }
 .auth-logo h1 { font-size: 22px; margin: 8px 0 0; }
 .auth-logo p { color: var(--muted); margin: 0; font-size: 14px; }
@@ -651,8 +651,8 @@ body.dark .see-more-link { color: var(--primary-2); }
   background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
   z-index: 1; pointer-events: none;
 }
-.create-icon.rec { background: linear-gradient(135deg, #ff0050, #c4003d); box-shadow: 0 10px 20px -5px rgba(255,0,80,0.4), inset 0 4px 10px rgba(255,255,255,0.3); }
-.create-icon.up { background: linear-gradient(135deg, #6c2bd9, #4a1996); box-shadow: 0 10px 20px -5px rgba(108,43,217,0.4), inset 0 4px 10px rgba(255,255,255,0.3); }
+.create-icon.rec { background: linear-gradient(135deg, #e8244c, #c4003d); box-shadow: 0 10px 20px -5px rgba(232,36,76,0.4), inset 0 4px 10px rgba(255,255,255,0.3); }
+.create-icon.up { background: linear-gradient(135deg, #1e56d6, #4a1996); box-shadow: 0 10px 20px -5px rgba(30, 86, 214,0.4), inset 0 4px 10px rgba(255,255,255,0.3); }
 .create-icon.live { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 10px 20px -5px rgba(239,68,68,0.4), inset 0 4px 10px rgba(255,255,255,0.3); }
 .create-icon.template { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 10px 20px -5px rgba(16,185,129,0.4), inset 0 4px 10px rgba(255,255,255,0.3); }
 .create-card-title { font-weight: 800; margin: 0 0 4px; font-size: 15.5px; letter-spacing: -0.2px; }
@@ -905,8 +905,8 @@ body.dark .see-more-link { color: var(--primary-2); }
 /* Flash when a quote jumps you to the original. */
 .bubble.flash { animation: bubbleFlash 1.2s ease; }
 @keyframes bubbleFlash {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(108, 43, 217, 0); }
-  20%      { box-shadow: 0 0 0 4px rgba(108, 43, 217, .45); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(30, 86, 214, 0); }
+  20%      { box-shadow: 0 0 0 4px rgba(30, 86, 214, .45); }
 }
 /* Armed state while a bubble is dragged far enough to reply. */
 .bubble.reply-armed { opacity: .75; }
@@ -924,7 +924,7 @@ body.dark .see-more-link { color: var(--primary-2); }
   font-size: 26px; line-height: 1; background: transparent; border: 0;
   padding: 6px; border-radius: 50%; cursor: pointer;
 }
-.reaction-pick.on { background: rgba(108, 43, 217, .18); }
+.reaction-pick.on { background: rgba(30, 86, 214, .18); }
 .reaction-pick:active { transform: scale(1.25); }
 
 /* Primary / Requests tabs in the inbox. Hidden entirely when nothing is
@@ -1029,7 +1029,7 @@ body.dark .see-more-link { color: var(--primary-2); }
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6c2bd9 0%, #8b5bff 100%);
+  background: linear-gradient(135deg, #1e56d6 0%, #4c81e8 100%);
   color: #fff;
   border: 0;
   display: flex;
@@ -1037,7 +1037,7 @@ body.dark .see-more-link { color: var(--primary-2); }
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  box-shadow: 0 3px 10px rgba(108, 43, 217, 0.35);
+  box-shadow: 0 3px 10px rgba(30, 86, 214, 0.35);
   transition: transform 120ms ease, opacity 120ms ease, background 120ms ease;
 }
 .comment-send-btn:active {
@@ -1402,7 +1402,7 @@ body.dark .see-more-link { color: var(--primary-2); }
 .splash {
   height: 100%;
   background:
-    radial-gradient(90% 55% at 50% 22%, rgba(108, 43, 217, 0.30) 0%, transparent 62%),
+    radial-gradient(90% 55% at 50% 22%, rgba(30, 86, 214, 0.30) 0%, transparent 62%),
     radial-gradient(70% 45% at 82% 88%, rgba(236, 72, 153, 0.14) 0%, transparent 65%),
     #0b0b10;
   display: flex; flex-direction: column; align-items: center; justify-content: space-between;
@@ -1420,7 +1420,7 @@ body.dark .see-more-link { color: var(--primary-2); }
 .splash-logo {
   width: 96px; height: 96px; margin: 0 auto 16px;
   display: flex; align-items: center; justify-content: center;
-  filter: drop-shadow(0 14px 34px rgba(108, 43, 217, 0.55));
+  filter: drop-shadow(0 14px 34px rgba(30, 86, 214, 0.55));
 }
 .splash-logo svg { width: 100%; height: 100%; }
 .splash .mark { width: 110px; height: 110px; border-radius: 30px; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 800; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); }
@@ -1522,7 +1522,14 @@ body.dark {
   --muted: #a0a0a8;
   --muted-2: #6b6b73;
   --border: #2a2a2e;
-  --primary-soft: #271b3d;
+  /* Dark tint behind selected rows — the blue counterpart of the light
+     theme's #eaf1fd, mixed at roughly the same strength over --bg. */
+  --primary-soft: #141f3a;
+  /* --primary is tuned for white text sitting ON it. Read the other way — blue
+     text on a dark card — it only reaches 4.3:1, so on dark screens the lighter
+     tone takes over and clears 4.5:1. Safe to override wholesale here because
+     --primary-2 is only ever used for `color` and `border-color`, never a fill. */
+  --primary-2: #5b9bf5;
 }
 body.dark .app { background: var(--bg); color: var(--text); }
 body.dark .bottom-nav { background: #0d0d0f; border-top-color: #1a1a1a; }
@@ -1531,6 +1538,18 @@ body.dark input, body.dark textarea, body.dark select {
 }
 body.dark .input, body.dark .input-pill { background: #1f1f24; color: var(--text); border-color: #2a2a2e; }
 body.dark .btn-secondary { background: #1f1f24; color: var(--text); border-color: #2a2a2e; }
+
+/* The brand blue is tuned for white text sitting ON it — a filled button gets
+   6.3:1. Used the other way round, as blue text or a blue outline against the
+   dark screens, it falls to 3.1:1, under the 4.5:1 the guidelines ask for. The
+   lighter tone reaches 5.2:1 there, so it takes over on dark backgrounds only.
+   Filled buttons deliberately keep --primary; only the outline styles change. */
+body.dark .btn-outline,
+body.dark .btn-ghost,
+body.dark .btn-following {
+  color: var(--primary-2);
+  border-color: var(--primary-2);
+}
 body.dark .chat-input { background: var(--bg-2); border-top-color: var(--border); }
 body.dark .bubble.them { background: #1f1f24; color: var(--text); }
 /* was `.topbar` (missing hyphen) so it matched nothing - the real class is
@@ -1546,7 +1565,7 @@ body.dark .sheet, body.dark .modal { background: var(--bg-2); color: var(--text)
   padding: 6px 14px; border-radius: 999px; cursor: pointer; transition: all 140ms ease;
   white-space: nowrap;
 }
-.lang-opt.active { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(108,43,217,0.3); }
+.lang-opt.active { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(30, 86, 214,0.3); }
 .lang-switch.compact .lang-opt { padding: 5px 11px; font-size: 12px; }
 body.dark .lang-switch { background: #1f1f24; }
 
@@ -2161,7 +2180,7 @@ body.dark .sound-fav.on { border-color: var(--primary-2); color: var(--primary-2
 }
 .trim-range {
   position: absolute; top: 0; bottom: 0;
-  background: rgba(108,43,217,.35); border-top: 2px solid var(--primary); border-bottom: 2px solid var(--primary);
+  background: rgba(30, 86, 214,.35); border-top: 2px solid var(--primary); border-bottom: 2px solid var(--primary);
 }
 .trim-handle {
   position: absolute; top: -3px; width: 14px; height: 48px; margin-inline-start: -7px;
@@ -2659,7 +2678,7 @@ body.dark .tag-cta .tc-icon { color: var(--primary-2); }
 .mapcard-icon {
   flex: none; width: 38px; height: 38px; padding: 9px;
   border-radius: 11px; color: #fff;
-  background: linear-gradient(135deg, var(--primary) 0%, #a855f7 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, #5b9bf5 100%);
 }
 .mapcard-icon svg { width: 100%; height: 100%; }
 .mapcard-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -2812,7 +2831,7 @@ body.dark .legal-foot { color: #8b8b93; border-top-color: rgba(255, 255, 255, 0.
 
 /* Mentions and hashtags inside captions and comments */
 .mention, .hashtag {
-  color: var(--primary-2, #a855f7);
+  color: var(--primary-2, #5b9bf5);
   font-weight: 600; cursor: pointer;
   unicode-bidi: isolate;
 }
@@ -2843,7 +2862,7 @@ body.dark .legal-foot { color: #8b8b93; border-top-color: rgba(255, 255, 255, 0.
 .onboard-art {
   width: 148px; height: 148px; margin: 0 auto 30px;
   border-radius: 44px;
-  background: linear-gradient(135deg, var(--primary) 0%, #a855f7 55%, #ff0080 130%);
+  background: linear-gradient(135deg, var(--primary) 0%, #5b9bf5 55%, #ff0080 130%);
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 18px 44px color-mix(in srgb, var(--primary) 35%, transparent);
 }
@@ -2910,9 +2929,9 @@ body:not(.dark) .reg-date { color-scheme: light; }
 }
 .bg-watch {
   background:
-    radial-gradient(120% 80% at 20% 15%, #7c3aed 0%, transparent 55%),
+    radial-gradient(120% 80% at 20% 15%, #3b82f6 0%, transparent 55%),
     radial-gradient(100% 70% at 85% 80%, #ec4899 0%, transparent 60%),
-    linear-gradient(160deg, #1b1030, #0d0b18);
+    linear-gradient(160deg, #101a36, #080b18);
 }
 .bg-create {
   background:
@@ -2923,12 +2942,12 @@ body:not(.dark) .reg-date { color-scheme: light; }
 .bg-live {
   background:
     radial-gradient(110% 70% at 75% 10%, #f43f5e 0%, transparent 55%),
-    radial-gradient(100% 80% at 15% 90%, #a855f7 0%, transparent 60%),
+    radial-gradient(100% 80% at 15% 90%, #5b9bf5 0%, transparent 60%),
     linear-gradient(150deg, #2a0f1d, #120a16);
 }
 .bg-chat {
   background:
-    radial-gradient(100% 60% at 80% 5%, #6c2bd9 0%, transparent 50%),
+    radial-gradient(100% 60% at 80% 5%, #1e56d6 0%, transparent 50%),
     linear-gradient(170deg, #16161f, #10101a);
 }
 .ph-topfade {
@@ -2948,7 +2967,7 @@ body:not(.dark) .reg-date { color-scheme: light; }
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: 50%; flex: none; font-size: 9px; font-weight: 700; color: #fff;
 }
-.ph-av.t1 { background: linear-gradient(135deg, #6c2bd9, #a855f7); }
+.ph-av.t1 { background: linear-gradient(135deg, #1e56d6, #5b9bf5); }
 .ph-av.t2 { background: linear-gradient(135deg, #0284c7, #38bdf8); }
 .ph-av.t3 { background: linear-gradient(135deg, #be123c, #fb7185); }
 
@@ -3044,7 +3063,7 @@ body:not(.dark) .reg-date { color-scheme: light; }
 .ph-map {
   position: relative; height: 124px;
   background:
-    radial-gradient(circle at 68% 26%, rgba(108,43,217,0.3), transparent 55%),
+    radial-gradient(circle at 68% 26%, rgba(30, 86, 214,0.3), transparent 55%),
     linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px),
     #1b2a22;
@@ -3083,14 +3102,14 @@ body:not(.dark) .reg-date { color-scheme: light; }
    disappearing into it. Everything after sign-in follows the user's theme. */
 .onboard, .splash {
   background:
-    radial-gradient(95% 55% at 50% 8%, rgba(108, 43, 217, 0.13) 0%, transparent 60%),
+    radial-gradient(95% 55% at 50% 8%, rgba(30, 86, 214, 0.13) 0%, transparent 60%),
     radial-gradient(75% 50% at 88% 92%, rgba(236, 72, 153, 0.10) 0%, transparent 65%),
     #f7f6fb;
   color: #14141a;
 }
 body.dark .onboard, body.dark .splash {
   background:
-    radial-gradient(95% 55% at 50% 8%, rgba(108, 43, 217, 0.13) 0%, transparent 60%),
+    radial-gradient(95% 55% at 50% 8%, rgba(30, 86, 214, 0.13) 0%, transparent 60%),
     radial-gradient(75% 50% at 88% 92%, rgba(236, 72, 153, 0.10) 0%, transparent 65%),
     #f7f6fb;
   color: #14141a;
@@ -3128,7 +3147,7 @@ body.dark .splash .splash-lang .lang-switch,
 /* Welcome buttons on light */
 .splash .actions .btn {
   background: var(--primary); color: #fff; border: none; font-weight: 650;
-  box-shadow: 0 10px 24px rgba(108, 43, 217, 0.28);
+  box-shadow: 0 10px 24px rgba(30, 86, 214, 0.28);
 }
 .splash .actions .btn-outline {
   background: #fff;
@@ -3145,14 +3164,14 @@ body.dark .splash .splash-lang .lang-switch,
    one family means no jarring flip anywhere in the pre-login flow. */
 .auth-screen {
   background:
-    radial-gradient(95% 55% at 50% 6%, rgba(108, 43, 217, 0.12) 0%, transparent 60%),
+    radial-gradient(95% 55% at 50% 6%, rgba(30, 86, 214, 0.12) 0%, transparent 60%),
     radial-gradient(75% 50% at 88% 94%, rgba(236, 72, 153, 0.09) 0%, transparent 65%),
     #f7f6fb;
   color: #14141a;
 }
 body.dark .auth-screen {
   background:
-    radial-gradient(95% 55% at 50% 6%, rgba(108, 43, 217, 0.12) 0%, transparent 60%),
+    radial-gradient(95% 55% at 50% 6%, rgba(30, 86, 214, 0.12) 0%, transparent 60%),
     radial-gradient(75% 50% at 88% 94%, rgba(236, 72, 153, 0.09) 0%, transparent 65%),
     #f7f6fb;
   color: #14141a;
@@ -3192,7 +3211,7 @@ body.dark .auth-screen .input::placeholder,
 body.dark .auth-screen .sec-input::placeholder { color: #9a9aa8; }
 .auth-screen .input:focus,
 .auth-screen .otp-input:focus,
-.auth-screen .sec-box:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(108, 43, 217, 0.12); }
+.auth-screen .sec-box:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30, 86, 214, 0.12); }
 .auth-screen .password-toggle-btn,
 .auth-screen .sec-eye { color: #6b6b7b; }
 
@@ -3208,7 +3227,7 @@ body.dark .auth-screen .top-bar .icon-btn { color: #14141a; }
 .auth-screen .btn-pill,
 .auth-screen .reg-body .btn {
   background: var(--primary); color: #fff; border: none;
-  box-shadow: 0 10px 24px rgba(108, 43, 217, 0.26);
+  box-shadow: 0 10px 24px rgba(30, 86, 214, 0.26);
 }
 .auth-screen .btn-pill:disabled { box-shadow: none; }
 

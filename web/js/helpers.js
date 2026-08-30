@@ -243,7 +243,7 @@ window.H = (function () {
   // colour - and it is derived from the ORIGINAL name, not the translated
   // one, so switching language does not recolour everybody.
   const AVATAR_COLORS = [
-    ['#6c2bd9', '#a855f7'], // brand purple
+    ['#1e56d6', '#5b9bf5'], // brand blue
     ['#4f46e5', '#818cf8'], // indigo
     ['#0284c7', '#38bdf8'], // blue
     ['#0d9488', '#2dd4bf'], // teal

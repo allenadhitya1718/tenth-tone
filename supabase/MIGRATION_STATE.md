@@ -16,6 +16,11 @@ bundle files, which were all wrong — see below).
 | `0049_blocking_fixes` | applied 2026-08-30 | Blocked users could still comment, message, and read your videos; blocks left follows intact. |
 | `0050_rate_limits` | applied 2026-08-30 | Follows, comments, messages, reports, likes, broadcasts. Verified 6 of 6 triggers active. |
 | `0051_enable_scheduled_jobs` | applied 2026-08-30 | See the note below — the SQL alone was not enough. |
+| `0052_fix_counter_guard` | **superseded by 0053** | Its repair UPDATE was reverted by the very guard it was fixing, because `auth.uid()` is null in the SQL editor. Do not run it. |
+| `0053_follow_requests_and_counter_repair` | applied 2026-08-30 | Following a private account had never worked — `follow_or_request` inserted notification type `follow_request`, which the check constraint rejected. Also repairs the counters 0052 failed to. |
+| `0054_block_visibility_and_private_lists` | applied 2026-08-30 | Instagram-style blocking; a private account's follower list was public. |
+| `0055_follower_list_rpcs` | applied 2026-08-30 | 0054's row policy hid public accounts' follower lists too — a row policy cannot know whose list is being viewed. `list_followers` / `list_following` decide per-viewer instead. |
+| `0056_remaining_rate_limits` | applied 2026-08-30 | videos (row insert), live_comments, chats, calls. Corrects 0050's note claiming videos were already covered — the upload quota guards the file, not the row. Verified 4 of 4 triggers and 3 of 3 indexes. |
 
 ### pg_cron had to be enabled from the dashboard
 

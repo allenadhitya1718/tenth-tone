@@ -299,7 +299,7 @@
     const area = path + ` L${W},${H} L0,${H} Z`;
     const wrap = el('div', { class: 'chart-line' });
     wrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-      <defs><linearGradient id="grad-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6c2bd9" stop-opacity="0.5"/><stop offset="100%" stop-color="#6c2bd9" stop-opacity="0"/></linearGradient></defs>
+      <defs><linearGradient id="grad-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1e56d6" stop-opacity="0.5"/><stop offset="100%" stop-color="#1e56d6" stop-opacity="0"/></linearGradient></defs>
       <path class="area" d="${area}"/>
       <path class="line" d="${path}"/>
       ${points.map(p => `<circle class="dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3"/>`).join('')}
