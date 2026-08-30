@@ -1,0 +1,31 @@
+-- ============================================================
+-- 0047_follows_followed_index.sql
+--
+-- One index, from an audit of all 43 tables and 65 foreign keys.
+--
+-- follows has a composite primary key (follower_id, followed_id). That
+-- answers "who does this person follow?" instantly, because follower_id
+-- comes first — but it is no help at all for the opposite question,
+-- "who follows this person?", which has to read the entire table.
+--
+-- That backwards question is asked constantly:
+--
+--   * chat_request_flags (0043)   - every time the inbox is opened, to work
+--                                   out which conversations are requests
+--   * notify_followers_live (0045)- every time anyone starts a broadcast,
+--                                   to find everyone who should be told
+--   * fetchFollowers              - the follower list on any profile
+--   * fetchShareTargets           - the share sheet
+--
+-- Today the table is small enough that nobody notices. At ten thousand
+-- follow rows, opening the inbox means reading all ten thousand.
+--
+-- Everything else checked out: every table has row level security on, and
+-- the hot paths in the feed (likes, saves, video_engagement, blocks) are
+-- already covered by their composite primary keys, which lead with the
+-- column those queries filter on. No other index is worth its cost — an
+-- index that is never read still has to be updated on every write.
+-- ============================================================
+
+create index if not exists idx_follows_followed
+  on public.follows (followed_id);
