@@ -75,8 +75,19 @@
     { p: /^\/tag\/(.+)$/, v: (q, m) => Views.hashtag({ id: m[1] }) },
   ];
 
-  // Restore the user's dark-mode preference from localStorage as early as possible
+  // Restore an explicit dark-mode preference before the first paint, so the
+  // app never flashes light on the way in.
   try { if (localStorage.getItem('tt-theme') === 'dark') document.body.classList.add('dark'); } catch (e) {}
+
+  // Signup and login are light; the app itself is dark. Someone who has never
+  // touched the setting therefore flips to dark the moment they are signed in,
+  // and back to light on the auth screens. An explicit choice in Settings wins
+  // in both directions, which is why this only decides when nothing is stored.
+  function applyTheme(signedIn) {
+    let pref = null;
+    try { pref = localStorage.getItem('tt-theme'); } catch (e) {}
+    document.body.classList.toggle('dark', pref ? pref === 'dark' : !!signedIn);
+  }
 
   function parseHash() {
     const raw = (location.hash || '#/').slice(1) || '/';
@@ -100,6 +111,8 @@
       try { session = await window.SB.getSession(); } catch (e) { session = null; }
       sessionChecked = true;
     }
+
+    applyTheme(!!session);
 
     if (!session && !isPublic(path)) {
       location.hash = '#/login';
@@ -139,6 +152,9 @@
     window.SB.onAuthChange((event, sess) => {
       session = sess;
       sessionChecked = true;
+      // Signing in or out changes which default applies, and this fires
+      // before any navigation does, so the switch is immediate.
+      applyTheme(!!sess);
       if (event === 'SIGNED_OUT') location.hash = '#/login';
       // Record the device on sign-in. A device never seen before raises a
       // login alert (see record_session in migration 0027).

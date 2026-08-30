@@ -1915,10 +1915,17 @@ function autoPlay(video) {
     const root = el('section', { class: 'create-wrap' });
     root.appendChild(topBar({ title: 'إنشاء جديد', back: false, right: el('button', { class: 'icon-btn', html: icons.x, onclick: () => go('/home') }) }));
 
-    // Hidden file picker shared with the "upload" card
-    const fileInput = el('input', { type: 'file', accept: 'video/*,image/*', style: { display: 'none' } });
+    // Hidden file picker shared with the "upload" card. Video only — rejecting
+    // here rather than on the publish screen means the user gets told why
+    // instead of being carried forward to a screen that then empties itself.
+    const fileInput = el('input', { type: 'file', accept: 'video/*', style: { display: 'none' } });
     fileInput.addEventListener('change', e => {
       const f = e.target.files[0]; if (!f) return;
+      if (!f.type.startsWith('video/')) {
+        toast('يمكنك نشر مقاطع الفيديو فقط');
+        fileInput.value = '';
+        return;
+      }
       window._ttPendingClip = f;
       go('/publish');
     });
@@ -2213,16 +2220,6 @@ function autoPlay(video) {
       if (!recorder || recorder.state === 'inactive') startRec(); else stopRec();
     } }, [el('div', { class: 'rb-inner' })]);
 
-    // Speed is presented but not applied to the recording yet, so it is a
-    // single labelled control rather than five bare numbers floating loose.
-    const SPEEDS = ['0.3x', '0.5x', '1x', '2x', '3x'];
-    const speedRow = el('div', { class: 'cam-speed' }, SPEEDS.map(v =>
-      el('button', { class: 'cam-speed-opt' + (v === '1x' ? ' active' : ''), onclick: (e) => {
-        speedRow.querySelectorAll('.cam-speed-opt').forEach(x => x.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-        toast('سرعة التسجيل غير متاحة بعد');
-      } }, v)));
-
     const durationsRow = el('div', { class: 'cam-durations' }, [
       el('button', { class: 'cam-dur', onclick: e => setMax(90, e) }, '90s'),
       el('button', { class: 'cam-dur active', onclick: e => setMax(15, e) }, '15s'),
@@ -2240,7 +2237,6 @@ function autoPlay(video) {
     ]);
 
     root.appendChild(el('div', { class: 'camera-bottom' }, [
-      speedRow,
       el('div', { class: 'camera-record' }, [
         sideAction('sparkle', 'مؤثرات', () => toast('المؤثرات غير متاحة بعد')),
         recBtn,
@@ -2450,7 +2446,7 @@ function autoPlay(video) {
     root.appendChild(topBar({ title: 'نشر', onBack: () => go('/edit-video') }));
     const wrap = el('div', { class: 'publish' });
     const descInput = el('textarea', { placeholder: 'صف فيديوك، أضف وسومًا (#) أو ذكر مستخدمين (@)' });
-    const fileInput = el('input', { type: 'file', accept: 'video/*,image/*', style: { display: 'none' } });
+    const fileInput = el('input', { type: 'file', accept: 'video/*', style: { display: 'none' } });
     // Empty picker tile until the user chooses a file (previously seeded
     // with a sample video's still, which looked like a real selection).
     const thumb = el('div', { class: 'publish-thumb', style: {
@@ -2483,6 +2479,17 @@ function autoPlay(video) {
     // error toast if it fails, otherwise renders the preview.
     async function acceptFile(file) {
       if (!file) return;
+
+      // FLYP posts are video only. The `accept` attribute is a filter hint,
+      // not a rule — the OS picker lets you switch it to "All files" and a
+      // drag-and-drop ignores it outright — so the real check lives here,
+      // which is the one place every path (camera clip, picker, drop) lands.
+      if (!file.type.startsWith('video/')) {
+        toast('يمكنك نشر مقاطع الفيديو فقط');
+        fileInput.value = '';
+        return;
+      }
+
       if (window.Compress) {
         const check = await window.Compress.validate(file);
         if (!check.ok) {
@@ -6477,7 +6484,10 @@ function autoPlay(video) {
     // ── Content & Display ──
     section('المحتوى والعرض', [
       { icon: 'globe', label: 'اللغة', right: langSwitch() },
-      { icon: 'sparkle', label: 'الوضع الداكن', right: makeToggle(localStorage.getItem('tt-theme') === 'dark', async (on) => {
+      // Reads the live state rather than localStorage: dark is now the default
+      // for a signed-in user, so nothing is stored until they touch this, and
+      // reading storage would show the switch off on a visibly dark screen.
+      { icon: 'sparkle', label: 'الوضع الداكن', right: makeToggle(document.body.classList.contains('dark'), async (on) => {
         document.body.classList.toggle('dark', on);
         localStorage.setItem('tt-theme', on ? 'dark' : 'light');
       }) },
