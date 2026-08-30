@@ -5,14 +5,39 @@ bundle files, which were all wrong — see below).
 
 ## Current state
 
-**`0001`–`0041` are applied**, with one deliberate exception:
+**`0001`–`0051` are applied**, with one deliberate exception:
 
 | Migration | State | Note |
 |---|---|---|
 | `0001`–`0014` | applied | |
 | `0015_ai_moderation` | **deliberately NOT applied** | Needs a paid moderation API (Sightengine, ~$29/mo minimum for video — their free tier is images only) and the `pg_net` extension. Apply only if that account exists. |
-| `0016`–`0040` | applied | |
-| `0041_chat_read_state` | applied | Chat read/unread state. |
+| `0016`–`0047` | applied | |
+| `0048_security_fixes` | applied 2026-08-30 | **Critical.** Any user could set their own `profiles.is_admin`. Also forged call-record messages, a reaction that could be moved into a private chat, and viewer counts anyone could rewrite. |
+| `0049_blocking_fixes` | applied 2026-08-30 | Blocked users could still comment, message, and read your videos; blocks left follows intact. |
+| `0050_rate_limits` | applied 2026-08-30 | Follows, comments, messages, reports, likes, broadcasts. Verified 6 of 6 triggers active. |
+| `0051_enable_scheduled_jobs` | applied 2026-08-30 | See the note below — the SQL alone was not enough. |
+
+### pg_cron had to be enabled from the dashboard
+
+`0032` and `0034` each registered a nightly job, but both were wrapped in
+`if exists (select 1 from pg_extension where extname = 'pg_cron')`. The
+extension was never enabled, so **both silently did nothing for months** —
+account deletion never completed past its 30-day grace period, and location
+history was never purged. The app's own privacy screen promises both.
+
+`create extension if not exists pg_cron;` in the SQL editor did **not** work.
+It ran without error and changed nothing. It had to be toggled on in
+**Database → Extensions**, after which `0051` registered the jobs.
+
+Confirmed active:
+
+| Job | Schedule |
+|---|---|
+| `purge-scheduled-deletions` | `30 3 * * *` |
+| `purge-stale-locations` | `0 3 * * *` |
+
+The lesson worth keeping: a guard that degrades quietly is only safe if
+somebody later checks whether it degraded. Nobody did, for months.
 
 ## The bundle files are stale — do not follow them
 
