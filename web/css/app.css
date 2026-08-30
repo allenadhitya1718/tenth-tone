@@ -857,6 +857,23 @@ body.dark .see-more-link { color: var(--primary-2); }
 .bubble.image { padding: 4px; }
 .bubble.image img { width: 220px; max-width: 60vw; border-radius: 12px; display: block; }
 
+/* Date divider. A thread was one unbroken run of bubbles with only clock
+   times on them, so this morning and three weeks ago looked identical. */
+.chat-day { align-self: center; margin: 10px 0 4px; }
+.chat-day span {
+  display: inline-block; padding: 3px 12px; border-radius: 999px;
+  background: var(--bg); border: 1px solid var(--border);
+  font-size: 11.5px; font-weight: 600; color: var(--muted);
+}
+
+/* "Seen" under your own last message. Only ever under YOUR messages, and
+   only the last one — repeating it on every bubble is noise. */
+.msg-seen {
+  align-self: flex-end; font-size: 11px; color: var(--muted);
+  margin: -2px 4px 2px; display: none;
+}
+.msg-seen.show { display: block; }
+
 /* Call record in the thread. Centred rather than sided, because it is a
    record of something that happened, not a message either person wrote. */
 .call-record {

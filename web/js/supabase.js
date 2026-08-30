@@ -36,14 +36,20 @@
     async client() { return await ready; },
 
     // ---------- Auth ----------
-    async signUp({ email, phone, password, name }) {
+    async signUp({ email, phone, password, name, handle }) {
       const c = await ready; if (!c) throw new Error('SDK not loaded');
       // Refuse rather than send a blank. This used to pass `name || ''`, and
       // the profile trigger's coalesce chain only replaces NULL — an empty
       // string went straight through it and produced a nameless account.
       const cleanName = (name || '').trim();
       if (cleanName.length < 2) throw new Error('الاسم مطلوب');
-      const opts = { password, options: { data: { name: cleanName } } };
+      // handle_new_user reads this out of raw_user_meta_data. Sent only when
+      // it is genuinely set and valid, so the trigger's generated fallback
+      // still applies to any account created by another route.
+      const cleanHandle = String(handle || '').trim().toLowerCase();
+      const meta = { name: cleanName };
+      if (/^[a-z0-9._]{3,30}$/.test(cleanHandle)) meta.handle = cleanHandle;
+      const opts = { password, options: { data: meta } };
       if (email) opts.email = email; else if (phone) opts.phone = phone;
       const { data, error } = await c.auth.signUp(opts);
       if (error) throw error;

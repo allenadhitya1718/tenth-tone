@@ -388,7 +388,7 @@
     hideNav();
     const root = el('section', { class: 'auth-screen reg-screen' });
 
-    const data = { name: '', birth: '', method: 'email', email: '', phone: '', pass: '', confirm: '' };
+    const data = { name: '', handle: '', birth: '', method: 'email', email: '', phone: '', pass: '', confirm: '' };
     let step = 0;
     const STEPS = 3;
 
@@ -425,26 +425,88 @@
 
     // ── Step 1: who you are ──
     const nameIn = el('input', { class: 'input', placeholder: 'الاسم', maxlength: '40', autocomplete: 'name' });
+    // Username is asked for here rather than generated.
+    //
+    // Signup never collected one, so handle_new_user fell back to
+    // 'user_' || eight hex characters. Everyone ended up as @user_d6aceb49.
+    // It is editable later in Edit Profile, but nobody goes looking, so in
+    // practice people keep a machine-generated handle for good — and on a
+    // social app the @handle is the person's identity.
+    const handleIn = el('input', {
+      class: 'input', placeholder: 'اسم المستخدم', maxlength: '30',
+      autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false',
+    });
+    const handleHint = el('p', { class: 'reg-hint' }, 'أحرف إنجليزية وأرقام و _ و . فقط');
+    // Typed live so a taken name is found before the form is submitted, and
+    // the input is coerced to the format the database will accept rather
+    // than rejecting the person afterwards.
+    let handleState = 'empty';   // empty | bad | checking | taken | free
+    let handleTimer = null;
+
+    function paintHandle(state, msg) {
+      handleState = state;
+      handleHint.textContent = msg;
+      handleHint.style.color = state === 'free' ? 'var(--success)'
+                             : (state === 'taken' || state === 'bad') ? 'var(--danger)'
+                             : '';
+      try { if (window.I18N) window.I18N.apply(handleHint); } catch (e) {}
+    }
+
+    handleIn.addEventListener('input', () => {
+      // The database enforces ^[a-z0-9._]{3,30}$ (0007). Match it here so the
+      // rules are visible while typing instead of arriving as a rejection.
+      handleIn.value = handleIn.value.toLowerCase().replace(/[^a-z0-9._]/g, '');
+      const v = handleIn.value;
+      if (handleTimer) { clearTimeout(handleTimer); handleTimer = null; }
+      if (!v) return paintHandle('empty', 'أحرف إنجليزية وأرقام و _ و . فقط');
+      if (v.length < 3) return paintHandle('bad', 'ثلاثة أحرف على الأقل');
+      paintHandle('checking', 'جارٍ التحقق...');
+      handleTimer = setTimeout(async () => {
+        try {
+          const free = await window.API.isHandleAvailable(v);
+          if (handleIn.value !== v) return;              // they kept typing
+          paintHandle(free ? 'free' : 'taken', free ? 'متاح' : 'اسم المستخدم محجوز');
+        } catch (e) {
+          // Never block signup on a check that failed; the unique index is
+          // the real guard and will reject a clash on insert.
+          paintHandle('free', '');
+        }
+      }, 450);
+    });
+
     const birthIn = el('input', { class: 'input reg-date', type: 'date', autocomplete: 'bday' });
     try { birthIn.max = new Date().toISOString().slice(0, 10); } catch (e) {}
 
     function step1() {
       body.innerHTML = '';
       body.appendChild(el('h2', { class: 'auth-title' }, 'عرّفنا بنفسك'));
-      body.appendChild(el('p', { class: 'auth-subtitle' }, 'اسمك كما سيظهر للآخرين، وتاريخ ميلادك'));
+      body.appendChild(el('p', { class: 'auth-subtitle' }, 'اسمك كما سيظهر للآخرين، واسم المستخدم، وتاريخ ميلادك'));
       body.appendChild(error);
       body.appendChild(el('div', { class: 'input-wrap' }, [nameIn]));
+      body.appendChild(el('div', { class: 'input-wrap' }, [handleIn]));
+      body.appendChild(handleHint);
       body.appendChild(el('label', { class: 'reg-label' }, 'تاريخ الميلاد'));
       body.appendChild(el('div', { class: 'input-wrap' }, [birthIn]));
       body.appendChild(el('p', { class: 'reg-hint' }, 'لن يظهر تاريخ ميلادك لأي شخص، ولا يمكن تغييره لاحقًا.'));
-      const next = el('button', { class: 'btn btn-pill', onclick: () => {
+      const next = el('button', { class: 'btn btn-pill', onclick: async () => {
         nameIn.value = nameIn.value.trim();
         if (nameIn.value.length < 2) return fail('أدخل اسمك');
+        if (handleIn.value.length < 3) return fail('أدخل اسم مستخدم من ثلاثة أحرف على الأقل');
+        if (handleState === 'taken') return fail('اسم المستخدم محجوز، اختر غيره');
         if (!birthIn.value) return fail('أدخل تاريخ ميلادك');
         const age = ageOf(birthIn.value);
         if (age == null || age > 120) return fail('تاريخ الميلاد غير صحيح');
         if (age < 13) return fail('يجب أن يكون عمرك 13 عامًا على الأقل');
+        // If they moved faster than the debounce, settle it before continuing.
+        if (handleState === 'checking' || handleState === 'empty') {
+          try {
+            if (!(await window.API.isHandleAvailable(handleIn.value))) {
+              return fail('اسم المستخدم محجوز، اختر غيره');
+            }
+          } catch (e) { /* fall through; the unique index still guards it */ }
+        }
         data.name = nameIn.value;
+        data.handle = handleIn.value;
         data.birth = birthIn.value;
         show(1);
       } }, 'التالي');
@@ -518,7 +580,7 @@
         create.textContent = 'جاري إنشاء الحساب...';
         try { if (window.I18N) window.I18N.apply(create); } catch (e) {}
         try {
-          const params = { password: pw.input.value, name: data.name };
+          const params = { password: pw.input.value, name: data.name, handle: data.handle };
           if (data.email) params.email = data.email; else params.phone = data.phone;
           await window.SB.signUp(params);
           sessionStorage.setItem('tt-pending-otp', JSON.stringify({ email: data.email || undefined, phone: data.phone || undefined }));
@@ -3089,6 +3151,60 @@ function autoPlay(video) {
       ]);
     }
     function fmtTime(iso) { return fmtClock(iso); }
+    // ── Date separators ──
+    // A long thread was one unbroken run of bubbles with only clock times, so
+    // there was no way to tell a message from this morning from one three
+    // weeks ago. A divider is inserted whenever the day changes.
+    let lastStampDay = null;
+    function dayKey(iso) {
+      const d = iso ? new Date(iso) : new Date();
+      return isNaN(d) ? null : d.toISOString().slice(0, 10);
+    }
+    function dayLabel(iso) {
+      const d = new Date(iso || Date.now());
+      const today = new Date();
+      const yest = new Date(); yest.setDate(today.getDate() - 1);
+      const same = (a, b) => a.toDateString() === b.toDateString();
+      if (same(d, today)) return 'اليوم';
+      if (same(d, yest)) return 'أمس';
+      try {
+        const lang = (localStorage.getItem('tt-lang') === 'en') ? 'en-GB' : 'ar';
+        return d.toLocaleDateString(lang, { day: 'numeric', month: 'long', year: 'numeric' });
+      } catch (e) { return d.toDateString(); }
+    }
+    function maybeDateDivider(iso) {
+      const k = dayKey(iso);
+      if (!k || k === lastStampDay) return;
+      lastStampDay = k;
+      const row = el('div', { class: 'chat-day' }, el('span', {}, dayLabel(iso)));
+      msgs.appendChild(row);
+      try { if (window.I18N) window.I18N.apply(row); } catch (e) {}
+    }
+
+    // ── "Seen" ──
+    // Placed under your own LAST message only. Repeating it on every bubble
+    // is noise, and it is the most recent one you actually care about.
+    const seenEl = el('div', { class: 'msg-seen' }, 'تمت المشاهدة');
+    async function refreshSeen() {
+      try {
+        if (!window.API || !window.API.fetchOtherLastRead || !isRealId(id)) return;
+        const readAt = await window.API.fetchOtherLastRead(id);
+        // Find my most recent message and compare it against their last look.
+        const mineBubbles = msgs.querySelectorAll('.bubble.me[data-msg-id]');
+        const last = mineBubbles[mineBubbles.length - 1];
+        if (!last || !readAt) { seenEl.classList.remove('show'); return; }
+        const sentAt = last.dataset.sentAt ? new Date(last.dataset.sentAt) : null;
+        const seen = sentAt ? (new Date(readAt) >= sentAt) : false;
+        if (seen) {
+          last.after(seenEl);
+          seenEl.classList.add('show');
+          try { if (window.I18N) window.I18N.apply(seenEl); } catch (e) {}
+        } else {
+          seenEl.classList.remove('show');
+        }
+      } catch (e) { /* a read receipt is never worth an error */ }
+    }
+
     function appendMessage(m) {
       const mine = m.from_user_id === myUserId;
 
@@ -3142,11 +3258,13 @@ function autoPlay(video) {
           ]),
         ]);
         if (m.id) rec.dataset.msgId = m.id;
+        maybeDateDivider(m.created_at);
         msgs.appendChild(rec);
         try { if (window.I18N) window.I18N.apply(rec); } catch (e) {}
         return rec;
       }
 
+      maybeDateDivider(m.created_at);
       const bubble = el('div', { class: 'bubble ' + (mine ? 'me' : 'them') });
       if (m.attachment_url && (m.type === 'image' || m.type === 'video')) {
         const tag = m.type === 'image' ? Object.assign(document.createElement('img'), { src: m.attachment_url, style: 'max-width:220px;border-radius:8px' })
@@ -3198,6 +3316,8 @@ function autoPlay(video) {
       if (m.text) bubble.appendChild(document.createTextNode(m.text));
       bubble.appendChild(el('div', { class: 't' }, fmtTime(m.created_at)));
       if (m && m.id) bubble.dataset.msgId = m.id;
+      // refreshSeen compares this against the other person's last_read_at.
+      if (m && m.created_at) bubble.dataset.sentAt = m.created_at;
 
       // ── Reactions ──
       const reactionWrap = el('div', { class: 'bubble-reactions', hidden: true });
@@ -3371,12 +3491,17 @@ function autoPlay(video) {
         // counts as having read it too.
         if (window.API.markChatRead) window.API.markChatRead(id);
 
+        // "Seen" under your own last message, if they have opened the thread
+        // since you sent it. Only on DMs — a group has no single reader.
+        refreshSeen();
+
         // Subscribe realtime
         unsub = window.API.subscribeToMessages(id, (m) => {
           appendMessage(m);
           msgs.scrollTop = msgs.scrollHeight;
           // A message arriving while the thread is open has been seen.
           if (window.API.markChatRead) window.API.markChatRead(id);
+          refreshSeen();
         });
 
         // ── Catch up on anything the live connection missed ──
@@ -7108,7 +7233,9 @@ function autoPlay(video) {
         title: 'حذف الحساب نهائيًا',
         lines: [
           'تُحذف فيديوهاتك وتعليقاتك ورسائلك ومتابعوك.',
-          'يُفقد رصيد المحفظة ولا يمكن استرداده.',
+          // Wallet line removed: there is no wallet screen anywhere in the
+          // app, so this warned people about losing something they were
+          // never able to see. Restore it if a wallet is ever built.
           'لديك 30 يومًا لتغيير رأيك قبل الحذف الفعلي.',
         ],
         cta: 'متابعة الحذف',
@@ -7146,7 +7273,6 @@ function autoPlay(video) {
         'جميع فيديوهاتك وتعليقاتك ستُحذف.',
         'محادثاتك ورسائلك ستُحذف.',
         'متابعوك ومن تتابعهم سيُفقدون.',
-        'رصيد محفظتك سيُفقد ولا يمكن استرداده.',
         'اسم المستخدم الخاص بك قد يأخذه شخص آخر.',
       ].forEach(l => ul.appendChild(el('li', {}, l)));
       body.appendChild(ul);

@@ -1066,6 +1066,24 @@
 
   // Stamps "you have seen everything up to now" on your own membership row.
   // Called when a chat is opened; safe to call when 0041 is not applied yet.
+  // When did the OTHER person last open this conversation? Backs the "Seen"
+  // line under your own last message. The data has existed since 0041 and
+  // nothing was showing it.
+  //
+  // Returns null for a group (there is no single other person) or when the
+  // read state cannot be read, so the caller simply shows nothing.
+  API.fetchOtherLastRead = async (chatId) => {
+    try {
+      const c = await client(); const me = await uid();
+      if (!me || !chatId) return null;
+      const { data, error } = await c.from('chat_members')
+        .select('user_id, last_read_at')
+        .eq('chat_id', chatId).neq('user_id', me);
+      if (error || !data || data.length !== 1) return null;   // group, or unreadable
+      return data[0].last_read_at || null;
+    } catch (e) { return null; }
+  };
+
   API.markChatRead = async (chatId) => {
     try {
       const c = await client(); const me = await uid();
@@ -1359,6 +1377,21 @@
   };
 
   // ---------- Handles ----------
+  // Is this @handle free? Used while typing on signup so a clash is found
+  // before the account is created rather than as a failed insert afterwards.
+  //
+  // Not authoritative — two people typing the same name at once will both be
+  // told it is free. The unique index on profiles.handle is what actually
+  // decides, and one of them gets an error. This only spares the common case.
+  API.isHandleAvailable = async (handle) => {
+    const h = String(handle || '').trim().toLowerCase();
+    if (h.length < 3) return false;
+    const c = await client();
+    const { data, error } = await c.from('profiles').select('id').eq('handle', h).limit(1);
+    if (error) throw error;
+    return !(data && data.length);
+  };
+
   API.fetchProfileByHandle = async (handle) => {
     const c = await client();
     const { data, error } = await c.from('profiles')

@@ -346,6 +346,17 @@
     // Inbox: message requests
     'الطلبات': 'Requests',
     'يريد متابعتك': 'wants to follow you',
+    // Chat: date dividers and the read receipt
+    'تمت المشاهدة': 'Seen',
+    // Signup: username step
+    'أحرف إنجليزية وأرقام و _ و . فقط': 'Letters, numbers, _ and . only',
+    'ثلاثة أحرف على الأقل': 'At least three characters',
+    'جارٍ التحقق...': 'Checking...',
+    'متاح': 'Available',
+    'اسم المستخدم محجوز': 'Username taken',
+    'اسم المستخدم محجوز، اختر غيره': 'That username is taken, pick another',
+    'أدخل اسم مستخدم من ثلاثة أحرف على الأقل': 'Enter a username of at least three characters',
+    'اسمك كما سيظهر للآخرين، واسم المستخدم، وتاريخ ميلادك': 'Your name as others will see it, your username, and your date of birth',
     'تسجيل دخول جديد إلى حسابك': 'New sign-in to your account',
     'تحديث جديد': 'New update',
     // Share sheet — "contacts" was misleading, this list is followers
