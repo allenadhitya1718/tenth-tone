@@ -453,7 +453,18 @@ window.DB = (function () {
   // through to its empty state) instead of showing invented content.
   // Gating here rather than at each call site means a screen can't leak
   // sample data by forgetting to check the flag.
-  const demo = !(window.TT_CONFIG && window.TT_CONFIG.demoMode === false);
+  // Note the direction of this test: demo content is returned only when the
+  // config explicitly asks for it.
+  //
+  // It used to read `!(TT_CONFIG && TT_CONFIG.demoMode === false)`, which is
+  // true when TT_CONFIG is missing entirely — so a build without config.js
+  // silently loaded the FULL demo dataset. That is exactly what happened in
+  // the mock-debug APK: `npx cap sync` had not been re-run, config.js was not
+  // among the bundled assets, and the app shipped showing invented profiles,
+  // videos and chat threads with no way to turn them off.
+  //
+  // Missing configuration must mean no demo data, never all of it.
+  const demo = !!(window.TT_CONFIG && window.TT_CONFIG.demoMode === true);
   if (demo) return full;
 
   return {

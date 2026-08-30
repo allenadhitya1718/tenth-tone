@@ -27,6 +27,18 @@
   // be sent to the server. Replaces ad-hoc `id.length > 10` checks.
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   function isRealId(id) { return typeof id === 'string' && UUID_RE.test(id); }
+
+  // Every profile is supposed to have a name — 0044 enforces that in the
+  // database — but a blank one must never render as an empty gap the way it
+  // did in "Featured creators", where an account appeared as a bare circle
+  // and a follower count. Falls back to the handle, which always exists.
+  function displayName(u) {
+    if (!u) return 'مستخدم';
+    const n = (u.name || '').trim();
+    if (n) return n;
+    const h = String(u.handle || '').replace(/^@/, '').trim();
+    return h || 'مستخدم';
+  }
   window.H.isRealId = isRealId;
 
   // Dates/times follow the active language — they were pinned to 'ar-SA',
@@ -708,6 +720,89 @@
     const scroll = el('div', { class: 'feed-scroll' });
     root.appendChild(scroll);
 
+    // ── One swipe moves exactly one clip ──
+    // scroll-snap-type alone does not give you this. A hard flick keeps its
+    // momentum, and the snap only decides where it eventually comes to rest,
+    // so a quick swipe could sail past three to five videos. The gesture is
+    // driven by hand instead and the travel is clamped to a single row, so a
+    // gentle swipe and a violent one both advance exactly one.
+    (function oneClipPerSwipe() {
+      let startY = 0, startX = 0, startTop = 0, startTs = 0;
+      let dragging = false, animating = false, axis = null;
+      const H = () => scroll.clientHeight || 1;
+
+      function releaseSnap() { scroll.style.scrollSnapType = 'none'; }
+      function restoreSnap() { scroll.style.scrollSnapType = 'y mandatory'; }
+
+      scroll.addEventListener('touchstart', (e) => {
+        if (animating || e.touches.length !== 1) return;
+        dragging = true; axis = null;
+        startY = e.touches[0].clientY;
+        startX = e.touches[0].clientX;
+        startTs = Date.now();
+        // Start from the row we are actually resting on, not a half-scrolled
+        // position, or the clamp below would be measured from the wrong place.
+        startTop = Math.round(scroll.scrollTop / H()) * H();
+      }, { passive: true });
+
+      scroll.addEventListener('touchmove', (e) => {
+        if (!dragging) return;
+        const dy = e.touches[0].clientY - startY;
+        const dx = e.touches[0].clientX - startX;
+
+        if (!axis) {
+          // Too small to read a direction from yet.
+          if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+          axis = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+          // Horizontal belongs to the tab switcher — let it through untouched.
+          if (axis === 'h') { dragging = false; return; }
+          releaseSnap();
+        }
+
+        // Clamped to one screen in either direction. This is what makes
+        // momentum unable to carry the feed past the neighbouring clip.
+        const clamped = Math.max(-H(), Math.min(H(), -dy));
+        // Once the browser has already committed to scrolling, the event can
+        // no longer be cancelled and calling preventDefault only logs a
+        // warning. Drive the position by hand when we still can, and let the
+        // browser get on with it when we cannot.
+        if (e.cancelable) e.preventDefault();
+        scroll.scrollTop = startTop + clamped;
+      }, { passive: false });
+
+      function settle(target) {
+        animating = true;
+        scroll.scrollTo({ top: target, behavior: 'smooth' });
+        setTimeout(() => {
+          animating = false;
+          restoreSnap();
+          playOnlyVisible();
+        }, 320);
+      }
+
+      scroll.addEventListener('touchend', (e) => {
+        if (!dragging) return;
+        dragging = false;
+        if (axis !== 'v') { restoreSnap(); return; }
+
+        const dy = e.changedTouches[0].clientY - startY;
+        const dt = Math.max(1, Date.now() - startTs);
+        // Either a decisive distance or a quick flick commits the move, so a
+        // short sharp swipe still advances rather than springing back.
+        const commit = Math.abs(dy) > H() * 0.18 || (Math.abs(dy) / dt) > 0.4;
+        let target = startTop;
+        if (commit) target = startTop + (dy < 0 ? H() : -H());
+        const max = Math.max(0, scroll.scrollHeight - H());
+        settle(Math.max(0, Math.min(max, target)));
+      });
+
+      scroll.addEventListener('touchcancel', () => {
+        if (!dragging) return;
+        dragging = false;
+        restoreSnap();
+      });
+    })();
+
     // Options sheet shown from the feed's "more" (⋮) button: Not interested /
     // More like this / Report — mirrors Instagram's per-post options menu.
     function openVideoOptionsSheet(v, itemEl) {
@@ -724,23 +819,37 @@
         ]);
       }
 
+      // Both of these swallowed their errors, so the toast promised the feed
+      // had been taught something even when nothing was written — and "not
+      // interested" additionally removed the video, making a silent failure
+      // look exactly like a success.
       const notInterestedRow = row(icons.eyeOff, 'غير مهتم', async () => {
         close();
-        // Fade out + remove immediately so the feedback feels instant
+        const isReal = typeof v.id === 'string' && v.id.length > 10 && window.API;
+        if (isReal) {
+          // Written first here, unlike the other actions: hiding the video is
+          // not reversible on screen, so it should not happen until the
+          // preference has actually been recorded.
+          try {
+            await window.API.setVideoFeedback(v.id, 'not_interested');
+          } catch (e) {
+            toast('تعذر التحديث');
+            return;
+          }
+        }
         itemEl.style.transition = 'opacity 0.25s'; itemEl.style.opacity = '0';
         setTimeout(() => itemEl.remove(), 250);
         toast('لن نعرض لك محتوى مشابهًا كثيرًا');
-        if (typeof v.id === 'string' && v.id.length > 10 && window.API) {
-          try { await window.API.setVideoFeedback(v.id, 'not_interested'); } catch (e) {}
-        }
       });
 
       const interestedRow = row(icons.heart, 'مهتم — أظهر لي المزيد مثل هذا', async () => {
         close();
-        toast('سنعرض لك محتوى مشابهًا أكثر');
         if (typeof v.id === 'string' && v.id.length > 10 && window.API) {
-          try { await window.API.setVideoFeedback(v.id, 'interested'); } catch (e) {}
+          try {
+            await window.API.setVideoFeedback(v.id, 'interested');
+          } catch (e) { toast('تعذر التحديث'); return; }
         }
+        toast('سنعرض لك محتوى مشابهًا أكثر');
       });
 
       const reportRow = row(icons.flag, 'الإبلاغ', () => {
@@ -895,7 +1004,8 @@
       }
       if (isVideo) {
         const video = document.createElement('video');
-        video.src = videoSrc;
+        // The source is deliberately NOT set here — see attachSrc below.
+        video.dataset.src = videoSrc;
         video.autoplay = PLAYBACK.autoplay;
         // Sound is a session preference, not a per-clip one. Once someone
         // turns it on it stays on as they scroll, the way every short video
@@ -906,7 +1016,12 @@
         armSoundOnFirstGesture();
         video.loop = true;
         video.playsInline = true;
-        video.preload = preloadMode();
+        // 'none' until the clip is near the viewport. A page is 20 rows and
+        // every one of them used to carry preload="auto" with a src already
+        // set, so opening the feed started twenty whole-file downloads at
+        // once. That is what made the feed cost several Mbps — not the
+        // bitrate of any single clip, which measures well under 2.
+        video.preload = 'none';
         video.setAttribute('playsinline', '');
         video.setAttribute('webkit-playsinline', '');
         if (PLAYBACK.muted) video.setAttribute('muted', '');
@@ -927,12 +1042,41 @@
         item.appendChild(video);
         item.appendChild(playBadge);
 
+        // ── Only clips near the viewport are allowed on the wire ──
+        // Attaching the source starts the download; removing it cancels one
+        // already in flight. A clip is attached when it comes within a screen
+        // of the viewport and detached once it is more than a screen away, so
+        // at most about three files are ever in flight instead of twenty.
+        function attachSrc() {
+          if (video.getAttribute('src')) return;
+          video.setAttribute('src', video.dataset.src);
+          video.preload = preloadMode();
+          try { video.load(); } catch (e) {}
+        }
+        function detachSrc() {
+          if (!video.getAttribute('src')) return;
+          try {
+            video.pause();
+            video.removeAttribute('src');
+            video.load(); // actually aborts the transfer; removeAttribute alone does not
+          } catch (e) {}
+        }
+        const nearIo = new IntersectionObserver(entries => {
+          entries.forEach(e => { e.isIntersecting ? attachSrc() : detachSrc(); });
+        }, { rootMargin: '100% 0px' });
+        nearIo.observe(item);
+
         video.addEventListener('error', () => {
+          // A detached video fires 'error' on some engines. That is us, not a
+          // broken file — ignore it or the poster gets hidden on every scroll.
+          if (!video.getAttribute('src')) return;
           // In demo mode, fall through to another sample clip. Outside it,
           // leave the poster showing rather than playing unrelated content.
           if (!video._retried && demoBgList.length) {
             video._retried = true;
-            video.src = demoBgList[(idx + 1) % demoBgList.length];
+            // dataset.src too, so re-attaching later keeps the fallback.
+            video.dataset.src = demoBgList[(idx + 1) % demoBgList.length];
+            video.setAttribute('src', video.dataset.src);
             autoPlay(video);
           } else {
             video.style.display = 'none';
@@ -945,17 +1089,54 @@
         // Initial play attempt
         autoPlay(video);
 
-        // Tap on feed item to toggle play/pause + unmute
+        // Double tap likes the clip. Assigned once the action rail below has
+        // been built, since the counter and the filled heart live on it.
+        item._likeFromGesture = null;
+
+        // Flies a heart up from wherever the finger landed, the way every
+        // short video app confirms a double tap.
+        function heartBurst(e) {
+          const r = item.getBoundingClientRect();
+          const x = (e && e.clientX ? e.clientX : r.left + r.width / 2) - r.left;
+          const y = (e && e.clientY ? e.clientY : r.top + r.height / 2) - r.top;
+          const h = el('div', { class: 'tap-heart', html: icons.feedHeart });
+          h.style.left = x + 'px';
+          h.style.top = y + 'px';
+          item.appendChild(h);
+          setTimeout(() => { try { h.remove(); } catch (err) {} }, 900);
+        }
+
+        // Tap toggles sound; double tap likes.
+        let tapTimer = null, lastTapTs = 0;
         item.addEventListener('click', (e) => {
           if (e.target.closest('.feed-actions') || e.target.closest('.feed-info') || e.target.closest('.feed-tabs')) return;
-          // First tap turns sound on for the whole session and does not
-          // also pause. Pausing on the very tap that unmutes felt broken.
-          // Tapping a clip turns sound on or off for the whole session.
-          // It deliberately does not pause: on a scrolling feed a stray tap
-          // that freezes the video reads as the app breaking.
-          setMuted(!PLAYBACK.muted);
-          playOnlyVisible();
-          playBadge.style.display = 'none';
+          const now = Date.now();
+
+          if (now - lastTapTs < 300) {
+            // Second tap of a pair. Cancel the sound toggle the first one
+            // queued — a double tap should never also flip the audio.
+            lastTapTs = 0;
+            if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
+            heartBurst(e);
+            // Double tap only ever likes, never unlikes, matching TikTok and
+            // Instagram: tapping an already liked clip re-plays the heart and
+            // leaves the like in place. Unliking is the rail button's job.
+            if (item._likeFromGesture) item._likeFromGesture();
+            return;
+          }
+
+          lastTapTs = now;
+          // Held back briefly so a double tap can cancel it. Single tap still
+          // reads as instant at this delay.
+          tapTimer = setTimeout(() => {
+            tapTimer = null;
+            // Tapping a clip turns sound on or off for the whole session.
+            // It deliberately does not pause: on a scrolling feed a stray tap
+            // that freezes the video reads as the app breaking.
+            setMuted(!PLAYBACK.muted);
+            playOnlyVisible();
+            playBadge.style.display = 'none';
+          }, 260);
         });
 
         // ── Engagement tracking: watch time, replay count, and completion %
@@ -1083,12 +1264,35 @@
         try { if (window.I18N) window.I18N.apply(followBtn); } catch (e) {}
       }
 
-      function setFollowed(next) {
+      // The call used to be fired without await inside a try/catch, which
+      // catches nothing: a rejected promise escapes a synchronous try, so a
+      // follow that the server refused still left the button reading
+      // "Following" until the screen was rebuilt.
+      async function setFollowed(next) {
+        const prev = followed;
         followed = next;
         window._followedUsers[v.user.id] = followed;
         applyFollowUI();
         if (window.API && typeof v.user.id === 'string' && v.user.id.length > 4) {
-          try { followed ? window.API.follow(v.user.id) : window.API.unfollow(v.user.id); } catch (e) {}
+          try {
+            if (next) {
+              const r = await window.API.follow(v.user.id);
+              // A private account returns a pending request, not a follow.
+              if (r === 'requested') {
+                followed = false;
+                window._followedUsers[v.user.id] = false;
+                applyFollowUI();
+                toast('تم إرسال طلب المتابعة');
+              }
+            } else {
+              await window.API.unfollow(v.user.id);
+            }
+          } catch (e) {
+            followed = prev;
+            window._followedUsers[v.user.id] = prev;
+            applyFollowUI();
+            toast('تعذر التحديث');
+          }
         }
       }
 
@@ -1127,9 +1331,13 @@
       // shows the same avatar and opens the same profile, and the Follow
       // button lives there too. One control per action.
 
-      const likeBtn = el('button', { class: 'feed-action' + (v.liked ? ' liked' : ''), onclick: async () => {
+      // One code path for both ways to like: the rail button toggles, the
+      // double tap forces it on. Sharing this keeps the count, the filled
+      // heart and the revert-on-error behaviour identical between them.
+      async function applyLike(next) {
+        if (v.liked === next) return;
         const wasLiked = v.liked;
-        v.liked = !wasLiked;
+        v.liked = next;
         v.likes += v.liked ? 1 : -1;
         likeBtn.classList.toggle('liked', v.liked);
         likeBtn.querySelector('.feed-action-count').textContent = fmt(v.likes);
@@ -1137,11 +1345,15 @@
           try { wasLiked ? await window.API.unlike(v.id) : await window.API.like(v.id); }
           catch (e) { /* revert on error */ v.liked = wasLiked; v.likes += wasLiked ? 1 : -1; likeBtn.classList.toggle('liked', wasLiked); likeBtn.querySelector('.feed-action-count').textContent = fmt(v.likes); }
         }
-      } }, [
+      }
+
+      const likeBtn = el('button', { class: 'feed-action' + (v.liked ? ' liked' : ''), onclick: () => applyLike(!v.liked) }, [
         el('span', { class: 'feed-action-icon no-bg', html: icons.feedHeart }),
         el('span', { class: 'feed-action-count' }, fmt(v.likes)),
       ]);
       actions.appendChild(likeBtn);
+      // Hands the double-tap handler its way in (set on the item above).
+      item._likeFromGesture = () => applyLike(true);
 
       const commentBtn = el('button', { class: 'feed-action', onclick: () => go('/comments/' + v.id) }, [
         el('span', { class: 'feed-action-icon no-bg', html: icons.feedComment }),
@@ -1149,11 +1361,29 @@
       ]);
       actions.appendChild(commentBtn);
 
-      const saveBtn = el('button', { class: 'feed-action', onclick: async () => {
-        v.saved = !v.saved;
+      // Saving toasted and nothing else: the count above the icon never moved,
+      // the icon never showed a saved state, and a failed save was swallowed
+      // so the toast still claimed success. Now it behaves like the like
+      // button — count, filled state, and a revert when the write fails.
+      const saveBtn = el('button', { class: 'feed-action' + (v.saved ? ' saved' : ''), onclick: async () => {
+        const wasSaved = v.saved;
+        v.saved = !wasSaved;
+        v.saves = Math.max(0, (Number(v.saves) || 0) + (v.saved ? 1 : -1));
+        const paintSave = () => {
+          saveBtn.classList.toggle('saved', !!v.saved);
+          saveBtn.querySelector('.feed-action-count').textContent = fmt(v.saves);
+        };
+        paintSave();
         toast(v.saved ? 'تم الحفظ' : 'تم إلغاء الحفظ');
         if (typeof v.id === 'string' && v.id.length > 10 && window.API) {
-          try { v.saved ? await window.API.save(v.id) : await window.API.unsave(v.id); } catch (e) {}
+          try {
+            wasSaved ? await window.API.unsave(v.id) : await window.API.save(v.id);
+          } catch (e) {
+            v.saved = wasSaved;
+            v.saves = Math.max(0, (Number(v.saves) || 0) + (wasSaved ? 1 : -1));
+            paintSave();
+            toast('تعذر التحديث');
+          }
         }
       } }, [
         el('span', { class: 'feed-action-icon no-bg', html: icons.feedBookmark }),
@@ -1496,8 +1726,8 @@ function autoPlay(video) {
             class: 'creator-item',
             onclick: () => go('/profile/' + u.id)
           }, [
-            avatar(u.avatar, u.name, 62),
-            el('div', { class: 'creator-name' }, u.name),
+            avatar(u.avatar, displayName(u), 62),
+            el('div', { class: 'creator-name' }, displayName(u)),
             el('div', { class: 'creator-meta' }, fmt(u.followers) + ' متابع')
           ]);
           const paintCreators = list => { creatorsRow.innerHTML = ''; list.forEach(u => creatorsRow.appendChild(creatorItem(u))); };
@@ -1674,26 +1904,111 @@ function autoPlay(video) {
     let maxSecs = 90;
     const dur = el('span', { class: 'camera-side-pill' }, '00:00');
 
-    async function startCamera() {
+    // Reads the standing decision without triggering a prompt. Returns
+    // 'granted' | 'denied' | 'prompt' | null when the engine cannot say.
+    async function permState(name) {
       try {
-        if (stream) stream.getTracks().forEach(t => t.stop());
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode },
-          audio: true,
+        if (!navigator.permissions || !navigator.permissions.query) return null;
+        const st = await navigator.permissions.query({ name });
+        return st.state;
+      } catch (e) { return null; } // older engines reject unknown names
+    }
+
+    // Draws the blocked card. Which buttons appear depends on why it failed:
+    // a permanent refusal must not offer "try again", because the browser
+    // will not ask a second time and the button would do visibly nothing.
+    function showCamError({ title, detail, canRetry }) {
+      root.classList.add('cam-blocked');
+      previewWrap.innerHTML = '';
+      const card = el('div', { class: 'cam-error' }, [
+        el('span', { class: 'ce-icon', html: icons.video }),
+        el('p', { class: 'ce-title' }, title),
+        el('p', { class: 'ce-sub' }, detail),
+      ]);
+      if (canRetry) {
+        card.appendChild(el('button', {
+          class: 'ce-btn', onclick: () => { root.classList.remove('cam-blocked'); startCamera(); },
+        }, 'إعادة المحاولة'));
+      }
+      // There is always a way back to the permission, whether or not the
+      // prompt can be shown again.
+      card.appendChild(el('button', {
+        class: 'ce-btn', onclick: () => { stopAll(); go('/settings/permissions'); },
+      }, 'إدارة الأذونات'));
+      card.appendChild(el('button', {
+        class: 'ce-btn', onclick: () => { stopAll(); go('/upload'); },
+      }, 'رفع من المعرض بدلًا من ذلك'));
+      previewWrap.appendChild(card);
+      try { if (window.I18N) window.I18N.apply(card); } catch (e) {}
+    }
+
+    async function startCamera() {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+
+      // Asking when the answer is already a standing "no" re-runs a prompt the
+      // browser silently suppresses, which is what made this look like the
+      // permission had been granted and ignored. Check first, and say plainly
+      // that it has to be changed in device settings.
+      if ((await permState('camera')) === 'denied') {
+        showCamError({
+          title: 'الكاميرا محظورة',
+          detail: 'تم رفض إذن الكاميرا سابقًا. لا يمكن للتطبيق طلبه مرة أخرى — فعّله من إعدادات جهازك.',
+          canRetry: false,
         });
+        return;
+      }
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: true });
+        root.classList.remove('cam-blocked');
         previewVideo.srcObject = stream;
+        return;
       } catch (e) {
-        // Previously injected bare text into the preview, so it collided with
-        // the speed row and record button. Now a self-contained card that sits
-        // above the controls.
-        root.classList.add('cam-blocked');
-        previewWrap.innerHTML = '';
-        previewWrap.appendChild(el('div', { class: 'cam-error' }, [
-          el('span', { class: 'ce-icon', html: icons.video }),
-          el('p', { class: 'ce-title' }, 'تعذر فتح الكاميرا'),
-          el('p', { class: 'ce-sub' }, e.message || 'الرجاء السماح بالوصول إلى الكاميرا والميكروفون.'),
-          el('button', { class: 'ce-btn', onclick: () => { stopAll(); go('/upload'); } }, 'رفع من المعرض بدلًا من ذلك'),
-        ]));
+        // Camera and microphone are one request, so a refused microphone
+        // failed the whole thing and reported it as a camera problem. Retry
+        // with video alone to find out which of the two actually said no.
+        if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: false });
+            root.classList.remove('cam-blocked');
+            previewVideo.srcObject = stream;
+            // The camera works; it was the microphone. Recording silently
+            // would be worse than saying so.
+            toast('الميكروفون محظور — سيتم التسجيل بدون صوت');
+            return;
+          } catch (e2) { /* genuinely the camera — fall through */ }
+        }
+
+        const name = (e && e.name) || '';
+        if (name === 'NotAllowedError' || name === 'SecurityError') {
+          // Distinguishes "not asked yet, dismissed" from a standing refusal.
+          const st = await permState('camera');
+          showCamError({
+            title: 'الكاميرا محظورة',
+            detail: st === 'denied'
+              ? 'تم رفض إذن الكاميرا. فعّله من إعدادات جهازك ثم عد.'
+              : 'يحتاج التطبيق إلى إذن الكاميرا والميكروفون للتصوير.',
+            canRetry: st !== 'denied',
+          });
+        } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+          showCamError({
+            title: 'لا توجد كاميرا',
+            detail: 'لم يعثر التطبيق على كاميرا متاحة على هذا الجهاز.',
+            canRetry: false,
+          });
+        } else if (name === 'NotReadableError' || name === 'AbortError') {
+          showCamError({
+            title: 'الكاميرا قيد الاستخدام',
+            detail: 'تطبيق آخر يستخدم الكاميرا. أغلقه ثم أعد المحاولة.',
+            canRetry: true,
+          });
+        } else {
+          showCamError({
+            title: 'تعذر فتح الكاميرا',
+            detail: (e && e.message) || 'الرجاء السماح بالوصول إلى الكاميرا والميكروفون.',
+            canRetry: true,
+          });
+        }
       }
     }
     startCamera();
@@ -2408,35 +2723,132 @@ function autoPlay(video) {
     ]);
     root.appendChild(cta);
 
+    // ── Primary / Requests ──
+    // A message from someone you do not follow used to land in the inbox
+    // beside the people you actually talk to, indistinguishable from them.
+    // It now waits in Requests until you accept it, and the tab only appears
+    // when something is actually waiting — an always-visible empty tab is
+    // just clutter.
+    let allChats = [];
+    let activeTab = 'primary';
+    // False until the server has actually answered. Guards the empty state
+    // above so it can only ever be shown as a fact, not as a guess.
+    let chatsLoaded = false;
+
+    const tabPrimary = el('button', { class: 'inbox-tab active', onclick: () => setTab('primary') }, 'الرسائل');
+    const requestCount = el('span', { class: 'inbox-tab-count' }, '');
+    const tabRequests = el('button', { class: 'inbox-tab', onclick: () => setTab('requests') }, [
+      document.createTextNode('الطلبات'), requestCount,
+    ]);
+    const tabs = el('div', { class: 'inbox-tabs', hidden: true }, [tabPrimary, tabRequests]);
+    root.appendChild(tabs);
+
+    function setTab(t) {
+      activeTab = t;
+      tabPrimary.classList.toggle('active', t === 'primary');
+      tabRequests.classList.toggle('active', t === 'requests');
+      paint();
+    }
+
+    function paint() {
+      const requests = allChats.filter(c => c.is_request);
+      const primary = allChats.filter(c => !c.is_request);
+      // Nothing pending: hide the tabs entirely and just show the inbox.
+      tabs.hidden = requests.length === 0;
+      if (!requests.length && activeTab === 'requests') activeTab = 'primary';
+      tabPrimary.classList.toggle('active', activeTab === 'primary');
+      tabRequests.classList.toggle('active', activeTab === 'requests');
+      requestCount.textContent = requests.length ? String(requests.length) : '';
+      renderChats(activeTab === 'requests' ? requests : primary);
+      try { if (window.I18N) window.I18N.apply(tabs); } catch (e) {}
+    }
+
     const list = el('div', { class: 'inbox-list' });
     root.appendChild(list);
 
     // Render mock by default; replace with real chats async
     function renderChats(chats) {
       list.innerHTML = '';
-      if (!chats.length) { list.appendChild(el('div', { class: 'empty-state', style: { padding: '40px', textAlign: 'center', color: 'var(--muted)' } }, 'لا توجد محادثات بعد')); return; }
-      chats.forEach(c => list.appendChild(el('div', { class: 'inbox-row', onclick: () => go('/chat/' + c.id) }, [
-        avatar(c.avatar || '', c.title || '', 44),
-        el('div', { class: 'inbox-body' }, [
-          el('div', { class: 'inbox-name' }, [
-            el('span', {}, c.title),
-            el('span', { class: 'time' }, _agoShort((c.last_message && c.last_message.created_at) || c.created_at)),
+      if (!chats.length) {
+        // "No conversations yet" is a definite statement, and this screen used
+        // to make it before it had asked the server anything — so the app
+        // announced you had no chats, then contradicted itself a moment later.
+        // Until the answer is actually back, show placeholder rows instead:
+        // they say "loading" without claiming anything untrue.
+        if (!chatsLoaded) {
+          for (let i = 0; i < 6; i++) {
+            list.appendChild(el('div', { class: 'inbox-row skeleton-row' }, [
+              el('div', { class: 'sk-circle' }),
+              el('div', { class: 'sk-lines' }, [
+                el('div', { class: 'sk-line w60' }),
+                el('div', { class: 'sk-line w85' }),
+              ]),
+            ]));
+          }
+          return;
+        }
+        list.appendChild(el('div', { class: 'empty-state', style: { padding: '40px', textAlign: 'center', color: 'var(--muted)' } }, 'لا توجد محادثات بعد'));
+        return;
+      }
+      chats.forEach(c => {
+        // An opened conversation and one holding a new message used to look
+        // identical. Unread now reads at a glance the way Instagram does it:
+        // the name and preview go solid and bold, and a dot sits on the end.
+        const unread = (c.unread_count || 0) > 0;
+        const row = el('div', {
+          class: 'inbox-row' + (unread ? ' unread' : ''),
+          onclick: () => {
+            // Clear it immediately rather than waiting for the next fetch, so
+            // coming back from the chat does not still show it as unread.
+            row.classList.remove('unread');
+            const d = row.querySelector('.inbox-dot');
+            if (d) d.remove();
+            if (window.API && window.API.markChatRead) window.API.markChatRead(c.id);
+            go('/chat/' + c.id);
+          },
+        }, [
+          avatar(c.avatar || '', c.title || '', 44),
+          el('div', { class: 'inbox-body' }, [
+            el('div', { class: 'inbox-name' }, [
+              el('span', {}, c.title),
+              el('span', { class: 'time' }, _agoShort((c.last_message && c.last_message.created_at) || c.created_at)),
+            ]),
+            el('p', { class: 'inbox-msg' }, _msgPreview(c.last_message)),
           ]),
-          el('p', { class: 'inbox-msg' }, _msgPreview(c.last_message)),
-        ]),
-      ])));
+        ]);
+        if (unread) {
+          row.appendChild(el('span', {
+            class: 'inbox-dot',
+            // Count past 9 becomes 9+; the dot is a glance, not a report.
+            title: String(c.unread_count),
+          }, c.unread_count > 9 ? '9+' : String(c.unread_count)));
+        }
+        list.appendChild(row);
+      });
     }
     function _agoShort(iso) { if (!iso) return ''; const t = Date.now() - new Date(iso).getTime(); const m = Math.floor(t / 60000); if (m < 1) return 'الآن'; if (m < 60) return m + 'د'; const h = Math.floor(m / 60); if (h < 24) return h + 'س'; const d = Math.floor(h / 24); return d + 'ي'; }
     function _msgPreview(m) { if (!m) return 'ابدأ محادثة'; if (m.type === 'voice') return '🎤 رسالة صوتية'; if (m.type === 'image') return '📷 صورة'; if (m.type === 'video') return '🎥 فيديو'; return (m.text || '').slice(0, 60); }
 
-    renderChats(DB.chats.map(c => ({ id: c.id, title: c.user.name, avatar: c.user.avatar, last_message: { text: c.last, created_at: new Date().toISOString() }, created_at: new Date().toISOString() })));
+    allChats = DB.chats.map(c => ({ id: c.id, title: c.user.name, avatar: c.user.avatar, last_message: { text: c.last, created_at: new Date().toISOString() }, created_at: new Date().toISOString(), is_request: false }));
+    if (allChats.length) chatsLoaded = true;   // demo data is an answer of sorts
+    paint();
     (async () => {
-      try { 
-        if (window.API) {
-          const apiChats = await window.API.fetchChats();
-          if (apiChats && apiChats.length > 0) renderChats(apiChats);
-        }
-      } catch (e) { console.warn('chats:', e); }
+      try {
+        if (!window.API) { chatsLoaded = true; paint(); return; }
+        // onFresh repaints if the background refresh turns up something
+        // different from what was served out of the cache.
+        const apiChats = await window.API.fetchChats({
+          onFresh: (rows) => { allChats = rows || []; chatsLoaded = true; paint(); },
+        });
+        allChats = apiChats || [];
+        chatsLoaded = true;
+        paint();
+      } catch (e) {
+        console.warn('chats:', e);
+        // Even a failure is an answer: stop showing placeholders forever.
+        chatsLoaded = true;
+        paint();
+      }
     })();
 
     return root;
@@ -2495,17 +2907,49 @@ function autoPlay(video) {
     const selected = new Set();
     let allUsers = (DB && DB.users) ? DB.users.map(u => ({ id: u.id, name: u.name, handle: u.handle.replace('@', ''), avatar_url: u.avatar, verified: u.verified })) : [];
     let myId = null;
-    (async () => { try { const u = await window.SB.getUser(); myId = u && u.id; renderUsers(); } catch (e) {} })();
+    (async () => {
+      try {
+        const u = await window.SB.getUser();
+        myId = u && u.id;
+        // Opening "new chat" listed every account on the platform, which is
+        // both a stranger-contact problem and useless as a starting point.
+        // The default list is now the people you follow; typing still
+        // searches everyone, which is how you reach someone new on purpose.
+        if (myId && window.API) {
+          try {
+            const following = await window.API.fetchFollowing(myId);
+            if (following && following.length) allUsers = following;
+            else allUsers = [];   // follow nobody yet -> empty state, not everyone
+          } catch (e) { console.warn('following list:', e); }
+        }
+        renderUsers();
+      } catch (e) {}
+    })();
+
+    // Tracked here rather than read back off the field: the search box is
+    // created inline with only an id, and renderUsers needs to know whether
+    // an empty list means "no results" or "you follow nobody".
+    let lastQuery = '';
 
     async function search(q) {
+      const query = (q || '').trim();
+      lastQuery = query;
       try {
         if (window.API) {
-          const res = await window.API.searchProfiles(q || '');
-          if (res && res.length) allUsers = res;
-          else if (!q) allUsers = DB.users.map(u => ({ id: u.id, name: u.name, handle: u.handle.replace('@', ''), avatar_url: u.avatar, verified: u.verified }));
+          if (!query) {
+            // Back to the default list rather than to everyone.
+            if (myId) {
+              const following = await window.API.fetchFollowing(myId).catch(() => []);
+              allUsers = following || [];
+            }
+          } else {
+            const res = await window.API.searchProfiles(query);
+            allUsers = res || [];
+          }
         }
       } catch (e) {
-        if (!q && DB && DB.users) allUsers = DB.users.map(u => ({ id: u.id, name: u.name, handle: u.handle.replace('@', ''), avatar_url: u.avatar, verified: u.verified }));
+        console.warn('user search:', e);
+        allUsers = [];
       }
       renderUsers();
     }
@@ -2514,7 +2958,10 @@ function autoPlay(video) {
       // Filter out current user so they can't try to DM themselves
       const filtered = allUsers.filter(u => u.id !== myId);
       if (!filtered.length) {
-        userList.appendChild(el('div', { style: { padding: '40px', textAlign: 'center', color: 'var(--muted)' } }, 'لا يوجد مستخدمون آخرون'));
+        // Two different situations, and telling them apart matters: an empty
+        // default list means "you follow nobody yet", not "nobody exists".
+        userList.appendChild(el('div', { style: { padding: '40px', textAlign: 'center', color: 'var(--muted)' } },
+          lastQuery ? 'لا توجد نتائج' : 'تابع أشخاصًا لبدء محادثة معهم'));
         return;
       }
       filtered.forEach(u => {
@@ -2576,10 +3023,27 @@ function autoPlay(video) {
     const headerStatus = el('div', { class: 'status' }, '');
     // Was a raw <img src="">, which rendered as a broken-image icon.
     const headerAv = el('div', { class: 'chat-header-av' }, [avatar('', '', 36)]);
-    root.appendChild(el('header', { class: 'chat-header' }, [
-      el('button', { class: 'icon-btn', html: icons.chevR, onclick: () => go('/inbox') }),
+    // Avatar and name together open the other person's profile, which is
+    // where you expect a name at the top of a conversation to take you.
+    // Grouped into one target rather than two so the whole identity block is
+    // tappable, not just the few pixels of the text itself.
+    const headerIdentity = el('div', {
+      class: 'chat-header-id',
+      onclick: () => {
+        // A group has no single profile to open, and there is no group info
+        // screen yet, so it stays inert rather than going somewhere wrong.
+        if (!chatInfo || chatInfo.type === 'group') return;
+        const other = chatInfo.others && chatInfo.others[0];
+        if (other && other.id) go('/profile/' + other.id);
+      },
+    }, [
       headerAv,
       el('div', { style: { flex: 1, minWidth: 0 } }, [headerName, headerStatus]),
+    ]);
+
+    root.appendChild(el('header', { class: 'chat-header' }, [
+      el('button', { class: 'icon-btn back-btn', html: icons.chevL, onclick: () => go('/inbox') }),
+      headerIdentity,
       el('button', { class: 'icon-btn', title: 'مكالمة صوتية', html: icons.phone, onclick: () => startCallFromChat('audio') }),
       el('button', { class: 'icon-btn', title: 'مكالمة فيديو', html: icons.video, onclick: () => startCallFromChat('video') }),
     ]));
@@ -2601,6 +3065,13 @@ function autoPlay(video) {
     root.appendChild(msgs);
 
     let myUserId = null;
+    // Every message id already drawn, and the optimistic bubbles still waiting
+    // for their realtime echo. Together these stop a sent message appearing
+    // twice in the sender's own thread — see appendMessage.
+    const renderedIds = new Set();
+    const pendingSends = [];
+    // The message the composer is currently replying to, if any.
+    let replyTo = null;
     let chatInfo = null;
     function chatIntro(info) {
       const name = (info && info.title) || '';
@@ -2616,6 +3087,62 @@ function autoPlay(video) {
     function fmtTime(iso) { return fmtClock(iso); }
     function appendMessage(m) {
       const mine = m.from_user_id === myUserId;
+
+      // ── Send it once, show it once ──
+      // Sending drew the bubble immediately (so it appears without waiting on
+      // the round trip), and then the realtime INSERT delivered the very same
+      // row back to the sender and drew it a second time. The other person
+      // only ever received the realtime copy, which is why they saw one
+      // message and the sender saw two.
+      if (m && m.id) {
+        if (renderedIds.has(m.id)) return null;   // already on screen
+        if (mine) {
+          // The echo of a bubble already drawn optimistically: adopt it
+          // rather than appending a second one.
+          const i = pendingSends.findIndex(p =>
+            p.type === (m.type || 'text') && p.text === (m.text || ''));
+          if (i !== -1) {
+            const p = pendingSends.splice(i, 1)[0];
+            renderedIds.add(m.id);
+            if (p.node) p.node.dataset.msgId = m.id;
+            return null;
+          }
+        }
+        renderedIds.add(m.id);
+      }
+
+      // ── Call record ──
+      // Written by a database trigger when a call reaches a terminal state
+      // (0045), so it appears whichever side hung up. The row carries JSON
+      // rather than a sentence, because the line has to be renderable in
+      // both Arabic and English.
+      if (m.type === 'call') {
+        let info = {};
+        try { info = JSON.parse(m.text || '{}'); } catch (e) { info = {}; }
+        const isVideo = info.kind === 'video';
+        const secs = Number(info.seconds) || 0;
+        const answered = info.status === 'ended' && secs > 0;
+
+        const label = info.status === 'declined' ? 'مكالمة مرفوضة'
+                    : info.status === 'missed'   ? 'مكالمة فائتة'
+                    : answered                   ? (mine ? 'مكالمة صادرة' : 'مكالمة واردة')
+                    : 'مكالمة لم تكتمل';
+
+        const rec = el('div', {
+          class: 'call-record' + (info.status === 'missed' || info.status === 'declined' ? ' missed' : ''),
+        }, [
+          el('span', { class: 'cr-icon', html: isVideo ? icons.video : icons.phone }),
+          el('span', { class: 'cr-text' }, [
+            el('span', { class: 'cr-label' }, label),
+            el('span', { class: 'cr-meta' }, answered ? fmtDuration(secs) : fmtTime(m.created_at)),
+          ]),
+        ]);
+        if (m.id) rec.dataset.msgId = m.id;
+        msgs.appendChild(rec);
+        try { if (window.I18N) window.I18N.apply(rec); } catch (e) {}
+        return rec;
+      }
+
       const bubble = el('div', { class: 'bubble ' + (mine ? 'me' : 'them') });
       if (m.attachment_url && (m.type === 'image' || m.type === 'video')) {
         const tag = m.type === 'image' ? Object.assign(document.createElement('img'), { src: m.attachment_url, style: 'max-width:220px;border-radius:8px' })
@@ -2641,14 +3168,155 @@ function autoPlay(video) {
         ]));
         m = Object.assign({}, m, { text: '' }); // the raw URL would be noise
       }
+      // A quoted copy of what this message answers, above its own text.
+      if (m.reply_to) {
+        const q = m.reply_to;
+        bubble.insertBefore(el('div', {
+          class: 'bubble-quote',
+          onclick: () => {
+            // Jump to the original and flash it, so a reply to something far
+            // up the thread is actually findable.
+            const target = msgs.querySelector('[data-msg-id="' + q.id + '"]');
+            if (!target) return;
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.classList.add('flash');
+            setTimeout(() => target.classList.remove('flash'), 1200);
+          },
+        }, [
+          el('div', { class: 'bq-name' }, (q.from && q.from.name) || ''),
+          el('div', { class: 'bq-text' }, msgPreviewText(q)),
+        ]), bubble.firstChild);
+      } else if (m.reply_to_id) {
+        // The target was deleted; the reply itself is still real.
+        bubble.insertBefore(el('div', { class: 'bubble-quote deleted' }, 'رسالة محذوفة'), bubble.firstChild);
+      }
+
       if (m.text) bubble.appendChild(document.createTextNode(m.text));
       bubble.appendChild(el('div', { class: 't' }, fmtTime(m.created_at)));
+      if (m && m.id) bubble.dataset.msgId = m.id;
+
+      // ── Reactions ──
+      const reactionWrap = el('div', { class: 'bubble-reactions', hidden: true });
+      bubble.appendChild(reactionWrap);
+      function paintReactions(list) {
+        const rows = list || [];
+        reactionWrap.innerHTML = '';
+        if (!rows.length) { reactionWrap.hidden = true; return; }
+        reactionWrap.hidden = false;
+        // Grouped by emoji with a count, rather than one chip per person.
+        const counts = {};
+        rows.forEach(r => { counts[r.emoji] = (counts[r.emoji] || 0) + 1; });
+        Object.keys(counts).forEach(e => {
+          reactionWrap.appendChild(el('span', { class: 'reaction-chip' },
+            counts[e] > 1 ? (e + ' ' + counts[e]) : e));
+        });
+      }
+      let myReaction = null;
+      if (m.reactions && m.reactions.length) {
+        paintReactions(m.reactions);
+        const mine2 = m.reactions.find(r => r.user_id === myUserId);
+        myReaction = mine2 ? mine2.emoji : null;
+      }
+      bubble._reactions = (m.reactions || []).slice();
+
+      async function react(emoji) {
+        if (!m.id || !window.API || !window.API.toggleMessageReaction) return;
+        const before = bubble._reactions.slice(), beforeMine = myReaction;
+        // Optimistic: drop any previous reaction of mine, add the new one
+        // unless it is the same emoji (which clears it).
+        bubble._reactions = bubble._reactions.filter(r => r.user_id !== myUserId);
+        myReaction = (beforeMine === emoji) ? null : emoji;
+        if (myReaction) bubble._reactions.push({ user_id: myUserId, emoji: myReaction });
+        paintReactions(bubble._reactions);
+        try {
+          await window.API.toggleMessageReaction(m.id, emoji);
+        } catch (e) {
+          bubble._reactions = before; myReaction = beforeMine;
+          paintReactions(bubble._reactions);
+          toast('تعذر التحديث');
+        }
+      }
+
+      // Long press opens the reaction bar — the same gesture Instagram and
+      // WhatsApp use, and the only one available without a right-click.
+      const QUICK = ['❤️', '😂', '😮', '😢', '🙏', '👍'];
+      function openReactionBar() {
+        if (!m.id) return; // an optimistic bubble has no id to react to yet
+        const bar = el('div', { class: 'reaction-bar' });
+        QUICK.forEach(e => bar.appendChild(el('button', {
+          class: 'reaction-pick' + (myReaction === e ? ' on' : ''), type: 'button',
+          onclick: () => { close(); react(e); },
+        }, e)));
+        const close = modal(bar);
+      }
+
+      let pressTimer = null;
+      bubble.addEventListener('touchstart', () => {
+        pressTimer = setTimeout(openReactionBar, 450);
+      }, { passive: true });
+      ['touchend', 'touchmove', 'touchcancel'].forEach(ev =>
+        bubble.addEventListener(ev, () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }, { passive: true }));
+      bubble.addEventListener('contextmenu', (e) => { e.preventDefault(); openReactionBar(); });
+
+      // ── Swipe to reply ──
+      // Dragging a bubble toward the middle of the screen and letting go sets
+      // it as the reply target, which is the gesture people already expect.
+      (function swipeToReply() {
+        let sx = 0, sy = 0, dx = 0, active = false, decided = false;
+        const TRIGGER = 56;
+        bubble.addEventListener('touchstart', (e) => {
+          if (e.touches.length !== 1) return;
+          active = true; decided = false; dx = 0;
+          sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+        }, { passive: true });
+        bubble.addEventListener('touchmove', (e) => {
+          if (!active) return;
+          const nx = e.touches[0].clientX - sx;
+          const ny = e.touches[0].clientY - sy;
+          if (!decided) {
+            // Vertical wins: the thread must still scroll normally.
+            if (Math.abs(ny) > Math.abs(nx)) { active = false; return; }
+            if (Math.abs(nx) < 8) return;
+            decided = true;
+          }
+          // Resisted past the trigger so it cannot be dragged across the screen.
+          dx = nx;
+          const shown = Math.sign(dx) * Math.min(Math.abs(dx), TRIGGER + 16);
+          bubble.style.transform = 'translateX(' + shown + 'px)';
+          bubble.classList.toggle('reply-armed', Math.abs(dx) > TRIGGER);
+        }, { passive: true });
+        function release() {
+          if (!active) return;
+          active = false;
+          const fire = Math.abs(dx) > TRIGGER;
+          bubble.style.transition = 'transform 160ms ease';
+          bubble.style.transform = '';
+          bubble.classList.remove('reply-armed');
+          setTimeout(() => { bubble.style.transition = ''; }, 180);
+          if (fire && m.id) setReplyTo(m);
+        }
+        bubble.addEventListener('touchend', release, { passive: true });
+        bubble.addEventListener('touchcancel', release, { passive: true });
+      })();
+
       msgs.appendChild(bubble);
+      return bubble; // the sender tracks this node until its echo arrives
     }
 
-    // Demo thread as a first paint (empty outside demo mode); the real
-    // conversation replaces it once the API responds.
-    const mockChat = (DB.chats && (DB.chats.find(x => x.id === id) || DB.chats[0])) || null;
+    // Demo thread as a first paint. Two guards, both needed:
+    //
+    // The fallback used to be `find(id) || DB.chats[0]`, so opening ANY real
+    // conversation painted the FIRST demo thread — someone else's name, photo
+    // and messages — for the moment before the API answered. That is the
+    // "demo screen flashes for a second" on entering a chat. A demo thread is
+    // now only ever used when its id genuinely matches.
+    //
+    // And a real chat id is a uuid, so if this looks like one there is a real
+    // conversation coming and nothing should be painted over it, whether or
+    // not demo mode happens to be on.
+    const mockChat = (DEMO && !isRealId(id) && DB.chats)
+      ? (DB.chats.find(x => x.id === id) || null)
+      : null;
     if (mockChat) {
       headerName.textContent = mockChat.user.name;
       headerAv.innerHTML = ''; headerAv.appendChild(avatar(mockChat.user.avatar, mockChat.user.name, 36));
@@ -2671,6 +3339,10 @@ function autoPlay(video) {
         try {
           const info = await window.API.fetchChatInfo(id);
           chatInfo = info;
+          // Only show it as tappable once we know it leads somewhere.
+          if (info && info.type !== 'group' && info.others && info.others[0]) {
+            headerIdentity.classList.add('tappable');
+          }
           if (info) {
             headerName.textContent = info.title;
             headerAv.innerHTML = '';
@@ -2690,11 +3362,47 @@ function autoPlay(video) {
         messages.forEach(appendMessage);
         msgs.scrollTop = msgs.scrollHeight;
 
+        // Reading the thread is what clears it from the inbox. Done here as
+        // well as on the inbox row, so arriving by deep link or notification
+        // counts as having read it too.
+        if (window.API.markChatRead) window.API.markChatRead(id);
+
         // Subscribe realtime
         unsub = window.API.subscribeToMessages(id, (m) => {
           appendMessage(m);
           msgs.scrollTop = msgs.scrollHeight;
+          // A message arriving while the thread is open has been seen.
+          if (window.API.markChatRead) window.API.markChatRead(id);
         });
+
+        // ── Catch up on anything the live connection missed ──
+        // A websocket is not a guarantee. It drops when the phone sleeps, the
+        // tab is backgrounded, or the network changes, and nothing tells the
+        // screen it has gone quiet — which is why a message sent from another
+        // device only appeared after a manual refresh.
+        //
+        // So the thread stops relying solely on the live feed: whenever it
+        // becomes visible again it re-reads the conversation and appends
+        // whatever is new. appendMessage already ignores anything it has
+        // drawn before, so re-reading can never duplicate a message.
+        async function catchUp() {
+          try {
+            const rows = await window.API.fetchMessages(id);
+            let added = 0;
+            (rows || []).forEach(m => { if (appendMessage(m)) added++; });
+            if (added) {
+              msgs.scrollTop = msgs.scrollHeight;
+              if (window.API.markChatRead) window.API.markChatRead(id);
+            }
+          } catch (e) { console.warn('catch-up failed:', e); }
+        }
+        const onVisible = () => { if (document.visibilityState === 'visible') catchUp(); };
+        document.addEventListener('visibilitychange', onVisible);
+        window.addEventListener('online', catchUp);
+        window.addEventListener('hashchange', () => {
+          document.removeEventListener('visibilitychange', onVisible);
+          window.removeEventListener('online', catchUp);
+        }, { once: true });
       } catch (e) { console.warn('chat load:', e); }
     })();
 
@@ -2872,7 +3580,21 @@ function autoPlay(video) {
         type: file ? (file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'voice') : 'text',
         attachment_url: file ? URL.createObjectURL(file) : null
       };
-      appendMessage(tempMsg);
+      // Captured before the bar is cleared, so the send below still knows
+      // what this was answering.
+      const replyingTo = replyTo;
+      if (replyingTo) {
+        tempMsg.reply_to_id = replyingTo.id;
+        tempMsg.reply_to = replyingTo;
+      }
+      setReplyTo(null);
+
+      // Drawn straight away so the message appears without waiting on the
+      // network, and recorded so the realtime echo of this same row adopts
+      // this bubble instead of adding a second one.
+      const tempNode = appendMessage(tempMsg);
+      const tracked = { text, type: tempMsg.type, node: tempNode };
+      pendingSends.push(tracked);
       inputField.value = '';
       msgs.scrollTop = msgs.scrollHeight;
 
@@ -2883,8 +3605,27 @@ function autoPlay(video) {
       }
 
       if (window.API && isRealId(id)) {
-        try { await window.API.sendMessage({ chatId: id, text, type: tempMsg.type, file }); fileInput.value = ''; }
-        catch (e) { toast('تعذر الإرسال'); }
+        try {
+          const saved = await window.API.sendMessage({
+            chatId: id, text, type: tempMsg.type, file,
+            replyToId: replyingTo ? replyingTo.id : null,
+          });
+          fileInput.value = '';
+          // Claim the id now. If the echo has not arrived yet it will be
+          // ignored on arrival; if it beat us here the bubble was already
+          // adopted and this is a no-op.
+          if (saved && saved.id) {
+            renderedIds.add(saved.id);
+            const i = pendingSends.indexOf(tracked);
+            if (i !== -1) pendingSends.splice(i, 1);
+            if (tempNode) tempNode.dataset.msgId = saved.id;
+          }
+        }
+        catch (e) {
+          const i = pendingSends.indexOf(tracked);
+          if (i !== -1) pendingSends.splice(i, 1);
+          toast('تعذر الإرسال');
+        }
       }
       // NOTE: there used to be a fake auto-reply here that invented a
       // random Arabic message from the other person ~1.2s after every send.
@@ -2906,16 +3647,135 @@ function autoPlay(video) {
       onclick: handleSend
     });
 
+    // No in-app emoji picker: the system keyboard already has one, and a
+    // second grid only competed with it for the same job while taking a slot
+    // in a row that was already tight. Removed at the user's request.
     const inputBar = el('div', { class: 'chat-input' }, [
       el('button', { class: 'icon-btn', html: icons.paperclip, onclick: () => openAttachSheet(), title: 'إرفاق' }),
       fileInput, videoInput, cameraInput, galleryInput, docInput,
       inputField,
       pttBtn,                                                                                  // push-to-talk
-      el('button', { class: 'icon-btn', html: icons.video, onclick: () => videoInput.click(), title: 'إرسال مقطع فيديو' }),
-      el('button', { class: 'icon-btn', html: icons.image, onclick: () => fileInput.click(), title: 'صورة' }),
+      // One gallery button rather than separate photo and video ones. The
+      // picker already accepts both, so the split only cost a slot in a row
+      // that was already overflowing and clipping the send button.
+      el('button', { class: 'icon-btn', html: icons.image, onclick: () => fileInput.click(), title: 'صورة أو فيديو' }),
       sendBtn,
     ]);
+    // ── Reply composer bar ──
+    // Shows what you are replying to, above the field, until you send or
+    // dismiss it. Sits outside inputBar so it spans the full width.
+    const replyName = el('div', { class: 'reply-name' }, '');
+    const replyText = el('div', { class: 'reply-text' }, '');
+    const replyBar = el('div', { class: 'reply-bar', hidden: true }, [
+      el('div', { class: 'reply-body' }, [replyName, replyText]),
+      el('button', {
+        class: 'icon-btn', type: 'button', title: 'إلغاء الرد',
+        html: icons.x, onclick: () => setReplyTo(null),
+      }),
+    ]);
+
+    function msgPreviewText(m) {
+      if (!m) return '';
+      if (m.type === 'image') return '📷 صورة';
+      if (m.type === 'video') return '🎥 فيديو';
+      if (m.type === 'voice') return '🎤 رسالة صوتية';
+      if (m.type === 'file') return '📎 ملف';
+      if (m.type === 'location') return '📍 موقع';
+      return (m.text || '').slice(0, 80);
+    }
+
+    function setReplyTo(m) {
+      replyTo = m || null;
+      if (!replyTo) { replyBar.hidden = true; return; }
+      replyBar.hidden = false;
+      const mine = replyTo.from_user_id === myUserId;
+      replyName.textContent = mine ? 'ردًا على نفسك' : ('ردًا على ' + ((replyTo.from && replyTo.from.name) || (chatInfo && chatInfo.title) || ''));
+      replyText.textContent = msgPreviewText(replyTo);
+      try { if (window.I18N) window.I18N.apply(replyBar); } catch (e) {}
+      inputField.focus();
+    }
+
+    // ── Message request bar ──
+    // Replaces the composer while this is an unaccepted request, so you
+    // decide about the person before you can be drawn into a conversation.
+    // Shown only once fetchChats confirms it — never guessed at.
+    const requestBar = el('div', { class: 'request-bar', hidden: true }, [
+      el('p', { class: 'rq-note' }, 'هذا الشخص لا تتابعه. هل تريد قبول رسالته؟'),
+      el('div', { class: 'rq-actions' }, [
+        el('button', { class: 'btn btn-secondary', onclick: async () => {
+          try {
+            await window.API.declineChatRequest(id);
+            toast('تم حذف الطلب');
+            go('/inbox');
+          } catch (e) { toast('تعذر الحذف'); }
+        } }, 'حذف'),
+        el('button', { class: 'btn', onclick: async () => {
+          try {
+            await window.API.acceptChatRequest(id);
+            requestBar.hidden = true;
+            inputBar.hidden = false;
+            toast('تم قبول الطلب');
+          } catch (e) { toast('تعذر القبول'); }
+        } }, 'قبول'),
+      ]),
+    ]);
+
+    root.appendChild(replyBar);
+    root.appendChild(requestBar);
     root.appendChild(inputBar);
+
+    // Ask whether this particular thread is still an unaccepted request.
+    (async () => {
+      try {
+        if (!window.API || !isRealId(id)) return;
+        const chats = await window.API.fetchChats();
+        const mine = (chats || []).find(ch => ch.id === id);
+        if (mine && mine.is_request) {
+          requestBar.hidden = false;
+          inputBar.hidden = true;
+          replyBar.hidden = true;
+          try { if (window.I18N) window.I18N.apply(requestBar); } catch (e) {}
+        }
+      } catch (e) { console.warn('request state:', e); }
+    })();
+
+    // ── Keep the composer above the keyboard ──
+    // The layout is a flex column at height 100%, which relies entirely on
+    // the Capacitor keyboard plugin resizing the body. That resize arrives
+    // late on some Android keyboards and not at all for floating or split
+    // ones, and when it does not the composer stays behind the keyboard —
+    // which is why this only happened sometimes. visualViewport reports the
+    // genuinely usable area in every one of those cases, so the height is
+    // driven from that rather than from trusting the resize.
+    (function keepComposerAboveKeyboard() {
+      const vv = window.visualViewport;
+      if (!vv) return; // very old webview: fall back to the plugin's resize
+      let pending = null;
+      function apply() {
+        pending = null;
+        const covered = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        root.style.setProperty('--kb', covered + 'px');
+        // A threshold, because the URL bar collapsing also changes the
+        // viewport by a few dozen pixels and is not a keyboard.
+        const open = covered > 80;
+        root.classList.toggle('kb-open', open);
+        if (open) msgs.scrollTop = msgs.scrollHeight;
+      }
+      const onChange = () => { if (pending == null) pending = requestAnimationFrame(apply); };
+      vv.addEventListener('resize', onChange);
+      vv.addEventListener('scroll', onChange);
+      apply();
+      window.addEventListener('hashchange', () => {
+        vv.removeEventListener('resize', onChange);
+        vv.removeEventListener('scroll', onChange);
+      }, { once: true });
+    })();
+
+    // The keyboard animation finishes after focus fires, so the scroll has to
+    // wait for it or it lands on the pre-keyboard height.
+    inputField.addEventListener('focus', () => {
+      setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 300);
+    });
 
     // Stop subscription when leaving
     window.addEventListener('hashchange', () => { if (unsub) try { unsub(); } catch (e) {} }, { once: true });
@@ -2999,6 +3859,9 @@ function autoPlay(video) {
         if (!p) { root.classList.remove('profile-loading'); return; }
 
         const real = shapeProfile(p);
+        // There is no videos_count column, so the figure comes from the list
+        // we have just fetched anyway rather than costing a second query.
+        real.videos_count = videos.length;
         writeProfileCache(userId, real);
         Object.assign(DB.me, real);
 
@@ -3032,8 +3895,13 @@ function autoPlay(video) {
         if (!window.API) return;
         const p = await window.API.fetchProfile(params.id);
         if (!p) { root.classList.remove('profile-loading'); return; }
+        // is_private was being dropped here. _renderProfile has always drawn a
+        // lock beside the handle for a private account, but the flag never
+        // reached it, so every profile looked public and the only way to find
+        // out otherwise was to tap Follow and get "request sent" back.
         const u = { id: p.id, name: p.name, handle: '@' + (p.handle || ''), avatar: p.avatar_url || '', bio: p.bio || '',
-                    followers: p.followers_count, following: p.following_count, likes: p.likes_count, verified: p.verified };
+                    followers: p.followers_count, following: p.following_count, likes: p.likes_count, verified: p.verified,
+                    is_private: p.is_private, link: p.link };
         const fresh = _renderProfile(u, false);
         // Async: load real videos + follow state
         const [videos, isFollowing, hasRequested] = await Promise.all([
@@ -3045,25 +3913,53 @@ function autoPlay(video) {
         if (followBtn) {
           const FOLLOW = 'متابعة', FOLLOWING = 'تتم المتابعة', REQUESTED = 'تم الطلب';
           let state = isFollowing ? FOLLOWING : (hasRequested ? REQUESTED : FOLLOW);
+
+          // The follower total is the second stat. Following someone changed
+          // the button but left this number untouched, so the profile went on
+          // claiming the old count until the screen was reloaded.
+          const followersNum = fresh.querySelectorAll('.profile-stats .profile-stat')[1];
+          const followersEl = followersNum ? followersNum.querySelector('.n') : null;
+          let followers = Number(p.followers_count) || 0;
+          const paintFollowers = () => { if (followersEl) followersEl.textContent = fmt(followers); };
+
           const paint = () => {
             followBtn.textContent = state;
             followBtn.classList.toggle('requested', state === REQUESTED);
+            followBtn.classList.toggle('following', state === FOLLOWING);
             try { if (window.I18N) window.I18N.apply(followBtn); } catch (e) {}
           };
           paint();
+
           followBtn.onclick = async () => {
-            const prev = state;
+            const prev = state, prevFollowers = followers;
             followBtn.disabled = true;
             try {
-              if (prev === FOLLOWING) { await window.API.unfollow(p.id); state = FOLLOW; }
-              else if (prev === REQUESTED) { await window.API.cancelFollowRequest(p.id); state = FOLLOW; }
-              else {
+              if (prev === FOLLOWING) {
+                await window.API.unfollow(p.id);
+                state = FOLLOW; followers = Math.max(0, followers - 1);
+              } else if (prev === REQUESTED) {
+                // A pending request was never counted, so cancelling it must
+                // not decrement anything.
+                await window.API.cancelFollowRequest(p.id);
+                state = FOLLOW;
+              } else {
                 const r = await window.API.follow(p.id);
                 state = r === 'requested' ? REQUESTED : FOLLOWING;
+                // A request is not a follow yet — only a real follow counts.
                 if (r === 'requested') toast('تم إرسال طلب المتابعة');
+                else followers += 1;
               }
-              paint();
-            } catch (e) { state = prev; paint(); toast(e.message || 'تعذر التحديث'); }
+              paint(); paintFollowers();
+              // The counter is maintained by a database trigger. Re-read it so
+              // the screen ends up on the true value rather than our guess.
+              window.API.fetchProfile(p.id)
+                .then(fp => { if (fp && typeof fp.followers_count === 'number') { followers = fp.followers_count; paintFollowers(); } })
+                .catch(() => {});
+            } catch (e) {
+              state = prev; followers = prevFollowers;
+              paint(); paintFollowers();
+              toast(e.message || 'تعذر التحديث');
+            }
             followBtn.disabled = false;
           };
         }
@@ -3078,10 +3974,36 @@ function autoPlay(video) {
           } catch (e) { toast('تعذر فتح المحادثة'); }
         };
         const grid = fresh.querySelector('.video-grid');
-        if (videos.length && grid) {
+        // A private account you do not follow says so, plainly, where the
+        // videos would be. Without this the grid just sat empty and read as
+        // "this person has never posted" rather than "you cannot see this".
+        // The database withholds the rows regardless; this explains why.
+        // Declared as a function so the follow button can repaint it:
+        // unfollowing a private account has to put the wall back.
+        function paintGrid(followingNow) {
+          if (!grid) return;
+          if (p.is_private && !followingNow) {
+            grid.innerHTML = '';
+            grid.appendChild(el('div', { class: 'private-wall' }, [
+              el('span', { class: 'pw-icon', html: icons.lock }),
+              el('p', { class: 'pw-title' }, 'هذا الحساب خاص'),
+              el('p', { class: 'pw-sub' }, 'تابع هذا الحساب لرؤية فيديوهاته'),
+            ]));
+            try { if (window.I18N) window.I18N.apply(grid); } catch (e) {}
+            return;
+          }
+          // No videos: leave whatever empty state is already there rather
+          // than blanking the grid.
+          if (!videos.length) return;
           grid.innerHTML = '';
           videos.forEach((v, i) => grid.appendChild(createVideoCard(v, i, () => go('/home'))));
         }
+        paintGrid(isFollowing);
+        // Same as the own-profile path: derived from the list already loaded.
+        // A private account we cannot see reports nothing rather than 0, which
+        // would read as "has never posted".
+        const vStat = fresh.querySelector('.js-videos-stat .n');
+        if (vStat) vStat.textContent = (p.is_private && !isFollowing) ? '—' : fmt(videos.length);
         root.replaceWith(fresh);
       } catch (e) {
         console.warn('userProfile load:', e);
@@ -3146,21 +4068,23 @@ function autoPlay(video) {
     const close = modal(sheet);
   }
 
-  // Share a profile: hands off to the device share sheet where available,
-  // otherwise copies the deep link.
-  async function shareProfile(u) {
-    const url = (window.DeepLink && u && u.id) ? window.DeepLink.profileLink(u.id) : location.href;
-    if (navigator.share) {
-      try { await navigator.share({ title: u.name || u.handle || 'Tenth Tone', url }); return; } catch (e) { return; }
-    }
-    try { await navigator.clipboard.writeText(url); toast('تم النسخ'); }
-    catch (e) { toast('تعذر النسخ'); }
+  // Share a profile.
+  //
+  // This used to try navigator.share and fall back to copying the link. In an
+  // Android WebView the Web Share API is not implemented at all, so it always
+  // took the fallback: tapping Share silently copied something and looked
+  // broken. It now opens the app's own share screen — the same one the feed
+  // uses — where you can send the profile straight to someone, hand it to the
+  // device share sheet if there is one, or copy the link deliberately.
+  function shareProfile(u) {
+    if (!u || !u.id) return;
+    go('/share/' + u.id + '?kind=profile');
   }
 
   function _renderProfile(u, isMe) {
     const root = el('section', { class: 'profile-screen' });
     root.appendChild(el('div', { class: 'profile-header' }, [
-      isMe ? el('button', { class: 'icon-btn', html: icons.menu, onclick: () => go('/settings') }) : el('button', { class: 'icon-btn', html: icons.chevR, onclick: () => back() }),
+      isMe ? el('button', { class: 'icon-btn', html: icons.menu, onclick: () => go('/settings') }) : el('button', { class: 'icon-btn back-btn', html: icons.chevL, onclick: () => back() }),
       el('h1', {}, [u.handle, svg('chevD', { style: { width: '14px', height: '14px' } })]),
       el('div', { style: { display: 'flex', alignItems: 'center', gap: '2px' } }, [
         el('button', { class: 'icon-btn', title: 'مشاركة الملف الشخصي', html: icons.shareBox, onclick: () => shareProfile(u) }),
@@ -3178,10 +4102,15 @@ function autoPlay(video) {
         document.createTextNode(u.handle),
         u.is_private ? el('span', { class: 'private-badge', title: 'حساب خاص', html: icons.lock }) : null,
       ].filter(Boolean)),
+      // Videos rather than total likes. A like count belongs on a video, not
+      // on a person — it says nothing you can act on, the number it showed was
+      // the sum of every like ever received, and tapping it only raised a
+      // toast. How much someone has posted is the useful third figure, and it
+      // is what every comparable app puts here.
       el('div', { class: 'profile-stats' }, [
         el('div', { class: 'profile-stat', onclick: () => go('/list/following') }, [el('div', { class: 'n' }, fmt(u.following || 0)), el('div', { class: 'l' }, 'متابَعين')]),
         el('div', { class: 'profile-stat', onclick: () => go('/list/followers') }, [el('div', { class: 'n' }, fmt(u.followers || 0)), el('div', { class: 'l' }, 'متابعون')]),
-        el('div', { class: 'profile-stat', onclick: () => toast('إجمالي الإعجابات: ' + fmt(u.likes || 0)) }, [el('div', { class: 'n' }, fmt(u.likes || 0)), el('div', { class: 'l' }, 'إعجابات')]),
+        el('div', { class: 'profile-stat js-videos-stat' }, [el('div', { class: 'n' }, fmt(u.videos_count || 0)), el('div', { class: 'l' }, 'فيديوهات')]),
       ]),
       el('p', { class: 'profile-bio' }, u.bio),
       // Link in bio - creators expect somewhere to point people.
@@ -3198,15 +4127,38 @@ function autoPlay(video) {
             const alreadyFollowed = !!window._followedUsers[u.id];
             const followBtn = el('button', {
               class: 'btn' + (alreadyFollowed ? ' btn-following' : ''),
-            }, alreadyFollowed ? 'Following' : 'Follow');
-            followBtn.addEventListener('click', () => {
+            }, alreadyFollowed ? 'تتم المتابعة' : 'متابعة');
+            followBtn.addEventListener('click', async () => {
               if (!window._followedUsers) window._followedUsers = {};
-              const isNowFollowing = !window._followedUsers[u.id];
+              const prev = !!window._followedUsers[u.id];
+              const isNowFollowing = !prev;
+              // These two labels were hardcoded English in an Arabic-first
+              // app, so this button read "Follow" on an otherwise Arabic
+              // screen. Arabic is the source language; i18n renders English.
+              const paint = (on) => {
+                followBtn.textContent = on ? 'تتم المتابعة' : 'متابعة';
+                followBtn.classList.toggle('btn-following', on);
+                try { if (window.I18N) window.I18N.apply(followBtn); } catch (e) {}
+              };
               window._followedUsers[u.id] = isNowFollowing;
-              followBtn.textContent = isNowFollowing ? 'Following' : 'Follow';
-              followBtn.classList.toggle('btn-following', isNowFollowing);
+              paint(isNowFollowing);
               if (window.API && u.id && u.id.length > 4) {
-                try { isNowFollowing ? window.API.follow(u.id) : window.API.unfollow(u.id); } catch(_) {}
+                try {
+                  if (isNowFollowing) {
+                    const r = await window.API.follow(u.id);
+                    if (r === 'requested') {
+                      window._followedUsers[u.id] = false;
+                      paint(false);
+                      toast('تم إرسال طلب المتابعة');
+                    }
+                  } else {
+                    await window.API.unfollow(u.id);
+                  }
+                } catch (_) {
+                  window._followedUsers[u.id] = prev;
+                  paint(prev);
+                  toast('تعذر التحديث');
+                }
               }
             });
             return el('div', { class: 'profile-actions' }, [
@@ -3544,14 +4496,36 @@ function autoPlay(video) {
           el('div', { class: 'name' }, u.name + (u.verified ? ' ✓' : '')),
           el('div', { class: 'handle' }, '@' + (u.handle || u.handle === '' ? u.handle : '').replace('@', '')),
         ]),
-        el('button', { class: 'btn btn-secondary', onclick: async (e) => {
-          const btn = e.currentTarget;
-          if (!window.API) return;
-          const isFollowing = btn.textContent === 'تتم المتابعة' || btn.textContent === 'متابَع';
-          btn.textContent = isFollowing ? 'متابعة' : 'تتم المتابعة';
-          try { isFollowing ? await window.API.unfollow(u.id) : await window.API.follow(u.id); }
-          catch (e) { btn.textContent = isFollowing ? 'تتم المتابعة' : 'متابعة'; }
-        } }, which === 'followers' ? 'متابعة' : 'تتم المتابعة'),
+        // State was read back off the button's own label and compared against
+        // Arabic strings. With the app in English i18n has already rewritten
+        // that label, so every comparison failed and the button did the
+        // opposite of what it showed. It is held on the element instead.
+        el('button', {
+          class: 'btn btn-secondary',
+          // Written as an attribute, not via `dataset`: el() assigns any key
+          // that exists on the element, and dataset is read-only, so it would
+          // have been dropped without a word.
+          'data-following': which === 'followers' ? '0' : '1',
+          onclick: async (e) => {
+            const btn = e.currentTarget;
+            if (!window.API) return;
+            const wasFollowing = btn.dataset.following === '1';
+            const paint = (on) => {
+              btn.dataset.following = on ? '1' : '0';
+              btn.textContent = on ? 'تتم المتابعة' : 'متابعة';
+              try { if (window.I18N) window.I18N.apply(btn); } catch (err) {}
+            };
+            paint(!wasFollowing);
+            try {
+              if (wasFollowing) {
+                await window.API.unfollow(u.id);
+              } else {
+                const r = await window.API.follow(u.id);
+                if (r === 'requested') { paint(false); toast('تم إرسال طلب المتابعة'); }
+              }
+            } catch (err) { paint(wasFollowing); toast('تعذر التحديث'); }
+          },
+        }, which === 'followers' ? 'متابعة' : 'تتم المتابعة'),
       ])));
     }
 
@@ -3599,6 +4573,11 @@ function autoPlay(video) {
       if (n.type === 'comment') return 'علّق: "' + ((n.payload && n.payload.text) || '') + '"';
       if (n.type === 'mention') return 'ذكرك في تعليق';
       if (n.type === 'message') return 'أرسل رسالة';
+      // Written by the trigger in 0045 when someone you follow starts a stream.
+      if (n.type === 'live') {
+        const t = (n.payload && n.payload.title) || '';
+        return t ? ('بدأ بثًا مباشرًا: ' + t) : 'بدأ بثًا مباشرًا الآن';
+      }
       if (n.type === 'system' && n.payload && n.payload.kind === 'location_request') return 'طلب تتبع موقعك';
       if (n.type === 'system' && n.payload && n.payload.kind === 'location_approved') return 'وافق على طلب تتبع موقعه';
       if (n.type === 'system' && n.payload && n.payload.kind === 'location_denied') return 'رفض طلب تتبع موقعه';
@@ -3613,6 +4592,9 @@ function autoPlay(video) {
       if (n.type === 'comment' && p.video_id) return '/comments/' + p.video_id;
       if (n.type === 'message' && p.chat_id) return '/chat/' + p.chat_id;
       if (n.type === 'follow' && n.actor && n.actor.id && n.actor.id !== '_') return '/profile/' + n.actor.id;
+      // Straight into the stream — a live alert is worthless if it takes you
+      // anywhere but the broadcast, since it will be over shortly.
+      if (n.type === 'live' && p.live_id) return '/live/' + p.live_id;
       return null;
     }
 
@@ -3864,8 +4846,12 @@ function autoPlay(video) {
       if (!filtered.length) {
         contacts.appendChild(emptyState({
           icon: 'users',
-          title: q ? 'لا توجد نتائج' : 'لا توجد جهات اتصال',
-          sub: q ? 'جرّب اسمًا آخر' : 'تابع أشخاصًا لتتمكن من مشاركة الفيديوهات معهم',
+          // "Contacts" read as the phone's address book, so an empty list
+          // looked like the app had failed to import contacts — when in fact
+          // this list is people you follow and people who follow you, and it
+          // is empty simply because there are none yet.
+          title: q ? 'لا توجد نتائج' : 'لا يوجد أشخاص بعد',
+          sub: q ? 'جرّب اسمًا آخر' : 'تابع أشخاصًا لمشاركة الفيديوهات معهم مباشرة',
         }));
         return;
       }
@@ -3901,13 +4887,22 @@ function autoPlay(video) {
     function syncClear() { clearBtn.hidden = !searchField.value; }
     searchField.addEventListener('input', () => { syncClear(); renderContacts(); });
     clearBtn.onclick = () => { searchField.value = ''; syncClear(); renderContacts(); searchField.focus(); };
-    root.appendChild(el('div', { class: 'share-section-label' }, 'إرسال إلى'));
+    // Says WHO this list is, so nobody assumes it is their phone contacts.
+    root.appendChild(el('div', { class: 'share-section-label' }, 'إرسال إلى متابعيك'));
     root.appendChild(contacts);
     root.appendChild(el('div', { class: 'divider' }));
     // Every one of these used to just pop a toast - nothing was ever shared.
     // They now open the real share target, and the first item hands off to the
     // device's own share sheet (WhatsApp, Messages, AirDrop, whatever the user
     // actually has installed).
+    // Declared before `socials`, which filters on them. They used to sit
+    // ~25 lines further down: `const` is not hoisted the way `var` is, so
+    // reading them earlier threw "Cannot access before initialization" and
+    // took out the whole share screen — video, profile and live alike.
+    const shareKind = (params && params.kind) || 'video';
+    const isProfileShare = shareKind === 'profile';
+    const isLiveShare = shareKind === 'live';
+
     const canNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
     const socials = [
       { k: 'native',   l: 'مشاركة',      icon: 'share' },
@@ -3918,7 +4913,11 @@ function autoPlay(video) {
       { k: 'x',        l: 'X',           icon: 'xTwitter' },
       { k: 'copy',     l: 'نسخ الرابط',  icon: 'link' },
       { k: 'download', l: 'تنزيل',       icon: 'download' },
-    ].filter(x => x.k !== 'native' || canNativeShare);
+    ].filter(x => (x.k !== 'native' || canNativeShare)
+      // There is no file behind a profile, so "download" would be a button
+      // that can only fail.
+      // Neither a profile nor a running stream is a file you can download.
+      && !(x.k === 'download' && (isProfileShare || isLiveShare)));
 
     function openShare(url) {
       const w = window.open(url, '_blank', 'noopener,noreferrer');
@@ -3941,7 +4940,9 @@ function autoPlay(video) {
     // on this video when tapped (falls back to the current URL if the
     // share screen was opened without a video id).
     const shareUrl = (params && params.id && window.DeepLink)
-      ? window.DeepLink.videoLink(params.id)
+      ? (isProfileShare ? window.DeepLink.profileLink(params.id)
+        : isLiveShare   ? window.DeepLink.liveLink(params.id)
+        : window.DeepLink.videoLink(params.id))
       : location.href;
 
     const socialRow = el('section', { class: 'social-row' });
@@ -3977,7 +4978,11 @@ function autoPlay(video) {
       sendBtn.disabled = true; sendBtn.textContent = 'جاري الإرسال...';
       try {
         if (window.API && params && isRealId(params.id)) {
-          const sent = await window.API.shareVideoTo(params.id, ids.filter(isRealId));
+          const sent = isProfileShare
+            ? await window.API.shareProfileTo(params.id, ids.filter(isRealId))
+            : isLiveShare
+              ? await window.API.shareLinkTo(shareUrl, ids.filter(isRealId))
+              : await window.API.shareVideoTo(params.id, ids.filter(isRealId));
           if (!sent) throw new Error('تعذر الإرسال');
           sendBtn.textContent = 'تم الإرسال ✓';
         } else {
@@ -4020,86 +5025,164 @@ function autoPlay(video) {
     let mode = 'camera';            // 'camera' | 'background'
     let selectedBg = BG_PRESETS[0];
     let privacy = 'public';         // 'public' | 'friends' | 'private'
+    let facing = 'user';            // front / rear camera for the preview
 
-    const ov = el('div', { class: 'live-overlay' });
-    ov.appendChild(el('div', { class: 'live-top', style: { justifyContent: 'space-between' } }, [
-      el('button', { class: 'icon-btn', html: icons.x, style: { color: '#fff' }, onclick: () => go('/create') }),
-      el('span'),
+    // ── Live camera preview ──
+    // The setup screen used to be a flat black rectangle: nothing was shown
+    // until Agora took over, so you went live without ever having seen your
+    // own framing. Every real broadcast app previews the camera first, which
+    // is also where you notice the lighting is wrong or the lens is covered.
+    let previewStream = null;
+    const selfView = el('video', { muted: true, playsInline: true, autoplay: true, class: 'live-selfview' });
+    selfView.muted = true;
+    selfView.setAttribute('playsinline', '');
+    previewVideo.appendChild(selfView);
+
+    function stopPreview() {
+      if (previewStream) { try { previewStream.getTracks().forEach(t => t.stop()); } catch (e) {} previewStream = null; }
+      selfView.srcObject = null;
+    }
+
+    async function startPreview() {
+      if (mode !== 'camera') { stopPreview(); selfView.hidden = true; return; }
+      selfView.hidden = false;
+      stopPreview();
+      try {
+        previewStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
+        selfView.srcObject = previewStream;
+        camWarn.hidden = true;
+      } catch (e) {
+        // A refusal here is not fatal: background mode still broadcasts audio.
+        selfView.hidden = true;
+        camWarn.hidden = false;
+        camWarn.textContent = (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError'))
+          ? 'إذن الكاميرا مرفوض — فعّله من إعدادات جهازك أو ابدأ بثًا بخلفية'
+          : 'تعذر فتح الكاميرا — يمكنك البث بخلفية بدلًا من ذلك';
+      }
+    }
+    window.addEventListener('hashchange', stopPreview, { once: true });
+
+    const camWarn = el('p', { class: 'live-warn', hidden: true });
+
+    const ov = el('div', { class: 'live-overlay live-setup' });
+    ov.appendChild(el('div', { class: 'live-top' }, [
+      el('button', { class: 'icon-btn', html: icons.x, onclick: () => { stopPreview(); go('/create'); } }),
+      el('span', { class: 'live-setup-heading' }, 'بث مباشر'),
+      el('button', { class: 'icon-btn', html: icons.flip, title: 'تبديل الكاميرا', onclick: () => {
+        facing = facing === 'user' ? 'environment' : 'user';
+        startPreview();
+      } }),
     ]));
-    const titleInput = el('input', { class: 'input', placeholder: 'عنوان البث (اختياري)', style: { background: 'rgba(0,0,0,0.4)', color: '#fff', maxWidth: '320px', textAlign: 'center' } });
 
-    // Mode selector — Camera vs Background-only
-    const modeRow = el('div', { style: { display: 'flex', gap: '6px', justifyContent: 'center' } });
-    function buildModeBtn(key, label) {
-      const b = el('button', { class: 'btn btn-sm', style: { background: mode === key ? '#fff' : 'rgba(255,255,255,0.15)', color: mode === key ? '#000' : '#fff', borderRadius: '999px', padding: '6px 14px', fontSize: '12.5px' }, onclick: () => { mode = key; refreshUI(); } }, label);
-      return b;
+    const titleInput = el('input', { class: 'live-title-input', maxlength: '60', placeholder: 'عنوان البث (اختياري)' });
+
+    // Segmented controls, built from one function so the two rows cannot
+    // drift apart in style the way three separate inline-styled ones did.
+    function segmented(options, current, onPick) {
+      const row = el('div', { class: 'live-seg' });
+      function paint() {
+        row.innerHTML = '';
+        options.forEach(o => {
+          row.appendChild(el('button', {
+            class: 'live-seg-btn' + (current() === o.k ? ' active' : ''),
+            type: 'button',
+            onclick: () => { onPick(o.k); paint(); },
+          }, [
+            el('span', { class: 'seg-icon', html: icons[o.icon] || '' }),
+            el('span', {}, o.l),
+          ]));
+        });
+        try { if (window.I18N) window.I18N.apply(row); } catch (e) {}
+      }
+      paint();
+      return { node: row, repaint: paint };
     }
-    function refreshModeRow() {
-      modeRow.innerHTML = '';
-      modeRow.appendChild(buildModeBtn('camera', '📷 كاميرا'));
-      modeRow.appendChild(buildModeBtn('background', '🖼️ خلفية فقط'));
-    }
-    refreshModeRow();
+
+    const modeSeg = segmented(
+      [{ k: 'camera', l: 'كاميرا', icon: 'camera' }, { k: 'background', l: 'خلفية فقط', icon: 'image' }],
+      () => mode,
+      (k) => { mode = k; refreshUI(); }
+    );
+
+    const privacySeg = segmented(
+      [{ k: 'public', l: 'عام', icon: 'globe' }, { k: 'friends', l: 'الأصدقاء', icon: 'users' }, { k: 'private', l: 'خاص', icon: 'lock' }],
+      () => privacy,
+      (k) => { privacy = k; }
+    );
 
     // Background picker (only visible in 'background' mode)
-    const bgPicker = el('div', { style: { display: 'flex', gap: '8px', overflowX: 'auto', padding: '8px 14px', maxWidth: '100%' } });
-    BG_PRESETS.forEach(b => {
-      const tile = el('div', { onclick: () => { selectedBg = b; refreshUI(); }, style: { width: '60px', height: '60px', borderRadius: '12px', backgroundImage: `url(${b.url})`, backgroundSize: 'cover', flexShrink: 0, border: selectedBg.id === b.id ? '3px solid #fff' : '3px solid transparent', cursor: 'pointer' } });
-      bgPicker.appendChild(tile);
-    });
-
-    // Privacy chooser
-    const privacyRow = el('div', { style: { display: 'flex', gap: '6px', justifyContent: 'center' } });
-    function buildPrivacyBtn(key, label, icon) {
-      return el('button', { class: 'btn btn-sm', style: { background: privacy === key ? '#fff' : 'rgba(255,255,255,0.15)', color: privacy === key ? '#000' : '#fff', borderRadius: '999px', padding: '6px 12px', fontSize: '12px' }, onclick: () => { privacy = key; refreshPrivacyRow(); } }, icon + ' ' + label);
+    const bgPicker = el('div', { class: 'live-bg-picker' });
+    function paintBgPicker() {
+      bgPicker.innerHTML = '';
+      BG_PRESETS.forEach(b => {
+        bgPicker.appendChild(el('div', {
+          class: 'live-bg-tile' + (selectedBg.id === b.id ? ' active' : ''),
+          title: b.name,
+          style: { backgroundImage: 'url(' + b.url + ')' },
+          onclick: () => { selectedBg = b; refreshUI(); },
+        }));
+      });
     }
-    function refreshPrivacyRow() {
-      privacyRow.innerHTML = '';
-      privacyRow.appendChild(buildPrivacyBtn('public', 'عام', '🌐'));
-      privacyRow.appendChild(buildPrivacyBtn('friends', 'الأصدقاء', '👥'));
-      privacyRow.appendChild(buildPrivacyBtn('private', 'خاص', '🔒'));
-    }
-    refreshPrivacyRow();
+    paintBgPicker();
 
-    // Help message
-    const helpMsg = el('p', { style: { color: 'rgba(255,255,255,0.5)', textAlign: 'center', margin: 0, fontSize: '11.5px', maxWidth: '320px' } });
+    const helpMsg = el('p', { class: 'live-help' });
     function refreshHelp() {
       if (mode === 'background') {
         helpMsg.textContent = 'بث صوتي مع خلفية — لا يحتاج كاميرا';
       } else if (window.Agora && window.Agora.isConfigured()) {
-        helpMsg.textContent = 'بث فيديو فعلي عبر الكاميرا والميكروفون';
+        helpMsg.textContent = 'سيراك المشاهدون ويسمعونك مباشرة';
       } else {
-        helpMsg.innerHTML = '⚠️ Agora App ID غير مضبوط — البث بدون فيديو فعلي';
+        helpMsg.textContent = '⚠️ Agora App ID غير مضبوط — البث بدون فيديو فعلي';
       }
     }
 
     function refreshUI() {
-      // background preview if in background mode
       if (mode === 'background') {
-        previewVideo.style.background = `#000 url(${selectedBg.url}) center/cover no-repeat`;
-        bgPicker.style.display = 'flex';
+        previewVideo.style.background = '#000 url(' + selectedBg.url + ') center/cover no-repeat';
+        bgPicker.hidden = false;
+        camWarn.hidden = true;
       } else {
         previewVideo.style.background = '#000';
-        bgPicker.style.display = 'none';
+        bgPicker.hidden = true;
       }
-      refreshModeRow();
+      paintBgPicker();
+      modeSeg.repaint();
       refreshHelp();
+      startPreview();
     }
     refreshUI();
 
-    ov.appendChild(el('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '0 16px' } }, [
-      el('h2', { style: { color: '#fff', margin: 0, textAlign: 'center' } }, 'ابدأ بثًا مباشرًا'),
-      modeRow,
-      bgPicker,
-      titleInput,
-      privacyRow,
+    ov.appendChild(el('div', { class: 'live-setup-body' }, [
+      el('div', { class: 'live-field' }, [
+        el('label', { class: 'live-label' }, 'العنوان'),
+        titleInput,
+      ]),
+      el('div', { class: 'live-field' }, [
+        el('label', { class: 'live-label' }, 'الوضع'),
+        modeSeg.node,
+        bgPicker,
+      ]),
+      el('div', { class: 'live-field' }, [
+        el('label', { class: 'live-label' }, 'من يمكنه المشاهدة'),
+        privacySeg.node,
+      ]),
       helpMsg,
+      camWarn,
     ]));
-    const startBtn = el('button', { class: 'btn btn-pill', style: { background: '#ef4444' } }, 'بدء البث');
+    const startBtn = el('button', { class: 'live-go-btn' }, [
+      el('span', { class: 'live-go-dot' }),
+      el('span', {}, 'بدء البث'),
+    ]);
     let agoraSession = null;
     startBtn.onclick = async () => {
-      startBtn.disabled = true; startBtn.textContent = 'جاري البدء...';
+      startBtn.disabled = true;
+      startBtn.classList.add('busy');
+      const goLabel = startBtn.lastChild;
+      goLabel.textContent = 'جاري البدء...';
       try {
+        // The preview holds the camera; Agora needs it next. Releasing it
+        // first avoids the device being reported as already in use.
+        stopPreview();
         if (!window.API) throw new Error('SDK not loaded');
         const live = await window.API.startLive({
           title: titleInput.value || null,
@@ -4107,9 +5190,17 @@ function autoPlay(video) {
           // than a stock image (this used to persist a sample video's
           // thumbnail as the real stream's cover).
           thumbnail: mode === 'background' ? selectedBg.url : null,
+          // The audience choice now actually reaches the database. It used
+          // to stop at window._ttLiveMeta below, so every stream was public
+          // whatever the person picked.
+          privacy,
         });
-        // Persist privacy + mode in payload (we'll hook this to RLS-based filtering in the live list)
-        // For now stored in app state; full RLS filter is a 1-line policy update.
+        // Local UI state only. Privacy is enforced by the database now (it is
+        // sent in startLive above and the RLS policy on live_streams honours
+        // it); this copy exists purely so the viewer screen knows which mode
+        // was chosen. The old comment here said the RLS filter was still "a
+        // 1-line policy update" away — the policy had in fact existed since
+        // 0004, and the only missing piece was sending the column.
         window._ttLiveMeta = { id: live.id, mode, bg: selectedBg.url, privacy };
         if (mode === 'camera' && window.Agora && window.Agora.isConfigured()) {
           agoraSession = await window.Agora.startHost({
@@ -4124,8 +5215,10 @@ function autoPlay(video) {
       } catch (e) {
         toast(e.message || 'تعذر بدء البث');
         startBtn.disabled = false;
-        startBtn.textContent = 'بدء البث';
+        startBtn.classList.remove('busy');
+        goLabel.textContent = 'بدء البث';
         if (agoraSession) try { await agoraSession.stop(); } catch (_) {}
+        startPreview();   // put the preview back so it can be tried again
       }
     };
     ov.appendChild(el('div', { class: 'live-bottom' }, [startBtn]));
@@ -4224,25 +5317,115 @@ function autoPlay(video) {
     const liveBg = el('div', { class: 'live-bg', style: { backgroundImage: live.bg ? `url(${live.bg})` : '', zIndex: 1 } });
     root.appendChild(liveBg);
     const ov = el('div', { class: 'live-overlay' });
+
+    // Am I the one broadcasting? Decided up front, because almost everything
+    // in the header differs: a host must not be offered a Follow button for
+    // themselves, and needs an End button nobody else should see.
+    let myId = null;
+    const iAmHost = () => !!(myId && live.host && live.host.id && myId === live.host.id);
+
     const hostAvatarImg = Object.assign(document.createElement('img'), { src: live.host.avatar || '' });
     hostAvatarImg.onerror = () => { hostAvatarImg.style.display = 'none'; };
     if (!live.host.avatar) hostAvatarImg.style.display = 'none';
-    const hostNameEl = el('div', { style: { fontSize: '12px', fontWeight: 700 } }, live.host.name || '');
-    const hostHandleEl = el('div', { style: { fontSize: '10px', opacity: 0.8 } }, live.host.handle ? '@' + live.host.handle.replace('@', '') : '');
-    const viewersEl = el('span', { class: 'live-pill viewers' }, fmt(live.viewers || 0) + ' 👁');
+    const hostNameEl = el('div', { class: 'lh-name' }, live.host.name || '');
+    const hostHandleEl = el('div', { class: 'lh-handle' }, live.host.handle ? '@' + live.host.handle.replace('@', '') : '');
+
+    // Follow reflects real state and reverts on failure, like everywhere else.
+    const followBtn = el('button', { class: 'live-follow', hidden: true, onclick: async () => {
+      if (!liveLoaded || !live.host.id || !window.API) return;
+      const wasFollowing = followBtn.dataset.following === '1';
+      const paintFollow = (on) => {
+        followBtn.dataset.following = on ? '1' : '0';
+        followBtn.textContent = on ? 'تتم المتابعة' : 'متابعة';
+        followBtn.classList.toggle('following', on);
+        try { if (window.I18N) window.I18N.apply(followBtn); } catch (e) {}
+      };
+      paintFollow(!wasFollowing);
+      try {
+        if (wasFollowing) await window.API.unfollow(live.host.id);
+        else {
+          const r = await window.API.follow(live.host.id);
+          if (r === 'requested') { paintFollow(false); toast('تم إرسال طلب المتابعة'); }
+        }
+      } catch (e) { paintFollow(wasFollowing); toast('تعذر التحديث'); }
+    } }, 'متابعة');
+
+    const viewersEl = el('span', { class: 'live-pill viewers' }, [
+      el('span', { class: 'lp-icon', html: icons.eye }),
+      el('span', { class: 'lp-num' }, fmt(live.viewers || 0)),
+    ]);
+    // How long it has been running. A stream with no elapsed time gives no
+    // sense of whether you have just missed the start or arrived an hour late.
+    const elapsedEl = el('span', { class: 'live-pill elapsed' }, '0:00');
+    let elapsedTimer = null;
+    function startElapsed(fromIso) {
+      const t0 = fromIso ? new Date(fromIso).getTime() : Date.now();
+      const tick = () => { elapsedEl.textContent = fmtDuration(Math.max(0, Math.floor((Date.now() - t0) / 1000))); };
+      tick();
+      elapsedTimer = setInterval(tick, 1000);
+    }
+
+    // Host-only. Ending was previously a side effect of navigating away, so
+    // there was no deliberate way to stop broadcasting.
+    const endLiveBtn = el('button', { class: 'live-end-btn', hidden: true, onclick: async () => {
+      // The app's own dialog, not window.confirm — a native confirm fails
+      // silently inside the Capacitor webview, which is why they were all
+      // removed from the admin panel.
+      const yes = await confirmDialog({
+        title: 'إنهاء البث',
+        message: 'سينتهي البث لجميع المشاهدين ولا يمكن استئنافه.',
+        confirmLabel: 'إنهاء',
+      });
+      if (!yes) return;
+      try {
+        if (window._ttAgoraHostSession) { try { await window._ttAgoraHostSession.stop(); } catch (e) {} }
+        window._ttAgoraHostSession = null;
+        window._ttAgoraHostLiveId = null;
+        if (window.API) await window.API.endLive(liveId);
+        toast('انتهى البث');
+      } catch (e) { toast('تعذر إنهاء البث'); }
+      go('/home');
+    } }, 'إنهاء');
+
     ov.appendChild(el('div', { class: 'live-top' }, [
-      el('div', { class: 'live-host-info' }, [
+      el('div', { class: 'live-host-info', onclick: () => { if (live.host && live.host.id) go('/profile/' + live.host.id); } }, [
         el('div', { class: 'avatar' }, [hostAvatarImg]),
-        el('div', {}, [hostNameEl, hostHandleEl]),
-        el('button', { class: 'btn btn-sm', style: { width: 'auto', padding: '4px 10px', background: 'var(--danger)' }, onclick: async () => {
-          if (!liveLoaded || !live.host.id || !window.API) return;
-          try { await window.API.follow(live.host.id); toast('تمت المتابعة'); } catch (e) { toast(e.message || 'فشل'); }
-        } }, 'متابعة'),
+        el('div', { class: 'lh-text' }, [hostNameEl, hostHandleEl]),
+        followBtn,
       ]),
-      el('span', { class: 'live-pill' }, 'مباشر'),
-      viewersEl,
-      el('button', { class: 'icon-btn', html: icons.x, style: { color: '#fff' }, onclick: () => go('/home') }),
+      el('div', { class: 'live-top-right' }, [
+        el('span', { class: 'live-pill live-badge' }, 'مباشر'),
+        viewersEl,
+        elapsedEl,
+        endLiveBtn,
+        el('button', { class: 'icon-btn live-close', html: icons.x, onclick: () => go('/home') }),
+      ]),
     ]));
+
+    let joined = false, unsubStream = null, endedShown = false;
+
+    function setViewers(n) {
+      const num = viewersEl.querySelector('.lp-num');
+      if (num) num.textContent = fmt(Number(n) || 0);
+    }
+
+    // Shown to everyone still watching when the host stops, instead of
+    // leaving a frozen frame that still claims to be live.
+    function showEnded() {
+      if (endedShown) return;
+      endedShown = true;
+      if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+      root.classList.add('live-over');
+      endLiveBtn.hidden = true;
+      const card = el('div', { class: 'live-ended' }, [
+        el('span', { class: 'le-icon', html: icons.video }),
+        el('p', { class: 'le-title' }, 'انتهى البث'),
+        el('p', { class: 'le-sub' }, 'شكرًا لمشاهدتك'),
+        el('button', { class: 'btn', onclick: () => go('/live/host-list') }, 'بثوث أخرى'),
+      ]);
+      root.appendChild(card);
+      try { if (window.I18N) window.I18N.apply(card); } catch (e) {}
+    }
 
     // ─── Load the real stream ───
     (async () => {
@@ -4278,9 +5461,43 @@ function autoPlay(video) {
         liveLoaded = true;
         if (live.bg) liveBg.style.backgroundImage = `url(${live.bg})`;
         hostAvatarImg.src = live.host.avatar || '';
-        hostNameEl.textContent = live.host.name;
+        hostAvatarImg.style.display = live.host.avatar ? '' : 'none';
+        hostNameEl.textContent = displayName(live.host);
         hostHandleEl.textContent = live.host.handle ? '@' + live.host.handle.replace('@', '') : '';
-        viewersEl.textContent = fmt(live.viewers) + ' 👁';
+        setViewers(live.viewers);
+        startElapsed(row.started_at);
+
+        // A stream that already ended should say so rather than showing a
+        // frozen last frame with a live badge over it.
+        if (row.status !== 'live') { showEnded(); return; }
+
+        try { const u = await window.SB.getUser(); myId = u && u.id; } catch (e) {}
+
+        if (iAmHost()) {
+          // Host: no Follow button for yourself, and a deliberate way to stop.
+          endLiveBtn.hidden = false;
+        } else {
+          followBtn.hidden = false;
+          try {
+            const already = await window.API.isFollowing(live.host.id);
+            followBtn.dataset.following = already ? '1' : '0';
+            followBtn.textContent = already ? 'تتم المتابعة' : 'متابعة';
+            followBtn.classList.toggle('following', already);
+          } catch (e) { followBtn.dataset.following = '0'; }
+          // Counted as present, and counted out again on the way off the screen.
+          const n = await window.API.joinLiveStream(liveId);
+          if (n) setViewers(n);
+          joined = true;
+        }
+        try { if (window.I18N) window.I18N.apply(ov); } catch (e) {}
+
+        // The count used to be read once and then sat frozen for the whole
+        // broadcast, and nothing told viewers when the host stopped.
+        unsubStream = window.API.subscribeToLiveStream(liveId, (row2) => {
+          if (!row2) return;
+          if (typeof row2.viewer_count === 'number') setViewers(row2.viewer_count);
+          if (row2.status && row2.status !== 'live') showEnded();
+        });
       } catch (e) {
         console.warn('live stream load failed:', e);
       }
@@ -4365,7 +5582,9 @@ function autoPlay(video) {
         // Emit a few hearts (TikTok rapid-tap feel)
         for (let i = 0; i < 4; i++) setTimeout(floatHeart, i * 80, ['❤️', '💖', '💕', '💗', '✨'][Math.floor(Math.random() * 5)]);
       } }),
-      el('button', { class: 'icon-btn', html: icons.share, onclick: () => go('/share/' + live.id) }),
+      // Was sharing the stream id as though it were a video, so the link
+      // opened a video that does not exist. Shares the live link instead.
+      el('button', { class: 'icon-btn', html: icons.share, onclick: () => go('/share/' + liveId + '?kind=live') }),
     ]));
     root.appendChild(ov);
 
@@ -4396,6 +5615,11 @@ function autoPlay(video) {
 
     // Stop on navigate away
     window.addEventListener('hashchange', async () => {
+      if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+      if (unsubStream) { try { unsubStream(); } catch (_) {} unsubStream = null; }
+      // Counted out, or the audience number stays inflated for the rest of
+      // the broadcast.
+      if (joined && window.API) { try { await window.API.leaveLiveStream(liveId); } catch (_) {} joined = false; }
       if (viewerSession) try { await viewerSession.stop(); } catch (_) {}
       if (isHost && hostSession) {
         try {
@@ -4441,7 +5665,7 @@ function autoPlay(video) {
       }
     };
     root.appendChild(el('div', { class: 'map-controls', style: { zIndex: 1000 } }, [
-      el('button', { class: 'icon-btn', style: { background: '#fff' }, html: icons.chevR, onclick: () => back() }),
+      el('button', { class: 'icon-btn back-btn', style: { background: '#fff' }, html: icons.chevL, onclick: () => back() }),
       ghostBtn,
       el('button', { class: 'icon-btn', style: { background: '#fff' }, html: icons.settings, onclick: () => go('/settings') }),
     ]));
@@ -4465,6 +5689,40 @@ function autoPlay(video) {
     }
     sheetHandle.style.cursor = sheetTitle.style.cursor = sheetSub.style.cursor = 'pointer';
     [sheetHandle, sheetTitle, sheetSub].forEach(n => n.addEventListener('click', toggleSheet));
+
+    // ── The swipe the label has been promising ──
+    // The sheet said "swipe up to view the list" but only ever responded to a
+    // tap on the handle — the gesture it named did nothing. Dragging the sheet
+    // now opens and closes it; tapping still works for anyone who tries that.
+    (function sheetSwipe() {
+      let startY = 0, delta = 0, dragging = false;
+      const THRESHOLD = 40; // px, enough to not fire on a stray touch
+
+      sheet.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        // While the list is open and scrolled, the gesture belongs to the
+        // list. Only a drag from its very top should collapse the sheet.
+        if (sheetExpanded.val && sheetList.contains(e.target) && sheetList.scrollTop > 0) return;
+        dragging = true;
+        startY = e.touches[0].clientY;
+        delta = 0;
+      }, { passive: true });
+
+      sheet.addEventListener('touchmove', (e) => {
+        if (!dragging) return;
+        delta = e.touches[0].clientY - startY;
+      }, { passive: true });
+
+      sheet.addEventListener('touchend', () => {
+        if (!dragging) return;
+        dragging = false;
+        if (delta < -THRESHOLD && !sheetExpanded.val) toggleSheet();      // up: open
+        else if (delta > THRESHOLD && sheetExpanded.val) toggleSheet();   // down: close
+      });
+
+      sheet.addEventListener('touchcancel', () => { dragging = false; });
+    })();
+
     root.appendChild(sheet);
 
     // ── Real map using Leaflet (free OpenStreetMap tiles) ──
@@ -6872,7 +8130,7 @@ function autoPlay(video) {
 
     const shareBtn = el('button', { class: 'icon-btn', title: 'مشاركة', html: icons.shareBox });
     root.appendChild(el('header', { class: 'top-bar' }, [
-      el('button', { class: 'icon-btn', html: icons.chevR, onclick: () => back() }),
+      el('button', { class: 'icon-btn back-btn', html: icons.chevL, onclick: () => back() }),
       el('span'),
       shareBtn,
     ]));
@@ -6945,7 +8203,7 @@ function autoPlay(video) {
 
     const shareBtn = el('button', { class: 'icon-btn', title: 'مشاركة', html: icons.shareBox });
     root.appendChild(el('header', { class: 'top-bar' }, [
-      el('button', { class: 'icon-btn', html: icons.chevR, onclick: () => back() }),
+      el('button', { class: 'icon-btn back-btn', html: icons.chevL, onclick: () => back() }),
       el('span'),
       shareBtn,
     ]));
@@ -7055,13 +8313,19 @@ function autoPlay(video) {
     const callId = params.id;
     const root = el('section', { class: 'call-screen' });
 
-    const avWrap = el('div', { class: 'call-avatar' }, [avatar('', '', 108)]);
+    // Rebuilt to read like a phone call rather than a settings page: the
+    // person fills the screen, the state is one clear line under their name,
+    // and the controls sit in a fixed row at the bottom where a thumb is.
+    const avPulse = el('span', { class: 'call-pulse' });
+    const avWrap = el('div', { class: 'call-avatar ringing' }, [avPulse, avatar('', '', 132)]);
     const nameEl = el('div', { class: 'call-name' }, '');
     const statusEl = el('div', { class: 'call-status' }, 'جاري الاتصال...');
+    const kindEl = el('div', { class: 'call-kind' }, '');
     const mediaNote = el('div', { class: 'call-media-note', hidden: true },
       'الصوت والفيديو غير مفعلين — أضف Agora App ID');
 
     let call = null, me = null, unsub = null, timer = null, startedAt = null, ringTimeout = null;
+    let ended = false;
 
     function cleanup() {
       if (unsub) { try { unsub(); } catch (e) {} unsub = null; }
@@ -7070,23 +8334,39 @@ function autoPlay(video) {
     }
     function leaveScreen() { cleanup(); back(); }
 
-    const muteBtn = el('button', { class: 'call-btn', onclick: () => {
-      muteBtn.classList.toggle('on');
+    // A labelled round control. Every button carries its own label so none of
+    // them is a bare icon you have to guess at.
+    function ctl(cls, icon, label, onclick) {
+      const btn = el('button', { class: 'call-btn ' + cls, title: label, onclick }, [el('span', { html: icon })]);
+      return { btn, node: el('div', { class: 'call-ctl' }, [btn, el('small', {}, label)]) };
+    }
+
+    const mute = ctl('', icons.mic, 'كتم', () => {
+      mute.btn.classList.toggle('on');
       // (media) mute the local Agora audio track here once configured
-    } }, [el('span', { html: icons.mic }), el('small', {}, 'كتم')]);
+    });
 
-    const camBtn = el('button', { class: 'call-btn', hidden: true, onclick: () => {
-      camBtn.classList.toggle('on');
+    const speaker = ctl('', icons.sparkle, 'مكبر الصوت', () => {
+      speaker.btn.classList.toggle('on');
+      // (media) route audio to the loudspeaker once Agora is wired
+    });
+
+    const cam = ctl('', icons.video, 'الكاميرا', () => {
+      cam.btn.classList.toggle('on');
       // (media) toggle the local Agora video track here once configured
-    } }, [el('span', { html: icons.video }), el('small', {}, 'الكاميرا')]);
+    });
+    cam.node.hidden = true;
 
-    const endBtn = el('button', { class: 'call-btn end', onclick: async () => {
+    const end = ctl('end', icons.phone, 'إنهاء', async () => {
+      if (ended) return;
+      ended = true;
+      end.btn.disabled = true;
       try { if (call) await window.API.endCall(call.id); } catch (e) {}
       leaveScreen();
-    } }, [el('span', { html: icons.phone }), el('small', {}, 'إنهاء')]);
+    });
 
-    root.appendChild(el('div', { class: 'call-body' }, [avWrap, nameEl, statusEl, mediaNote]));
-    root.appendChild(el('div', { class: 'call-actions' }, [muteBtn, camBtn, endBtn]));
+    root.appendChild(el('div', { class: 'call-body' }, [kindEl, avWrap, nameEl, statusEl, mediaNote]));
+    root.appendChild(el('div', { class: 'call-actions' }, [mute.node, speaker.node, cam.node, end.node]));
 
     function startTimer() {
       startedAt = Date.now();
@@ -7099,22 +8379,33 @@ function autoPlay(video) {
     function applyStatus(row) {
       if (!row) return;
       call = Object.assign(call || {}, row);
+
+      // A terminal status must only be handled once. The screen subscribes to
+      // the call and also ends it locally, so without this guard hanging up
+      // could schedule two departures and pop the history twice.
+      const terminal = (row.status === 'declined' || row.status === 'missed' || row.status === 'ended');
+      if (terminal && ended) return;
+
       if (row.status === 'accepted' && !timer) {
         if (ringTimeout) { clearTimeout(ringTimeout); ringTimeout = null; }
+        avWrap.classList.remove('ringing');
+        avWrap.classList.add('connected');
         startTimer();
         // (media) both sides join Agora channel `call.channel` here.
         if (!(window.Agora && window.Agora.isConfigured && window.Agora.isConfigured())) {
           mediaNote.hidden = false;
         }
-      } else if (row.status === 'declined') {
-        statusEl.textContent = 'تم رفض المكالمة';
-        setTimeout(leaveScreen, 1400);
-      } else if (row.status === 'missed') {
-        statusEl.textContent = 'لم يتم الرد';
-        setTimeout(leaveScreen, 1400);
-      } else if (row.status === 'ended') {
-        statusEl.textContent = 'انتهت المكالمة';
-        setTimeout(leaveScreen, 1200);
+      } else if (terminal) {
+        ended = true;
+        cleanup();                       // stop the timer before it overwrites the reason
+        avWrap.classList.remove('ringing', 'connected');
+        avWrap.classList.add('over');
+        end.btn.disabled = true;
+        statusEl.textContent = row.status === 'declined' ? 'تم رفض المكالمة'
+                             : row.status === 'missed'   ? 'لم يتم الرد'
+                             : 'انتهت المكالمة';
+        try { if (window.I18N) window.I18N.apply(statusEl); } catch (e) {}
+        setTimeout(leaveScreen, 1300);
       }
     }
 
@@ -7128,7 +8419,13 @@ function autoPlay(video) {
         avWrap.innerHTML = '';
         avWrap.appendChild(avatar((other && other.avatar_url) || '', oname, 108));
         nameEl.textContent = oname;
-        if (call.kind === 'video') camBtn.hidden = false;
+        kindEl.textContent = callKindLabel(call.kind);
+        if (call.kind === 'video') cam.node.hidden = false;
+        // Ringing out and being connected are different states and should not
+        // share a label.
+        if (call.status === 'ringing') {
+          statusEl.textContent = (call.caller_id === me) ? 'جاري الاتصال...' : 'مكالمة واردة';
+        }
         applyStatus(call);
         try { if (window.I18N) window.I18N.apply(root); } catch (e) {}
 
@@ -7154,8 +8451,15 @@ function autoPlay(video) {
   (function initIncomingCalls() {
     let overlay = null;
     let ringingId = null;
+    let callUnsub = null;
+    let missTimer = null;
 
     function dismiss() {
+      // The subscription and the timeout have to go with the card. Leaving
+      // either behind meant a dismissed call could still fire missCall on a
+      // call that had already been answered somewhere else.
+      if (callUnsub) { try { callUnsub(); } catch (e) {} callUnsub = null; }
+      if (missTimer) { clearTimeout(missTimer); missTimer = null; }
       if (overlay) { overlay.remove(); overlay = null; }
       ringingId = null;
     }
@@ -7168,28 +8472,60 @@ function autoPlay(video) {
         try { const full = await window.API.fetchCall(row.id); caller = full && full.caller; } catch (e) {}
       }
       const cname = (caller && caller.name) || (caller && caller.handle) || '';
+      const isVideo = row.kind === 'video';
+
+      // Full-screen, the way a real incoming call looks — a small card in the
+      // corner of the app read as a notification, not as a ringing phone.
       overlay = el('div', { class: 'incoming-call' }, [
+        el('div', { class: 'ic-bg' }),
         el('div', { class: 'ic-card' }, [
-          avatar((caller && caller.avatar_url) || '', cname, 92),
-          el('div', { class: 'ic-name' }, cname),
           el('div', { class: 'ic-kind' }, callKindLabel(row.kind)),
+          el('div', { class: 'ic-avatar' }, [
+            el('span', { class: 'ic-pulse' }),
+            el('span', { class: 'ic-pulse d2' }),
+            avatar((caller && caller.avatar_url) || '', cname, 112),
+          ]),
+          el('div', { class: 'ic-name' }, cname),
+          el('div', { class: 'ic-sub' }, 'مكالمة واردة'),
           el('div', { class: 'ic-actions' }, [
-            el('button', { class: 'ic-btn decline', onclick: async () => {
-              const id = ringingId; dismiss();
-              try { await window.API.declineCall(id); } catch (e) {}
-            } }, [el('span', { html: icons.x }), el('small', {}, 'رفض')]),
-            el('button', { class: 'ic-btn accept', onclick: async () => {
-              const id = ringingId; dismiss();
-              try { await window.API.acceptCall(id); } catch (e) {}
-              go('/call/' + id);
-            } }, [el('span', { html: icons.phone }), el('small', {}, 'قبول')]),
+            el('div', { class: 'ic-slot' }, [
+              el('button', {
+                class: 'ic-btn decline', title: 'رفض',
+                onclick: async () => {
+                  const id = ringingId; dismiss();
+                  try { await window.API.declineCall(id); } catch (e) {}
+                },
+              }, [el('span', { html: icons.phone })]),
+              el('small', {}, 'رفض'),
+            ]),
+            el('div', { class: 'ic-slot' }, [
+              el('button', {
+                class: 'ic-btn accept', title: 'قبول',
+                onclick: async () => {
+                  const id = ringingId; dismiss();
+                  try { await window.API.acceptCall(id); } catch (e) {}
+                  go('/call/' + id);
+                },
+              }, [el('span', { html: isVideo ? icons.video : icons.phone })]),
+              el('small', {}, 'قبول'),
+            ]),
           ]),
         ]),
       ]);
       document.body.appendChild(overlay);
       try { if (window.I18N) window.I18N.apply(overlay); } catch (e) {}
 
-      setTimeout(() => {
+      // ── The fix for a card that would not go away ──
+      // subscribeToIncomingCalls listens for INSERT only, so it never hears
+      // the caller hang up. Nothing was watching this call's status, and the
+      // card kept ringing after the other side had already ended it — right
+      // through to the 35s timeout, which then reported it as missed.
+      callUnsub = window.API.subscribeToCall(row.id, (updated) => {
+        if (!updated || updated.id !== ringingId) return;
+        if (updated.status !== 'ringing') dismiss();   // ended, declined, or answered elsewhere
+      });
+
+      missTimer = setTimeout(() => {
         if (ringingId === row.id) {
           const id = ringingId; dismiss();
           window.API.missCall(id).catch(() => {});

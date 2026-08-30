@@ -38,7 +38,12 @@
     // ---------- Auth ----------
     async signUp({ email, phone, password, name }) {
       const c = await ready; if (!c) throw new Error('SDK not loaded');
-      const opts = { password, options: { data: { name: name || '' } } };
+      // Refuse rather than send a blank. This used to pass `name || ''`, and
+      // the profile trigger's coalesce chain only replaces NULL — an empty
+      // string went straight through it and produced a nameless account.
+      const cleanName = (name || '').trim();
+      if (cleanName.length < 2) throw new Error('الاسم مطلوب');
+      const opts = { password, options: { data: { name: cleanName } } };
       if (email) opts.email = email; else if (phone) opts.phone = phone;
       const { data, error } = await c.auth.signUp(opts);
       if (error) throw error;
@@ -170,7 +175,33 @@
       return data.session;
     },
 
+    // The signed-in user, read from the session already held locally.
+    //
+    // This used to call auth.getUser(), which asks the auth server to
+    // re-validate the token on every single call — measured at 206-289ms.
+    // Between db.js (119 uses via uid()) and the screens (15 more), almost
+    // every action in the app paid that round trip before doing its actual
+    // work, which roughly doubled the latency of everything.
+    //
+    // The session carries the same user object, decoded from the JWT the
+    // client already holds, and returns in about 1ms.
+    //
+    // Safe, because this value never authorises anything. It is used to
+    // build queries and to decide what to show; Postgres derives auth.uid()
+    // from the JWT itself and RLS enforces access server-side. A stale or
+    // tampered value here gets nothing back from the database.
+    //
+    // Use getUserVerified() for the rare case that genuinely needs the auth
+    // server's own answer — confirming an account still exists before a
+    // destructive action, for instance.
     async getUser() {
+      const c = await ready; if (!c) return null;
+      const { data } = await c.auth.getSession();
+      return (data && data.session && data.session.user) || null;
+    },
+
+    // Round-trips to the auth server. Costs ~230ms; use deliberately.
+    async getUserVerified() {
       const c = await ready; if (!c) return null;
       const { data } = await c.auth.getUser();
       return data.user;

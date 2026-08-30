@@ -133,6 +133,22 @@
     'المتصفح لا يدعم التسجيل': 'Browser does not support recording',
     'الرجاء السماح بالوصول إلى الكاميرا والميكروفون.': 'Please allow access to the camera and microphone.',
     'تعذر فتح الكاميرا': 'Could not open the camera',
+    // Camera permission states — each failure is named separately so the
+    // screen can say which one happened rather than one catch-all message.
+    'الكاميرا محظورة': 'Camera blocked',
+    'تم رفض إذن الكاميرا سابقًا. لا يمكن للتطبيق طلبه مرة أخرى — فعّله من إعدادات جهازك.':
+      'Camera permission was denied earlier. The app cannot ask again — enable it in your device settings.',
+    'تم رفض إذن الكاميرا. فعّله من إعدادات جهازك ثم عد.':
+      'Camera permission was denied. Enable it in your device settings, then come back.',
+    'يحتاج التطبيق إلى إذن الكاميرا والميكروفون للتصوير.':
+      'The app needs camera and microphone permission to record.',
+    'لا توجد كاميرا': 'No camera found',
+    'لم يعثر التطبيق على كاميرا متاحة على هذا الجهاز.': 'The app could not find an available camera on this device.',
+    'الكاميرا قيد الاستخدام': 'Camera in use',
+    'تطبيق آخر يستخدم الكاميرا. أغلقه ثم أعد المحاولة.': 'Another app is using the camera. Close it and try again.',
+    'الميكروفون محظور — سيتم التسجيل بدون صوت': 'Microphone blocked — recording without sound',
+    'إعادة المحاولة': 'Try again',
+    'إدارة الأذونات': 'Manage permissions',
     'معاينة الفيديو': 'Video preview',
     'تعديل الفيديو': 'Edit video',
     'صف فيديوك، أضف وسومًا (#) أو ذكر مستخدمين (@)': 'Describe your video, add hashtags (#) or mention users (@)',
@@ -299,6 +315,51 @@
     'تحقق من بريدك الجديد للتأكيد': 'Check your new inbox to confirm',
     'الخصوصية والأمان': 'Privacy & Security',
     'الحساب خاص': 'Private account',
+    // Shown in place of the video grid on a private account you do not follow.
+    'هذا الحساب خاص': 'This account is private',
+    'تابع هذا الحساب لرؤية فيديوهاته': 'Follow this account to see its videos',
+    // Chat: replies, reactions, emoji picker
+    'ردًا على نفسك': 'Replying to yourself',
+    'إلغاء الرد': 'Cancel reply',
+    'رسالة محذوفة': 'Deleted message',
+    // Call records in the thread, and the call screens
+    'مكالمة صادرة': 'Outgoing call',
+    'مكالمة واردة': 'Incoming call',
+    'مكالمة فائتة': 'Missed call',
+    'مكالمة مرفوضة': 'Declined call',
+    'مكالمة لم تكتمل': 'Call not completed',
+    'مكبر الصوت': 'Speaker',
+    // Live setup screen
+    'الوضع': 'Mode',
+    'من يمكنه المشاهدة': 'Who can watch',
+    'سيراك المشاهدون ويسمعونك مباشرة': 'Viewers will see and hear you live',
+    'إذن الكاميرا مرفوض — فعّله من إعدادات جهازك أو ابدأ بثًا بخلفية':
+      'Camera permission denied — enable it in your device settings, or stream with a background',
+    'تعذر فتح الكاميرا — يمكنك البث بخلفية بدلًا من ذلك':
+      'Could not open the camera — you can stream with a background instead',
+    'بدأ بثًا مباشرًا الآن': 'started a live broadcast',
+    // Live viewer
+    'سينتهي البث لجميع المشاهدين ولا يمكن استئنافه.': 'The broadcast will end for all viewers and cannot be resumed.',
+    'انتهى البث': 'The broadcast has ended',
+    'شكرًا لمشاهدتك': 'Thanks for watching',
+    'بثوث أخرى': 'Other broadcasts',
+    // Inbox: message requests
+    'الطلبات': 'Requests',
+    // Share sheet — "contacts" was misleading, this list is followers
+    'إرسال إلى متابعيك': 'Send to your followers',
+    'لا يوجد أشخاص بعد': 'No one here yet',
+    'تابع أشخاصًا لمشاركة الفيديوهات معهم مباشرة': 'Follow people to share videos with them directly',
+    'هذا الشخص لا تتابعه. هل تريد قبول رسالته؟': 'You do not follow this person. Accept their message?',
+    'تم قبول الطلب': 'Request accepted',
+    'تم حذف الطلب': 'Request deleted',
+    'تعذر القبول': 'Could not accept',
+    'تعذر الحذف': 'Could not delete',
+    '📎 ملف': '📎 File',
+    '📍 موقع': '📍 Location',
+    // Profile / lists
+    'تابع أشخاصًا لبدء محادثة معهم': 'Follow people to start a conversation',
+    'صورة أو فيديو': 'Photo or video',
+    'مشاركة الملف الشخصي': 'Share profile',
     'حسابك أصبح خاصًا': 'Your account is now private',
     'حسابك أصبح عامًا': 'Your account is now public',
     'من يمكنه مراسلتي': 'Who can message me',
@@ -1811,6 +1872,49 @@
   function apply(root) {
     if (getLang() !== 'en') return;
     walk(root || document.body);
+  }
+
+  // ── Translate content that arrives after the view has rendered ──
+  //
+  // The router calls apply(document.body) once, synchronously, the moment a
+  // view function returns. Anything that appears later never saw it: a screen
+  // that waits on the camera, a list that waits on the API, a sheet or dialog
+  // opened by a tap. Those stayed in Arabic with the app set to English —
+  // the "go live" window was one of several.
+  //
+  // Watching for inserted nodes covers all of them at once, instead of every
+  // async render having to remember to call apply() on itself.
+  let observer = null;
+  let translating = false;
+
+  function observeAdditions() {
+    if (observer || typeof MutationObserver === 'undefined' || !document.body) return;
+    observer = new MutationObserver((records) => {
+      // Our own rewriting mutates text nodes, which would re-enter this
+      // callback forever without the guard.
+      if (translating || getLang() !== 'en') return;
+      translating = true;
+      try {
+        for (const rec of records) {
+          const added = rec.addedNodes;
+          for (let i = 0; i < added.length; i++) {
+            const n = added[i];
+            if (n.nodeType === 1 || n.nodeType === 3) walk(n);
+          }
+        }
+      } catch (e) {
+        console.warn('i18n observer:', e);
+      } finally {
+        translating = false;
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', observeAdditions, { once: true });
+  } else {
+    observeAdditions();
   }
 
   // ── Language state ──

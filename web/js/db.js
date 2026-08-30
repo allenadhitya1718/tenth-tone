@@ -5,7 +5,234 @@
   const API = {};
 
   async function client() { return await window.SB.client(); }
-  async function uid() { const u = await window.SB.getUser(); return u ? u.id : null; }
+
+  // Our own user id, read from the locally stored session.
+  //
+  // This used to call SB.getUser(), which asks the auth server to re-validate
+  // the token and costs a full round trip — measured at 206-289ms. uid() is
+  // called by 119 functions in this file, almost always as the FIRST thing
+  // they do, so nearly every read in the app was paying that before it even
+  // issued its real query. fetchFeed spent ~230ms learning who you are and
+  // another ~230ms fetching the feed. It roughly doubled the latency of the
+  // whole app.
+  //
+  // getSession() reads the JWT already held in local storage (~1ms) and the
+  // id is the token's own `sub` claim — the same value getUser() returns.
+  //
+  // This is not a weakening of security. The id is only used to BUILD
+  // queries; it is never what authorises them. Postgres derives auth.uid()
+  // from the JWT itself on every request and RLS enforces that, so a client
+  // that lied here would simply get nothing back.
+  async function uid() {
+    try {
+      const s = await window.SB.getSession();
+      return (s && s.user && s.user.id) || null;
+    } catch (e) { return null; }
+  }
+
+  // =====================================================================
+  //  Read cache
+  //
+  //  Nothing was cached. Every screen re-queried on every visit, and the
+  //  router rebuilds a view from scratch each time you navigate to it, so
+  //  going home -> profile -> home re-fetched the entire feed. Measured
+  //  round trip to Supabase is ~227ms and fetchFeed alone costs four or
+  //  five of them, which is where "it loads again every time" came from.
+  //
+  //  This is deliberately a CLIENT cache, not Redis. The browser talks to
+  //  Supabase directly — there is no server tier for Redis to sit in, and
+  //  adding one would put an extra hop in front of every miss. It also
+  //  could not be shared safely: RLS decides row visibility per user, so
+  //  one shared server-side cache is a way to serve one account's rows to
+  //  another.
+  //
+  //  Two modes:
+  //    cached(...)  - within TTL, return the stored value and make no call.
+  //    swr(...)     - return the stored value immediately AND refresh in
+  //                   the background, so the screen is instant but still
+  //                   converges on the truth. Used for anything that
+  //                   changes while you are looking at it.
+  // =====================================================================
+  const _cache = new Map();          // key -> { at, data }
+  const _inflight = new Map();       // key -> Promise, so N callers share one call
+  let _cacheOwner = null;            // whose data this is
+
+  // ── Surviving an app restart ──
+  //
+  // The cache above lives in memory, which is wiped the moment the app is
+  // closed — so opening the app fresh was always slow again, however much
+  // had been cached while using it. These write a copy to the device's own
+  // storage and read it back on the next launch, so the first screen can be
+  // drawn immediately from what was there last time while the real answer is
+  // fetched behind it.
+  //
+  // Only a few keys are worth keeping, and only for a day. Everything is
+  // stamped with whose data it is and erased on sign-out, so one account's
+  // conversations can never be shown to whoever opens the app next.
+  const PERSIST_KEY = 'tt-cache-v1';
+  const PERSIST_PREFIXES = ['chats', 'feed:', 'profile:', 'uservideos:'];
+  const PERSIST_MAX_CHARS = 400000;   // ~400KB; storage is small and shared
+  const PERSIST_MAX_AGE = 24 * 60 * 60 * 1000;
+
+  const _persistable = (k) => PERSIST_PREFIXES.some(p => k.indexOf(p) === 0);
+
+  function clearPersisted() {
+    try { localStorage.removeItem(PERSIST_KEY); } catch (e) {}
+  }
+
+  function savePersisted() {
+    try {
+      if (!_cacheOwner) return;
+      const out = {};
+      for (const [k, v] of _cache.entries()) if (_persistable(k)) out[k] = v;
+      if (!Object.keys(out).length) return;
+      const payload = JSON.stringify({ owner: _cacheOwner, at: Date.now(), data: out });
+      // Better to keep nothing than to fill the device's storage quota and
+      // start throwing on every write.
+      if (payload.length > PERSIST_MAX_CHARS) return;
+      localStorage.setItem(PERSIST_KEY, payload);
+    } catch (e) { /* private mode, or quota full — the cache is optional */ }
+  }
+
+  function loadPersisted(owner) {
+    try {
+      const raw = localStorage.getItem(PERSIST_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      // Belongs to someone else, or is too old to be worth showing.
+      if (!parsed || parsed.owner !== owner || (Date.now() - parsed.at) > PERSIST_MAX_AGE) {
+        clearPersisted();
+        return;
+      }
+      Object.keys(parsed.data || {}).forEach(k => {
+        const e = parsed.data[k];
+        // Kept with its ORIGINAL timestamp, so it is honestly old: swr()
+        // paints it at once and refreshes immediately, and cached() treats
+        // it as expired and fetches properly. Nothing is passed off as fresh.
+        if (e && 'data' in e) _cache.set(k, { at: e.at || 0, data: e.data });
+      });
+    } catch (e) { clearPersisted(); }
+  }
+
+  // Written when the app is backgrounded or closed rather than on every
+  // change, so normal use never pays for the copying.
+  try {
+    window.addEventListener('pagehide', savePersisted);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') savePersisted();
+    });
+  } catch (e) {}
+
+  // The cache must never survive a change of account.
+  //
+  // Deliberately getSession, not getUser: getUser re-validates the token
+  // against the server and costs a full round trip, so using it here made
+  // every cache HIT pay ~230ms and the cache saved nothing at all.
+  // getSession reads the stored session locally and returns in about 0ms.
+  async function _assertOwner() {
+    let me = null;
+    try {
+      const s = await window.SB.getSession();
+      me = (s && s.user && s.user.id) || null;
+    } catch (e) { me = null; }
+    if (me !== _cacheOwner) {
+      _cache.clear(); _inflight.clear();
+      _cacheOwner = me;
+      // A new signed-in user gets their own saved copy back; signing out
+      // wipes what was stored so nothing is left on the device.
+      if (me) loadPersisted(me); else clearPersisted();
+    }
+  }
+
+  function _fresh(entry, ttl) {
+    return entry && (Date.now() - entry.at) < ttl;
+  }
+
+  async function cached(key, ttl, fn) {
+    await _assertOwner();
+    const hit = _cache.get(key);
+    if (_fresh(hit, ttl)) return hit.data;
+    if (_inflight.has(key)) return _inflight.get(key);   // collapse duplicate calls
+    const p = (async () => {
+      try {
+        const data = await fn();
+        _cache.set(key, { at: Date.now(), data });
+        return data;
+      } finally { _inflight.delete(key); }
+    })();
+    _inflight.set(key, p);
+    return p;
+  }
+
+  // Stale-while-revalidate. onFresh fires only if the refreshed result
+  // differs from what was handed back, so a caller can repaint without
+  // flickering on every navigation.
+  async function swr(key, ttl, fn, onFresh) {
+    await _assertOwner();
+    const hit = _cache.get(key);
+    if (hit) {
+      if (!_fresh(hit, ttl) && !_inflight.has(key)) {
+        const p = (async () => {
+          try {
+            const data = await fn();
+            const changed = JSON.stringify(data) !== JSON.stringify(hit.data);
+            _cache.set(key, { at: Date.now(), data });
+            if (changed && typeof onFresh === 'function') { try { onFresh(data); } catch (e) {} }
+            return data;
+          } catch (e) { return hit.data; }
+          finally { _inflight.delete(key); }
+        })();
+        _inflight.set(key, p);
+      }
+      return hit.data;
+    }
+    return cached(key, ttl, fn);
+  }
+
+  // Drops every key starting with the given prefix. Called after a write so
+  // the next read cannot serve something the user just changed.
+  function invalidate(prefix) {
+    if (!prefix) { _cache.clear(); return; }
+    for (const k of Array.from(_cache.keys())) {
+      if (k.indexOf(prefix) === 0) _cache.delete(k);
+    }
+  }
+
+  // Edits cached entries in place instead of dropping them.
+  //
+  // Liking a video only changes that video's own flags, so throwing away the
+  // whole cached feed would force a fresh four-or-five round trip fetch after
+  // every single tap — the cache would stop helping exactly the people using
+  // the app most. This rewrites the affected rows and leaves the rest alone.
+  function patchCached(prefix, mutate) {
+    for (const [k, entry] of _cache.entries()) {
+      if (k.indexOf(prefix) !== 0 || !entry) continue;
+      try { mutate(entry.data); } catch (e) { _cache.delete(k); }
+    }
+  }
+
+  // Reflects a like/save toggle onto every cached copy of that video.
+  function _patchVideoFlag(videoId, field, value) {
+    const apply = (rows) => {
+      if (!Array.isArray(rows)) return;
+      rows.forEach(r => { if (r && r.id === videoId) r[field] = value; });
+    };
+    patchCached('feed:', apply);
+  }
+
+  API.invalidate = invalidate;
+  API.patchCached = patchCached;
+  API.clearCache = () => { _cache.clear(); _inflight.clear(); clearPersisted(); };
+  // Signing out must not leave the previous account's data behind — not in
+  // memory, and not in the copy written to the device.
+  try {
+    if (window.SB && typeof window.SB.onAuthChange === 'function') {
+      window.SB.onAuthChange((event) => {
+        if (event === 'SIGNED_OUT') { _cacheOwner = null; API.clearCache(); }
+        else { _cache.clear(); _inflight.clear(); _cacheOwner = null; }
+      });
+    }
+  } catch (e) {}
 
   // ---------- Videos ----------
   API.publishVideo = async ({ file, thumbnail_url, description, music, sound_id = null, privacy = 'public', is_draft = false, allow_comments = true, allow_saving = true }) => {
@@ -55,7 +282,7 @@
     return data;
   };
 
-  API.fetchFeed = async ({ tab = 'foryou', limit = 20, offset = 0 } = {}) => {
+  const _fetchFeedRaw = async ({ tab = 'foryou', limit = 20, offset = 0 } = {}) => {
     const c = await client();
     let data = [];
 
@@ -125,6 +352,20 @@
       data.forEach(v => { v.liked = likeSet.has(v.id); v.saved = saveSet.has(v.id); });
     }
     return data || [];
+  };
+
+  // The feed is the most expensive read in the app — four or five round
+  // trips — and the one you return to most, so it gets stale-while-
+  // revalidate: the cached page paints instantly and a refresh runs behind
+  // it. Pass onFresh to repaint if the refreshed feed actually differs.
+  //
+  // Only page one is cached. Paging further is always live, or the cache
+  // key would have to track scroll position to no benefit.
+  API.fetchFeed = async (opts = {}) => {
+    const { tab = 'foryou', limit = 20, offset = 0, onFresh } = opts;
+    if (offset > 0) return _fetchFeedRaw({ tab, limit, offset });
+    return swr('feed:' + tab + ':' + limit, 30000,
+      () => _fetchFeedRaw({ tab, limit, offset }), onFresh);
   };
 
   // ---------- Original sounds ----------
@@ -303,23 +544,73 @@
 
   // People you can share a video to: existing DM threads first, then
   // people you follow. Replaces the fake contacts list on the share screen.
+  // Who you can send something to, in the order you are most likely to want.
+  //
+  // This used to return only the accounts you follow, so someone who follows
+  // you but whom you have not followed back could not be sent anything, and
+  // the list came back in whatever order the database produced — the person
+  // you message constantly sat at the bottom.
+  //
+  // Order is: people you have messaged most recently, then mutuals, then
+  // everyone else. Recency comes from existing conversations rather than a
+  // new "recently shared" table — the people you last talked to are the ones
+  // you are about to share with, and it needs no extra schema.
   API.fetchShareTargets = async () => {
     const c = await client(); const me = await uid();
     if (!me) return [];
-    const { data, error } = await c.from('follows').select(`
-      followed_id,
-      profile:profiles!follows_followed_id_fkey ( id, name, handle, avatar_url )
-    `).eq('follower_id', me).limit(50);
-    if (error) return [];
-    return (data || []).map(r => r.profile).filter(Boolean);
+
+    const [followingRes, followerRes] = await Promise.all([
+      c.from('follows').select('profile:profiles!follows_followed_id_fkey ( id, name, handle, avatar_url )')
+        .eq('follower_id', me).limit(200),
+      c.from('follows').select('profile:profiles!follows_follower_id_fkey ( id, name, handle, avatar_url )')
+        .eq('followed_id', me).limit(200),
+    ]);
+
+    const following = (followingRes.data || []).map(r => r.profile).filter(Boolean);
+    const followers = (followerRes.data || []).map(r => r.profile).filter(Boolean);
+
+    const followingIds = new Set(following.map(p => p.id));
+    const byId = new Map();
+    following.forEach(p => byId.set(p.id, { ...p, _mutual: false }));
+    followers.forEach(p => {
+      if (byId.has(p.id)) byId.get(p.id)._mutual = true;      // both directions
+      else byId.set(p.id, { ...p, _mutual: false });
+    });
+
+    // Recency from existing DM threads. Best effort — an ordering nicety
+    // should never be the reason the share sheet comes back empty.
+    const recency = new Map();
+    try {
+      const chats = await API.fetchChats();
+      (chats || []).forEach((ch, i) => {
+        if (ch.type === 'group') return;
+        const other = (ch.others || [])[0];
+        if (!other || recency.has(other.id)) return;
+        recency.set(other.id, i);                              // fetchChats is newest-first
+      });
+    } catch (e) { console.warn('share target recency unavailable:', e); }
+
+    const rank = (p) => {
+      if (recency.has(p.id)) return [0, recency.get(p.id)];    // talked to recently
+      if (p._mutual) return [1, 0];                            // follow each other
+      if (followingIds.has(p.id)) return [2, 0];               // you follow them
+      return [3, 0];                                           // they follow you
+    };
+
+    return Array.from(byId.values()).sort((a, b) => {
+      const ra = rank(a), rb = rank(b);
+      return ra[0] - rb[0] || ra[1] - rb[1] || (a.name || '').localeCompare(b.name || '');
+    });
   };
 
   // Actually sends a video to the chosen people as a DM containing its
   // deep link. The share screen previously just showed "Sent ✓" and did
   // nothing. Returns the number of recipients successfully sent to.
-  API.shareVideoTo = async (videoId, userIds) => {
-    if (!videoId || !userIds || !userIds.length) return 0;
-    const link = (window.DeepLink && window.DeepLink.videoLink(videoId)) || String(videoId);
+  // Sends any link to a set of people as a DM. Split out of shareVideoTo so
+  // a profile can be shared the same way a video is, through the same screen,
+  // rather than a profile only ever being copyable to the clipboard.
+  API.shareLinkTo = async (link, userIds) => {
+    if (!link || !userIds || !userIds.length) return 0;
     let sent = 0;
     for (const userId of userIds) {
       try {
@@ -328,8 +619,22 @@
         sent++;
       } catch (e) { console.warn('share to', userId, 'failed:', e.message); }
     }
+    return sent;
+  };
+
+  API.shareVideoTo = async (videoId, userIds) => {
+    if (!videoId || !userIds || !userIds.length) return 0;
+    const link = (window.DeepLink && window.DeepLink.videoLink(videoId)) || String(videoId);
+    const sent = await API.shareLinkTo(link, userIds);
+    // Only a video has a share counter to bump.
     if (sent) { try { await API.countShare(videoId); } catch (e) {} }
     return sent;
+  };
+
+  API.shareProfileTo = async (userId, userIds) => {
+    if (!userId || !userIds || !userIds.length) return 0;
+    const link = (window.DeepLink && window.DeepLink.profileLink(userId)) || String(userId);
+    return API.shareLinkTo(link, userIds);
   };
 
   // Increments a video's share counter.
@@ -368,15 +673,18 @@
   };
 
   API.fetchUserVideos = async (userId) => {
-    const c = await client();
-    // Pinned videos sit at the top of the grid, newest first within each group.
-    const { data, error } = await c.from('videos')
-      .select('id, description, thumbnail, video_url, likes_count, created_at, is_pinned')
-      .eq('user_id', userId).eq('is_draft', false).eq('is_archived', false)
-      .order('is_pinned', { ascending: false })
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    return data || [];
+    if (!userId) return [];
+    return cached('uservideos:' + userId, 60000, async () => {
+      const c = await client();
+      // Pinned videos sit at the top of the grid, newest first within each group.
+      const { data, error } = await c.from('videos')
+        .select('id, description, thumbnail, video_url, likes_count, created_at, is_pinned')
+        .eq('user_id', userId).eq('is_draft', false).eq('is_archived', false)
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    });
   };
 
   // Pin / unpin one of your own videos. The 3-per-user cap is enforced by a
@@ -397,7 +705,10 @@
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
     const { error } = await c.from('likes').insert({ user_id: me, video_id: videoId });
     if (error && error.code !== '23505') throw error;
-    await c.rpc('noop'); // placeholder; counts maintained client-side until trigger added
+    // Removed: `await c.rpc('noop')`. It was left here as a placeholder and
+    // did nothing except spend a whole round trip on every like — the counts
+    // it referred to are maintained by a database trigger.
+    _patchVideoFlag(videoId, 'liked', true);
     return true;
   };
 
@@ -405,6 +716,7 @@
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
     const { error } = await c.from('likes').delete().eq('user_id', me).eq('video_id', videoId);
     if (error) throw error;
+    _patchVideoFlag(videoId, 'liked', false);
     return true;
   };
 
@@ -412,6 +724,8 @@
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
     const { error } = await c.from('saves').upsert({ user_id: me, video_id: videoId });
     if (error) throw error;
+    _patchVideoFlag(videoId, 'saved', true);
+    invalidate('savedvideos');
     return true;
   };
 
@@ -419,6 +733,8 @@
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
     const { error } = await c.from('saves').delete().eq('user_id', me).eq('video_id', videoId);
     if (error) throw error;
+    _patchVideoFlag(videoId, 'saved', false);
+    invalidate('savedvideos');
     return true;
   };
 
@@ -477,15 +793,28 @@
   // Returns 'following' or 'requested'. A private account turns a follow into
   // a request, so the caller must render the button from what came back rather
   // than assuming it worked.
+  // Every write below drops the keys it could have made stale. A cache that
+  // keeps serving the old answer after you act on it is worse than no cache:
+  // it turns a slow app into one that looks broken.
+  function _invalidateFollowGraph(otherId) {
+    invalidate('profile:' + otherId);       // their follower count moved
+    invalidate('isfollowing:' + otherId);   // the button's own state
+    invalidate('following:');
+    invalidate('followers:');
+    invalidate('sharetargets:');
+    invalidate('feed:');                    // the Following tab composition changed
+  }
+
   API.follow = async (userId) => {
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
     if (me === userId) return 'following';
     const { data, error } = await c.rpc('follow_or_request', { p_target: userId });
-    if (!error) return data || 'following';
+    if (!error) { _invalidateFollowGraph(userId); if (me) invalidate('profile:' + me); return data || 'following'; }
     // Before 0030 the function does not exist; the plain insert still works.
     if (error.code === 'PGRST202' || /function .*follow_or_request/i.test(error.message || '')) {
       const { error: e2 } = await c.from('follows').insert({ follower_id: me, followed_id: userId });
       if (e2 && e2.code !== '23505') throw e2;
+      _invalidateFollowGraph(userId); invalidate('profile:' + me);
       return 'following';
     }
     throw error;
@@ -540,14 +869,19 @@
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
     const { error } = await c.from('follows').delete().eq('follower_id', me).eq('followed_id', userId);
     if (error) throw error;
+    _invalidateFollowGraph(userId);
+    invalidate('profile:' + me);
     return true;
   };
 
   API.isFollowing = async (userId) => {
-    const c = await client(); const me = await uid(); if (!me) return false;
-    const { data, error } = await c.from('follows').select('followed_id').eq('follower_id', me).eq('followed_id', userId).maybeSingle();
-    if (error) return false;
-    return !!data;
+    if (!userId) return false;
+    return cached('isfollowing:' + userId, 60000, async () => {
+      const c = await client(); const me = await uid(); if (!me) return false;
+      const { data, error } = await c.from('follows').select('followed_id').eq('follower_id', me).eq('followed_id', userId).maybeSingle();
+      if (error) return false;
+      return !!data;
+    });
   };
 
   API.fetchFollowers = async (userId) => {
@@ -560,12 +894,15 @@
   };
 
   API.fetchFollowing = async (userId) => {
+    if (!userId) return [];
+    return cached('following:' + userId, 60000, async () => {
     const c = await client();
     const { data, error } = await c.from('follows').select(`
       profiles:profiles!follows_followed_id_fkey ( id, name, handle, avatar_url, verified, followers_count )
     `).eq('follower_id', userId);
     if (error) throw error;
     return (data || []).map(r => r.profiles).filter(Boolean);
+    });
   };
 
   // ---------- Profile by id ----------
@@ -619,11 +956,16 @@
     if (error) throw error;
   };
 
+  // Opened constantly (every profile visit, every follow re-read) and it
+  // barely changes, so a short TTL removes most of those round trips.
   API.fetchProfile = async (userId) => {
-    const c = await client();
-    const { data, error } = await c.from('profiles').select('*').eq('id', userId).single();
-    if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    if (!userId) return null;
+    return cached('profile:' + userId, 60000, async () => {
+      const c = await client();
+      const { data, error } = await c.from('profiles').select('*').eq('id', userId).single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    });
   };
 
   API.searchProfiles = async (q) => {
@@ -656,7 +998,7 @@
     };
   };
 
-  API.fetchChats = async () => {
+  const _fetchChatsRaw = async () => {
     const c = await client(); const me = await uid(); if (!me) return [];
     const { data: memberships } = await c.from('chat_members').select('chat_id').eq('user_id', me);
     const chatIds = (memberships || []).map(r => r.chat_id);
@@ -677,6 +1019,25 @@
       (membersByChat[m.chat_id] = membersByChat[m.chat_id] || []).push(m);
     });
 
+    // Unread counts come back in one call (see chat_unread_counts in 0041).
+    // Failing soft matters here: on a database that has not had 0041 applied
+    // yet the inbox should still list conversations, just without the unread
+    // marks, rather than showing an error.
+    let unreadByChat = {};
+    try {
+      const { data: counts } = await c.rpc('chat_unread_counts');
+      (counts || []).forEach(r => { unreadByChat[r.chat_id] = r.unread_count; });
+    } catch (e) { console.warn('unread counts unavailable (is 0041 applied?):', e); }
+
+    // Which chats are message requests from people you do not follow.
+    // Fails soft the same way: without 0043 nothing is a request and the
+    // inbox behaves exactly as it did before.
+    const requestByChat = {};
+    try {
+      const { data: flags } = await c.rpc('chat_request_flags');
+      (flags || []).forEach(r => { requestByChat[r.chat_id] = !!r.is_request; });
+    } catch (e) { console.warn('request flags unavailable (is 0043 applied?):', e); }
+
     return (chats || []).map(c => {
       const others = (membersByChat[c.id] || []).filter(m => m.user_id !== me).map(m => m.profiles);
       const last = lastByChat[c.id];
@@ -684,6 +1045,8 @@
         ...c,
         others,
         last_message: last,
+        unread_count: unreadByChat[c.id] || 0,
+        is_request: !!requestByChat[c.id],
         // An empty display name is falsy, so this used to fall through to the
         // literal word "Chat". Try the handle before giving up.
         title: c.type === 'group'
@@ -692,6 +1055,42 @@
         avatar: c.type === 'group' ? c.photo_url : (others[0] && others[0].avatar_url),
       };
     }).sort((a, b) => new Date((b.last_message && b.last_message.created_at) || b.created_at) - new Date((a.last_message && a.last_message.created_at) || a.created_at));
+  };
+
+  // The inbox is opened constantly and this read costs several round trips
+  // (memberships, chats, last messages, members, unread counts, request
+  // flags). Served from the notepad first, refreshed behind — pass onFresh
+  // to repaint when the refresh finds something new.
+  API.fetchChats = async (opts = {}) =>
+    swr('chats', 20000, _fetchChatsRaw, opts.onFresh);
+
+  // Stamps "you have seen everything up to now" on your own membership row.
+  // Called when a chat is opened; safe to call when 0041 is not applied yet.
+  API.markChatRead = async (chatId) => {
+    try {
+      const c = await client(); const me = await uid();
+      if (!me || !chatId) return;
+      await c.rpc('mark_chat_read', { p_chat_id: chatId });
+      invalidate('chats');   // the unread dot has gone
+    } catch (e) { console.warn('mark_chat_read:', e); }
+  };
+
+  // Accepting moves a request into the inbox proper. Declining removes you
+  // from the conversation — deliberately silent, so a stranger learns nothing.
+  API.acceptChatRequest = async (chatId) => {
+    const c = await client(); const me = await uid();
+    if (!me || !chatId) return;
+    const { error } = await c.rpc('accept_chat_request', { p_chat_id: chatId });
+    if (error) throw error;
+    invalidate('chats');
+  };
+
+  API.declineChatRequest = async (chatId) => {
+    const c = await client(); const me = await uid();
+    if (!me || !chatId) return;
+    const { error } = await c.rpc('decline_chat_request', { p_chat_id: chatId });
+    if (error) throw error;
+    invalidate('chats');
   };
 
   API.openOrCreateDm = async (otherUserId) => {
@@ -740,19 +1139,65 @@
     return chat.id;
   };
 
-  API.fetchMessages = async (chatId, limit = 100) => {
-    const c = await client();
-    const { data, error } = await c.from('messages').select(`
+  // The reply target and the reactions are embedded rather than fetched per
+  // message — a thread of 100 would otherwise be 200 extra round trips.
+  // The reply target is addressed by its COLUMN (reply_to_id), not by a
+  // foreign-key constraint name.
+  //
+  // This first read `messages!messages_reply_to_id_fkey`, guessing what
+  // Postgres would name the self-reference. It is not called that, so every
+  // fetch failed with "could not find a relationship between 'messages' and
+  // 'messages'" and quietly fell back to the reply-less query — chat worked,
+  // but replies and reactions silently did nothing at all. Naming the column
+  // avoids depending on a generated constraint name entirely.
+  const MSG_SELECT_FULL = `
+      id, type, text, attachment_url, from_user_id, created_at, reply_to_id,
+      from:profiles!messages_from_user_id_fkey ( id, name, avatar_url ),
+      reply_to:reply_to_id (
+        id, type, text, attachment_url, from_user_id,
+        from:profiles!messages_from_user_id_fkey ( id, name )
+      ),
+      reactions:message_reactions ( user_id, emoji )
+  `;
+  const MSG_SELECT_BASIC = `
       id, type, text, attachment_url, from_user_id, created_at,
       from:profiles!messages_from_user_id_fkey ( id, name, avatar_url )
-    `).eq('chat_id', chatId).order('created_at', { ascending: true }).limit(limit);
-    if (error) throw error;
+  `;
+
+  API.fetchMessages = async (chatId, limit = 100) => {
+    const c = await client();
+    const q = (sel) => c.from('messages').select(sel)
+      .eq('chat_id', chatId).order('created_at', { ascending: true }).limit(limit);
+
+    let { data, error } = await q(MSG_SELECT_FULL);
+    if (error) {
+      // Falls back when 0042 has not been applied — the reply column and the
+      // reactions table simply are not there yet. The thread still loads,
+      // just without replies or reactions, rather than failing outright.
+      console.warn('messages: replies/reactions unavailable (is 0042 applied?)', error);
+      ({ data, error } = await q(MSG_SELECT_BASIC));
+      if (error) throw error;
+    }
     return data || [];
   };
 
-  API.sendMessage = async ({ chatId, text, type = 'text', file }) => {
+  // Returns the emoji now standing, or null when the reaction was cleared.
+  API.toggleMessageReaction = async (messageId, emoji) => {
+    const c = await client(); const me = await uid();
+    if (!me) throw new Error('not signed in');
+    const { data, error } = await c.rpc('toggle_message_reaction', {
+      p_message_id: messageId, p_emoji: emoji,
+    });
+    if (error) throw error;
+    return data || null;
+  };
+
+  API.sendMessage = async ({ chatId, text, type = 'text', file, replyToId = null }) => {
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
     const row = { chat_id: chatId, from_user_id: me, type, text };
+    // Only sent when set, so this still works against a database without
+    // 0042 applied — an unknown column would otherwise reject every message.
+    if (replyToId) row.reply_to_id = replyToId;
     if (file) {
       const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
       const path = `${chatId}/${Date.now()}-${me}.${ext}`;
@@ -765,6 +1210,7 @@
     }
     const { data, error } = await c.from('messages').insert(row).select().single();
     if (error) throw error;
+    invalidate('chats');   // the preview line and the ordering both moved
     return data;
   };
 
@@ -868,12 +1314,23 @@
   };
 
   // ---------- Notifications ----------
+  // Activity, not messages. A direct message already announces itself in the
+  // inbox with its own unread mark, so repeating it here meant every chat was
+  // reported twice and the genuinely one-off events — a follow, a follow
+  // request, a security notice — were buried under chatter. Instagram draws
+  // the same line: DMs live in the inbox, everything else in activity.
+  // 'live' is included: someone you follow starting a broadcast is exactly
+  // the kind of one-off event this feed is for. 'message' stays out — a DM
+  // already announces itself in the inbox.
+  const ACTIVITY_TYPES = ['like', 'comment', 'follow', 'mention', 'system', 'live'];
+
   API.fetchNotifications = async () => {
     const c = await client(); const me = await uid(); if (!me) return [];
     const { data, error } = await c.from('notifications').select(`
       id, type, payload, read_at, created_at,
       actor:profiles!notifications_actor_id_fkey ( id, name, avatar_url )
-    `).eq('user_id', me).order('created_at', { ascending: false }).limit(100);
+    `).eq('user_id', me).in('type', ACTIVITY_TYPES)
+      .order('created_at', { ascending: false }).limit(100);
     if (error) throw error;
     return data || [];
   };
@@ -893,7 +1350,10 @@
     const c = await client(); const me = await uid(); if (!me) return 0;
     const { count, error } = await c.from('notifications')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', me).is('read_at', null);
+      // Same filter as the list above, or the bell would count messages the
+      // notifications screen does not show — a badge you cannot clear by
+      // opening it.
+      .eq('user_id', me).in('type', ACTIVITY_TYPES).is('read_at', null);
     if (error) return 0;
     return count || 0;
   };
@@ -1187,13 +1647,13 @@
     autoplay: true, data_saver: false,
   };
 
-  API.fetchUserSettings = async () => {
+  API.fetchUserSettings = async () => cached('usersettings', 300000, async () => {
     const c = await client(); const me = await uid();
     if (!me) return { ...SETTINGS_DEFAULTS };
     const { data, error } = await c.from('user_settings').select('*').eq('user_id', me).maybeSingle();
     if (error) return { ...SETTINGS_DEFAULTS };   // table not there yet -> defaults
     return { ...SETTINGS_DEFAULTS, ...(data || {}) };
-  };
+  });
 
   API.updateUserSettings = async (patch) => {
     const c = await client(); const me = await uid();
@@ -1201,6 +1661,8 @@
     const { error } = await c.from('user_settings')
       .upsert({ user_id: me, ...patch, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     if (error) throw error;
+    // Or the settings screen would keep showing the value you just changed.
+    invalidate('usersettings');
   };
 
   // Can I open a DM with this person? Honours their "who can message me"
@@ -1342,6 +1804,37 @@
     return () => { if (channel) channel.unsubscribe(); };
   };
 
+  // Viewer count and stream status. All three fail soft: without 0046 the
+  // stream still plays, the count just stays where it started.
+  API.joinLiveStream = async (liveId) => {
+    try {
+      const c = await client();
+      const { data } = await c.rpc('join_live_stream', { p_live_id: liveId });
+      return data || 0;
+    } catch (e) { console.warn('joinLiveStream (is 0046 applied?):', e); return 0; }
+  };
+
+  API.leaveLiveStream = async (liveId) => {
+    try {
+      const c = await client();
+      const { data } = await c.rpc('leave_live_stream', { p_live_id: liveId });
+      return data || 0;
+    } catch (e) { return 0; }
+  };
+
+  // Watches the stream row itself, so the viewer count moves and viewers are
+  // told when the host ends the broadcast instead of staring at a frozen frame.
+  API.subscribeToLiveStream = (liveId, cb) => {
+    let channel = null;
+    (async () => {
+      const c = await client();
+      channel = c.channel('live:one:' + liveId).on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'live_streams', filter: `id=eq.${liveId}`,
+      }, payload => cb(payload.new)).subscribe();
+    })();
+    return () => { if (channel) channel.unsubscribe(); };
+  };
+
   API.subscribeToLiveComments = async (liveStreamId, cb) => {
     const c = await client();
     const ch = c.channel('live-comments-' + liveStreamId)
@@ -1352,9 +1845,28 @@
     return () => { try { c.removeChannel(ch); } catch (e) {} };
   };
 
-  API.startLive = async ({ title, thumbnail }) => {
+  // privacy is REQUIRED to be sent, and this is why:
+  //
+  // live_streams.privacy exists (0004), defaults to 'public', and the RLS
+  // policy on that table honours it correctly. But this function never sent
+  // the column — the setup screen's Public / Friends / Private chooser wrote
+  // its answer into a plain JavaScript variable (window._ttLiveMeta) and
+  // nothing carried it to the database.
+  //
+  // So every stream was public regardless. Someone could pick "Private",
+  // broadcast believing only they could see it, and be visible to anyone at
+  // all, including signed-out visitors. A privacy control that is ignored is
+  // worse than not offering one.
+  API.startLive = async ({ title, thumbnail, privacy = 'public' }) => {
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
-    const { data, error } = await c.from('live_streams').insert({ host_id: me, title, thumbnail, status: 'live' }).select().single();
+    // Guard the value rather than trusting the caller: an unrecognised
+    // string would be rejected by the column's check constraint and lose the
+    // whole broadcast, and defaulting to 'public' on a typo is the wrong way
+    // to fail for a privacy setting.
+    const p = ['public', 'friends', 'private'].indexOf(privacy) !== -1 ? privacy : 'private';
+    const { data, error } = await c.from('live_streams')
+      .insert({ host_id: me, title, thumbnail, status: 'live', privacy: p })
+      .select().single();
     if (error) throw error;
     return data;
   };

@@ -288,6 +288,29 @@ input, textarea, [contenteditable="true"] {
   background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.7) 100%);
   pointer-events: none;
 }
+/* The heart a double tap throws up from under the finger. Sits above the
+   video (z-index 1) and the play badge (3) but below the action rail (4),
+   and never takes a tap of its own. */
+.tap-heart {
+  position: absolute; z-index: 3;
+  width: 96px; height: 96px; margin: -48px 0 0 -48px;
+  color: #fe2c55; pointer-events: none;
+  animation: tapHeart 900ms cubic-bezier(.17, .89, .32, 1.28) forwards;
+}
+.tap-heart svg {
+  width: 100%; height: 100%; fill: currentColor;
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, .45));
+}
+@keyframes tapHeart {
+  0%   { opacity: 0; transform: scale(.2) rotate(-12deg); }
+  22%  { opacity: 1; transform: scale(1.18) rotate(-12deg); }
+  42%  { transform: scale(.94) rotate(-12deg); }
+  70%  { opacity: 1; transform: scale(1) rotate(-12deg) translateY(-14px); }
+  100% { opacity: 0; transform: scale(1.1) rotate(-12deg) translateY(-64px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tap-heart { animation-duration: 1ms; }
+}
 .feed-actions {
   position: absolute; right: 8px; bottom: calc(80px + var(--safe-bottom)); z-index: 4;
   display: flex; flex-direction: column; align-items: center;
@@ -322,6 +345,17 @@ input, textarea, [contenteditable="true"] {
 .feed-action.liked .feed-action-icon svg { fill: #fe2c55; stroke: #fe2c55; filter: drop-shadow(0 0 6px rgba(254,44,85,0.6)); }
 @keyframes like-pop { 0%{transform:scale(1)} 40%{transform:scale(1.35)} 70%{transform:scale(0.9)} 100%{transform:scale(1)} }
 .feed-action.liked .feed-action-icon { animation: like-pop 0.35s cubic-bezier(.36,.07,.19,.97) both; }
+
+/* Save: the bookmark fills once saved. There was no saved style at all, so
+   the only confirmation a save had happened was a toast that disappeared —
+   reopening the feed gave no way to tell what you had already saved. */
+.feed-action.saved .feed-action-icon { background: transparent; }
+.feed-action.saved .feed-action-icon svg { fill: #fbbf24; stroke: #fbbf24; }
+.feed-action.saved .feed-action-icon { animation: like-pop 0.35s cubic-bezier(.36,.07,.19,.97) both; }
+@media (prefers-reduced-motion: reduce) {
+  .feed-action.liked .feed-action-icon,
+  .feed-action.saved .feed-action-icon { animation: none; }
+}
 
 .feed-info {
   position: absolute; left: 16px; bottom: calc(63.5px + var(--safe-bottom)); z-index: 4;
@@ -688,7 +722,49 @@ body.dark .see-more-link { color: var(--primary-2); }
 .inbox-name { font-weight: 700; margin: 0; display: flex; justify-content: space-between; gap: 6px; align-items: center; }
 .inbox-name .time { font-size: 12px; color: var(--muted); font-weight: 500; }
 .inbox-msg { color: var(--muted); margin: 2px 0 0; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* ── Unread conversations ──
+   This rule already existed but nothing ever set the class, so every row
+   rendered as read. The inbox now marks them, and unread is carried by three
+   things at once — weight, colour and the dot — so it does not rely on colour
+   alone to be noticed. */
 .inbox-row.unread .inbox-msg { color: var(--text); font-weight: 600; }
+.inbox-row.unread .inbox-name { font-weight: 800; }
+.inbox-row.unread .inbox-name .time { color: var(--primary); font-weight: 700; }
+/* A faint wash so the row itself reads as new, not just its text. */
+.inbox-row.unread { background: color-mix(in srgb, var(--primary) 6%, transparent); }
+@supports not (background: color-mix(in srgb, red 6%, transparent)) {
+  .inbox-row.unread { background: var(--bg-2); }
+}
+/* Placeholder rows shown while the inbox is still loading.
+   The screen used to draw an empty list first, which reads as the definite
+   statement "you have no conversations" — then contradicted itself a moment
+   later. These say "still looking" without claiming anything untrue. */
+.skeleton-row { pointer-events: none; }
+.skeleton-row .sk-circle {
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+  background: var(--border);
+}
+.skeleton-row .sk-lines { flex: 1; display: flex; flex-direction: column; gap: 7px; }
+.skeleton-row .sk-line { height: 10px; border-radius: 6px; background: var(--border); }
+.skeleton-row .sk-line.w60 { width: 60%; }
+.skeleton-row .sk-line.w85 { width: 85%; }
+/* A slow sweep so it reads as working rather than frozen. */
+.skeleton-row .sk-circle, .skeleton-row .sk-line { animation: skPulse 1.3s ease-in-out infinite; }
+.skeleton-row:nth-child(2) .sk-line { animation-delay: .08s; }
+.skeleton-row:nth-child(3) .sk-line { animation-delay: .16s; }
+.skeleton-row:nth-child(4) .sk-line { animation-delay: .24s; }
+@keyframes skPulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-row .sk-circle, .skeleton-row .sk-line { animation: none; }
+}
+
+.inbox-dot {
+  flex-shrink: 0; align-self: center;
+  min-width: 20px; height: 20px; padding: 0 6px;
+  border-radius: 10px; background: var(--primary); color: #fff;
+  font-size: 11px; font-weight: 700; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+}
 .inbox-badge { background: var(--primary); color: #fff; min-width: 20px; height: 20px; border-radius: 10px; padding: 0 6px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 
 .inbox-actions-row { display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 0 12px; border-bottom: 1px solid var(--border); }
@@ -722,7 +798,29 @@ body.dark .see-more-link { color: var(--primary-2); }
 .iai-4 { background: linear-gradient(135deg, #818cf8, #4f46e5); box-shadow: 0 10px 20px -5px rgba(129, 140, 248, 0.4), inset 0 4px 10px rgba(255,255,255,0.3); }
 
 /* === Chat === */
-.chat { height: 100%; display: flex; flex-direction: column; background: var(--bg-2); }
+/* --kb is the height the keyboard is covering, measured from visualViewport
+   in V.chat. Shrinking the whole column by it lifts the composer clear of the
+   keyboard even when the webview's own resize does not fire. */
+.chat {
+  height: calc(100% - var(--kb, 0px));
+  display: flex; flex-direction: column; background: var(--bg-2);
+  transition: height 120ms ease;
+}
+/* The home-indicator inset is meaningless while a keyboard covers that area,
+   and leaving it in adds a visible gap under the composer. */
+.chat.kb-open .chat-input { padding-bottom: 10px; }
+@media (prefers-reduced-motion: reduce) { .chat { transition: none; } }
+/* Avatar + name in the header open the profile, so it reads as tappable. */
+.chat-header-id { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.chat-header-id.tappable { cursor: pointer; }
+.chat-header-id.tappable:active { opacity: .6; }
+
+/* Back chevron, drawn pointing left and mirrored for RTL.
+   These buttons were hardcoded to chevR, which is right for Arabic but wrong
+   the moment i18n switches the document to dir="ltr" for English — back then
+   pointed forwards. Flipping from one source keeps both languages correct. */
+.back-btn svg { transform: none; }
+[dir="rtl"] .back-btn svg { transform: scaleX(-1); }
 .chat-header {
   background: var(--bg); color: var(--text);
   padding: calc(8px + var(--safe-top)) 8px 8px;
@@ -741,6 +839,97 @@ body.dark .see-more-link { color: var(--primary-2); }
 .bubble.voice { display: flex; align-items: center; gap: 10px; min-width: 160px; }
 .bubble.image { padding: 4px; }
 .bubble.image img { width: 220px; max-width: 60vw; border-radius: 12px; display: block; }
+
+/* Call record in the thread. Centred rather than sided, because it is a
+   record of something that happened, not a message either person wrote. */
+.call-record {
+  align-self: center; display: inline-flex; align-items: center; gap: 9px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 999px; padding: 7px 14px; margin: 2px 0;
+  max-width: 85%;
+}
+.call-record .cr-icon { display: flex; width: 16px; height: 16px; color: var(--muted); flex-shrink: 0; }
+.call-record .cr-icon svg { width: 100%; height: 100%; }
+.call-record .cr-text { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.call-record .cr-label { font-size: 12.5px; font-weight: 600; color: var(--text); }
+.call-record .cr-meta { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* A missed or refused call is the one worth spotting when scrolling back. */
+.call-record.missed .cr-icon,
+.call-record.missed .cr-label { color: var(--danger); }
+.call-record.missed .cr-icon svg { transform: rotate(135deg); }
+
+/* Quoted message shown inside a reply's own bubble. */
+.bubble-quote {
+  display: block; margin: 0 0 6px; padding: 6px 9px;
+  border-inline-start: 3px solid currentColor;
+  border-radius: 8px; background: rgba(127, 127, 127, .14);
+  font-size: 12.5px; line-height: 1.35; cursor: pointer; opacity: .9;
+}
+.bubble-quote.deleted { font-style: italic; opacity: .6; cursor: default; }
+.bubble-quote .bq-name { font-weight: 700; margin-bottom: 1px; }
+.bubble-quote .bq-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Flash when a quote jumps you to the original. */
+.bubble.flash { animation: bubbleFlash 1.2s ease; }
+@keyframes bubbleFlash {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(108, 43, 217, 0); }
+  20%      { box-shadow: 0 0 0 4px rgba(108, 43, 217, .45); }
+}
+/* Armed state while a bubble is dragged far enough to reply. */
+.bubble.reply-armed { opacity: .75; }
+
+/* Reaction chips sit under the bubble's own text. */
+.bubble-reactions { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; }
+.reaction-chip {
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 1px 7px; font-size: 12px; line-height: 1.5;
+}
+/* The long-press picker. */
+.reaction-bar { display: flex; gap: 6px; padding: 10px 12px; justify-content: center; }
+.reaction-pick {
+  font-size: 26px; line-height: 1; background: transparent; border: 0;
+  padding: 6px; border-radius: 50%; cursor: pointer;
+}
+.reaction-pick.on { background: rgba(108, 43, 217, .18); }
+.reaction-pick:active { transform: scale(1.25); }
+
+/* Primary / Requests tabs in the inbox. Hidden entirely when nothing is
+   waiting, so the inbox looks exactly as it did before for most people. */
+.inbox-tabs { display: flex; gap: 4px; padding: 6px 12px 0; border-bottom: 1px solid var(--border); }
+.inbox-tabs[hidden] { display: none; }
+.inbox-tab {
+  flex: 1; background: transparent; border: 0; cursor: pointer;
+  padding: 10px 6px; font-size: 14px; font-weight: 700;
+  color: var(--muted); border-bottom: 2px solid transparent;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.inbox-tab.active { color: var(--text); border-bottom-color: var(--primary); }
+.inbox-tab-count:empty { display: none; }
+.inbox-tab-count {
+  background: var(--primary); color: #fff; border-radius: 999px;
+  min-width: 18px; padding: 0 5px; font-size: 11px; line-height: 18px;
+}
+
+/* Accept / delete bar shown instead of the composer on an unaccepted
+   request, so the decision about the person comes before the conversation. */
+.request-bar {
+  background: var(--bg); border-top: 1px solid var(--border);
+  padding: 12px 14px calc(12px + var(--safe-bottom));
+}
+.request-bar[hidden] { display: none; }
+.request-bar .rq-note { margin: 0 0 10px; font-size: 13px; color: var(--muted); line-height: 1.5; text-align: center; }
+.request-bar .rq-actions { display: flex; gap: 8px; }
+.request-bar .rq-actions .btn { flex: 1; }
+
+/* Reply bar above the composer. */
+.reply-bar {
+  background: var(--bg); border-top: 1px solid var(--border);
+  padding: 8px 10px; display: flex; align-items: center; gap: 8px;
+}
+.reply-bar[hidden] { display: none; }
+.reply-bar .reply-body { flex: 1; min-width: 0; border-inline-start: 3px solid var(--primary); padding-inline-start: 8px; }
+.reply-bar .reply-name { font-size: 12px; font-weight: 700; color: var(--primary); }
+.reply-bar .reply-text { font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .chat-input {
   background: var(--bg); border-top: 1px solid var(--border);
@@ -894,6 +1083,148 @@ body.dark .see-more-link { color: var(--primary-2); }
 .live-comments { flex: 1; padding: 0 14px 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; overflow: hidden; }
 .live-cmt { background: rgba(0,0,0,0.35); border-radius: 14px; padding: 6px 10px; font-size: 12.5px; max-width: 80%; backdrop-filter: blur(8px); }
 .live-cmt .u { font-weight: 700; opacity: 0.85; margin-end: 6px; }
+/* ── Live viewer header ──
+   Host identity on one side, stream state on the other, so a glance tells you
+   who is broadcasting, how many are watching and how long it has been running
+   — the count used to be a frozen number and there was no elapsed time. */
+.live-top-right { margin-inline-start: auto; display: flex; align-items: center; gap: 6px; }
+.live-host-info { cursor: pointer; max-width: 62%; }
+.live-host-info .lh-text { min-width: 0; }
+.live-host-info .lh-name {
+  font-size: 12.5px; font-weight: 700; color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.live-host-info .lh-handle { font-size: 10px; opacity: .75; color: #fff; }
+.live-follow {
+  border: 0; cursor: pointer; flex-shrink: 0;
+  background: var(--danger); color: #fff;
+  border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 700;
+}
+.live-follow[hidden] { display: none; }
+.live-follow.following { background: rgba(255,255,255,.22); }
+.live-pill .lp-icon { display: inline-flex; width: 13px; height: 13px; vertical-align: -2px; }
+.live-pill .lp-icon svg { width: 100%; height: 100%; }
+.live-pill.viewers { display: inline-flex; align-items: center; gap: 5px; }
+.live-pill.elapsed { font-variant-numeric: tabular-nums; }
+.live-badge::before {
+  content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: #fff; margin-inline-end: 5px; vertical-align: 1px;
+  animation: liveDot 1.4s ease-in-out infinite;
+}
+.live-end-btn {
+  border: 0; cursor: pointer; background: var(--danger); color: #fff;
+  border-radius: 999px; padding: 6px 13px; font-size: 12px; font-weight: 800;
+}
+.live-end-btn[hidden] { display: none; }
+.live-close { color: #fff; background: rgba(0,0,0,.4); backdrop-filter: blur(8px); }
+
+/* Shown when the host stops, over the last frame. Without it a finished
+   stream just froze with a LIVE badge still on it. */
+.live-ended {
+  position: absolute; inset: 0; z-index: 20;
+  background: rgba(0,0,0,.82); backdrop-filter: blur(6px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; text-align: center; padding: 24px; color: #fff;
+}
+.live-ended .le-icon { display: flex; width: 52px; height: 52px; padding: 14px; border: 1.5px solid rgba(255,255,255,.25); border-radius: 50%; }
+.live-ended .le-icon svg { width: 100%; height: 100%; }
+.live-ended .le-title { margin: 8px 0 0; font-size: 19px; font-weight: 800; }
+.live-ended .le-sub { margin: 0 0 12px; font-size: 13px; color: rgba(255,255,255,.65); }
+.live-over .live-badge, .live-over .live-bottom { display: none; }
+
+/* ── Live setup screen ──
+   Rebuilt from a stack of inline-styled rows into a proper sheet over a live
+   camera preview. The screen used to be flat black until Agora took over, so
+   you went live having never seen your own framing. */
+.live-selfview {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; background: #000;
+}
+.live-selfview[hidden] { display: none; }
+/* Mirrored, because a preview of yourself that moves the wrong way is
+   disorienting — the same thing every camera app does. */
+.live-setup .live-selfview { transform: scaleX(-1); }
+/* A scrim so the controls stay readable over any camera image. */
+.live-setup::before {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.15) 28%, rgba(0,0,0,.72) 100%);
+}
+.live-setup .live-top { position: relative; z-index: 2; justify-content: space-between; }
+.live-setup .live-top .icon-btn { background: rgba(0,0,0,.4); color: #fff; backdrop-filter: blur(8px); }
+.live-setup-heading { color: #fff; font-weight: 800; font-size: 16px; }
+
+.live-setup-body {
+  position: relative; z-index: 2;
+  margin-top: auto; padding: 16px 16px 6px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.live-field { display: flex; flex-direction: column; gap: 8px; }
+.live-label {
+  color: rgba(255,255,255,.62); font-size: 11.5px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase;
+}
+.live-title-input {
+  background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.18);
+  border-radius: 12px; padding: 12px 14px; color: #fff; font-size: 15px;
+  outline: 0; backdrop-filter: blur(8px); width: 100%;
+}
+.live-title-input::placeholder { color: rgba(255,255,255,.5); }
+.live-title-input:focus { border-color: rgba(255,255,255,.5); }
+
+/* Segmented control — one style for both mode and audience, so they cannot
+   drift apart the way three separately inline-styled rows had. */
+.live-seg {
+  display: flex; gap: 4px; padding: 4px;
+  background: rgba(0,0,0,.45); border-radius: 999px;
+  backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.14);
+}
+.live-seg-btn {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: transparent; border: 0; cursor: pointer;
+  color: rgba(255,255,255,.75); font-size: 13px; font-weight: 700;
+  padding: 9px 10px; border-radius: 999px; transition: background .16s ease, color .16s ease;
+  white-space: nowrap;
+}
+.live-seg-btn .seg-icon { display: inline-flex; width: 15px; height: 15px; }
+.live-seg-btn .seg-icon svg { width: 100%; height: 100%; }
+.live-seg-btn.active { background: #fff; color: #111; }
+
+.live-bg-picker { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 4px; }
+.live-bg-picker[hidden] { display: none; }
+.live-bg-tile {
+  width: 58px; height: 58px; border-radius: 12px; flex-shrink: 0; cursor: pointer;
+  background-size: cover; background-position: center;
+  border: 3px solid transparent; transition: border-color .16s ease;
+}
+.live-bg-tile.active { border-color: #fff; }
+
+.live-help, .live-warn {
+  margin: 0; font-size: 12px; line-height: 1.5; text-align: center;
+  color: rgba(255,255,255,.6);
+}
+.live-warn { color: #fca5a5; }
+.live-warn[hidden] { display: none; }
+
+/* The one irreversible action on the screen, sized and coloured to say so. */
+.live-go-btn {
+  width: 100%; border: 0; cursor: pointer; color: #fff;
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  border-radius: 999px; padding: 15px 20px;
+  font-size: 16px; font-weight: 800;
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  box-shadow: 0 8px 26px rgba(225, 29, 72, .42);
+  transition: transform .15s ease, opacity .15s ease;
+}
+.live-go-btn:active { transform: scale(.98); }
+.live-go-btn:disabled { opacity: .65; cursor: default; }
+.live-go-dot {
+  width: 9px; height: 9px; border-radius: 50%; background: #fff;
+  animation: liveDot 1.4s ease-in-out infinite;
+}
+.live-go-btn.busy .live-go-dot { animation-duration: .6s; }
+@keyframes liveDot { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .live-go-dot { animation: none; } }
+
 .live-bottom { padding: 12px 12px calc(14px + var(--safe-bottom)); display: flex; gap: 10px; align-items: center; }
 .live-bottom input { flex: 1; background: rgba(0,0,0,0.4); border: 0; outline: 0; padding: 10px 14px; border-radius: 999px; color: #fff; font-size: 14px; backdrop-filter: blur(8px); }
 .live-bottom input::placeholder { color: rgba(255,255,255,0.7); }
@@ -1249,58 +1580,116 @@ body.lang-en .toast { font-family: 'Cairo', system-ui, sans-serif; }
   padding: calc(64px + var(--safe-top)) 24px calc(44px + var(--safe-bottom));
 }
 .call-body { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
-.call-avatar .avatar { box-shadow: 0 0 0 4px rgba(255,255,255,0.08), 0 12px 40px rgba(0,0,0,0.5); }
-.call-name { font-size: 23px; font-weight: 800; margin-top: 18px; }
-.call-status { font-size: 14.5px; color: rgba(255,255,255,0.62); font-variant-numeric: tabular-nums; }
+/* The avatar carries the call's state: a pulsing ring while it rings, a
+   steady ring once connected, and a dimmed one when it is over. */
+.call-avatar { position: relative; display: inline-flex; }
+.call-avatar .avatar {
+  position: relative; z-index: 1;
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.08), 0 12px 40px rgba(0,0,0,0.5);
+}
+.call-pulse {
+  position: absolute; inset: -10px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.35); opacity: 0;
+}
+.call-avatar.ringing .call-pulse { animation: callPulse 1.9s ease-out infinite; }
+.call-avatar.connected .avatar { box-shadow: 0 0 0 4px rgba(34,197,94,.5), 0 12px 40px rgba(0,0,0,.5); }
+.call-avatar.over .avatar { filter: grayscale(1); opacity: .65; }
+@keyframes callPulse {
+  0%   { opacity: .8; transform: scale(1); }
+  100% { opacity: 0;  transform: scale(1.45); }
+}
+@media (prefers-reduced-motion: reduce) { .call-avatar.ringing .call-pulse { animation: none; } }
+.call-kind {
+  font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: rgba(255,255,255,.5); margin-bottom: 26px; font-weight: 700;
+}
+.call-name { font-size: 26px; font-weight: 800; margin-top: 22px; }
+.call-status { font-size: 15px; color: rgba(255,255,255,0.62); font-variant-numeric: tabular-nums; }
+/* Each control keeps its label under the button rather than crammed inside
+   a 62px circle with the icon, where it was barely legible. */
+.call-ctl { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.call-ctl[hidden] { display: none; }
+.call-ctl small { font-size: 11px; color: rgba(255,255,255,.65); }
 .call-media-note {
   margin-top: 14px; max-width: 260px; font-size: 11.5px; line-height: 1.5;
   color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.07);
   border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 8px 12px;
 }
-.call-actions { display: flex; gap: 26px; align-items: center; }
+.call-actions { display: flex; gap: 22px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
 .call-btn {
   background: rgba(255,255,255,0.12); border: 0; color: #fff; cursor: pointer;
   width: 62px; height: 62px; border-radius: 50%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  display: flex; align-items: center; justify-content: center;
   transition: background .18s ease, transform .15s ease;
 }
-.call-btn span { display: flex; width: 22px; height: 22px; }
+.call-btn span { display: flex; width: 24px; height: 24px; }
 .call-btn span svg { width: 100%; height: 100%; }
-.call-btn small { font-size: 9px; opacity: 0.75; }
 .call-btn:active { transform: scale(0.92); }
 .call-btn.on { background: #fff; color: #111; }
-.call-btn.end { background: #ef4444; }
+.call-btn:disabled { opacity: .5; cursor: default; }
+.call-btn.end { background: #ef4444; width: 68px; height: 68px; }
 .call-btn.end span svg { transform: rotate(135deg); }
 
-/* Incoming call overlay - shown over any screen */
+/* Incoming call — full screen, not a card in the corner.
+   A ringing phone should take over the screen; the old small dialog read as
+   a notification you could ignore rather than a call to answer. */
 .incoming-call {
   position: fixed; inset: 0; z-index: 200;
-  background: rgba(0,0,0,0.62); backdrop-filter: blur(10px);
   display: flex; align-items: center; justify-content: center; padding: 24px;
-  animation: ic-in 200ms ease-out;
+  animation: ic-in 220ms ease-out;
+  color: #fff;
+}
+.ic-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, #1b1b22 0%, #08080b 100%);
 }
 @keyframes ic-in { from { opacity: 0; } to { opacity: 1; } }
 .ic-card {
-  width: 100%; max-width: 320px; border-radius: 22px; padding: 30px 22px 22px;
-  background: var(--bg); border: 1px solid var(--border);
-  box-shadow: 0 24px 70px rgba(0,0,0,0.45);
-  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px;
+  position: relative; z-index: 1;
+  width: 100%; max-width: 360px; height: 100%;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  justify-content: center; gap: 6px;
+  padding: calc(48px + var(--safe-top)) 8px calc(40px + var(--safe-bottom));
 }
-.ic-name { font-size: 19px; font-weight: 800; color: var(--text); margin-top: 14px; }
-.ic-kind { font-size: 13px; color: var(--muted); }
-.ic-actions { display: flex; gap: 40px; margin-top: 24px; }
+/* Concentric rings, offset in time, so the card visibly rings. */
+.ic-avatar { position: relative; display: inline-flex; margin-top: 8px; }
+.ic-avatar .avatar { position: relative; z-index: 1; box-shadow: 0 12px 44px rgba(0,0,0,.55); }
+.ic-pulse {
+  position: absolute; inset: -12px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.4); opacity: 0;
+  animation: icPulse 2s ease-out infinite;
+}
+.ic-pulse.d2 { animation-delay: 1s; }
+@keyframes icPulse {
+  0%   { opacity: .75; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.5); }
+}
+@media (prefers-reduced-motion: reduce) { .ic-pulse { animation: none; } }
+.ic-name { font-size: 27px; font-weight: 800; color: #fff; margin-top: 26px; }
+.ic-sub { font-size: 14px; color: rgba(255,255,255,.6); }
+.ic-kind {
+  font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase;
+  font-weight: 700; color: rgba(255,255,255,.5);
+}
+/* Pushed to the bottom of the screen, where the thumbs are. */
+.ic-actions { display: flex; gap: 72px; margin-top: auto; padding-top: 48px; }
+.ic-slot { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.ic-slot small { font-size: 12px; color: rgba(255,255,255,.7); }
 .ic-btn {
   border: 0; cursor: pointer; color: #fff;
-  width: 60px; height: 60px; border-radius: 50%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  width: 68px; height: 68px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
   transition: transform .15s ease;
 }
-.ic-btn span { display: flex; width: 22px; height: 22px; }
+.ic-btn span { display: flex; width: 26px; height: 26px; }
 .ic-btn span svg { width: 100%; height: 100%; }
-.ic-btn small { font-size: 9px; opacity: 0.9; }
 .ic-btn:active { transform: scale(0.92); }
-.ic-btn.accept { background: #16a34a; }
+.ic-btn.accept { background: #16a34a; animation: icNudge 1.6s ease-in-out infinite; }
 .ic-btn.decline { background: #ef4444; }
+/* The decline handset points down, the universal "hang up". */
+.ic-btn.decline span svg { transform: rotate(135deg); }
+@keyframes icNudge { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) { .ic-btn.accept { animation: none; } }
 
 /* Share targets: now 8 items, so scroll horizontally rather than cram a grid. */
 .social-row {
@@ -1373,6 +1762,22 @@ body::-webkit-scrollbar,
   color: var(--muted); vertical-align: middle;
 }
 .private-badge svg { width: 100%; height: 100%; }
+/* Shown in place of the video grid on a private account you do not follow.
+   Spans all three columns — a child of .video-grid would otherwise be squeezed
+   into the first one, which is the same trap .empty-state fell into. */
+.private-wall {
+  grid-column: 1 / -1;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 8px; padding: 44px 24px; color: var(--muted);
+  border-top: 1px solid var(--border);
+}
+.private-wall .pw-icon {
+  display: inline-flex; width: 46px; height: 46px; padding: 12px;
+  border: 1.5px solid var(--border); border-radius: 50%; color: var(--text);
+}
+.private-wall .pw-icon svg { width: 100%; height: 100%; }
+.private-wall .pw-title { margin: 6px 0 0; font-size: 16px; font-weight: 800; color: var(--text); }
+.private-wall .pw-sub { margin: 0; font-size: 13.5px; line-height: 1.5; }
 .profile-link {
   display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;
   color: var(--primary); font-size: 13px; font-weight: 700; text-decoration: none;

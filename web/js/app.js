@@ -39,7 +39,9 @@
     { p: /^\/list\/(followers|following)$/, v: (q, m) => Views.userList({ id: m[1] }) },
     { p: /^\/notifications$/, v: () => Views.notifications() },
     { p: /^\/comments\/(.+)$/, v: (q, m) => Views.comments({ id: m[1] }) },
-    { p: /^\/share(?:\/(.+))?$/, v: (q, m) => Views.share({ id: m[1] }) },
+    // kind distinguishes sharing a profile from sharing a video; both use the
+    // same screen, and without it a shared profile link pointed at a video.
+    { p: /^\/share(?:\/(.+))?$/, v: (q, m) => Views.share({ id: m[1], kind: q.kind || 'video' }) },
     { p: /^\/live\/start$/, v: () => Views.liveStart() },
     { p: /^\/live\/host-list$/, v: () => Views.liveHostList() },
     { p: /^\/live\/(.+)$/, v: (q, m) => Views.live({ id: m[1] }) },
