@@ -221,7 +221,11 @@ window.H = (function () {
   function topBar({ title, back: showBack = true, dark = false, right = null, onBack } = {}) {
     return el('header', { class: 'top-bar' + (dark ? ' dark' : '') }, [
       showBack
-        ? el('button', { class: 'icon-btn' + (dark ? ' dark' : ''), onclick: onBack || (() => back()), html: icons.chevR })
+        // back-btn + chevL, mirrored for RTL by CSS. This was a bare chevR,
+        // which points forwards in English — every screen built with topBar
+        // had a back arrow pointing the wrong way once the app was in
+        // English, while the five hand-rolled ones had been corrected.
+        ? el('button', { class: 'icon-btn back-btn' + (dark ? ' dark' : ''), onclick: onBack || (() => back()), html: icons.chevL })
         : el('span', { style: { width: '36px' } }),
       title ? el('h1', { class: 'title' }, title) : el('span'),
       right || el('span', { style: { width: '36px' } }),

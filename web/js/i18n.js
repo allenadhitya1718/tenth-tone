@@ -346,6 +346,8 @@
     // Inbox: message requests
     'الطلبات': 'Requests',
     'يريد متابعتك': 'wants to follow you',
+    'تسجيل دخول جديد إلى حسابك': 'New sign-in to your account',
+    'تحديث جديد': 'New update',
     // Share sheet — "contacts" was misleading, this list is followers
     'إرسال إلى متابعيك': 'Send to your followers',
     'لا يوجد أشخاص بعد': 'No one here yet',
@@ -725,7 +727,12 @@
     'مستخدم': 'User',
     'خاص': 'Private',
     'عام': 'Public',
-    'لك': 'You',
+    // Both uses of this are the For You feed tab, not the word "you".
+    'لك': 'For You',
+    // The Following FEED tab. Deliberately a different Arabic word from
+    // the profile's followers stat ('متابعون'), which means the opposite —
+    // sharing one string made this tab read as "Followers" in English.
+    'متابَعة': 'Following',
     'أنت': 'You',
 
     // Misc / toasts
@@ -1752,6 +1759,8 @@
     // entry can ever match it.
     [/^([\d.,]+\s*[KMGT]?B) من ([\d.,]+\s*[KMGT]?B)$/, (m) => `${m[1]} of ${m[2]}`],
     [/^(\d+) يوم$/, (m) => `${m[1]} days`],
+    // The device name is appended, so this can never be a fixed entry.
+    [/^تسجيل دخول جديد من (.+)$/, (m) => `New sign-in from ${m[1]}`],
     [/^سيصل إلى (.+) حساب$/, (m) => `Reaches ${m[1]} accounts`],
     [/^حساب مجدول للحذف: (\d+)$/, (m) => `Accounts scheduled for deletion: ${m[1]}`],
     [/^طلب بيانات بانتظار المعالجة: (\d+)$/, (m) => `Data requests pending: ${m[1]}`],

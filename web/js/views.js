@@ -109,7 +109,7 @@
         el('div', { class: 'ph-bg bg-watch' }),
         el('div', { class: 'ph-topfade' }),
         el('div', { class: 'ph-tabs' }, [
-          el('span', { class: 'dim' }, 'المتابَعون'),
+          el('span', { class: 'dim' }, 'متابَعة'),
           el('span', { class: 'on' }, 'لك'),
         ]),
         el('div', { class: 'ph-rail' }, [
@@ -711,7 +711,11 @@
 
     // Top: tabs
     const tabs = el('div', { class: 'feed-tabs' }, [
-      el('button', { class: 'feed-tab' + (tab === 'following' ? ' active' : ''), onclick: () => go('/home?tab=following') }, 'متابعون'),
+      // 'متابَعة' rather than 'متابعون' on purpose. The translator matches
+      // whole strings, and 'متابعون' is also the profile's followers stat —
+      // so this tab was rendering in English as "Followers", the opposite of
+      // what it shows. One Arabic word, two meanings, one dictionary entry.
+      el('button', { class: 'feed-tab' + (tab === 'following' ? ' active' : ''), onclick: () => go('/home?tab=following') }, 'متابَعة'),
       el('button', { class: 'feed-tab' + (tab === 'foryou' ? ' active' : ''), onclick: () => go('/home?tab=foryou') }, 'لك'),
       el('button', { class: 'feed-tab', onclick: () => go('/live/host-list') }, 'مباشر'),
     ]);
@@ -4586,7 +4590,18 @@ function autoPlay(video) {
       if (n.type === 'system' && n.payload && n.payload.kind === 'location_request') return 'طلب تتبع موقعك';
       if (n.type === 'system' && n.payload && n.payload.kind === 'location_approved') return 'وافق على طلب تتبع موقعه';
       if (n.type === 'system' && n.payload && n.payload.kind === 'location_denied') return 'رفض طلب تتبع موقعه';
-      return (n.payload && n.payload.text) || '';
+      // A sign-in from a new device. This had no case, so the row rendered
+      // as a name and a timestamp with no text at all — which is precisely
+      // the notification someone needs to read, since it is how you notice
+      // another person getting into your account.
+      if (n.type === 'system' && n.payload && n.payload.kind === 'new_login') {
+        const dev = (n.payload.device || '').trim();
+        return dev ? ('تسجيل دخول جديد من ' + dev) : 'تسجيل دخول جديد إلى حسابك';
+      }
+      // Last resort. An empty string leaves a row that says nothing happened,
+      // which is worse than a vague sentence — the person cannot even tell
+      // there is something they are failing to read.
+      return (n.payload && n.payload.text) || 'تحديث جديد';
     }
 
     // Notifications were inert. The payload already carries the ids needed to
