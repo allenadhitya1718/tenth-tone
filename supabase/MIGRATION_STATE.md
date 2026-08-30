@@ -1,0 +1,75 @@
+# Migration state — verified against the live database
+
+**Verified:** 2026-08-30, by querying the database directly (not by reading the
+bundle files, which were all wrong — see below).
+
+## Current state
+
+**`0001`–`0041` are applied**, with one deliberate exception:
+
+| Migration | State | Note |
+|---|---|---|
+| `0001`–`0014` | applied | |
+| `0015_ai_moderation` | **deliberately NOT applied** | Needs a paid moderation API (Sightengine, ~$29/mo minimum for video — their free tier is images only) and the `pg_net` extension. Apply only if that account exists. |
+| `0016`–`0040` | applied | |
+| `0041_chat_read_state` | applied | Chat read/unread state. |
+
+## The bundle files are stale — do not follow them
+
+Three "paste this into the SQL editor" bundles sit in `supabase/`. Every one of
+them understates what is applied, because each was written at a different time
+and never updated:
+
+| File | Claims outstanding | Actually |
+|---|---|---|
+| `APPLY_ALL.sql` | `0005`, `0006`, `0017`–`0027` | all applied |
+| `REMAINING.sql` | `0028`–`0030` | all applied |
+| `migrations/RUN_NOW.sql` | `0035`, `0038` | both applied |
+
+Following `RUN_NOW.sql` would mean re-running two migrations that are already
+live. They are all written to be safe to re-run, so nothing would break — but
+the instruction is wrong, and it cost real time to work out that it was.
+
+Keep them only as history. **This file is the source of truth.**
+
+## Re-verifying
+
+The state above was established with the query below. It reports one row per
+object that a migration creates: a populated `found` means that migration is
+applied, `null` means it is not. Re-run it any time rather than trusting a
+bundle file, or this file, or a handoff document.
+
+```sql
+select '0031 app_limits'            as object, to_regclass('public.app_limits')::text as found
+union all select '0031 within_upload_quota',   to_regprocedure('public.within_upload_quota(uuid)')::text
+union all select '0032 stop_sharing_location', to_regprocedure('public.stop_sharing_location()')::text
+union all select '0033 support_tickets',       to_regclass('public.support_tickets')::text
+union all select '0034 deactivate_account',    to_regprocedure('public.deactivate_account()')::text
+union all select '0035 extract_handles',       to_regprocedure('public.extract_handles(text)')::text
+union all select '0035 search_handles',        to_regprocedure('public.search_handles(text,integer)')::text
+union all select '0035 mention trigger',       (select tgname::text from pg_trigger where tgname = 'trg_notify_video_mentions')
+union all select '0037 admin_queue_counts',    to_regprocedure('public.admin_queue_counts()')::text
+union all select '0038 close_stale_live',      to_regprocedure('public.close_stale_live_streams(integer)')::text
+union all select '0038 live insert policy',    (select policyname::text from pg_policies where tablename = 'live_streams' and policyname = 'live insert own')
+union all select '0039 admin_delete_user',     to_regprocedure('public.admin_delete_user(uuid)')::text
+union all select '0039 purge_scheduled_del',   to_regprocedure('public.purge_scheduled_deletions()')::text
+union all select '0040 seed accounts',         (select count(*)::text from public.profiles where handle like 'flyp\_%')
+union all select '0041 last_read_at col',      (select column_name::text from information_schema.columns where table_schema='public' and table_name='chat_members' and column_name='last_read_at')
+union all select '0041 mark_chat_read',        to_regprocedure('public.mark_chat_read(uuid)')::text
+union all select '0041 chat_unread_counts',    to_regprocedure('public.chat_unread_counts()')::text;
+```
+
+Two traps worth knowing when extending this query:
+
+- **Check what a migration actually creates.** `0038_live_streaming` adds
+  *policies* to `live_streams`; the table itself comes from an earlier
+  migration. Testing for the table reports "applied" either way.
+- **`0040_seed_accounts` inserts data, not schema.** It is checked by counting
+  the five `flyp_*` profiles it creates, not by looking for an object.
+
+## Counters
+
+Counters were rebuilt with `RECOUNT_STATS.sql`. Across the original 9 videos
+there were **3 likes, 3 comments, 3 saves**, and the 7 seeded demo videos
+legitimately show 0 engagement. **That is correct** — do not "fix" it by
+re-inflating the numbers.
