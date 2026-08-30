@@ -345,6 +345,7 @@
     'بثوث أخرى': 'Other broadcasts',
     // Inbox: message requests
     'الطلبات': 'Requests',
+    'يريد متابعتك': 'wants to follow you',
     // Share sheet — "contacts" was misleading, this list is followers
     'إرسال إلى متابعيك': 'Send to your followers',
     'لا يوجد أشخاص بعد': 'No one here yet',

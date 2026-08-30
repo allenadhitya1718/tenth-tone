@@ -460,5 +460,69 @@ window.H = (function () {
     });
   }
 
-  return { el, esc, safeUrl, fmt, go, back, toast, modal, ask, confirmDialog, richText, icons, svg, bottomNav, hideNav, topBar, avatar, emptyState, errorState };
+  // ── Turning a database error into something a person can act on ──
+  //
+  // Thirty-three places used to do `toast(e.message || 'something failed')`,
+  // which shows the raw Postgres error whenever there is one. People were
+  // being told things like:
+  //
+  //   duplicate key value violates unique constraint "follows_pkey"
+  //   new row violates row-level security policy for table "messages"
+  //
+  // That is not an error message, it is a stack trace with a friendly font.
+  // It tells the person nothing they can do, and it leaks the shape of the
+  // database to anyone reading it.
+  //
+  // Known cases are translated. Anything unrecognised falls back to the
+  // caller's own wording — never to the raw text.
+  function friendlyError(e, fallback) {
+    const generic = fallback || 'حدث خطأ، حاول مرة أخرى';
+    if (!e) return generic;
+
+    const code = e.code || '';
+    const raw = String(e.message || '');
+
+    // Rate limits (0050) raise their own sentence. Matched on the shape
+    // rather than the exact text so a reworded limit still lands here.
+    if (/too many/i.test(raw)) {
+      if (/follow/i.test(raw))   return 'تتابع بسرعة كبيرة، انتظر قليلًا';
+      if (/comment/i.test(raw))  return 'تعلّق بسرعة كبيرة، انتظر قليلًا';
+      if (/message/i.test(raw))  return 'ترسل بسرعة كبيرة، انتظر قليلًا';
+      if (/report/i.test(raw))   return 'أرسلت بلاغات كثيرة، حاول لاحقًا';
+      if (/broadcast/i.test(raw)) return 'بدأت بثوثًا كثيرة، حاول لاحقًا';
+      return 'تجاوزت الحد المسموح، انتظر قليلًا';
+    }
+
+    switch (code) {
+      case '23505': return 'تم هذا الإجراء بالفعل';       // duplicate key
+      case '23503': return 'العنصر لم يعد موجودًا';        // missing reference
+      case '23514': return 'قيمة غير صالحة';               // check constraint
+      case '42501': return 'ليس لديك صلاحية لهذا الإجراء'; // insufficient privilege
+      case 'PGRST301': return 'انتهت الجلسة، سجّل الدخول مرة أخرى';
+      default: break;
+    }
+
+    // Row Level Security refusals arrive with varying codes but a stable
+    // phrase. This is the app's authorization boundary, so it is worth
+    // naming clearly rather than lumping in with "something went wrong".
+    if (/row-level security|violates row level/i.test(raw)) {
+      return 'ليس لديك صلاحية لهذا الإجراء';
+    }
+    if (/not signed in|JWT|not authenticated/i.test(raw)) {
+      return 'سجّل الدخول للمتابعة';
+    }
+    if (/Failed to fetch|NetworkError|network/i.test(raw)) {
+      return 'تحقق من اتصالك بالإنترنت';
+    }
+
+    // Anything already written in Arabic came from our own code and is
+    // meant for the person, so it passes through.
+    if (/[؀-ۿ]/.test(raw)) return raw;
+
+    // Unrecognised: log it for us, show the caller's wording to them.
+    try { console.warn('unmapped error:', code, raw); } catch (err) {}
+    return generic;
+  }
+
+  return { el, esc, safeUrl, fmt, go, back, toast, modal, ask, confirmDialog, richText, icons, svg, bottomNav, hideNav, topBar, avatar, emptyState, errorState, friendlyError };
 })();

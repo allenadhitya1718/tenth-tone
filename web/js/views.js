@@ -1,6 +1,6 @@
 /* === Mobile views === */
 (function () {
-  const { el, esc, safeUrl, fmt, go, back, toast, modal, ask, confirmDialog, richText, icons, svg, bottomNav, hideNav, topBar, avatar, emptyState, errorState } = window.H;
+  const { el, esc, safeUrl, fmt, go, back, toast, modal, ask, confirmDialog, richText, icons, svg, bottomNav, hideNav, topBar, avatar, emptyState, errorState, friendlyError } = window.H;
   const DB = window.DB;
   const V = window.Views = {};
 
@@ -885,7 +885,7 @@
               await window.API.report({ targetType, targetId, reason });
               toast('تم استلام بلاغك، شكرًا لك');
             } catch (e) {
-              toast(e.message || 'تعذر إرسال البلاغ');
+              toast(friendlyError(e, 'تعذر إرسال البلاغ'));
             }
           },
         }, [el('span', { style: { fontSize: '14.5px' } }, reason)]));
@@ -2420,7 +2420,7 @@ function autoPlay(video) {
       if (window.Compress) {
         const check = await window.Compress.validate(file);
         if (!check.ok) {
-          toast(check.message);
+          toast(friendlyError(check));
           fileInput.value = '';
           return;
         }
@@ -3059,7 +3059,7 @@ function autoPlay(video) {
         if (info.type === 'group') { toast('المكالمات الجماعية غير متاحة بعد'); return; }
         const c = await window.API.startCall({ calleeId: other.id, kind, chatId: id });
         go('/call/' + c.id);
-      } catch (e) { toast(e.message || 'تعذر بدء المكالمة'); }
+      } catch (e) { toast(friendlyError(e, 'تعذر بدء المكالمة')); }
     }
     const msgs = el('div', { class: 'chat-msgs' });
     root.appendChild(msgs);
@@ -3958,7 +3958,7 @@ function autoPlay(video) {
             } catch (e) {
               state = prev; followers = prevFollowers;
               paint(); paintFollowers();
-              toast(e.message || 'تعذر التحديث');
+              toast(friendlyError(e, 'تعذر التحديث'));
             }
             followBtn.disabled = false;
           };
@@ -4034,7 +4034,7 @@ function autoPlay(video) {
         const already = await window.API.isRestricted(u.id);
         if (already) { await window.API.unrestrictUser(u.id); toast('تم إلغاء التقييد'); }
         else { await window.API.restrictUser(u.id); toast('تم التقييد'); }
-      } catch (e) { toast(e.message || 'تعذر التحديث'); }
+      } catch (e) { toast(friendlyError(e, 'تعذر التحديث')); }
     });
     const muteRow = row(icons.eyeOff, 'كتم ' + (u.name || 'المستخدم'), async () => {
       close();
@@ -4043,7 +4043,7 @@ function autoPlay(video) {
         const already = await window.API.isMuted(u.id);
         if (already) { await window.API.unmuteUser(u.id); toast('تم إلغاء الكتم'); }
         else { await window.API.muteUser(u.id); toast('تم الكتم'); }
-      } catch (e) { toast(e.message || 'تعذر التحديث'); }
+      } catch (e) { toast(friendlyError(e, 'تعذر التحديث')); }
     });
     sheet.appendChild(restrictRow);
     sheet.appendChild(muteRow);
@@ -4055,7 +4055,7 @@ function autoPlay(video) {
         await window.API.blockUser(u.id);
         toast('تم حظر المستخدم');
         go('/home');
-      } catch (e) { toast(e.message || 'تعذر الحظر'); }
+      } catch (e) { toast(friendlyError(e, 'تعذر الحظر')); }
     }, true);
     const reportRow = row(icons.flag, 'الإبلاغ عن المستخدم', () => {
       close();
@@ -4213,7 +4213,7 @@ function autoPlay(video) {
                   v.is_pinned = next;
                   toast(next ? 'تم التثبيت' : 'تم إلغاء التثبيت');
                   renderGrid('videos');
-                } catch (err) { toast(err.message || 'تعذر التثبيت'); }
+                } catch (err) { toast(friendlyError(err, 'تعذر التثبيت')); }
               },
             });
             card.appendChild(btn);
@@ -4573,6 +4573,11 @@ function autoPlay(video) {
       if (n.type === 'comment') return 'علّق: "' + ((n.payload && n.payload.text) || '') + '"';
       if (n.type === 'mention') return 'ذكرك في تعليق';
       if (n.type === 'message') return 'أرسل رسالة';
+      // Never displayed before now: follow_or_request writes this type, but
+      // it was not in the notifications check constraint, so the insert
+      // failed and took the whole follow request down with it. Nobody could
+      // request to follow a private account at all.
+      if (n.type === 'follow_request') return 'يريد متابعتك';
       // Written by the trigger in 0045 when someone you follow starts a stream.
       if (n.type === 'live') {
         const t = (n.payload && n.payload.title) || '';
@@ -4592,6 +4597,9 @@ function autoPlay(video) {
       if (n.type === 'comment' && p.video_id) return '/comments/' + p.video_id;
       if (n.type === 'message' && p.chat_id) return '/chat/' + p.chat_id;
       if (n.type === 'follow' && n.actor && n.actor.id && n.actor.id !== '_') return '/profile/' + n.actor.id;
+      // Straight to the approve/decline screen, not to their profile — the
+      // notification exists because there is a decision to make.
+      if (n.type === 'follow_request') return '/follow-requests';
       // Straight into the stream — a live alert is worthless if it takes you
       // anywhere but the broadcast, since it will be over shortly.
       if (n.type === 'live' && p.live_id) return '/live/' + p.live_id;
@@ -4990,7 +4998,7 @@ function autoPlay(video) {
         }
         setTimeout(() => back(), 800);
       } catch (e) {
-        toast(e.message || 'تعذر الإرسال');
+        toast(friendlyError(e, 'تعذر الإرسال'));
         sendBtn.disabled = false;
         updateSend();
       }
@@ -5206,14 +5214,14 @@ function autoPlay(video) {
           agoraSession = await window.Agora.startHost({
             channel: live.id,
             videoEl: previewVideo,
-            onError: (e) => toast(e.message),
+            onError: (e) => toast(friendlyError(e)),
           });
           window._ttAgoraHostSession = agoraSession;
           window._ttAgoraHostLiveId = live.id;
         }
         go('/live/' + live.id);
       } catch (e) {
-        toast(e.message || 'تعذر بدء البث');
+        toast(friendlyError(e, 'تعذر بدء البث'));
         startBtn.disabled = false;
         startBtn.classList.remove('busy');
         goLabel.textContent = 'بدء البث';
@@ -5570,7 +5578,7 @@ function autoPlay(video) {
         // The realtime subscription echoes it back, so don't append here.
       } catch (e) {
         cmtInput.value = text; // restore so the user doesn't lose it
-        toast(e.message || 'تعذر إرسال التعليق');
+        toast(friendlyError(e, 'تعذر إرسال التعليق'));
       }
     }
     cmtInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendLiveComment(); });
@@ -6108,7 +6116,7 @@ function autoPlay(video) {
             if (!yes) return;
             unblockBtn.disabled = true;
             try { await window.API.unblockUser(p.id); toast('تم إلغاء الحظر'); load(); }
-            catch (e) { toast(e.message || 'فشل'); unblockBtn.disabled = false; }
+            catch (e) { toast(friendlyError(e, 'فشل')); unblockBtn.disabled = false; }
           };
           row.appendChild(unblockBtn);
           list.appendChild(row);
@@ -6146,7 +6154,7 @@ function autoPlay(video) {
         t.classList.toggle('on');
         const on = t.classList.contains('on');
         try { await onChange(on); }
-        catch (err) { t.classList.toggle('on'); toast(err.message || 'تعذر التحديث'); }
+        catch (err) { t.classList.toggle('on'); toast(friendlyError(err, 'تعذر التحديث')); }
       } });
       return t;
     }
@@ -6193,7 +6201,7 @@ function autoPlay(video) {
             cfg.current = prev;
             const back = cfg.options.find(x => x.v === prev);
             if (back) cfg.el.textContent = back.l;
-            toast(err.message || 'تعذر التحديث');
+            toast(friendlyError(err, 'تعذر التحديث'));
           }
         },
       }, o.l)));
@@ -6317,7 +6325,7 @@ function autoPlay(video) {
           const incoming = await window.API.fetchIncomingPermits();
           if (!incoming.length) return toast('لا توجد طلبات جديدة');
           toast(incoming.length + ' طلب — راجعها من شاشة الإشعارات');
-        } catch (e) { toast(e.message); }
+        } catch (e) { toast(friendlyError(e)); }
       } },
     ]);
 
@@ -6354,7 +6362,7 @@ function autoPlay(video) {
               locWith.dataset.v = o.v; locWith.textContent = o.l;
               try { if (window.I18N) window.I18N.apply(locWith); } catch (e) {}
               try { await window.API.setLocationVisibility(o.v); }
-              catch (err) { locWith.dataset.v = prev; locWith.textContent = prevText; toast(err.message || 'تعذر التحديث'); }
+              catch (err) { locWith.dataset.v = prev; locWith.textContent = prevText; toast(friendlyError(err, 'تعذر التحديث')); }
             },
           }, o.l)));
           try { if (window.I18N) window.I18N.apply(sheet); } catch (e) {}
@@ -6654,7 +6662,7 @@ function autoPlay(video) {
           e.stopPropagation();
           approve.disabled = decline.disabled = true;
           try { await fn(p.id); refresh(); }
-          catch (err) { approve.disabled = decline.disabled = false; toast(err.message || 'تعذر التحديث'); }
+          catch (err) { approve.disabled = decline.disabled = false; toast(friendlyError(err, 'تعذر التحديث')); }
         };
         approve.onclick = act(id => window.API.approveFollowRequest(id));
         decline.onclick = act(id => window.API.declineFollowRequest(id));
@@ -7106,7 +7114,7 @@ function autoPlay(video) {
         await window.API.deactivateAccount();
         toast('تم إيقاف حسابك مؤقتًا');
         go('/login');
-      } catch (e) { toast(e.message || 'تعذر التنفيذ'); }
+      } catch (e) { toast(friendlyError(e, 'تعذر التنفيذ')); }
     }
 
     // A second screen rather than a dialog: the list of what is lost deserves
@@ -7194,7 +7202,7 @@ function autoPlay(video) {
         keep.onclick = async () => {
           keep.disabled = true;
           try { await window.API.cancelAccountDeletion(); toast('تم إلغاء الحذف'); renderChoices(); }
-          catch (e) { keep.disabled = false; toast(e.message || 'تعذر التنفيذ'); }
+          catch (e) { keep.disabled = false; toast(friendlyError(e, 'تعذر التنفيذ')); }
         };
         body.appendChild(keep);
         try { if (window.I18N) window.I18N.apply(body); } catch (e) {}
@@ -7221,7 +7229,7 @@ function autoPlay(video) {
         t.classList.toggle('on');
         const on = t.classList.contains('on');
         try { await window.API.updateUserSettings({ [key]: on }); }
-        catch (err) { t.classList.toggle('on'); toast(err.message || 'تعذر التحديث'); }
+        catch (err) { t.classList.toggle('on'); toast(friendlyError(err, 'تعذر التحديث')); }
       } });
       store[key] = t;
       return t;
@@ -7284,7 +7292,7 @@ function autoPlay(video) {
               const btn = e.currentTarget;
               btn.disabled = true;
               try { await window.API.revokeSession(r.id); refresh(); }
-              catch (err) { btn.disabled = false; toast(err.message || 'تعذر الإزالة'); }
+              catch (err) { btn.disabled = false; toast(friendlyError(err, 'تعذر الإزالة')); }
             } }, 'إزالة');
         list.appendChild(el('div', { class: 'dev-row' + (isMe ? ' me' : '') }, [
           el('span', { class: 'dev-icon', html: icons[kind] || icons.settings }),
@@ -7442,7 +7450,7 @@ function autoPlay(video) {
     dlBtn.onclick = async () => {
       dlBtn.disabled = true;
       try { await window.API.requestDataExport(); toast('تم استلام طلبك'); }
-      catch (e) { toast(e.message || 'تعذر الطلب'); }
+      catch (e) { toast(friendlyError(e, 'تعذر الطلب')); }
       await loadExports();
     };
 
@@ -7485,7 +7493,7 @@ function autoPlay(video) {
           e.stopPropagation();
           e.currentTarget.disabled = true;
           try { await window.API.setVideoArchived(v.id, false); toast('تمت الاستعادة'); refresh(); }
-          catch (err) { e.currentTarget.disabled = false; toast(err.message || 'تعذر التحديث'); }
+          catch (err) { e.currentTarget.disabled = false; toast(friendlyError(err, 'تعذر التحديث')); }
         } }, 'استعادة');
         card.appendChild(restore);
         grid.appendChild(card);
@@ -7542,7 +7550,7 @@ function autoPlay(video) {
             if (chosen.has(p.id)) { await window.API.removeCloseFriend(p.id); chosen.delete(p.id); }
             else { await window.API.addCloseFriend(p.id); chosen.add(p.id); }
             render();
-          } catch (err) { btn.disabled = false; toast(err.message || 'تعذر التحديث'); }
+          } catch (err) { btn.disabled = false; toast(friendlyError(err, 'تعذر التحديث')); }
         };
         list.appendChild(el('div', { class: 'user-row', style: { padding: '10px 16px' } }, [
           avatar(p.avatar_url || '', p.name || p.handle || '', 44),
@@ -7636,7 +7644,7 @@ function autoPlay(video) {
               btn.textContent = r === 'requested' ? 'تم الطلب' : 'تتابعه';
               btn.classList.add('following');
               try { if (window.I18N) window.I18N.apply(btn); } catch (er) {}
-            } catch (err) { btn.disabled = false; toast(err.message || 'تعذر المتابعة'); }
+            } catch (err) { btn.disabled = false; toast(friendlyError(err, 'تعذر المتابعة')); }
           };
           sug.appendChild(el('div', { class: 'user-row', style: { padding: '10px 16px' }, onclick: () => go('/profile/' + p.id) }, [
             avatar(p.avatar_url || '', p.name || p.handle || '', 44),
@@ -7722,7 +7730,7 @@ function autoPlay(video) {
                 e.stopPropagation();
                 e.currentTarget.disabled = true;
                 try { await window.API.deleteMyComment(cm.id); load(); }
-                catch (err) { e.currentTarget.disabled = false; toast(err.message || 'تعذر الحذف'); }
+                catch (err) { e.currentTarget.disabled = false; toast(friendlyError(err, 'تعذر الحذف')); }
               } }, 'حذف');
               body.appendChild(el('div', { class: 'act-comment', onclick: () => go('/v/' + cm.video_id) }, [
                 el('div', { style: { flex: 1, minWidth: 0 } }, [
@@ -7828,7 +7836,7 @@ function autoPlay(video) {
         if (!u || !u.email) { toast('لا يوجد بريد إلكتروني على هذا الحساب'); forgot.disabled = false; return; }
         await window.SB.resetPassword(u.email);
         toast('أرسلنا رابط إعادة التعيين إلى بريدك');
-      } catch (e) { toast(e.message || 'تعذر الإرسال'); forgot.disabled = false; }
+      } catch (e) { toast(friendlyError(e, 'تعذر الإرسال')); forgot.disabled = false; }
     } }, 'نسيت كلمة المرور الحالية؟');
 
     // Live requirement list, so the rules are visible before you fail them.
@@ -7905,7 +7913,7 @@ function autoPlay(video) {
         back();
         return;
       } catch (e) {
-        if (e.message !== '__handled__') toast(e.message || 'تعذر التغيير');
+        if (e.message !== '__handled__') toast(friendlyError(e, 'تعذر التغيير'));
       }
       saveBtn.textContent = 'حفظ';
       try { if (window.I18N) window.I18N.apply(saveBtn); } catch (e) {}
@@ -7993,7 +8001,7 @@ function autoPlay(video) {
         try { if (window.I18N) window.I18N.apply(root); } catch (e) {}
         return;
       } catch (e) {
-        if (e.message !== '__handled__') toast(e.message || 'تعذر الإرسال');
+        if (e.message !== '__handled__') toast(friendlyError(e, 'تعذر الإرسال'));
       }
       saveBtn.textContent = 'إرسال';
       try { if (window.I18N) window.I18N.apply(saveBtn); } catch (e) {}
@@ -8030,7 +8038,7 @@ function autoPlay(video) {
           btn.onclick = async () => {
             btn.disabled = true;
             try { await remove(u.id); refresh(); }
-            catch (e) { btn.disabled = false; toast(e.message || 'تعذر التحديث'); }
+            catch (e) { btn.disabled = false; toast(friendlyError(e, 'تعذر التحديث')); }
           };
           list.appendChild(el('div', { class: 'user-row', style: { padding: '12px 16px' } }, [
             avatar(u.avatar_url || '', u.name || u.handle || '', 44),
@@ -8098,7 +8106,7 @@ function autoPlay(video) {
         const x = el('button', { class: 'hw-x', html: icons.x });
         x.onclick = async () => {
           try { await window.API.removeHiddenWord(w); refresh(); }
-          catch (e) { toast(e.message || 'تعذر الحذف'); }
+          catch (e) { toast(friendlyError(e, 'تعذر الحذف')); }
         };
         chips.appendChild(el('span', { class: 'hw-chip' }, [el('span', {}, w), x]));
       });
@@ -8109,7 +8117,7 @@ function autoPlay(video) {
       if (!w) return;
       addBtn.disabled = true;
       try { await window.API.addHiddenWord(w); input.value = ''; await refresh(); }
-      catch (e) { toast(e.message || 'تعذر الإضافة'); }
+      catch (e) { toast(friendlyError(e, 'تعذر الإضافة')); }
       addBtn.disabled = false;
       input.focus();
     }
@@ -8241,7 +8249,7 @@ function autoPlay(video) {
       const next = !favorited;
       favorited = next; paintFav();
       try { next ? await window.API.favoriteSound(soundId) : await window.API.unfavoriteSound(soundId); }
-      catch (e) { favorited = !next; paintFav(); toast(e.message || 'خطأ'); }
+      catch (e) { favorited = !next; paintFav(); toast(friendlyError(e, 'خطأ')); }
     };
 
     (async () => {
