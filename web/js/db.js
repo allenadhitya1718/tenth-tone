@@ -1895,6 +1895,50 @@
     return () => { if (channel) channel.unsubscribe(); };
   };
 
+  // ── Live reactions ──
+  // Deliberately NOT stored. A heart is worth something for the two seconds it
+  // floats up the screen and nothing at all afterwards, and a table would mean
+  // a write per tap on the busiest screen in the app — for data nobody ever
+  // reads back. Sent over a realtime broadcast channel instead: ephemeral, and
+  // it needs no migration or RLS policy.
+  //
+  // One channel does both directions. `self: false` means a sender does not
+  // receive their own reaction back, because the tap already floats a heart
+  // locally and echoing it would double every one.
+  API.joinLiveReactions = async (liveId, onReaction) => {
+    const c = await client();
+    const ch = c.channel('live:react:' + liveId, { config: { broadcast: { self: false } } });
+    ch.on('broadcast', { event: 'react' }, (msg) => {
+      const p = (msg && msg.payload) || {};
+      // Capped: this string is put straight into the DOM as text by the live
+      // screen, and it arrives from another client.
+      const emoji = typeof p.emoji === 'string' ? p.emoji.slice(0, 8) : '❤️';
+      try { onReaction(emoji); } catch (e) {}
+    });
+    await new Promise((resolve) => {
+      let settled = false;
+      ch.subscribe((status) => {
+        if (settled) return;
+        if (status === 'SUBSCRIBED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          settled = true; resolve(status);
+        }
+      });
+      // Never leave the caller waiting on a channel that will not come up.
+      setTimeout(() => { if (!settled) { settled = true; resolve('TIMED_OUT'); } }, 6000);
+    });
+    return {
+      send: (emoji) => {
+        try {
+          return ch.send({
+            type: 'broadcast', event: 'react',
+            payload: { emoji: String(emoji || '❤️').slice(0, 8) },
+          }).catch(() => {});
+        } catch (e) { return Promise.resolve(); }
+      },
+      stop: () => { try { ch.unsubscribe(); } catch (e) {} },
+    };
+  };
+
   API.subscribeToLiveComments = async (liveStreamId, cb) => {
     const c = await client();
     const ch = c.channel('live-comments-' + liveStreamId)

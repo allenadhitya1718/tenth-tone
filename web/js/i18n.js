@@ -340,6 +340,8 @@
     'بدأ بثًا مباشرًا الآن': 'started a live broadcast',
     // Live viewer
     'سينتهي البث لجميع المشاهدين ولا يمكن استئنافه.': 'The broadcast will end for all viewers and cannot be resumed.',
+    'بدأ بثك المباشر': 'Your live has started',
+    'انتهى بثك': 'Your live has ended',
     'انتهى البث': 'The broadcast has ended',
     'شكرًا لمشاهدتك': 'Thanks for watching',
     'بثوث أخرى': 'Other broadcasts',
@@ -1832,6 +1834,7 @@
     [/^فيديو · (.+)$/, (m) => `Video · ${m[1]}`],
     [/^علّق: "(.*)"$/, (m) => `commented: "${m[1]}"`],
     [/^رد على تعليقك: "(.*)"$/, (m) => `replied to your comment: "${m[1]}"`],
+    [/^المدة (.*) · أعلى عدد مشاهدين (.*)$/, (m) => `Duration ${m[1]} · Peak viewers ${m[2]}`],
     [/^خطأ في التحميل: (.+)$/, (m) => `Load error: ${m[1]}`],
     [/^([\d.,KM]+) متابع$/, (m) => `${m[1]} follower${m[1] === '1' ? '' : 's'}`],
     [/^([\d.,KM]+) فيديو$/, (m) => `${m[1]} video${m[1] === '1' ? '' : 's'}`],

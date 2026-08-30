@@ -5646,10 +5646,12 @@ function autoPlay(video) {
     ]));
 
     let joined = false, unsubStream = null, endedShown = false;
+    let reactions = null, peakViewers = 0;
 
     function setViewers(n) {
       const num = viewersEl.querySelector('.lp-num');
       if (num) num.textContent = fmt(Number(n) || 0);
+      peakViewers = Math.max(peakViewers, Number(n) || 0);
     }
 
     // Shown to everyone still watching when the host stops, instead of
@@ -5660,11 +5662,17 @@ function autoPlay(video) {
       if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
       root.classList.add('live-over');
       endLiveBtn.hidden = true;
+      // The host was shown "thanks for watching" about their own broadcast,
+      // and told nothing about how it went. They get a summary instead.
+      const mine = iAmHost();
       const card = el('div', { class: 'live-ended' }, [
         el('span', { class: 'le-icon', html: icons.video }),
-        el('p', { class: 'le-title' }, 'انتهى البث'),
-        el('p', { class: 'le-sub' }, 'شكرًا لمشاهدتك'),
-        el('button', { class: 'btn', onclick: () => go('/live/host-list') }, 'بثوث أخرى'),
+        el('p', { class: 'le-title' }, mine ? 'انتهى بثك' : 'انتهى البث'),
+        el('p', { class: 'le-sub' }, mine
+          ? ('المدة ' + ((elapsedEl && elapsedEl.textContent) || '0:00') + ' · أعلى عدد مشاهدين ' + fmt(peakViewers))
+          : 'شكرًا لمشاهدتك'),
+        el('button', { class: 'btn', onclick: () => go(mine ? '/home' : '/live/host-list') },
+          mine ? 'تم' : 'بثوث أخرى'),
       ]);
       root.appendChild(card);
       try { if (window.I18N) window.I18N.apply(card); } catch (e) {}
@@ -5822,8 +5830,14 @@ function autoPlay(video) {
       cmtInput,
       el('button', { class: 'icon-btn', html: icons.send, onclick: sendLiveComment }),
       el('button', { class: 'icon-btn', html: icons.heart, onclick: () => {
+        const picks = ['❤️', '💖', '💕', '💗', '✨'];
+        const pick = () => picks[Math.floor(Math.random() * picks.length)];
         // Emit a few hearts (TikTok rapid-tap feel)
-        for (let i = 0; i < 4; i++) setTimeout(floatHeart, i * 80, ['❤️', '💖', '💕', '💗', '✨'][Math.floor(Math.random() * 5)]);
+        for (let i = 0; i < 4; i++) setTimeout(floatHeart, i * 80, pick());
+        // ...and let the room see them. These used to float on the tapper's
+        // own screen only, so the host — the one person a reaction is aimed
+        // at — never saw a single one.
+        if (reactions) reactions.send(pick());
       } }),
       // Was sharing the stream id as though it were a video, so the link
       // opened a video that does not exist. Shares the live link instead.
@@ -5856,6 +5870,9 @@ function autoPlay(video) {
               videoContainer.style.zIndex = '2';
             } catch (e) { console.warn('agora host re-attach:', e); }
           }
+          // Going live is otherwise silent: the screen simply changes, with
+          // nothing confirming you are actually broadcasting to anyone.
+          toast('بدأ بثك المباشر');
           return;
         }
         viewerSession = await window.Agora.startViewer({
@@ -5871,6 +5888,14 @@ function autoPlay(video) {
       } catch (e) { console.warn('agora viewer:', e); }
     })();
 
+    // Reactions are broadcast, not stored, so this is just a channel join.
+    (async () => {
+      try {
+        if (!window.API || !window.API.joinLiveReactions || !isRealId(liveId)) return;
+        reactions = await window.API.joinLiveReactions(liveId, (emoji) => floatHeart(emoji));
+      } catch (e) { console.warn('live reactions:', e); }
+    })();
+
     // Stop on navigate away
     window.addEventListener('hashchange', async () => {
       if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
@@ -5878,6 +5903,7 @@ function autoPlay(video) {
       // Counted out, or the audience number stays inflated for the rest of
       // the broadcast.
       if (joined && window.API) { try { await window.API.leaveLiveStream(liveId); } catch (_) {} joined = false; }
+      if (reactions) { try { reactions.stop(); } catch (_) {} reactions = null; }
       if (viewerSession) try { await viewerSession.stop(); } catch (_) {}
       if (isHost && hostSession) {
         try {
