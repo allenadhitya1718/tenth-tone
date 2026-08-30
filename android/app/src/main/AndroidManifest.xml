@@ -60,6 +60,43 @@
     </application>
 
     <!-- Permissions -->
+    <!--
+      These are declared here rather than injected at build time. The CI
+      workflow used to sed them in, which meant any APK built locally with
+      android/build_apk.bat shipped with INTERNET alone: the camera could
+      never be granted, and recording failed with "permission denied" no
+      matter what the person tapped in the system dialog. The workflow skips
+      its patch when RECORD_AUDIO is already present, so this stays correct
+      for CI builds too.
+    -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Recording and live streaming -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Agora switches the audio route (earpiece/speaker) during a call -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- Map, friend locations, ghost mode -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- Picking a clip or photo from the gallery. Android 13 split the old
+         single storage permission per media type; the legacy one is capped so
+         it is not requested on versions that no longer use it. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!-- Android 13+ requires this to be requested before notifications show -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- A device without a camera can still use the rest of the app, so this
+         must not become an install-time filter on the Play Store. -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 </manifest>

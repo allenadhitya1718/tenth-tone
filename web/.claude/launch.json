@@ -4,7 +4,11 @@
     {
       "name": "tenthtone-web",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5500", "--directory", "C:/Users/admin/OneDrive/Desktop/TenthTone-source-v1.1/Tiktok/web"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5500"
+      ],
       "port": 5500
     }
   ]
