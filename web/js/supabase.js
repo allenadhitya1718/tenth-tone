@@ -135,7 +135,11 @@
       const probe = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
       });
-      const { error } = await probe.auth.signInWithPassword({ email, password: currentPassword });
+      // CAPTCHA covers this call too. It is a genuine sign-in, so the moment
+      // protection is switched on in the dashboard Supabase rejects it without a
+      // token, and both change-password and change-email break with an error that
+      // looks nothing like the real cause. Same shape as signIn above.
+      const { error } = await probe.auth.signInWithPassword({ email, password: currentPassword, options: { ...(await captchaOpt()) } });
       try { await probe.auth.signOut({ scope: 'local' }); } catch (e) {}
       if (!error) return true;
       // Anything other than a plain rejection is worth surfacing as itself
