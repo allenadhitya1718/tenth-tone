@@ -611,15 +611,24 @@
   // rather than a profile only ever being copyable to the clipboard.
   API.shareLinkTo = async (link, userIds) => {
     if (!link || !userIds || !userIds.length) return 0;
-    let sent = 0;
-    for (const userId of userIds) {
-      try {
-        const chatId = await API.openOrCreateDm(userId);
-        await API.sendMessage({ chatId, text: link });
-        sent++;
-      } catch (e) { console.warn('share to', userId, 'failed:', e.message); }
-    }
-    return sent;
+    // Sent in parallel. This used to be a sequential for-await loop, so each
+    // recipient cost two round trips one after another — sharing to ten
+    // people meant twenty in a row, around four seconds of the person
+    // watching a "sending..." label for work the network could have done at
+    // once. Recipients are independent, so there is no reason to queue them.
+    //
+    // allSettled rather than all: one failed recipient must not abandon the
+    // rest, and the count returned is what actually got through.
+    const results = await Promise.allSettled(userIds.map(async (userId) => {
+      const chatId = await API.openOrCreateDm(userId);
+      await API.sendMessage({ chatId, text: link });
+    }));
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') {
+        console.warn('share to', userIds[i], 'failed:', r.reason && r.reason.message);
+      }
+    });
+    return results.filter(r => r.status === 'fulfilled').length;
   };
 
   API.shareVideoTo = async (videoId, userIds) => {
@@ -884,24 +893,34 @@
     });
   };
 
+  // Goes through list_followers (0055) rather than querying follows directly.
+  //
+  // 0054 made a follow row visible only when both people in it are visible to
+  // you, which is stricter than intended: a private account following a
+  // PUBLIC one vanished from that public account's follower list, so a
+  // profile could read "1 follower" above an empty list.
+  //
+  // A row policy cannot fix that — it sees one row and cannot know whose list
+  // is being asked for. The function takes the subject explicitly, checks
+  // once whether you may see THAT person's lists, and returns them.
   API.fetchFollowers = async (userId) => {
-    const c = await client();
-    const { data, error } = await c.from('follows').select(`
-      profiles:profiles!follows_follower_id_fkey ( id, name, handle, avatar_url, verified, followers_count )
-    `).eq('followed_id', userId);
-    if (error) throw error;
-    return (data || []).map(r => r.profiles).filter(Boolean);
+    if (!userId) return [];
+    return cached('followers:' + userId, 60000, async () => {
+      const c = await client();
+      const { data, error } = await c.rpc('list_followers', { p_user: userId });
+      if (error) throw error;
+      return data || [];
+    });
   };
 
+  // Same reasoning as fetchFollowers above — see 0055.
   API.fetchFollowing = async (userId) => {
     if (!userId) return [];
     return cached('following:' + userId, 60000, async () => {
-    const c = await client();
-    const { data, error } = await c.from('follows').select(`
-      profiles:profiles!follows_followed_id_fkey ( id, name, handle, avatar_url, verified, followers_count )
-    `).eq('follower_id', userId);
-    if (error) throw error;
-    return (data || []).map(r => r.profiles).filter(Boolean);
+      const c = await client();
+      const { data, error } = await c.rpc('list_following', { p_user: userId });
+      if (error) throw error;
+      return data || [];
     });
   };
 
@@ -1004,10 +1023,29 @@
     const chatIds = (memberships || []).map(r => r.chat_id);
     if (!chatIds.length) return [];
 
-    const [{ data: chats }, { data: lastMsgs }, { data: members }] = await Promise.all([
+    // All five reads go out together.
+    //
+    // This used to be three sequential steps after the membership lookup —
+    // the chat/message/member batch, then unread counts, then request flags —
+    // and each step costs a full round trip. Measured, the inbox took 765ms
+    // against a 158ms baseline for the simplest possible query: roughly four
+    // trips in a row, three of which were waiting on nothing.
+    //
+    // Neither RPC depends on the other reads; they only need chatIds, which
+    // we already have. Issued together this is two trips instead of four.
+    //
+    // The RPCs are wrapped so one missing function cannot take the inbox down
+    // with it: without 0041 there are no unread marks, without 0043 nothing
+    // is a request, and the conversation list still loads either way.
+    const [
+      { data: chats }, { data: lastMsgs }, { data: members },
+      unreadRes, flagsRes,
+    ] = await Promise.all([
       c.from('chats').select('id, type, name, photo_url, created_by, created_at').in('id', chatIds),
       c.from('messages').select('chat_id, text, type, from_user_id, created_at').in('chat_id', chatIds).order('created_at', { ascending: false }),
       c.from('chat_members').select('chat_id, user_id, profiles:profiles!chat_members_user_id_fkey(id, name, handle, avatar_url)').in('chat_id', chatIds),
+      c.rpc('chat_unread_counts').then(r => r, e => ({ error: e })),
+      c.rpc('chat_request_flags').then(r => r, e => ({ error: e })),
     ]);
 
     // Latest message per chat
@@ -1019,24 +1057,13 @@
       (membersByChat[m.chat_id] = membersByChat[m.chat_id] || []).push(m);
     });
 
-    // Unread counts come back in one call (see chat_unread_counts in 0041).
-    // Failing soft matters here: on a database that has not had 0041 applied
-    // yet the inbox should still list conversations, just without the unread
-    // marks, rather than showing an error.
-    let unreadByChat = {};
-    try {
-      const { data: counts } = await c.rpc('chat_unread_counts');
-      (counts || []).forEach(r => { unreadByChat[r.chat_id] = r.unread_count; });
-    } catch (e) { console.warn('unread counts unavailable (is 0041 applied?):', e); }
+    const unreadByChat = {};
+    if (unreadRes && unreadRes.error) console.warn('unread counts unavailable (is 0041 applied?):', unreadRes.error);
+    else (unreadRes && unreadRes.data || []).forEach(r => { unreadByChat[r.chat_id] = r.unread_count; });
 
-    // Which chats are message requests from people you do not follow.
-    // Fails soft the same way: without 0043 nothing is a request and the
-    // inbox behaves exactly as it did before.
     const requestByChat = {};
-    try {
-      const { data: flags } = await c.rpc('chat_request_flags');
-      (flags || []).forEach(r => { requestByChat[r.chat_id] = !!r.is_request; });
-    } catch (e) { console.warn('request flags unavailable (is 0043 applied?):', e); }
+    if (flagsRes && flagsRes.error) console.warn('request flags unavailable (is 0043 applied?):', flagsRes.error);
+    else (flagsRes && flagsRes.data || []).forEach(r => { requestByChat[r.chat_id] = !!r.is_request; });
 
     return (chats || []).map(c => {
       const others = (membersByChat[c.id] || []).filter(m => m.user_id !== me).map(m => m.profiles);
