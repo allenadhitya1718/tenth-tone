@@ -1,118 +1,118 @@
-"""Generate PWA icons from scratch (purple gradient + 'T' letter).
+"""Generate every app icon from one source logo.
+
+Replaces the previous version, which DREW the old FLYP icon from
+scratch (purple gradient plus a letter T) and took no input. This one takes
+the real FLYP logo and produces every size the project needs.
 
 Usage:
-    python tools/generate-icons.py
+    python web/tools/generate-icons.py [source.png]
 
-Generates:
-    icons/icon-192.png   (Android/manifest)
-    icons/icon-512.png   (Android/manifest)
-    icons/icon-512-maskable.png  (Android adaptive)
-    icons/apple-touch-icon.png   (180x180, iOS home screen)
-    icons/apple-touch-icon-167.png (167x167, iPad Pro)
-    icons/apple-touch-icon-152.png (152x152, iPad)
-    icons/favicon-32.png
-    icons/favicon-16.png
+Default source: resources/flyp-logo-master.png
+
+Writes:
+    web/icons/*                       PWA + favicons
+    site/assets/*                     marketing site
+    android/.../mipmap-*/ic_launcher* Android launcher, all densities
+    resources/AppIcon-1024.png        iOS source
 """
 
-from PIL import Image, ImageDraw, ImageFont
 import os
 import sys
+from PIL import Image, ImageDraw
 
-OUT = os.path.join(os.path.dirname(__file__), '..', 'icons')
-os.makedirs(OUT, exist_ok=True)
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 
+SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, 'resources', 'flyp-logo-master.png')
 
-def lerp(a, b, t):
-    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+# The logo sits inside a lot of empty space, and the outer rounded-rectangle
+# frame is part of the artwork rather than something to keep. These bounds
+# were measured on the 1254px master: the waveform starts at x=215 and the
+# P ends at x=1050, with the artwork band running y=458..802.
+LOCKUP = (215, 458, 1050, 802)
 
-
-def draw_icon(size: int, rounded: bool = True, padding_ratio: float = 0.0):
-    """Draw a square icon with purple gradient background and white 'T'."""
-    img = Image.new('RGBA', (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-
-    # Background: purple gradient (#6c2bd9 -> #8b5bff)
-    c1 = (108, 43, 217)
-    c2 = (139, 91, 255)
-
-    # Compute corner radius (~22% for rounded squircle look)
-    if rounded:
-        r = int(size * 0.22)
-    else:
-        r = 0
-
-    # Build the rounded rect mask
-    mask = Image.new('L', (size, size), 0)
-    md = ImageDraw.Draw(mask)
-    inset = int(size * padding_ratio)
-    md.rounded_rectangle(
-        [inset, inset, size - inset - 1, size - inset - 1],
-        radius=r if not padding_ratio else int((size - inset * 2) * 0.22),
-        fill=255,
-    )
-
-    # Render gradient pixel-by-pixel (vertical)
-    grad = Image.new('RGB', (size, size))
-    gpx = grad.load()
-    for y in range(size):
-        col = lerp(c1, c2, y / max(1, size - 1))
-        for x in range(size):
-            gpx[x, y] = col
-    grad.putalpha(mask)
-
-    img = Image.alpha_composite(img, grad)
-    draw = ImageDraw.Draw(img)
-
-    # Draw the letter 'T'
-    text = 'T'
-    target_h = int(size * 0.55)
-    font = None
-    candidates = [
-        'C:\\Windows\\Fonts\\arialbd.ttf',
-        'C:\\Windows\\Fonts\\arial.ttf',
-        'C:\\Windows\\Fonts\\segoeuib.ttf',
-        '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            try:
-                font = ImageFont.truetype(path, target_h)
-                break
-            except Exception:
-                pass
-    if font is None:
-        font = ImageFont.load_default()
-
-    # Center the text
-    bbox = draw.textbbox((0, 0), text, font=font)
-    tw = bbox[2] - bbox[0]
-    th = bbox[3] - bbox[1]
-    cx = (size - tw) / 2 - bbox[0]
-    cy = (size - th) / 2 - bbox[1] - int(size * 0.02)
-    draw.text((cx, cy), text, fill=(255, 255, 255, 255), font=font)
-
-    return img
+# Android crops adaptive icons to a circle or squircle and only the middle
+# ~66% is guaranteed to survive. The foreground layer therefore needs much
+# more padding than the plain icon does.
+PAD_STANDARD = 0.10
+PAD_ADAPTIVE = 0.42
 
 
-def save(img, name):
-    path = os.path.join(OUT, name)
-    img.save(path, 'PNG', optimize=True)
-    print(f'  wrote {os.path.relpath(path)}')
+def squared(im, box, pad_ratio, size, bg):
+    x0, y0, x1, y1 = box
+    cw, ch = x1 - x0, y1 - y0
+    side = int(max(cw, ch) * (1 + pad_ratio * 2))
+    canvas = Image.new('RGBA', (side, side), bg)
+    canvas.paste(im.crop(box), ((side - cw) // 2, (side - ch) // 2))
+    return canvas.resize((size, size), Image.LANCZOS)
+
+
+def write(img, path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    img.convert('RGB').save(path)
+    print('  ', os.path.relpath(path, ROOT))
 
 
 def main():
-    print('Generating PWA icons...')
-    save(draw_icon(192), 'icon-192.png')
-    save(draw_icon(512), 'icon-512.png')
-    # Maskable: solid background with safe-zone padding (~10% on each side)
-    save(draw_icon(512, padding_ratio=0.10), 'icon-512-maskable.png')
-    # Apple touch icons (no transparency, no rounded — iOS rounds them automatically)
-    save(draw_icon(180, rounded=False), 'apple-touch-icon.png')
-    save(draw_icon(167, rounded=False), 'apple-touch-icon-167.png')
-    save(draw_icon(152, rounded=False), 'apple-touch-icon-152.png')
-    save(draw_icon(32), 'favicon-32.png')
-    save(draw_icon(16), 'favicon-16.png')
-    print('Done.')
+    if not os.path.exists(SRC):
+        sys.exit('source not found: ' + SRC)
+
+    im = Image.open(SRC).convert('RGBA')
+    bg = im.convert('RGB').getpixel((6, 6)) + (255,)
+    print('source:', os.path.relpath(SRC, ROOT), im.size, 'background', bg[:3])
+
+    def icon(size, pad=PAD_STANDARD):
+        return squared(im, LOCKUP, pad, size, bg)
+
+    print('web/icons:')
+    web = os.path.join(ROOT, 'web', 'icons')
+    write(icon(192), os.path.join(web, 'icon-192.png'))
+    write(icon(512), os.path.join(web, 'icon-512.png'))
+    # Maskable icons are cropped by the launcher, so keep the art well inside.
+    write(icon(512, PAD_ADAPTIVE), os.path.join(web, 'icon-512-maskable.png'))
+    write(icon(180), os.path.join(web, 'apple-touch-icon.png'))
+    write(icon(167), os.path.join(web, 'apple-touch-icon-167.png'))
+    write(icon(152), os.path.join(web, 'apple-touch-icon-152.png'))
+    write(icon(32), os.path.join(web, 'favicon-32.png'))
+    write(icon(16), os.path.join(web, 'favicon-16.png'))
+
+    print('site/assets:')
+    site = os.path.join(ROOT, 'site', 'assets')
+    write(icon(512), os.path.join(site, 'app-icon.png'))
+    write(icon(180), os.path.join(site, 'apple-touch-icon.png'))
+    write(icon(32), os.path.join(site, 'favicon-32.png'))
+    icon(32).convert('RGB').save(os.path.join(ROOT, 'site', 'favicon.ico'),
+                                 sizes=[(16, 16), (32, 32)])
+    print('   site/favicon.ico')
+    icon(32).convert('RGB').save(os.path.join(ROOT, 'web', 'favicon.ico'),
+                                 sizes=[(16, 16), (32, 32)])
+    print('   web/favicon.ico')
+
+    print('android launcher:')
+    # mdpi is the 1x baseline; the rest are the standard Android multipliers.
+    densities = {'mdpi': 48, 'hdpi': 72, 'xhdpi': 96, 'xxhdpi': 144, 'xxxhdpi': 192}
+    res = os.path.join(ROOT, 'android', 'app', 'src', 'main', 'res')
+    for name, px in densities.items():
+        d = os.path.join(res, 'mipmap-' + name)
+        write(icon(px), os.path.join(d, 'ic_launcher.png'))
+
+        # Round variant: same art, circular mask.
+        r = icon(px, PAD_ADAPTIVE)
+        mask = Image.new('L', (px, px), 0)
+        ImageDraw.Draw(mask).ellipse((0, 0, px - 1, px - 1), fill=255)
+        rounded = Image.new('RGB', (px, px), bg[:3])
+        rounded.paste(r.convert('RGB'), (0, 0), mask)
+        write(rounded, os.path.join(d, 'ic_launcher_round.png'))
+
+        # Foreground layer for adaptive icons is rendered at 108dp against a
+        # separate background colour, and the outer ~18dp is cropped away.
+        write(icon(int(px * 108 / 48), PAD_ADAPTIVE),
+              os.path.join(d, 'ic_launcher_foreground.png'))
+
+    print('ios source:')
+    write(icon(1024), os.path.join(ROOT, 'resources', 'AppIcon-1024.png'))
+
+    print('\ndone')
 
 
 if __name__ == '__main__':

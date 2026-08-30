@@ -1,5 +1,5 @@
 -- ============================================================
---  APPLY_ALL.sql  -  Tenth Tone
+--  APPLY_ALL.sql  -  FLYP
 --  Everything outstanding, in dependency order, in one file.
 --
 --  SAFE TO RE-RUN. Every statement uses IF NOT EXISTS,
@@ -2903,7 +2903,7 @@ language sql
 immutable
 as $fn$
   -- The @ must not follow a word character, or the domain half of an email
-  -- address (support@tenthtone.app) is read as a mention of "tenthtone".
+  -- address (support@flyp-sa.com) is read as a mention of "flyp".
   -- Trailing dots are sentence punctuation, not part of the handle.
   select coalesce(
     array_agg(distinct rtrim(lower(m[2]), '.')),

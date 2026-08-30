@@ -13,7 +13,7 @@ The Live Stream feature now uses **Agora.io** for real video broadcasting (host'
 2. Verify your email and log in
 3. You land on the Console: **https://console.agora.io/**
 4. Top-left → **Project Management** → **Create**
-5. Name: `tenth-tone` · Use case: pick **Social** → **Submit**
+5. Name: `flyp` · Use case: pick **Social** → **Submit**
 6. **Important — choose authentication mechanism:**
    - **For testing / demo:** select **"App ID + Token (Recommended)"** then on the project card click the gear icon → **Edit** → switch to **"App ID"** only (no token). This lets you test without a token server.
    - **For production:** keep the token mechanism on; you'll generate tokens from a Supabase Edge Function (see Step 4 below).

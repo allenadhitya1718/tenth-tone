@@ -1,7 +1,7 @@
 {
-  "name": "tenth-tone",
+  "name": "flyp",
   "version": "1.0.0",
-  "description": "Tenth Tone — social video app, iOS shell via Capacitor",
+  "description": "FLYP — social video app, iOS shell via Capacitor",
   "private": true,
   "scripts": {
     "cap:sync": "npx cap sync",

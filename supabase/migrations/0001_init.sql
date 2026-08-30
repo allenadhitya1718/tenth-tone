@@ -1,5 +1,5 @@
 -- =============================================================
--- Tenth Tone — Initial schema (full SRS coverage, future-proof)
+-- FLYP — Initial schema (full SRS coverage, future-proof)
 -- Run this once in Supabase SQL Editor.
 -- Phase 1 actively uses: profiles. Other tables are scaffolded
 -- now so later phases don't need migrations on top of live data.

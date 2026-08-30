@@ -35,8 +35,8 @@ In the Supabase dashboard, **New project**, twice:
 
 | Name | Region | Purpose |
 |---|---|---|
-| `tenthtone` | `ap-south-1` (Mumbai) | the real one |
-| `tenthtone-staging` | `ap-south-1` (Mumbai) | fake data, load testing, trying migrations first |
+| `flyp` | `ap-south-1` (Mumbai) | the real one |
+| `flyp-staging` | `ap-south-1` (Mumbai) | fake data, load testing, trying migrations first |
 
 Same region for both, or staging timings will not tell you anything about
 production.

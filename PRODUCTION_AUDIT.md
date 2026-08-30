@@ -1,4 +1,4 @@
-# Tenth Tone — production-readiness audit
+# FLYP — production-readiness audit
 
 Checked against an 18-point production-grade checklist, 2026-08-30.
 Every line below was verified against the actual code or database, not assumed.

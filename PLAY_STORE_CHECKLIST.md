@@ -49,21 +49,21 @@ You need `keytool` to generate your Play Store upload keystore. It comes with an
    cd C:\Users\Syed\Desktop\Tiktok
    keytool -genkey -v `
      -keystore upload-keystore.jks `
-     -alias tenth-tone-upload `
+     -alias flyp-upload `
      -keyalg RSA -keysize 2048 -validity 36500 `
      -storepass YourPassword123! `
      -keypass YourPassword123! `
-     -dname "CN=Tenth Tone, OU=Mobile, O=Tenth Tone, L=Riyadh, ST=Riyadh, C=SA"
+     -dname "CN=FLYP, OU=Mobile, O=FLYP, L=Riyadh, ST=Riyadh, C=SA"
    ```
 2. The file `upload-keystore.jks` (~3 KB) is created in your Tiktok folder
 3. **Move it OUT of the repo** — never commit it:
    ```powershell
-   mkdir C:\Users\Syed\Documents\TenthToneKeys
-   move upload-keystore.jks C:\Users\Syed\Documents\TenthToneKeys\
+   mkdir C:\Users\Syed\Documents\FLYPKeys
+   move upload-keystore.jks C:\Users\Syed\Documents\FLYPKeys\
    ```
 4. Save a backup copy to a second location (cloud drive, USB stick, password manager). If you lose this file you cannot update the app on Play Store.
 
-**Checkpoint:** ✅ The `upload-keystore.jks` file exists at `C:\Users\Syed\Documents\TenthToneKeys\upload-keystore.jks` AND you have the password written down.
+**Checkpoint:** ✅ The `upload-keystore.jks` file exists at `C:\Users\Syed\Documents\FLYPKeys\upload-keystore.jks` AND you have the password written down.
 
 ---
 
@@ -73,7 +73,7 @@ Same trick as the Apple `.p8` file — GitHub secrets store text only.
 
 1. In PowerShell:
    ```powershell
-   [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\Syed\Documents\TenthToneKeys\upload-keystore.jks"))
+   [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\Syed\Documents\FLYPKeys\upload-keystore.jks"))
    ```
 2. Copy the **entire output** (one long line, ~5 000 base64 characters).
 
@@ -90,7 +90,7 @@ Same trick as the Apple `.p8` file — GitHub secrets store text only.
 |---|---|---|
 | 1 | `ANDROID_KEYSTORE_BASE64` | The long base64 string from Step 3 |
 | 2 | `ANDROID_KEYSTORE_PASSWORD` | The password from Step 2 (`YourPassword123!`) |
-| 3 | `ANDROID_KEY_ALIAS` | `tenth-tone-upload` |
+| 3 | `ANDROID_KEY_ALIAS` | `flyp-upload` |
 | 4 | `ANDROID_KEY_PASSWORD` | Same password as #2 |
 
 **Checkpoint:** ✅ All four secrets appear in the **Repository secrets** list.
@@ -105,7 +105,7 @@ Much faster than Apple — Google approves the account within minutes, not days.
 2. Sign in with the Google account that will own the app
 3. Choose **An organization** (most users) or **Personal**
 4. Fill in:
-   - **Developer name** (shown to users): `Tenth Tone` (or your company name)
+   - **Developer name** (shown to users): `FLYP` (or your company name)
    - **Contact email**: a real reachable email
    - **Contact phone**: real number
    - **Website** (optional): leave blank or use `https://tiktok-nu-eosin.vercel.app`
@@ -124,7 +124,7 @@ Much faster than Apple — Google approves the account within minutes, not days.
 
 | Field | Value |
 |---|---|
-| App name | `Tenth Tone` |
+| App name | `FLYP` |
 | Default language | **Arabic** |
 | App or game | **App** |
 | Free or paid | **Free** |
@@ -160,14 +160,14 @@ You should see steps:
 
 Total time: ~6 minutes.
 
-**Checkpoint:** ✅ The build has a green ✓ AND the artifacts section at the bottom shows `tenth-tone-release-aab-XXXXX`.
+**Checkpoint:** ✅ The build has a green ✓ AND the artifacts section at the bottom shows `flyp-release-aab-XXXXX`.
 
 ---
 
 ## Step 8 — Download the AAB ⏱️ 1 min
 
 1. On the green-check workflow run → scroll to **Artifacts** section
-2. Click **tenth-tone-release-aab-XXXXX** to download a `.zip`
+2. Click **flyp-release-aab-XXXXX** to download a `.zip`
 3. Unzip → you have `app-release.aab` (~3–8 MB) on your disk
 
 **Checkpoint:** ✅ You have `app-release.aab` saved locally.
@@ -205,7 +205,7 @@ Google may flag a few "errors" or "warnings" — most are about missing store li
 6. Share that link with your testers. They:
    - Open it on their Android phone in Chrome
    - Tap **Become a tester**
-   - Tap **Download it on Google Play** → goes to a normal Play Store page that lets them install Tenth Tone
+   - Tap **Download it on Google Play** → goes to a normal Play Store page that lets them install FLYP
 
 **Checkpoint:** ✅ You and at least one tester have the app installed via Play Store (not side-loaded).
 
@@ -217,7 +217,7 @@ You can skip this for now and stay on internal testing forever. To eventually go
 
 1. Play Console → your app → left sidebar → **Grow** → **Store presence** → **Main store listing**
 2. Fill in (all in Arabic for primary language):
-   - **App name** (≤30 chars): `Tenth Tone`
+   - **App name** (≤30 chars): `FLYP`
    - **Short description** (≤80 chars): one sentence about the app
    - **Full description** (≤4000 chars): longer marketing copy
 3. **Graphics** — required images:
@@ -231,7 +231,7 @@ Then in left sidebar → **Policy** → **App content** — fill out the questio
 - **Ads**: No (we don't show ads yet)
 - **App access**: provide test login (Google must be able to log in to review)
 - **Data safety**: declare you collect email, location, photos — be honest
-- **Target audience**: 13+ (Tenth Tone has DMs and UGC; pick 17+ if you're being conservative)
+- **Target audience**: 13+ (FLYP has DMs and UGC; pick 17+ if you're being conservative)
 - **News app**: No
 - **COVID-19 contact tracing**: No
 
@@ -279,12 +279,12 @@ CI produces a fresh signed AAB. Upload it to Play Console → Internal Testing �
 ```
 ANDROID_KEYSTORE_BASE64    = base64 of upload-keystore.jks   (Step 3)
 ANDROID_KEYSTORE_PASSWORD  = the password you set in keytool  (Step 2)
-ANDROID_KEY_ALIAS          = tenth-tone-upload
+ANDROID_KEY_ALIAS          = flyp-upload
 ANDROID_KEY_PASSWORD       = same as ANDROID_KEYSTORE_PASSWORD
 
-Keystore location  = C:\Users\Syed\Documents\TenthToneKeys\upload-keystore.jks
-Bundle ID          = com.tenthtone.tenthTone   (matches Apple, matches capacitor.config.json)
-App name           = Tenth Tone
+Keystore location  = C:\Users\Syed\Documents\FLYPKeys\upload-keystore.jks
+Bundle ID          = com.flyp.app   (matches Apple, matches capacitor.config.json)
+App name           = FLYP
 Default language   = Arabic
 First track        = Internal testing (no review)
 Cost               = $25 one-time (vs Apple $99/year)

@@ -1,4 +1,4 @@
-# Tenth Tone — Social Video App
+# FLYP — Social Video App
 
 Clickable frontend prototype of a TikTok-style Arabic social video app, built from the SRS document. RTL Arabic, mobile-first, **PWA-installable on iPhone**, no build step, no backend (mock data).
 
@@ -34,7 +34,7 @@ The app is a Progressive Web App — it installs to the home screen, runs fullsc
 
 4. Scroll and tap **"Add to Home Screen"** (إضافة إلى الشاشة الرئيسية).
 
-5. Confirm the name "Tenth Tone" and tap **Add**.
+5. Confirm the name "FLYP" and tap **Add**.
 
 6. The app icon appears on your home screen. Launching it opens fullscreen with no browser bar — looks and feels like a native app.
 

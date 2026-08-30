@@ -35,7 +35,7 @@ language plpgsql
 security definer
 stable
 set search_path = public
-as $$
+as $fn$
 begin
   -- One check, about the person whose list this is. can_see_posts_of already
   -- encodes public/private/following and, since 0049, refuses across a block.
@@ -52,7 +52,7 @@ begin
        and not public.is_blocked_between(p.id, auth.uid())
      order by f.created_at desc;
 end;
-$$;
+$fn$;
 
 
 create or replace function public.list_following(p_user uuid)
@@ -64,7 +64,7 @@ language plpgsql
 security definer
 stable
 set search_path = public
-as $$
+as $fn$
 begin
   if not public.can_see_posts_of(p_user, auth.uid()) then
     return;
@@ -78,7 +78,7 @@ begin
        and not public.is_blocked_between(p.id, auth.uid())
      order by f.created_at desc;
 end;
-$$;
+$fn$;
 
 revoke all on function public.list_followers(uuid) from public;
 revoke all on function public.list_following(uuid) from public;

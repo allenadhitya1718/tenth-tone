@@ -260,8 +260,8 @@
     const root = el('section', { class: 'splash' }, [
       el('div', { class: 'splash-lang' }, [langSwitch({ compact: true })]),
       el('div', { class: 'splash-hero' }, [
-        el('div', { class: 'splash-logo', html: icons.logo, style: { width: '96px', height: '96px', margin: '0 auto 16px' } }),
-        el('h1', {}, 'Tenth Tone'),
+        el('div', { class: 'splash-logo', html: icons.logo, style: { width: '190px', height: 'auto', margin: '0 auto 18px' } }),
+        el('h1', {}, 'FLYP'),
         el('p', {}, 'شارك لحظتك مع العالم'),
       ]),
       el('div', { class: 'actions' }, [
@@ -307,7 +307,7 @@
     const error = el('div', { class: 'error-box', hidden: true });
     root.appendChild(el('div', { class: 'splash-lang', style: { alignSelf: 'flex-end', position: 'relative', zIndex: 2 } }, [langSwitch({ compact: true })]));
     root.appendChild(el('div', { class: 'auth-logo' }, [
-      el('div', { class: 'auth-logo-svg', html: icons.logo, style: { width: '80px', height: '80px', margin: '0 auto 12px' } }),
+      el('div', { class: 'auth-logo-svg', html: icons.logo, style: { width: '165px', height: 'auto', margin: '0 auto 14px' } }),
       el('h1', {}, 'مرحبًا بعودتك'),
       el('p', {}, 'سجّل دخولك للمتابعة'),
     ]));
@@ -619,7 +619,7 @@
     root.appendChild(topBar({ title: 'التحقق' }));
     const wrap = el('div', { style: { padding: '14px 4px', textAlign: 'center' } });
     wrap.appendChild(el('div', { class: 'auth-logo' }, [
-      el('div', { class: 'auth-logo-svg', html: icons.logo, style: { width: '72px', height: '72px', margin: '0 auto 10px' } })
+      el('div', { class: 'auth-logo-svg', html: icons.logo, style: { width: '150px', height: 'auto', margin: '0 auto 12px' } })
     ]));
     wrap.appendChild(el('h2', { class: 'auth-title' }, 'أدخل رمز التحقق'));
     wrap.appendChild(el('p', { class: 'auth-subtitle' }, 'أرسلنا لك رمز التحقق'));
@@ -1264,7 +1264,7 @@
       const musicRaw = v.music || 'الأصلي';
       const musicParts = musicRaw.split(' - ');
       const musicTitle = musicParts[0] || musicRaw;
-      const musicAuthor = musicParts[1] || (v.user && v.user.name) || 'Tenth Tone Sound';
+      const musicAuthor = musicParts[1] || (v.user && v.user.name) || 'FLYP Sound';
 
       // The sound is already surfaced by the rotating disc in the right rail,
       // so the bottom-left pill was showing it a second time. Removed.
@@ -5079,7 +5079,7 @@ function autoPlay(video) {
         const url = v && v.video_url;
         if (!url) { toast('لا يوجد فيديو للتنزيل'); return; }
         const a = document.createElement('a');
-        a.href = url; a.download = 'tenthtone-' + params.id + '.mp4';
+        a.href = url; a.download = 'flyp-' + params.id + '.mp4';
         a.rel = 'noopener'; a.target = '_blank';
         document.body.appendChild(a); a.click(); a.remove();
       } catch (e) { toast('تعذر التنزيل'); }
@@ -5096,10 +5096,10 @@ function autoPlay(video) {
     const socialRow = el('section', { class: 'social-row' });
     socials.forEach(s => socialRow.appendChild(el('button', { class: 'social-item', onclick: async () => {
       const u = encodeURIComponent(shareUrl);
-      const t = encodeURIComponent('Tenth Tone');
+      const t = encodeURIComponent('FLYP');
       switch (s.k) {
         case 'native':
-          try { await navigator.share({ title: 'Tenth Tone', url: shareUrl }); } catch (e) { /* user cancelled */ }
+          try { await navigator.share({ title: 'FLYP', url: shareUrl }); } catch (e) { /* user cancelled */ }
           break;
         case 'copy':
           try { await navigator.clipboard.writeText(shareUrl); toast('تم النسخ'); }
@@ -6519,14 +6519,14 @@ function autoPlay(video) {
         onclick: () => {
           const sheet = el('div', { class: 'sheet about-sheet' });
           const close = modal(sheet);
-          sheet.appendChild(el('div', { class: 'about-logo' }, 'Tenth Tone'));
+          sheet.appendChild(el('div', { class: 'about-logo' }, 'FLYP'));
           sheet.appendChild(el('div', { class: 'about-ver' }, 'الإصدار 1.0.0'));
           [
             ['الشروط وسياسة الخصوصية', () => { close(); go('/legal'); }],
             ['تواصل معنا', () => { close(); go('/contact'); }],
-            ['تواصل معنا', () => { close(); window.location.href = 'mailto:support@tenthtone.app'; }],
+            ['تواصل معنا', () => { close(); window.location.href = 'mailto:support@flyp-sa.com'; }],
           ].forEach(([l, fn]) => sheet.appendChild(el('button', { class: 'sheet-opt', onclick: fn }, l)));
-          sheet.appendChild(el('div', { class: 'about-foot' }, '© 2026 Tenth Tone'));
+          sheet.appendChild(el('div', { class: 'about-foot' }, '© 2026 FLYP'));
           try { if (window.I18N) window.I18N.apply(sheet); } catch (e) {}
         } },
     ]);
@@ -6874,8 +6874,8 @@ function autoPlay(video) {
         {
           h: { ar: 'قبول الشروط', en: 'Accepting these terms' },
           p: {
-            ar: 'باستخدامك تطبيق Tenth Tone فإنك توافق على هذه الشروط. إذا لم توافق عليها، فلا تستخدم التطبيق. قد نحدّث هذه الشروط، وسنخطرك داخل التطبيق قبل سريان أي تغيير جوهري.',
-            en: 'By using Tenth Tone you agree to these terms. If you do not agree, please do not use the app. We may update these terms, and we will tell you in the app before any significant change takes effect.',
+            ar: 'باستخدامك تطبيق FLYP فإنك توافق على هذه الشروط. إذا لم توافق عليها، فلا تستخدم التطبيق. قد نحدّث هذه الشروط، وسنخطرك داخل التطبيق قبل سريان أي تغيير جوهري.',
+            en: 'By using FLYP you agree to these terms. If you do not agree, please do not use the app. We may update these terms, and we will tell you in the app before any significant change takes effect.',
           },
         },
         {
@@ -6971,8 +6971,8 @@ function autoPlay(video) {
         {
           h: { ar: 'كيف تتواصل معنا', en: 'How to reach us' },
           p: {
-            ar: 'لأي سؤال عن الخصوصية، استخدم "تواصل معنا" في الإعدادات أو راسلنا على support@tenthtone.app.',
-            en: 'For any privacy question, use Contact us in Settings or email support@tenthtone.app.',
+            ar: 'لأي سؤال عن الخصوصية، استخدم "تواصل معنا" في الإعدادات أو راسلنا على support@flyp-sa.com.',
+            en: 'For any privacy question, use Contact us in Settings or email support@flyp-sa.com.',
           },
         },
       ],
@@ -7017,7 +7017,7 @@ function autoPlay(video) {
         body.appendChild(el('h2', { class: 'legal-h' }, (i + 1) + '. ' + sec.h[L]));
         body.appendChild(el('p', { class: 'legal-p' }, sec.p[L]));
       });
-      body.appendChild(el('p', { class: 'legal-foot' }, '© 2026 Tenth Tone'));
+      body.appendChild(el('p', { class: 'legal-foot' }, '© 2026 FLYP'));
     }
 
     root.appendChild(tabs);
@@ -7123,7 +7123,7 @@ function autoPlay(video) {
     root.appendChild(subList([
       { icon: 'flag', label: 'الإبلاغ عن مشكلة', onclick: () => go('/report-problem') },
       { icon: 'mail', label: 'مراسلتنا بالبريد', onclick: () => {
-        window.location.href = 'mailto:support@tenthtone.app';
+        window.location.href = 'mailto:support@flyp-sa.com';
       } },
       { icon: 'globe', label: 'الشروط وسياسة الخصوصية', onclick: () => go('/legal') },
     ]));
@@ -7737,7 +7737,7 @@ function autoPlay(video) {
     root.appendChild(topBar({ title: 'متابعة ودعوة الأصدقاء' }));
 
     const link = location.origin + '/#/';
-    const msg = 'انضم إليّ على Tenth Tone';
+    const msg = 'انضم إليّ على FLYP';
 
     root.appendChild(el('div', { class: 'sec-group' }, [
       el('h3', {}, 'ادعُ أصدقاءك'),
@@ -7745,7 +7745,7 @@ function autoPlay(video) {
         el('button', { class: 'sec-cta', onclick: async () => {
           // The device's own share sheet where there is one, a copied link where not.
           if (navigator.share) {
-            try { await navigator.share({ title: 'Tenth Tone', text: msg, url: link }); return; }
+            try { await navigator.share({ title: 'FLYP', text: msg, url: link }); return; }
             catch (e) { if (e && e.name === 'AbortError') return; }
           }
           try { await navigator.clipboard.writeText(msg + ' ' + link); toast('تم نسخ الرابط'); }
@@ -7755,7 +7755,7 @@ function autoPlay(video) {
           window.location.href = 'sms:?&body=' + encodeURIComponent(msg + ' ' + link);
         } }, 'دعوة عبر رسالة نصية'),
         el('button', { class: 'sec-cta ghost', onclick: () => {
-          window.location.href = 'mailto:?subject=' + encodeURIComponent('Tenth Tone') +
+          window.location.href = 'mailto:?subject=' + encodeURIComponent('FLYP') +
             '&body=' + encodeURIComponent(msg + ' ' + link);
         } }, 'دعوة عبر البريد'),
       ]),
@@ -7949,7 +7949,7 @@ function autoPlay(video) {
     'passw0rd', 'p@ssword', 'p@ssw0rd', 'qwerty123', 'qwertyuiop',
     '1234567890', '12345678', '123456789', 'iloveyou', 'admin123',
     'welcome1', 'welcome123', 'letmein1', 'abc12345', 'football1',
-    'monkey123', 'sunshine1', 'princess1', 'dragon123', 'tenthtone',
+    'monkey123', 'sunshine1', 'princess1', 'dragon123', 'flyp',
   ];
   function isCommonPassword(v) {
     const t = String(v || '').toLowerCase().replace(/\s+/g, '');
@@ -8430,7 +8430,7 @@ function autoPlay(video) {
         shareBtn.onclick = async () => {
           const url = (window.DeepLink && window.DeepLink.ORIGIN)
             ? window.DeepLink.ORIGIN + '/s/' + soundId : location.href;
-          if (navigator.share) { try { await navigator.share({ title: snd.title || 'Tenth Tone', url }); return; } catch (e) { return; } }
+          if (navigator.share) { try { await navigator.share({ title: snd.title || 'FLYP', url }); return; } catch (e) { return; } }
           try { await navigator.clipboard.writeText(url); toast('تم النسخ'); } catch (e) { toast('تعذر النسخ'); }
         };
 

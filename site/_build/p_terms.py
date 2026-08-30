@@ -13,7 +13,7 @@ MAIL_L = 'legal@flyp-sa.com'
 
 AR = [
 ('accept', u'قبول الشروط', u'''
-      <p>باستخدامك تطبيق Tenth Tone فإنك توافق على هذه الشروط. إن لم توافق عليها فلا تستخدم التطبيق.</p>
+      <p>باستخدامك تطبيق FLYP فإنك توافق على هذه الشروط. إن لم توافق عليها فلا تستخدم التطبيق.</p>
       <p>الخدمة تقدّمها %(co)s. تشمل الشروط التطبيق على الهاتف وتطبيق الويب وأي خدمة مرتبطة بهما.</p>
 ''' % dict(co=CO_AR)),
 
@@ -87,7 +87,7 @@ AR = [
 '''),
 
 ('ours', u'ما نملكه نحن', u'''
-      <p>اسم Tenth Tone وشعاره وتصميم التطبيق وشيفرته البرمجية مملوكة لنا. لا يجوز نسخها أو استخدامها دون إذن كتابي.</p>
+      <p>اسم FLYP وشعاره وتصميم التطبيق وشيفرته البرمجية مملوكة لنا. لا يجوز نسخها أو استخدامها دون إذن كتابي.</p>
       <p>لا يمنحك استخدام التطبيق أي حق في هذه العلامات.</p>
 '''),
 
@@ -139,7 +139,7 @@ AR = [
 
 EN = [
 ('accept', 'Accepting these terms', '''
-      <p>By using Tenth Tone you agree to these terms. If you do not agree with them, do not use the app.</p>
+      <p>By using FLYP you agree to these terms. If you do not agree with them, do not use the app.</p>
       <p>The service is provided by %(co)s. These terms cover the mobile app, the web app, and any related service.</p>
 ''' % dict(co=CO_EN)),
 
@@ -213,7 +213,7 @@ EN = [
 '''),
 
 ('ours', 'What we own', '''
-      <p>The Tenth Tone name, logo, app design and source code belong to us. They may not be copied or used without written permission.</p>
+      <p>The FLYP name, logo, app design and source code belong to us. They may not be copied or used without written permission.</p>
       <p>Using the app gives you no rights in those marks.</p>
 '''),
 
@@ -266,6 +266,6 @@ doc('terms.html',
     u'شروط الاستخدام', 'Terms of Use',
     u'الاتفاق بينك وبيننا: ما يمكنك فعله، وما نتعهد به، وماذا يحدث عند المخالفة.',
     'The agreement between you and us: what you can do, what we commit to, and what happens if the rules are broken.',
-    u'شروط استخدام تطبيق Tenth Tone.', 'The Tenth Tone terms of use.',
+    u'شروط استخدام تطبيق FLYP.', 'The FLYP terms of use.',
     AR, EN)
 print('terms done')

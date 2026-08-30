@@ -6,7 +6,7 @@
 - [ ] Verify https://tiktok-nu-eosin.vercel.app loads (not 404)
 - [ ] Have **two browsers ready**:
   - Browser 1: signed in as you (admin)
-  - Browser 2: incognito, ready to sign in as `khaled@tenthtone.app` / `khaled1234`
+  - Browser 2: incognito, ready to sign in as `khaled@flyp-sa.com` / `khaled1234`
 - [ ] Have an MP4 file ready on the desktop for the upload demo (~5-15 seconds, < 20 MB)
 - [ ] Phone with stable WiFi for live mobile demo
 - [ ] **Test once before the customer arrives** — sign up, publish a video, send a chat
@@ -22,7 +22,7 @@
 | 5 | 3:00 | Browse home feed (vertical TikTok-style) | "All real videos from the database, ordered by recency. Recommendation engine is the next phase." |
 | 6 | 4:00 | Like a video, comment, save | "Each interaction hits Supabase. Postgres triggers auto-create notifications for the video owner." |
 | 7 | 5:00 | Tap **+** in bottom nav → upload an MP4 → publish | "60-second cap, auto-thumbnails, stored privately or publicly per RLS." |
-| 8 | 6:00 | Switch to second browser, sign in as `khaled@tenthtone.app` / `khaled1234` | "This is a separate account I prepared — same Supabase project." |
+| 8 | 6:00 | Switch to second browser, sign in as `khaled@flyp-sa.com` / `khaled1234` | "This is a separate account I prepared — same Supabase project." |
 | 9 | 6:30 | Like the video you just uploaded | "Watch the notification fire on the other side..." |
 | 10 | 6:45 | Switch back to first browser → bell icon shows new notification | "Postgres trigger created that. No background polling — Supabase Realtime broadcasts the change." |
 | 11 | 7:30 | Open Inbox → New chat → search khaled → start DM → send a message | "Real-time message delivery. Watch the other browser..." |
@@ -65,7 +65,7 @@ If the customer asks about these, tell them:
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Demo user (pre-loaded) | `khaled@tenthtone.app` | `khaled1234` |
+| Demo user (pre-loaded) | `khaled@flyp-sa.com` | `khaled1234` |
 | Admin (you set this up) | your email | your password |
 
 ## URLs
@@ -89,4 +89,4 @@ If the customer asks for next steps, the typical pricing tiers:
 | + Android Play Store | Same | 1 week | $25 one-time |
 | + Push notifications | iOS + Android push | 1 week | free |
 | + Recommendation engine | ML pipeline for "For You" | 2-4 weeks | dev time |
-| + Custom domain | tenthtone.app or similar | 1 day | $10-15/yr domain |
+| + Custom domain | flyp-sa.com or similar | 1 day | $10-15/yr domain |

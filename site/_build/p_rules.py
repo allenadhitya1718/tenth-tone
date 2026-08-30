@@ -16,7 +16,7 @@ M_SUP = 'support@flyp-sa.com'
 # =============================================================== GUIDELINES
 G_AR = [
 ('idea', u'الفكرة باختصار', u'''
-      <p>Tenth Tone مكان للتصوير والمشاركة. القاعدة الأساسية بسيطة: <strong>انشر ما لا يؤذي غيرك.</strong></p>
+      <p>FLYP مكان للتصوير والمشاركة. القاعدة الأساسية بسيطة: <strong>انشر ما لا يؤذي غيرك.</strong></p>
       <p>هذه الإرشادات تنطبق على كل شيء في التطبيق: المقاطع، الأوصاف، التعليقات، الأصوات، أسماء المستخدمين، الصور الشخصية، الرسائل، والبث المباشر.</p>
       <p>وهي جزء من <a href="terms.html">شروط الاستخدام</a>.</p>
 '''),
@@ -116,7 +116,7 @@ G_AR = [
 
 G_EN = [
 ('idea', 'The idea in short', '''
-      <p>Tenth Tone is a place to film and share. The basic rule is simple: <strong>post what does not harm other people.</strong></p>
+      <p>FLYP is a place to film and share. The basic rule is simple: <strong>post what does not harm other people.</strong></p>
       <p>These guidelines apply to everything in the app: clips, captions, comments, sounds, usernames, profile photos, messages, and live streams.</p>
       <p>They form part of the <a href="terms.html">Terms of Use</a>.</p>
 '''),
@@ -216,9 +216,9 @@ G_EN = [
 
 doc('guidelines.html',
     u'إرشادات المجتمع', 'Community Guidelines',
-    u'ما هو مسموح وما هو ممنوع على Tenth Tone، وماذا يحدث عند المخالفة.',
-    'What is allowed and what is not on Tenth Tone, and what happens when the rules are broken.',
-    u'إرشادات المجتمع في Tenth Tone.', 'The Tenth Tone community guidelines.',
+    u'ما هو مسموح وما هو ممنوع على FLYP، وماذا يحدث عند المخالفة.',
+    'What is allowed and what is not on FLYP, and what happens when the rules are broken.',
+    u'إرشادات المجتمع في FLYP.', 'The FLYP community guidelines.',
     G_AR, G_EN)
 
 
@@ -319,7 +319,7 @@ doc('copyright.html',
     u'حقوق النشر', 'Copyright',
     u'كيف تبلّغ عن استخدام عملك دون إذن، وكيف تعترض إن حُذف محتواك بالخطأ.',
     'How to report unauthorised use of your work, and how to dispute a removal you believe was wrong.',
-    u'سياسة حقوق النشر في Tenth Tone.', 'The Tenth Tone copyright policy.',
+    u'سياسة حقوق النشر في FLYP.', 'The FLYP copyright policy.',
     C_AR, C_EN)
 
 
@@ -410,8 +410,8 @@ doc('law-enforcement.html',
     u'طلبات الجهات الرسمية', 'Law Enforcement Requests',
     u'كيف تُرسَل الطلبات القانونية، وما الذي قد يكون متاحًا، وكيف نتعامل مع الحالات الطارئة.',
     'How legal requests should be sent, what may be available, and how we handle emergencies.',
-    u'إرشادات الجهات الرسمية للحصول على بيانات من Tenth Tone.',
-    'Guidelines for authorities requesting data from Tenth Tone.',
+    u'إرشادات الجهات الرسمية للحصول على بيانات من FLYP.',
+    'Guidelines for authorities requesting data from FLYP.',
     L_AR, L_EN)
 
 print('rules pages done')

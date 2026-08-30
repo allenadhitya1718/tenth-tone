@@ -80,7 +80,7 @@
     const r = el('div', { class: 'adm-login' });
     const card = el('div', { class: 'card' });
     card.appendChild(el('div', { style: { display: 'flex', justifyContent: 'center', marginBottom: '10px' } }, [admLangSwitch()]));
-    card.appendChild(el('div', { class: 'auth-logo-svg', html: icons.logo, style: { width: '64px', height: '64px', margin: '0 auto 12px' } }));
+    card.appendChild(el('div', { class: 'auth-logo-svg', html: icons.logo, style: { width: '150px', height: 'auto', margin: '0 auto 14px' } }));
     card.appendChild(el('h1', {}, 'لوحة التحكم'));
     card.appendChild(el('p', {}, 'سجّل دخولك للوصول إلى لوحة الإدارة'));
     const inputStyle = { width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid var(--border)', marginBottom: '12px', fontSize: '14px', outline: 0 };
@@ -116,7 +116,7 @@
     const side = el('aside', { class: 'adm-sidebar' });
     side.appendChild(el('div', { class: 'adm-brand' }, [
       el('div', { class: 'adm-logo-svg', html: icons.logoMark, style: { width: '38px', height: '38px', flexShrink: '0' } }),
-      el('div', {}, [el('div', { class: 'name' }, 'Tenth Tone'), el('div', { class: 'sub' }, 'Admin Panel')]),
+      el('div', {}, [el('div', { class: 'name' }, 'FLYP'), el('div', { class: 'sub' }, 'Admin Panel')]),
     ]));
     // Back-to-app link (so admins can hop back to the user-facing PWA)
     side.appendChild(el('a', {
@@ -1386,7 +1386,7 @@
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'tenthtone-analytics-' + days + 'd.csv';
+      a.download = 'flyp-analytics-' + days + 'd.csv';
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     };

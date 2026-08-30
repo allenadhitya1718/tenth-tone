@@ -79,8 +79,13 @@ window.H = (function () {
   // === Modern, Crisp Icon Set (Feather / Lucide Style) ===
   const icons = {
     // Brand Logos
-    logo: '<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ttGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8b5bff"/><stop offset="50%" stop-color="#6c2bd9"/><stop offset="100%" stop-color="#ff0080"/></linearGradient><linearGradient id="ttGlow" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#00f2fe"/><stop offset="100%" stop-color="#4facfe"/></linearGradient><filter id="ttShadow" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#6c2bd9" flood-opacity="0.4"/></filter></defs><rect width="100" height="100" rx="28" fill="url(#ttGrad)" filter="url(#ttShadow)"/><path d="M35 30H65M50 30V72M50 72C50 77.5 45 81 39 81C33 81 29 76.5 29 71C29 65.5 34 61 40 61C43.5 61 46.5 62.5 48.5 65" stroke="#ffffff" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="68" cy="42" r="4.5" fill="url(#ttGlow)"/></svg>',
-    logoMark: '<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ttMiniGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8b5bff"/><stop offset="100%" stop-color="#6c2bd9"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#ttMiniGrad)"/><path d="M10 9H22M16 9V23M16 23C16 25 14 26 12 26C10 26 9 24.5 9 23C9 21.5 10.5 20 12.5 20C13.8 20 15 20.6 15.6 21.5" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    // The FLYP wordmark. Was a hand-drawn SVG of a purple gradient square
+    // with a letter T — the old Tenth Tone mark. The real logo has glows and
+    // a waveform that cannot sensibly be redrawn as SVG paths, so it is the
+    // artwork itself. Sized by whatever container it is dropped into.
+    logo: '<img src="icons/flyp-logo-wide.png" alt="FLYP" style="width:100%;height:auto;display:block;border-radius:12px">',
+    // Square mark, for tight spaces like the admin header.
+    logoMark: '<img src="icons/flyp-mark.png" alt="FLYP" style="width:100%;height:100%;display:block;border-radius:8px;object-fit:cover">',
 
     // Navigation & Primary Actions
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
@@ -251,7 +256,7 @@ window.H = (function () {
   ];
 
   function avatarColors(key) {
-    const k = String(key || '').trim().toLowerCase() || 'tenthtone';
+    const k = String(key || '').trim().toLowerCase() || 'flyp';
     let h = 5381;
     for (let i = 0; i < k.length; i++) h = (((h << 5) + h + k.charCodeAt(i)) >>> 0);
     return AVATAR_COLORS[h % AVATAR_COLORS.length];

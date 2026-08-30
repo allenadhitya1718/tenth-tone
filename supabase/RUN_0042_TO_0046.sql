@@ -1,5 +1,5 @@
 -- =============================================================
---  Tenth Tone - RUN THIS WHOLE FILE ONCE in the Supabase SQL Editor
+--  FLYP - RUN THIS WHOLE FILE ONCE in the Supabase SQL Editor
 --
 --  Combines migrations 0042 through 0046, in dependency order:
 --    0042  message replies + reactions

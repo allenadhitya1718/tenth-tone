@@ -99048,7 +99048,7 @@ s=A.yI().$2$fontSize$fontWeight(15,B.aq)
 s=A.SW(q,q,q,q,q,q,q,q,q,B.ap,q,B.Ir,q,q,new A.bL(A.bk(12),B.n),B.pb,q,q,s,q)
 r=A.aJz(q,q,q,q,q,q,q,q,q,B.ap,q,q,q,q,q,q,q,q,A.yI().$1$fontWeight(B.bO),q)
 r=p.aqY(m,B.Kg,n,B.O1,new A.uB(l),A.aOa(new A.i7(4,A.bk(12),B.n),q,B.OT,q,B.bM,!0,new A.i7(4,A.bk(12),B.pb),A.yI().$2$color$fontSize(B.MD,14),A.yI().$2$color$fontSize(B.aH,13)),new A.vD(s),B.e,A.aQ2(q,q,q,B.a5,B.of,q,A.yI().$2$color$fontSize(B.e,13.5),q,q,q,q,q,new A.bL(A.bk(999),B.n),q),new A.wF(r),o)
-return new A.vn($.aWx(),"Tenth Tone",r,B.yr,B.a0k,B.a0G,!1,q)}}
+return new A.vn($.aWx(),"FLYP",r,B.yr,B.a0k,B.a0G,!1,q)}}
 A.aG7.prototype={
 $2(a,b){return B.a9L},
 $S:632}
@@ -106650,7 +106650,7 @@ B.afA=new A.aE("\u062d\u0641\u0638 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u
 B.afB=new A.aE("\u0627\u0644\u0623\u0635\u062f\u0642\u0627\u0621",null,null,null,null,null,null,null,null)
 B.afC=new A.aE("\u0625\u0646\u0634\u0627\u0621 \u062d\u0633\u0627\u0628 \u062c\u062f\u064a\u062f",null,B.ot,null,null,null,null,null,null)
 B.afE=new A.aE("\u0627\u0644\u0639\u0631\u0628\u064a\u0629",null,B.du,null,null,null,null,null,null)
-B.afG=new A.aE("\u0627\u0646\u0636\u0645 \u0625\u0644\u0649 Tenth Tone",null,B.kK,null,null,null,null,null,null)
+B.afG=new A.aE("\u0627\u0646\u0636\u0645 \u0625\u0644\u0649 FLYP",null,B.kK,null,null,null,null,null,null)
 B.afH=new A.aE("\u062a\u0633\u062c\u064a\u0644",null,null,null,null,null,null,null,null)
 B.af2=new A.j(!0,B.e,null,null,null,null,16,B.aI,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
 B.afJ=new A.aE("\u0627\u0644\u0647\u062f\u0627\u064a\u0627",null,B.af2,null,null,null,null,null,null)
@@ -106665,7 +106665,7 @@ B.afM=new A.aE("\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0
 B.afN=new A.aE("\u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644",null,null,null,null,null,null,null,null)
 B.afO=new A.aE("\u0633\u062c\u0651\u0644 \u062f\u062e\u0648\u0644\u0643 \u0644\u0644\u0645\u062a\u0627\u0628\u0639\u0629",null,B.du,B.bV,null,null,null,null,null)
 B.acO=new A.j(!0,B.e,null,null,null,null,28,B.aI,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
-B.afQ=new A.aE("Tenth Tone",null,B.acO,null,null,null,null,null,null)
+B.afQ=new A.aE("FLYP",null,B.acO,null,null,null,null,null,null)
 B.afR=new A.aE("Go to home page",null,B.fq,null,null,null,null,null,null)
 B.afS=new A.aE("\u0627\u0644\u0646\u0628\u0630\u0629",null,B.oq,null,null,null,null,null,null)
 B.afU=new A.aE("\u0628\u062b\u0648\u062b \u0645\u0628\u0627\u0634\u0631\u0629",null,null,null,null,null,null,null,null)

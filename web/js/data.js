@@ -1,4 +1,4 @@
-/* === Mock data store for Tenth Tone === */
+/* === Mock data store for FLYP === */
 window.DB = (function () {
   // Diverse, high quality realistic avatar URLs
   const AVATARS = [
@@ -134,7 +134,7 @@ window.DB = (function () {
   ];
 
   const MUSIC = [
-    'الأصلي - Tenth Tone Sound 🎵',
+    'الأصلي - FLYP Sound 🎵',
     'لحن الغروب - سارة الشمري 🎻',
     'نبضات الحماس - أحمد الدوسري ⚡',
     'أجواء ليلية - محمد القحطاني 🌙',
@@ -166,7 +166,7 @@ window.DB = (function () {
       user: me,
       bg: VIDEO_BG[0],
       thumbnail: THUMBNAILS[0],
-      desc: 'أول فيديو لي على Tenth Tone! مرحبًا بالجميع 🥳✨ #welcome',
+      desc: 'أول فيديو لي على FLYP! مرحبًا بالجميع 🥳✨ #welcome',
       music: MUSIC[0],
       likes: 14500,
       comments: 630,
@@ -333,7 +333,7 @@ window.DB = (function () {
     { id: 'n5', type: 'like', user: users[4], text: 'و 42 آخرون أعجبوا بتعليقك الأخير', time: 'منذ ساعة' },
     { id: 'n6', type: 'mention', user: users[5], text: 'أشار إليك في فيديو: "شوفوا الإبداع هنا @abdulrahman"', time: 'منذ 3 ساعات' },
     { id: 'n7', type: 'follow', user: users[6], text: 'بدأ بمتابعة حسابك', time: 'أمس' },
-    { id: 'n8', type: 'system', user: { name: 'فريق Tenth Tone', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=80' }, text: 'تهانينا! وصل حسابك إلى 50,000 مشاهدة هذا الأسبوع 🎉', time: 'منذ يومين' },
+    { id: 'n8', type: 'system', user: { name: 'فريق FLYP', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=80' }, text: 'تهانينا! وصل حسابك إلى 50,000 مشاهدة هذا الأسبوع 🎉', time: 'منذ يومين' },
     { id: 'n9', type: 'system', user: { name: 'مركز الأمان', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=80' }, text: 'تم توثيق وتأمين حسابك بنجاح ✅', time: 'منذ 4 أيام' },
   ];
 
@@ -376,7 +376,7 @@ window.DB = (function () {
 
   // Sounds library for creation & discovery
   const sounds = [
-    { id: 's1', title: 'الأصلي - Tenth Tone Wave', author_name: 'Tenth Tone Studio', duration: 30, usage_count: 142000 },
+    { id: 's1', title: 'الأصلي - FLYP Wave', author_name: 'FLYP Studio', duration: 30, usage_count: 142000 },
     { id: 's2', title: 'إيقاع شرقي حماسي', author_name: 'أحمد الدوسري', duration: 45, usage_count: 98000 },
     { id: 's3', title: 'أوتار هادئة للاسترخاء', author_name: 'سارة الشمري', duration: 60, usage_count: 76000 },
     { id: 's4', title: 'نبض الصحراء 2026', author_name: 'محمد القحطاني', duration: 25, usage_count: 54000 },

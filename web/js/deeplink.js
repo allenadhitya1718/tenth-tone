@@ -3,9 +3,9 @@
  * friend opens the native app on that exact screen instead of a browser.
  *
  * Canonical link formats (all served from the site root):
- *   https://tenthtone.app/v/<videoId>    → the video, in the feed
- *   https://tenthtone.app/u/<userId>     → a user's profile
- *   https://tenthtone.app/live/<liveId>  → a live stream
+ *   https://flyp-sa.com/v/<videoId>    → the video, in the feed
+ *   https://flyp-sa.com/u/<userId>     → a user's profile
+ *   https://flyp-sa.com/live/<liveId>  → a live stream
  *
  * Three entry paths are handled:
  *   1. Native app already running  → Capacitor 'appUrlOpen' event
@@ -20,9 +20,9 @@
  */
 window.DeepLink = (function () {
 
-  const DOMAIN = 'tenthtone.app';
+  const DOMAIN = 'flyp-sa.com';
   const ORIGIN = 'https://' + DOMAIN;
-  const SCHEME = 'tenthtone'; // custom-scheme fallback: tenthtone://v/<id>
+  const SCHEME = 'flyp'; // custom-scheme fallback: flyp://v/<id>
 
   // Clean web path → in-app hash route.
   const PATH_ROUTES = [
@@ -37,14 +37,14 @@ window.DeepLink = (function () {
   function liveLink(id)    { return ORIGIN + '/live/' + encodeURIComponent(id); }
 
   // ── Resolving incoming links ──
-  // Accepts a full URL (https://… or tenthtone://…) or a bare path, and
+  // Accepts a full URL (https://… or flyp://…) or a bare path, and
   // returns the matching in-app route, or null if it isn't a deep link.
   function routeForUrl(url) {
     if (!url) return null;
     let path;
     try {
       if (url.indexOf(SCHEME + '://') === 0) {
-        // tenthtone://v/123 — host is the first segment, so re-prefix it
+        // flyp://v/123 — host is the first segment, so re-prefix it
         path = '/' + url.slice((SCHEME + '://').length);
       } else if (/^https?:\/\//i.test(url)) {
         const u = new URL(url);

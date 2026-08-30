@@ -3,7 +3,7 @@
 -- a fresh demo doesn't show empty screens.
 --
 -- Run this in Supabase SQL editor AFTER you have at least one
--- user (preferably khaled@tenthtone.app from earlier).
+-- user (preferably khaled@flyp-sa.com from earlier).
 --
 -- Idempotent — safe to re-run; uses on conflict do nothing.
 -- =============================================================

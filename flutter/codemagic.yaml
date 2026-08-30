@@ -17,14 +17,14 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
     integrations:
-      app_store_connect: tenth_tone_key   # Set up once in Codemagic UI under Integrations
+      app_store_connect: flyp_key   # Set up once in Codemagic UI under Integrations
     environment:
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.tenthtone.tenthTone
+        bundle_identifier: com.flyp.app
       vars:
         APP_STORE_APP_ID: $APP_STORE_APP_ID
-        BUNDLE_ID: 'com.tenthtone.tenthTone'
+        BUNDLE_ID: 'com.flyp.app'
       flutter: stable
       xcode: latest
       cocoapods: default

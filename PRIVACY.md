@@ -1,8 +1,8 @@
-# Privacy Policy — Tenth Tone
+# Privacy Policy — FLYP
 
 **Last updated:** 2026-05-05
 
-This Privacy Policy describes how Tenth Tone ("we," "our," or "the app") collects, uses, and shares information when you use the Tenth Tone mobile application or website.
+This Privacy Policy describes how FLYP ("we," "our," or "the app") collects, uses, and shares information when you use the FLYP mobile application or website.
 
 ## Information we collect
 
@@ -51,7 +51,7 @@ You have the right to:
 - Export your data
 - Object to processing
 
-For requests, email **privacy@tenthtone.app**.
+For requests, email **privacy@flyp-sa.com**.
 
 ## Data retention
 
@@ -66,7 +66,7 @@ Data is encrypted in transit (TLS 1.2+) and at rest (AES-256). We use industry-s
 
 ## Children
 
-Tenth Tone is not directed at children under 13 (or under 16 in EU/EEA). If we learn we have collected data from such a child, we delete it.
+FLYP is not directed at children under 13 (or under 16 in EU/EEA). If we learn we have collected data from such a child, we delete it.
 
 ## International transfers
 
@@ -78,7 +78,7 @@ We will post any changes here and update the "Last updated" date. Material chang
 
 ## Contact
 
-- Email: **privacy@tenthtone.app**
-- Postal: Tenth Tone, [your address]
+- Email: **privacy@flyp-sa.com**
+- Postal: FLYP, [your address]
 
 This policy is governed by the laws of [your jurisdiction].

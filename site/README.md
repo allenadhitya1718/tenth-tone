@@ -1,4 +1,4 @@
-# Tenth Tone marketing site
+# FLYP marketing site
 
 Plain HTML, one stylesheet, one script. No build step needed to deploy. Upload the
 folder as-is to any static host (Cloudflare Pages, Netlify, Hostinger, GitHub Pages).
@@ -49,7 +49,7 @@ var STORE = {
 While a value is empty its button reads "Coming soon" and does not navigate, so the
 page never carries a dead link. Fill one in and that button goes live immediately.
 
-Also update the domain in `robots.txt` and `sitemap.xml` (currently `tenthtone.com`).
+Also update the domain in `robots.txt` and `sitemap.xml` (currently `flyp.com`).
 
 ## Images
 

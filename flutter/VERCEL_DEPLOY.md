@@ -1,4 +1,4 @@
-# Deploy Flutter web to Vercel — Tenth Tone
+# Deploy Flutter web to Vercel — FLYP
 
 The Flutter app builds to `build/web/`. Vercel doesn't have a Flutter SDK, so you build locally and Vercel just serves the output.
 
@@ -9,7 +9,7 @@ The Flutter app builds to `build/web/`. Vercel doesn't have a Flutter SDK, so yo
 export PATH="/c/src/flutter/bin:$PATH"   # Git Bash
 # or in PowerShell: $env:PATH = "C:\src\flutter\bin;$env:PATH"
 
-cd C:\Users\Syed\Desktop\tenth_tone_flutter
+cd C:\Users\Syed\Desktop\flyp_flutter
 flutter build web --release
 ```
 
@@ -19,7 +19,7 @@ That writes the deployable site to `build/web/`.
 
 1. Zip the `build/web/` folder (NOT the project root).
 2. Go to **https://vercel.com/new** → drop the zip.
-3. Project name: `tenth-tone-flutter`
+3. Project name: `flyp-flutter`
 4. Framework Preset: **Other**
 5. **Deploy**.
 
@@ -28,13 +28,13 @@ Done. URL is HTTPS — installable as a PWA on iPhone.
 ## Path 2 — CLI
 
 ```bash
-cd C:\Users\Syed\Desktop\tenth_tone_flutter
+cd C:\Users\Syed\Desktop\flyp_flutter
 npx vercel
 ```
 
 Prompts:
 1. **Set up and deploy?** → **Y**
-2. **Project name?** → `tenth-tone-flutter`
+2. **Project name?** → `flyp-flutter`
 3. **Directory?** → `./` (vercel.json points to `build/web` already)
 4. **Modify settings?** → **N**
 
@@ -81,7 +81,7 @@ Slow (Flutter SDK downloads each build) but fully automated.
 
 ## URLs after deployment
 
-`https://tenth-tone-flutter-xxxx.vercel.app`
+`https://flyp-flutter-xxxx.vercel.app`
 
 Hash routes work too:
 - `/#/home` → home feed

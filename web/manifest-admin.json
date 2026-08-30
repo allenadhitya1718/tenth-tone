@@ -1,7 +1,7 @@
 {
-  "name": "Tenth Tone — لوحة التحكم",
+  "name": "FLYP — لوحة التحكم",
   "short_name": "TT Admin",
-  "description": "لوحة إدارة منصة Tenth Tone",
+  "description": "لوحة إدارة منصة FLYP",
   "lang": "ar",
   "dir": "rtl",
   "start_url": "/admin.html#/dashboard",

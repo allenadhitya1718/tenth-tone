@@ -8,10 +8,10 @@ real developer accounts and the live domain, so they're listed here.
 
 | Link | Opens |
 |---|---|
-| `https://tenthtone.app/v/<videoId>` | that video, pinned to the top of the feed |
-| `https://tenthtone.app/u/<userId>` | that user's profile |
-| `https://tenthtone.app/live/<liveId>` | that live stream |
-| `tenthtone://v/<videoId>` | custom-scheme fallback (no domain verification needed) |
+| `https://flyp-sa.com/v/<videoId>` | that video, pinned to the top of the feed |
+| `https://flyp-sa.com/u/<userId>` | that user's profile |
+| `https://flyp-sa.com/live/<liveId>` | that live stream |
+| `flyp://v/<videoId>` | custom-scheme fallback (no domain verification needed) |
 
 Video links are public — a signed-out person who taps one still sees the
 video, so a shared link is never a dead end.
@@ -32,11 +32,11 @@ video, so a shared link is never a dead end.
 
 ### 1. Host the association files at the domain root
 
-Both must be reachable at the **root** of `tenthtone.app`, over HTTPS,
+Both must be reachable at the **root** of `flyp-sa.com`, over HTTPS,
 with no redirects:
 
-- `https://tenthtone.app/.well-known/assetlinks.json`
-- `https://tenthtone.app/.well-known/apple-app-site-association`
+- `https://flyp-sa.com/.well-known/assetlinks.json`
+- `https://flyp-sa.com/.well-known/apple-app-site-association`
 
 The Apple file has **no `.json` extension** and must be served as
 `application/json`. On Netlify, add to `netlify.toml`:
@@ -73,31 +73,31 @@ Paste the `SHA256:` value into `sha256_cert_fingerprints`.
 Verify after deploying:
 
 ```bash
-adb shell pm verify-app-links --re-verify com.tenthtone.tenthTone
+adb shell pm verify-app-links --re-verify com.flyp.app
 ```
 
 ### 3. iOS — Team ID + Associated Domains
 
 1. In `web/.well-known/apple-app-site-association`, replace
    `REPLACE_WITH_TEAMID` with your Apple Developer Team ID, giving
-   e.g. `A1B2C3D4E5.com.tenthtone.tenthTone`.
+   e.g. `A1B2C3D4E5.com.flyp.app`.
 2. The `ios/` project doesn't exist in the repo yet — create it with
    `npx cap add ios`, then in Xcode: target → Signing & Capabilities →
    **+ Capability** → **Associated Domains**, and add:
-   - `applinks:tenthtone.app`
-   - `applinks:www.tenthtone.app`
+   - `applinks:flyp-sa.com`
+   - `applinks:www.flyp-sa.com`
 
 ### 4. Test
 
-- **Android:** `adb shell am start -a android.intent.action.VIEW -d "https://tenthtone.app/v/SOME_ID"`
+- **Android:** `adb shell am start -a android.intent.action.VIEW -d "https://flyp-sa.com/v/SOME_ID"`
 - **iOS:** send yourself the link in Notes/Messages and tap it (typing it
   into Safari's address bar does *not* trigger a Universal Link).
-- **Web:** open `https://tenthtone.app/v/SOME_ID` in a desktop browser —
+- **Web:** open `https://flyp-sa.com/v/SOME_ID` in a desktop browser —
   it should land on that video in the PWA.
 
 ## Note on the domain
 
-`tenthtone.app` is taken from the support/privacy addresses already used
+`flyp-sa.com` is taken from the support/privacy addresses already used
 in the app. If the real domain differs, update it in **three** places:
 `web/js/deeplink.js` (`DOMAIN`), the `android:host` values in
 `AndroidManifest.xml`, and the iOS Associated Domains entries.

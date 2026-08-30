@@ -1,6 +1,6 @@
 # How to restore this backup
 
-This zip contains the **complete Tenth Tone project** as of 2026-05-11. Everything needed to recover, deploy, or hand off.
+This zip contains the **complete FLYP project** as of 2026-05-11. Everything needed to recover, deploy, or hand off.
 
 ## What's inside
 
@@ -94,7 +94,7 @@ This is always the most up-to-date source.
 - **Supabase:** https://supabase.com/dashboard/project/qnzgxihlrwanywndcmpf
 
 ### Demo credentials
-- **Admin 1:** `khaled@tenthtone.app` / `khaled1234`
+- **Admin 1:** `khaled@flyp-sa.com` / `khaled1234`
 - **Admin 2:** `mohamed_syed2@icloud.com` / `Mohamed1234`
 
 ### What's wired (everything except)

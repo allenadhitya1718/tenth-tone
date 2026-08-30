@@ -4,7 +4,7 @@ This repo is set up to build and upload to TestFlight from the cloud — **no Ma
 
 ## Bundle ID
 
-Already configured: **`com.tenthtone.tenthTone`**
+Already configured: **`com.flyp.app`**
 
 If you want to change it, edit:
 1. `ios/Runner.xcodeproj/project.pbxproj` (5 occurrences of `PRODUCT_BUNDLE_IDENTIFIER`)
@@ -31,10 +31,10 @@ These can't be automated:
 2. **Apps** → **+** → **New App**
 3. Fill in:
    - **Platform:** iOS
-   - **Name:** Tenth Tone (or your chosen name)
+   - **Name:** FLYP (or your chosen name)
    - **Primary language:** Arabic
-   - **Bundle ID:** `com.tenthtone.tenthTone` (must match exactly)
-   - **SKU:** any unique string (e.g. `tenthtone-001`)
+   - **Bundle ID:** `com.flyp.app` (must match exactly)
+   - **SKU:** any unique string (e.g. `flyp-001`)
 4. Click **Create**
 5. Note the **App ID** (numeric, in the URL after creation)
 
@@ -108,7 +108,7 @@ This auto-builds, signs, uploads to TestFlight.
 1. Sign up at https://codemagic.io with your GitHub/GitLab/Bitbucket account.
 2. **Add application** → select your repo.
 3. Codemagic auto-detects the `codemagic.yaml` in the root.
-4. **Teams** → **Integrations** → **Apple Developer Portal** → **Connect** → upload the .p8 file + paste Key ID + Issuer ID. Name it `tenth_tone_key` (matches the `integrations:` key in `codemagic.yaml`).
+4. **Teams** → **Integrations** → **Apple Developer Portal** → **Connect** → upload the .p8 file + paste Key ID + Issuer ID. Name it `flyp_key` (matches the `integrations:` key in `codemagic.yaml`).
 5. **Workflow settings** → add environment variable `APP_STORE_APP_ID` = your numeric App ID.
 6. Edit `codemagic.yaml` line `recipients:` to your email.
 
@@ -153,7 +153,7 @@ You can iterate on TestFlight all you want without these — TestFlight reviews 
 ## Common errors & fixes
 
 **"No matching profiles found"**
-→ Bundle ID in App Store Connect doesn't match `com.tenthtone.tenthTone`. Fix one or the other.
+→ Bundle ID in App Store Connect doesn't match `com.flyp.app`. Fix one or the other.
 
 **"Invalid Key ID" / "Authentication failed"**
 → Double-check the .p8 file was base64'd correctly (no line breaks, no extra whitespace).
@@ -172,7 +172,7 @@ You can iterate on TestFlight all you want without these — TestFlight reviews 
 ## Local Mac builds (if you ever get a Mac)
 
 ```bash
-cd tenth_tone_flutter
+cd flyp_flutter
 flutter pub get
 flutter precache --ios
 
@@ -181,7 +181,7 @@ open ios/Runner.xcworkspace
 # In Xcode: Runner target → Signing & Capabilities → check "Automatically manage signing" → pick your team
 
 flutter build ipa --release
-# IPA at build/ios/ipa/tenth_tone.ipa
+# IPA at build/ios/ipa/flyp.ipa
 
 # Or open Xcode → Product → Archive → Distribute App → App Store Connect → Upload
 ```

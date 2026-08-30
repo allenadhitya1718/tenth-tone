@@ -1,4 +1,4 @@
-/* === Tenth Tone — bilingual (Arabic ⇄ English) layer ===
+/* === FLYP — bilingual (Arabic ⇄ English) layer ===
  *
  * The app is authored in Arabic. This module retrofits English on top
  * WITHOUT touching every view: after each render it walks the DOM and
@@ -822,7 +822,7 @@
 
     // Empty states — feed, profile tabs, saved, contacts
     'لا توجد فيديوهات بعد': 'No videos yet',
-    'كن أول من ينشر فيديو على تِنث تون': 'Be the first to post a video on Tenth Tone',
+    'كن أول من ينشر فيديو على تِنث تون': 'Be the first to post a video on FLYP',
     'إنشاء فيديو': 'Create video',
     'لم تنشر أي فيديو بعد': "You haven't posted any videos yet",
     'أنشئ أول فيديو لك وشاركه مع العالم': 'Create your first video and share it with the world',
@@ -1339,14 +1339,14 @@
     'قهوة الصباح وجلسة هادئة تروّق البال ☕🌤️ صباحكم سعادة #صباح_الخير': 'Morning coffee and a quiet relaxing session ☕🌤️ Good morning and happiness #goodmorning',
     'مغامرة التسلق بين جبال طويق الساحرة ⛰️🧗‍♂️ #مغامرات #السعودية': 'Rock climbing adventure among the magical Tuwaiq mountains ⛰️🧗‍♂️ #adventures #SaudiArabia',
 
-    'أول فيديو لي على Tenth Tone! مرحبًا بالجميع 🥳✨ #welcome': 'My first video on Tenth Tone! Hello everyone 🥳✨ #welcome',
+    'أول فيديو لي على FLYP! مرحبًا بالجميع 🥳✨ #welcome': 'My first video on FLYP! Hello everyone 🥳✨ #welcome',
     'لقطات من جولتي في وادي حنيفة اليوم 🌿🌤️ #طبيعة': 'Clips from my tour in Wadi Hanifa today 🌿🌤️ #nature',
     'جلسة تصوير احترافية في الرياض القديمة 📸🏛️ #تصوير': 'Professional photoshoot in old Riyadh 📸🏛️ #photography',
     'أجمل إطلالة لغروب الشمس في جبال طويق 🌄✨ #السعودية': 'The most beautiful sunset view at Tuwaiq mountains 🌄✨ #SaudiArabia',
     'عزف حي لأغنية الموسم في البوليفارد 🎵🔥 #موسيقى': 'Live performance of the season’s song at the Boulevard 🎵🔥 #music',
     'تحدي الطبخ السريع: تحضير طبق شرقي في دقيقة واحدة! 🍳😋 #طبخ': 'Fast cooking challenge: Making an oriental dish in one minute! 🍳😋 #cooking',
 
-    'الأصلي - Tenth Tone Sound 🎵': 'Original - Tenth Tone Sound 🎵',
+    'الأصلي - FLYP Sound 🎵': 'Original - FLYP Sound 🎵',
     'لحن الغروب - سارة الشمري 🎻': 'Sunset Melody - Sarah Alshammari 🎻',
     'نبضات الحماس - أحمد الدوسري ⚡': 'Enthusiastic Beats - Ahmed Aldosari ⚡',
     'أجواء ليلية - محمد القحطاني 🌙': 'Night Vibes - Mohammed Alqahtani 🌙',
@@ -1383,7 +1383,7 @@
     'و 42 آخرون أعجبوا بتعليقك الأخير': 'and 42 others liked your latest comment',
     'أشار إليك في فيديو: "شوفوا الإبداع هنا @abdulrahman"': 'mentioned you in a video: "Look at the creativity here @abdulrahman"',
     
-    'فريق Tenth Tone': 'Tenth Tone Team',
+    'فريق FLYP': 'FLYP Team',
     'مركز الأمان': 'Security Center',
     'تهانينا! وصل حسابك إلى 50,000 مشاهدة هذا الأسبوع 🎉': 'Congratulations! Your account reached 50,000 views this week 🎉',
     'تم توثيق وتأمين حسابك بنجاح ✅': 'Your account has been successfully verified and secured ✅',
@@ -1438,8 +1438,8 @@
     '6.5M مشاهدة': '6.5M views',
     '4.9M مشاهدة': '4.9M views',
 
-    'الأصلي - Tenth Tone Wave': 'Original - Tenth Tone Wave',
-    'Tenth Tone Studio': 'Tenth Tone Studio',
+    'الأصلي - FLYP Wave': 'Original - FLYP Wave',
+    'FLYP Studio': 'FLYP Studio',
     'إيقاع شرقي حماسي': 'Enthusiastic Oriental Rhythm',
     'أوتار هادئة للاسترخاء': 'Calm Strings for Relaxation',
     'نبض الصحراء 2026': 'Desert Pulse 2026',
@@ -1549,7 +1549,7 @@
     
     // Additional Discover / Profile / Feed missing translations
     'ليس لديك حساب؟ ': "Don't have an account? ",
-    'انضم إلى Tenth Tone': 'Join Tenth Tone',
+    'انضم إلى FLYP': 'Join FLYP',
     'لم يصلك الرمز؟ ': "Didn't get the code? ",
     'صُنّاع محتوى مميزون': 'Featured creators',
     'جميع الحسابات المقترحة': 'All suggested accounts',

@@ -64,8 +64,8 @@ jobs:
           BUILD_NUM=$(date +%s | tail -c 8)
           echo "VERSION_CODE=$BUILD_NUM" >> $GITHUB_ENV
           sed -i "s/versionCode 1/versionCode $BUILD_NUM/" android/app/build.gradle || true
-          sed -i 's|<string name="app_name">.*</string>|<string name="app_name">Tenth Tone</string>|' android/app/src/main/res/values/strings.xml || true
-          sed -i 's|<string name="title_activity_main">.*</string>|<string name="title_activity_main">Tenth Tone</string>|' android/app/src/main/res/values/strings.xml || true
+          sed -i 's|<string name="app_name">.*</string>|<string name="app_name">FLYP</string>|' android/app/src/main/res/values/strings.xml || true
+          sed -i 's|<string name="title_activity_main">.*</string>|<string name="title_activity_main">FLYP</string>|' android/app/src/main/res/values/strings.xml || true
           # Allow camera, mic, location, internet — Capacitor adds most by default but be explicit
           PERM_FILE=android/app/src/main/AndroidManifest.xml
           if ! grep -q "android.permission.RECORD_AUDIO" $PERM_FILE; then
@@ -148,7 +148,7 @@ jobs:
       - name: Upload debug APK (every build)
         uses: actions/upload-artifact@v4
         with:
-          name: tenth-tone-debug-apk
+          name: flyp-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
 
@@ -156,7 +156,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.have_signing == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: tenth-tone-release-aab-${{ env.VERSION_CODE }}
+          name: flyp-release-aab-${{ env.VERSION_CODE }}
           path: android/app/build/outputs/bundle/release/*.aab
           retention-days: 90
 
@@ -164,7 +164,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.have_signing == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: tenth-tone-release-apk-${{ env.VERSION_CODE }}
+          name: flyp-release-apk-${{ env.VERSION_CODE }}
           path: android/app/build/outputs/apk/release/*.apk
           retention-days: 90
 
@@ -172,7 +172,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.have_signing == 'false'
         uses: actions/upload-artifact@v4
         with:
-          name: tenth-tone-release-apk-unsigned
+          name: flyp-release-apk-unsigned
           path: android/app/build/outputs/apk/release/*.apk
           retention-days: 30
 

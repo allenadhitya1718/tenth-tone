@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""Writes the Tenth Tone marketing site. Each output file is standalone HTML."""
+"""Writes the FLYP marketing site. Each output file is standalone HTML."""
 import io, os, re
 
-OUT = r'C:\Users\admin\OneDrive\Desktop\TenthTone-source-v1.1\Tiktok\site'
+OUT = r'C:\Users\admin\OneDrive\Desktop\FLYP-source-v1.1\Tiktok\site'
 CSSV = 8
 JSV = 3
 IMGV = 2  # bump whenever a photo in assets/ is replaced
@@ -50,7 +50,7 @@ def nav(here):
   <div class="wrap nav-in">
     <a class="brand" href="index.html">
       <img src="assets/app-icon.png" alt="" width="34" height="34">
-      <span>Tenth Tone</span>
+      <span>FLYP</span>
     </a>
 
     <nav class="nav-links" aria-label="Primary">
@@ -88,7 +88,7 @@ def footer():
       <div>
         <a class="brand" href="index.html">
           <img src="assets/app-icon.png" alt="" width="28" height="28">
-          <span>Tenth Tone</span>
+          <span>FLYP</span>
         </a>
         <p class="foot-about" %s>تطبيق فيديوهات قصيرة عربي. شاهد، صوّر، وابدأ بثًا مباشرًا مع من تحب.</p>
       </div>
@@ -96,7 +96,7 @@ def footer():
     </div>
 
     <div class="foot-bottom">
-      <span>&copy; 2026 Tenth Tone</span>
+      <span>&copy; 2026 FLYP</span>
       <span class="spacer"></span>
       <div class="lang" role="group" aria-label="Language">
         <button type="button" data-lang="ar" class="on">AR</button>
@@ -124,7 +124,7 @@ def page(filename, title_ar, title_en, desc_ar, desc_en, content, here=''):
 <meta name="tt-desc-en" content="%(den)s">
 
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Tenth Tone">
+<meta property="og:site_name" content="FLYP">
 <meta property="og:title" content="%(tar)s">
 <meta property="og:description" content="%(dar)s">
 <meta property="og:image" content="assets/app-icon.png">

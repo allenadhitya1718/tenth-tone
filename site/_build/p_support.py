@@ -188,8 +188,8 @@ SAFETY = head(u'مركز الأمان', 'Safety Centre',
 )
 
 page('safety.html', u'مركز الأمان', 'Safety Centre',
-     u'أدوات الأمان في Tenth Tone، ولأولياء الأمور، وماذا يحدث بعد البلاغ.',
-     'Safety tools in Tenth Tone, guidance for parents, and what happens after a report.',
+     u'أدوات الأمان في FLYP، ولأولياء الأمور، وماذا يحدث بعد البلاغ.',
+     'Safety tools in FLYP, guidance for parents, and what happens after a report.',
      SAFETY, here='safety.html')
 
 
@@ -298,8 +298,8 @@ HELP += u'''
     b1=t(u'تواصل معنا', 'Contact us'), b2=t(u'مركز الأمان', 'Safety centre'))
 
 page('help.html', u'مركز المساعدة', 'Help Centre',
-     u'أجوبة عن أكثر الأسئلة تكرارًا حول Tenth Tone.',
-     'Answers to the most common questions about Tenth Tone.',
+     u'أجوبة عن أكثر الأسئلة تكرارًا حول FLYP.',
+     'Answers to the most common questions about FLYP.',
      HELP, here='help.html')
 
 
@@ -347,7 +347,7 @@ CONTACT = head(u'تواصل معنا', 'Contact us',
         'We usually reply within two working days. Reports involving someone\'s safety, or a child\'s safety, are reviewed first and as fast as we can.'))
 
 page('contact.html', u'تواصل معنا', 'Contact us',
-     u'قنوات التواصل مع فريق Tenth Tone.', 'How to reach the Tenth Tone team.',
+     u'قنوات التواصل مع فريق FLYP.', 'How to reach the FLYP team.',
      CONTACT, here='contact.html')
 
 
@@ -361,7 +361,7 @@ ABOUT = head(u'من نحن', 'About us',
       <div class="row-copy">
         <h2 %(t1)s>لماذا بدأنا</h2>
         <p %(p1)s>معظم تطبيقات الفيديو القصير تُبنى بالإنجليزية أولًا ثم تُترجم. النتيجة واجهة لم تُصمَّم للعربية أصلًا، ونصوص تبدو غريبة، وميزات لا تناسب طريقة استخدام الناس هنا.</p>
-        <p %(p2)s style="margin-top:14px">Tenth Tone بُني للعربية من البداية: بخط عربي مقروء، وبكلمات كُتبت بالعربية لا مترجمة إليها. والإنجليزية موجودة بالكامل أيضًا لمن يفضّلها.</p>
+        <p %(p2)s style="margin-top:14px">FLYP بُني للعربية من البداية: بخط عربي مقروء، وبكلمات كُتبت بالعربية لا مترجمة إليها. والإنجليزية موجودة بالكامل أيضًا لمن يفضّلها.</p>
       </div>
       <div class="row-art">
         <figure class="shot" style="margin:0">
@@ -403,8 +403,8 @@ ABOUT = head(u'من نحن', 'About us',
     t1=t(u'لماذا بدأنا', 'Why we started'),
     p1=t(u'معظم تطبيقات الفيديو القصير تُبنى بالإنجليزية أولًا ثم تُترجم. النتيجة واجهة لم تُصمَّم للعربية أصلًا، ونصوص تبدو غريبة، وميزات لا تناسب طريقة استخدام الناس هنا.',
          'Most short video apps are built in English first and translated afterwards. The result is a layout that was never meant for Arabic, text that reads oddly, and features that do not match how people here actually use them.'),
-    p2=t(u'Tenth Tone بُني للعربية من البداية: بخط عربي مقروء، وبكلمات كُتبت بالعربية لا مترجمة إليها. والإنجليزية موجودة بالكامل أيضًا لمن يفضّلها.',
-         'Tenth Tone was built for Arabic from the start: a readable Arabic typeface, and words written in Arabic rather than translated into it. English is fully present too, for anyone who prefers it.'),
+    p2=t(u'FLYP بُني للعربية من البداية: بخط عربي مقروء، وبكلمات كُتبت بالعربية لا مترجمة إليها. والإنجليزية موجودة بالكامل أيضًا لمن يفضّلها.',
+         'FLYP was built for Arabic from the start: a readable Arabic typeface, and words written in Arabic rather than translated into it. English is fully present too, for anyone who prefers it.'),
     t2=t(u'ما نؤمن به', 'What we believe'),
     b1=t(u'الإعداد يجب أن يعمل', 'A setting has to do something'),
     v1=t(u'لا نضع زرًا لا يفعل شيئًا. كل مفتاح في الإعدادات له أثر حقيقي في التطبيق.',
@@ -430,8 +430,8 @@ ABOUT = head(u'من نحن', 'About us',
          'If you find something broken or missing, tell us from the contact page or inside the app. We read every report.'))
 
 page('about.html', u'من نحن', 'About us',
-     u'لماذا بُني Tenth Tone، وما نؤمن به، وأين نحن الآن.',
-     'Why Tenth Tone was built, what we believe, and where we are now.',
+     u'لماذا بُني FLYP، وما نؤمن به، وأين نحن الآن.',
+     'Why FLYP was built, what we believe, and where we are now.',
      ABOUT, here='about.html')
 
 print('support pages done')

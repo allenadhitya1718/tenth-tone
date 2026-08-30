@@ -1,16 +1,16 @@
 {
-  "appId": "com.tenthtone.tenthTone",
-  "appName": "Tenth Tone",
+  "appId": "com.flyp.app",
+  "appName": "FLYP",
   "webDir": "web",
   "bundledWebRuntime": false,
   "server": {
     "androidScheme": "https",
-    "iosScheme": "tenthtone",
+    "iosScheme": "flyp",
     "cleartext": false
   },
   "ios": {
     "contentInset": "always",
-    "scheme": "Tenth Tone",
+    "scheme": "FLYP",
     "limitsNavigationsToAppBoundDomains": false,
     "preferredContentMode": "mobile",
     "scrollEnabled": true,

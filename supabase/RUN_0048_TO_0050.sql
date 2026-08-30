@@ -1,5 +1,5 @@
 -- =============================================================
---  Tenth Tone - RUN THIS WHOLE FILE ONCE in the Supabase SQL Editor
+--  FLYP - RUN THIS WHOLE FILE ONCE in the Supabase SQL Editor
 --
 --  Migrations 0048, 0049 and 0050, in order. 0041-0047 are already applied.
 --

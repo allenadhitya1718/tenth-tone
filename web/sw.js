@@ -1,4 +1,4 @@
-/* === Tenth Tone Service Worker — DEV MODE (cache-bypass) === */
+/* === FLYP Service Worker — DEV MODE (cache-bypass) === */
 // This SW clears all caches and unregisters itself so the browser
 // always fetches fresh JS/CSS from the dev server.
 self.addEventListener('install', () => self.skipWaiting());

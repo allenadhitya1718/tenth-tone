@@ -1,6 +1,6 @@
-# Tenth Tone — Flutter
+# FLYP — Flutter
 
-Native Flutter rewrite of the Tenth Tone social video app. RTL Arabic, mobile-first, mock data (no backend).
+Native Flutter rewrite of the FLYP social video app. RTL Arabic, mobile-first, mock data (no backend).
 
 Targets: **iOS** · **Android** · **Web** (already builds).
 
@@ -19,7 +19,7 @@ $env:PATH = "C:\src\flutter\bin;$env:PATH"
 Then:
 
 ```bash
-cd C:\Users\Syed\Desktop\tenth_tone_flutter
+cd C:\Users\Syed\Desktop\flyp_flutter
 flutter pub get        # one-time, install deps
 flutter run -d chrome  # run on web (no extra setup)
 flutter run             # run on connected device or emulator
@@ -30,7 +30,7 @@ To make the PATH permanent on Windows: System Properties → Environment Variabl
 ## Web demo (already built)
 
 ```bash
-cd C:\Users\Syed\Desktop\tenth_tone_flutter\build\web
+cd C:\Users\Syed\Desktop\flyp_flutter\build\web
 python -m http.server 5600
 # → http://127.0.0.1:5600
 ```
@@ -126,7 +126,7 @@ Steps when you have Mac access:
 
 ```bash
 # On the Mac, after copying this repo
-cd tenth_tone_flutter
+cd flyp_flutter
 flutter pub get
 flutter precache --ios
 

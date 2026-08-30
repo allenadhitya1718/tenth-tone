@@ -1,6 +1,6 @@
 # Apple TestFlight Setup — Click-by-Click Checklist
 
-A focused, in-order checklist for getting **Tenth Tone** onto TestFlight for the first time. Each step shows the exact URL, the exact field to fill, and what to copy where.
+A focused, in-order checklist for getting **FLYP** onto TestFlight for the first time. Each step shows the exact URL, the exact field to fill, and what to copy where.
 
 Total time once Apple approval is complete: **~30 minutes of clicking + 20 minutes for CI build**.
 
@@ -57,10 +57,10 @@ Have these tools ready:
 | Field | Value |
 |---|---|
 | Platforms | ☑ **iOS** only (leave macOS / tvOS unchecked) |
-| Name | `Tenth Tone` |
+| Name | `FLYP` |
 | Primary Language | **Arabic** |
-| Bundle ID | Pick from dropdown — if `com.tenthtone.tenthTone` isn't listed, click **Register a new bundle ID** below the dropdown. **Must match `capacitor.config.json` exactly — case sensitive.** |
-| SKU | `tenthtone-ios-1` (any unique string; never shown to users) |
+| Bundle ID | Pick from dropdown — if `com.flyp.app` isn't listed, click **Register a new bundle ID** below the dropdown. **Must match `capacitor.config.json` exactly — case sensitive.** |
+| SKU | `flyp-ios-1` (any unique string; never shown to users) |
 | User Access | **Full Access** |
 
 5. Click **Create**
@@ -169,7 +169,7 @@ Or, alternatively, from the GitHub UI:
 3. While waiting, install the **TestFlight** app on your iPhone from the App Store (it's free, by Apple).
 4. In App Store Connect → TestFlight → **Internal Testing** → **+** → add your Apple ID email (the same one you signed in with)
 5. Apple sends an email invite within 1 minute. Open the TestFlight app on your iPhone → tap the invite link.
-6. The **Tenth Tone** card appears with **Install** button. Tap → 10-second install → tap **Open**.
+6. The **FLYP** card appears with **Install** button. Tap → 10-second install → tap **Open**.
 
 **Checkpoint:** ✅ The app launches with the purple splash screen, then loads your live feed. Native camera/mic prompts work. You can sign in with your demo account.
 
@@ -179,7 +179,7 @@ Or, alternatively, from the GitHub UI:
 
 | Symptom | Most likely cause | Fix |
 |---|---|---|
-| `xcodebuild: error: No profiles for 'com.tenthtone.tenthTone' were found` | Bundle ID in App Store Connect doesn't match `capacitor.config.json` | Re-check Step 2; the Bundle ID is case-sensitive |
+| `xcodebuild: error: No profiles for 'com.flyp.app' were found` | Bundle ID in App Store Connect doesn't match `capacitor.config.json` | Re-check Step 2; the Bundle ID is case-sensitive |
 | `Authentication failed because the password was incorrect or the user is locked` | Wrong Issuer ID or Key ID | Double-check Step 5 secrets — common to confuse Key ID with Issuer ID |
 | `Error: Could not find or use auto-linked library` | Capacitor plugin pod install flaked | Re-run the workflow (click "Re-run failed jobs") — usually transient |
 | `Invalid Code Signing Entitlements` | The app uses Push Notifications without a Push certificate | We listed the plugin but haven't requested push entitlement yet. Either: (a) remove push from `package.json` and re-tag, or (b) in App Store Connect → your app → enable Push Notifications capability. For first TestFlight, option (a) is faster. |
@@ -215,9 +215,9 @@ APP_STORE_CONNECT_KEY_ID       = 10-char Key ID from API Keys page
 APP_STORE_CONNECT_ISSUER_ID    = UUID Issuer ID (top of API Keys page)
 APP_STORE_CONNECT_KEY_BASE64   = base64 of the .p8 file (PowerShell command above)
 
-Bundle ID  = com.tenthtone.tenthTone   (must match capacitor.config.json exactly)
-SKU        = tenthtone-ios-1           (arbitrary; never shown to users)
-App Name   = Tenth Tone
+Bundle ID  = com.flyp.app   (must match capacitor.config.json exactly)
+SKU        = flyp-ios-1           (arbitrary; never shown to users)
+App Name   = FLYP
 Language   = Arabic
 ```
 

@@ -41,10 +41,10 @@ Apple's App Review (Guideline 4.2 — Minimum Functionality) rejects apps that a
 
 ### Register the app in App Store Connect
 1. https://appstoreconnect.apple.com → **Apps** → **+** → **New App**
-2. Platform: iOS · Name: **Tenth Tone** (or your chosen name)
+2. Platform: iOS · Name: **FLYP** (or your chosen name)
 3. Primary language: Arabic
-4. Bundle ID: `com.tenthtone.tenthTone` (must exactly match `capacitor.config.json`)
-5. SKU: any unique string (e.g. `tenthtone-001`)
+4. Bundle ID: `com.flyp.app` (must exactly match `capacitor.config.json`)
+5. SKU: any unique string (e.g. `flyp-001`)
 6. Note the numeric **App ID** from the URL after creation
 
 ### App Store Connect API Key
@@ -109,9 +109,9 @@ After a successful upload:
 2. Wait 5–30 min for Apple's processing
 3. **Internal Testing** → add yourself as a tester (no review required)
 4. Install **TestFlight** app on your iPhone from the App Store
-5. Open TestFlight → see Tenth Tone → install → launch
+5. Open TestFlight → see FLYP → install → launch
 
-The build appears as **"Tenth Tone"** with the purple **T** icon. It's a real native app — runs fullscreen, has native splash, camera works, etc.
+The build appears as **"FLYP"** with the purple **T** icon. It's a real native app — runs fullscreen, has native splash, camera works, etc.
 
 For external testing (up to 10,000 users): **External Testing** group → Apple does a brief review (~24h) → users join via public link.
 
@@ -122,7 +122,7 @@ For external testing (up to 10,000 users): **External Testing** group → Apple 
 When ready for the public store:
 1. App Store Connect → your app → **App Store** tab → **+ Version**
 2. Fill in:
-   - **App Name** (≤30 chars) — e.g. "Tenth Tone"
+   - **App Name** (≤30 chars) — e.g. "FLYP"
    - **Subtitle** (≤30 chars)
    - **Description** (long-form, up to 4000 chars)
    - **Keywords** (comma-separated, ≤100 chars)
@@ -135,7 +135,7 @@ When ready for the public store:
    - 6.5" (iPhone 11 Pro Max) — 1242×2688
    - 5.5" (iPhone 8 Plus) — 1242×2208
    - Take with **Xcode Simulator** (Hardware → Save Screen) or real device
-4. **Age Rating** — answer the questionnaire (Tenth Tone is likely 17+ given UGC + DMs)
+4. **Age Rating** — answer the questionnaire (FLYP is likely 17+ given UGC + DMs)
 5. **App Review Information**:
    - Test account: provide a real email + password Apple can use to log in
    - **Notes**: brief description of how to test the app

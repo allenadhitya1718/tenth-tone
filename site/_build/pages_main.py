@@ -147,7 +147,7 @@ def dl_cards(detail=False):
         <span class="dl-ico">%(globe)s</span>
         <span class="kicker" %(k3)s>المتصفح</span>
         <h3 %(h3)s>تطبيق الويب</h3>
-        <p %(p3)s>افتح Tenth Tone من المتصفح مباشرة دون تحميل، على الهاتف أو الحاسب.</p>
+        <p %(p3)s>افتح FLYP من المتصفح مباشرة دون تحميل، على الهاتف أو الحاسب.</p>
         <p class="req" %(r3)s>يعمل على Chrome و Safari و Edge</p>
         <span class="spacer"></span>
         <a class="btn btn-ghost" href="#" data-store="web"><span %(b3)s>افتح تطبيق الويب</span></a>
@@ -161,8 +161,8 @@ def dl_cards(detail=False):
              'Get the app from the App Store and start watching within a minute.'),
         p2=t(u'حمّل التطبيق من Google Play، ويعمل على الشبكات البطيئة أيضًا.',
              'Get the app from Google Play. It works on slow connections too.'),
-        p3=t(u'افتح Tenth Tone من المتصفح مباشرة دون تحميل، على الهاتف أو الحاسب.',
-             'Open Tenth Tone straight from your browser, on a phone or a computer.'),
+        p3=t(u'افتح FLYP من المتصفح مباشرة دون تحميل، على الهاتف أو الحاسب.',
+             'Open FLYP straight from your browser, on a phone or a computer.'),
         r1=ios_req, r2=and_req, r3=web_req,
         b1=t(u'حمّل من App Store', 'Get it on the App Store'),
         b2=t(u'حمّل من Google Play', 'Get it on Google Play'),
@@ -389,7 +389,7 @@ home = HOME % dict(
     a3=t(u'احذف حسابك متى شئت', 'Delete your account anytime'),
 )
 
-page('index.html', u'Tenth Tone', u'Tenth Tone',
+page('index.html', u'FLYP', u'FLYP',
      u'تطبيق فيديوهات قصيرة عربي. شاهد، صوّر، وابدأ بثًا مباشرًا. مجاني على iPhone و Android.',
      u'An Arabic short video app. Watch, record and go live. Free on iPhone and Android.',
      home, here='index.html')
@@ -399,7 +399,7 @@ page('index.html', u'Tenth Tone', u'Tenth Tone',
 DOWNLOAD = u'''
 <section class="doc-head">
   <div class="wrap">
-    <h1 %(h1)s>حمّل Tenth Tone</h1>
+    <h1 %(h1)s>حمّل FLYP</h1>
     <p class="lede" %(sub)s>التطبيق مجاني على الهاتف والمتصفح. اختر جهازك وابدأ خلال دقيقة.</p>
     <p class="updated" %(note)s>بتحميل التطبيق فإنك توافق على شروط الاستخدام وسياسة الخصوصية.</p>
   </div>
@@ -444,7 +444,7 @@ DOWNLOAD = u'''
 '''
 
 download = DOWNLOAD % dict(
-    h1=t(u'حمّل Tenth Tone', 'Download Tenth Tone'),
+    h1=t(u'حمّل FLYP', 'Download FLYP'),
     sub=t(u'التطبيق مجاني على الهاتف والمتصفح. اختر جهازك وابدأ خلال دقيقة.',
           'The app is free on mobile and in the browser. Pick your device and start within a minute.'),
     note=t(u'بتحميل التطبيق فإنك توافق على شروط الاستخدام وسياسة الخصوصية.',
@@ -472,9 +472,9 @@ download = DOWNLOAD % dict(
     m4=t(u'يمكن تثبيته على الشاشة الرئيسية كتطبيق', 'Can be installed to the home screen as an app'),
 )
 
-page('download.html', u'تحميل Tenth Tone', 'Download Tenth Tone',
-     u'حمّل تطبيق Tenth Tone على iPhone أو Android أو افتحه من المتصفح.',
-     'Get Tenth Tone on iPhone, Android, or open it in your browser.',
+page('download.html', u'تحميل FLYP', 'Download FLYP',
+     u'حمّل تطبيق FLYP على iPhone أو Android أو افتحه من المتصفح.',
+     'Get FLYP on iPhone, Android, or open it in your browser.',
      download, here='download.html')
 
 

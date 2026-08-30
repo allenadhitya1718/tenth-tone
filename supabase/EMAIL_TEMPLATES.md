@@ -1,4 +1,4 @@
-# Supabase email templates — Tenth Tone
+# Supabase email templates — FLYP
 
 Paste these into **Supabase → Authentication → Email Templates**.
 
@@ -16,13 +16,13 @@ clients strip stylesheets and block remote assets.
 
 ## 1. Confirm signup
 
-**Subject:** `رمز تفعيل حسابك في Tenth Tone / Your Tenth Tone code`
+**Subject:** `رمز تفعيل حسابك في FLYP / Your FLYP code`
 
 ```html
 <div style="margin:0;padding:24px;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Tahoma,Arial,sans-serif">
   <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px">
 
-    <div style="font-size:20px;font-weight:700;color:#6c2bd9;margin-bottom:28px">Tenth Tone</div>
+    <div style="font-size:20px;font-weight:700;color:#6c2bd9;margin-bottom:28px">FLYP</div>
 
     <div dir="rtl" style="text-align:right">
       <div style="font-size:19px;font-weight:700;color:#16161c;margin-bottom:8px">رمز تفعيل حسابك</div>
@@ -50,7 +50,7 @@ clients strip stylesheets and block remote assets.
       </div>
     </div>
 
-    <div style="margin-top:26px;font-size:12px;color:#a5a4b0">Tenth Tone</div>
+    <div style="margin-top:26px;font-size:12px;color:#a5a4b0">FLYP</div>
   </div>
 </div>
 ```
@@ -65,7 +65,7 @@ clients strip stylesheets and block remote assets.
 <div style="margin:0;padding:24px;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Tahoma,Arial,sans-serif">
   <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px">
 
-    <div style="font-size:20px;font-weight:700;color:#6c2bd9;margin-bottom:28px">Tenth Tone</div>
+    <div style="font-size:20px;font-weight:700;color:#6c2bd9;margin-bottom:28px">FLYP</div>
 
     <div dir="rtl" style="text-align:right">
       <div style="font-size:19px;font-weight:700;color:#16161c;margin-bottom:8px">إعادة تعيين كلمة المرور</div>
@@ -93,7 +93,7 @@ clients strip stylesheets and block remote assets.
       </div>
     </div>
 
-    <div style="margin-top:26px;font-size:12px;color:#a5a4b0">Tenth Tone</div>
+    <div style="margin-top:26px;font-size:12px;color:#a5a4b0">FLYP</div>
   </div>
 </div>
 ```
@@ -130,7 +130,7 @@ In **Project Settings → Authentication → SMTP Settings**:
 | Username | `resend` |
 | Password | the Resend API key |
 | Sender email | `no-reply@flyp-sa.com` |
-| Sender name | `Tenth Tone` |
+| Sender name | `FLYP` |
 
 The sender domain must be the one verified in Resend, or every message is
 rejected.

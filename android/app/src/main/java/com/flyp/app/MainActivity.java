@@ -1,4 +1,4 @@
-package com.tenthtone.tenthTone;
+package com.flyp.app;
 
 import com.getcapacitor.BridgeActivity;
 

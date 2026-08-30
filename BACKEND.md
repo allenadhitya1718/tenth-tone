@@ -187,7 +187,7 @@ python -m http.server 5500
 
 Auth works against the live Supabase project. To use a separate dev project:
 
-1. Create another Supabase project (e.g. `tenth-tone-dev`)
+1. Create another Supabase project (e.g. `flyp-dev`)
 2. Run `supabase/migrations/0001_init.sql` in it
 3. Update `web/js/supabase.js` with the dev URL + anon key
 4. Add `http://localhost:5500/**` to dev project's redirect URLs

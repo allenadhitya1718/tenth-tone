@@ -1,6 +1,6 @@
-# Tenth Tone — Complete Build & Deploy Guide
+# FLYP — Complete Build & Deploy Guide
 
-Single source of truth for getting Tenth Tone running on iOS, Android, and the web. Aimed at a developer picking this up fresh.
+Single source of truth for getting FLYP running on iOS, Android, and the web. Aimed at a developer picking this up fresh.
 
 ---
 
@@ -26,7 +26,7 @@ Single source of truth for getting Tenth Tone running on iOS, Android, and the w
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│              Tenth Tone — one source, three targets         │
+│              FLYP — one source, three targets         │
 └─────────────────────────────────────────────────────────────┘
 
   web/                ← vanilla JS PWA (no React, no build step)
@@ -88,7 +88,7 @@ Web-only dev needs **only** Node + Git.
 
 ```bash
 # 1. Unzip the source (or git clone)
-unzip TenthTone-source.zip
+unzip FLYP-source.zip
 cd Tiktok
 
 # 2. Restore npm dependencies
@@ -240,21 +240,21 @@ The repo has a GitHub Actions workflow at `.github/workflows/android-build.yml`.
 # In any folder:
 keytool -genkey -v `
   -keystore upload-keystore.jks `
-  -alias tenth-tone-upload `
+  -alias flyp-upload `
   -keyalg RSA -keysize 2048 -validity 36500 `
   -storepass YourStrongPass!23 `
   -keypass YourStrongPass!23 `
-  -dname "CN=Tenth Tone, OU=Mobile, O=Tenth Tone, L=Riyadh, ST=Riyadh, C=SA"
+  -dname "CN=FLYP, OU=Mobile, O=FLYP, L=Riyadh, ST=Riyadh, C=SA"
 
 # ⚠️ This keystore is irreplaceable. Back it up to two locations.
 # If lost AND Play Console access lost, the app can never be updated.
 
 # Move out of the repo so it's never committed:
-mkdir C:\Users\$env:USERNAME\Documents\TenthToneKeys
-Move-Item upload-keystore.jks C:\Users\$env:USERNAME\Documents\TenthToneKeys\
+mkdir C:\Users\$env:USERNAME\Documents\FLYPKeys
+Move-Item upload-keystore.jks C:\Users\$env:USERNAME\Documents\FLYPKeys\
 
 # Base64-encode for GitHub secret:
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\$env:USERNAME\Documents\TenthToneKeys\upload-keystore.jks")) | Set-Clipboard
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\$env:USERNAME\Documents\FLYPKeys\upload-keystore.jks")) | Set-Clipboard
 ```
 
 ### Add 4 GitHub secrets
@@ -265,7 +265,7 @@ GitHub repo → Settings → Secrets and variables → Actions → **New reposit
 |---|---|
 | `ANDROID_KEYSTORE_BASE64` | The base64 string from clipboard above |
 | `ANDROID_KEYSTORE_PASSWORD` | `YourStrongPass!23` (or whatever you used) |
-| `ANDROID_KEY_ALIAS` | `tenth-tone-upload` |
+| `ANDROID_KEY_ALIAS` | `flyp-upload` |
 | `ANDROID_KEY_PASSWORD` | Same as `ANDROID_KEYSTORE_PASSWORD` |
 
 ### Trigger the release build
@@ -317,7 +317,7 @@ This is the production path. Workflow at `.github/workflows/ios-build.yml`. Push
 
 ### Prerequisites
 1. Apple Developer Program membership ($99/yr — see `APPLE_TESTFLIGHT_CHECKLIST.md` Step 1)
-2. App registered in App Store Connect with bundle ID `com.tenthtone.tenthTone`
+2. App registered in App Store Connect with bundle ID `com.flyp.app`
 3. App Store Connect API key (`.p8` file) generated
 
 ### Add 4 GitHub secrets
@@ -351,7 +351,7 @@ All GitHub Actions secrets in one place:
 ### Android (Play Store)
 - `ANDROID_KEYSTORE_BASE64` — base64 of upload-keystore.jks
 - `ANDROID_KEYSTORE_PASSWORD`
-- `ANDROID_KEY_ALIAS` — typically `tenth-tone-upload`
+- `ANDROID_KEY_ALIAS` — typically `flyp-upload`
 - `ANDROID_KEY_PASSWORD`
 
 ### iOS (TestFlight / App Store)
@@ -386,7 +386,7 @@ All GitHub Actions secrets in one place:
 
 | Symptom | Fix |
 |---|---|
-| `xcodebuild: error: No profiles for 'com.tenthtone.tenthTone'` | Bundle ID in App Store Connect must match `capacitor.config.json` exactly (case-sensitive) |
+| `xcodebuild: error: No profiles for 'com.flyp.app'` | Bundle ID in App Store Connect must match `capacitor.config.json` exactly (case-sensitive) |
 | *"Authentication failed because the password was incorrect"* | Check `APP_STORE_CONNECT_ISSUER_ID` vs `APP_STORE_CONNECT_KEY_ID` — easy to swap |
 | *"Invalid Code Signing Entitlements"* (Push Notifications) | Enable Push Notifications capability in App Store Connect for the bundle ID, OR temporarily remove `@capacitor/push-notifications` from `package.json` for first build |
 | Build never appears in TestFlight | Wait up to 30 min for Apple processing. Check App Store Connect → Notifications email for rejection reason |

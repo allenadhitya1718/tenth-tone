@@ -1,11 +1,11 @@
 {
-    "name": "tenth_tone",
-    "short_name": "tenth_tone",
+    "name": "flyp",
+    "short_name": "flyp",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "Tenth Tone — social video app",
+    "description": "FLYP — social video app",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

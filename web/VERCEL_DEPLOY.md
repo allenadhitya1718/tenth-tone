@@ -1,4 +1,4 @@
-# Deploy to Vercel — Tenth Tone PWA
+# Deploy to Vercel — FLYP PWA
 
 This is the static PWA version (HTML/CSS/JS). Two paths — pick one.
 
@@ -7,10 +7,10 @@ This is the static PWA version (HTML/CSS/JS). Two paths — pick one.
 1. Go to **https://vercel.com/new** (sign up free with GitHub/Google/email).
 2. Click **"Import Third-Party Git Repository"** is too much — instead scroll down or click **"Deploy"** at top right and choose **"Browse"** to upload a folder.
    - Easiest: zip the `social-app/` folder, then drop the zip on https://vercel.com/new
-3. Project name: `tenth-tone` (or whatever)
+3. Project name: `flyp` (or whatever)
 4. Framework Preset: **Other** (Vercel will detect the static site)
 5. Click **Deploy**.
-6. Done. Vercel gives you a URL like `https://tenth-tone-xxxx.vercel.app`.
+6. Done. Vercel gives you a URL like `https://flyp-xxxx.vercel.app`.
 
 That URL is HTTPS — you can install it as a PWA on your iPhone via Safari → Share → Add to Home Screen.
 
@@ -26,7 +26,7 @@ First run prompts:
 1. **Set up and deploy?** → **Y**
 2. **Which scope?** → pick your account
 3. **Link to existing project?** → **N**
-4. **What's your project name?** → `tenth-tone` (or anything)
+4. **What's your project name?** → `flyp` (or anything)
 5. **In which directory is your code located?** → `./`
 6. **Want to modify settings?** → **N**
 
@@ -36,7 +36,7 @@ It builds and gives you a preview URL. Then for production:
 npx vercel --prod
 ```
 
-That gives you the production URL (e.g. `https://tenth-tone.vercel.app`).
+That gives you the production URL (e.g. `https://flyp.vercel.app`).
 
 ## Path 3 — GitHub auto-deploy (best long-term)
 
@@ -56,7 +56,7 @@ The `vercel.json` in the project root sets:
 
 ## URLs after deployment
 
-Assuming your Vercel URL is `https://tenth-tone.vercel.app`:
+Assuming your Vercel URL is `https://flyp.vercel.app`:
 
 | Path | What |
 | --- | --- |
@@ -70,7 +70,7 @@ Assuming your Vercel URL is `https://tenth-tone.vercel.app`:
 If you have a domain (or buy one — Vercel sells `.com` for ~$10/yr or you can use Cloudflare Registrar for cheaper):
 
 1. Vercel project → **Settings** → **Domains**
-2. Enter your domain (e.g. `tenthtone.app`)
+2. Enter your domain (e.g. `flyp-sa.com`)
 3. Vercel shows DNS records to add at your registrar (A or CNAME)
 4. Wait 5–60 min for DNS propagation; HTTPS auto-issued via Let's Encrypt
 

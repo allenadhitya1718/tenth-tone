@@ -1,6 +1,6 @@
-# Tiktok — Tenth Tone
+# Tiktok — FLYP
 
-Monorepo for the **Tenth Tone** social video app. Two implementations of the same SRS:
+Monorepo for the **FLYP** social video app. Two implementations of the same SRS:
 
 ```
 .

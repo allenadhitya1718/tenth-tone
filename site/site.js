@@ -1,5 +1,5 @@
 /* =========================================================
-   Tenth Tone - marketing site behaviour
+   FLYP - marketing site behaviour
    Language switching, store links, sticky nav, scroll reveal.
    No dependencies.
    ========================================================= */
@@ -15,7 +15,7 @@
   var STORE = {
     ios: '',      // paste the App Store URL here
     android: '',  // paste the Google Play URL here
-    web: ''       // paste the web app address here, for example https://app.tenthtone.com
+    web: ''       // paste the web app address here, for example https://app.flyp.com
   };
 
   var SOON = { ar: 'قريبًا', en: 'Coming soon' };

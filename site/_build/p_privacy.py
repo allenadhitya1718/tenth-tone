@@ -16,7 +16,7 @@ MAIL_S = 'support@flyp-sa.com'
 AR = [
 
 ('who', u'من نحن', u'''
-      <p>تطبيق Tenth Tone تديره %(co)s، ومقرها %(addr)s. عندما تستخدم التطبيق فإن الشركة هي المسؤولة عن بياناتك الشخصية، أي أنها من يقرر لماذا تُجمع وكيف تُستخدم.</p>
+      <p>تطبيق FLYP تديره %(co)s، ومقرها %(addr)s. عندما تستخدم التطبيق فإن الشركة هي المسؤولة عن بياناتك الشخصية، أي أنها من يقرر لماذا تُجمع وكيف تُستخدم.</p>
       <p>هذه الصفحة تشرح ما نجمعه، ولماذا، وكم نحتفظ به، وما الذي يمكنك فعله حيال ذلك. كُتبت بلغة واضحة عن قصد.</p>
 ''' % dict(co=CO_AR, addr=ADDR_AR)),
 
@@ -124,7 +124,7 @@ AR = [
 ''' % dict(mp=MAIL_P)),
 
 ('children', u'الأطفال', u'''
-      <p>الحد الأدنى لاستخدام Tenth Tone هو <strong>ثلاثة عشر عامًا</strong>. نطلب تاريخ الميلاد عند إنشاء الحساب، ولا يمكن تعديله لاحقًا.</p>
+      <p>الحد الأدنى لاستخدام FLYP هو <strong>ثلاثة عشر عامًا</strong>. نطلب تاريخ الميلاد عند إنشاء الحساب، ولا يمكن تعديله لاحقًا.</p>
       <ul>
         <li>مشاركة الموقع مغلقة تمامًا لمن هم دون الثامنة عشرة.</li>
         <li>إن علمنا بحساب لطفل دون الثالثة عشرة فسنغلقه ونحذف بياناته.</li>
@@ -164,7 +164,7 @@ AR = [
 EN = [
 
 ('who', 'Who we are', '''
-      <p>Tenth Tone is operated by %(co)s, based at %(addr)s. When you use the app, that company is the controller of your personal data, meaning it decides why data is collected and how it is used.</p>
+      <p>FLYP is operated by %(co)s, based at %(addr)s. When you use the app, that company is the controller of your personal data, meaning it decides why data is collected and how it is used.</p>
       <p>This page explains what we collect, why, how long we keep it, and what you can do about it. It is deliberately written in plain language.</p>
 ''' % dict(co=CO_EN, addr=ADDR_EN)),
 
@@ -223,7 +223,7 @@ EN = [
       <p>We share as little as possible, and only with these parties:</p>
       <ul>
         <li><strong>Technical providers:</strong> database and file hosting, email delivery, and the live streaming service. They work under contracts that require them to protect the data and use it only for our service.</li>
-        <li><strong>Other people on Tenth Tone:</strong> what you post publicly is visible to others. If your account is private, only the people you approve can see it.</li>
+        <li><strong>Other people on FLYP:</strong> what you post publicly is visible to others. If your account is private, only the people you approve can see it.</li>
         <li><strong>Authorities:</strong> when we receive a valid legal request, or when there is an immediate risk to someone's life. Details are on the <a href="law-enforcement.html">law enforcement page</a>.</li>
         <li><strong>If the company is sold or merges:</strong> data may pass to the new owner, and we will tell you before that happens.</li>
       </ul>
@@ -272,7 +272,7 @@ EN = [
 ''' % dict(mp=MAIL_P)),
 
 ('children', 'Children', '''
-      <p>The minimum age for Tenth Tone is <strong>thirteen</strong>. We ask for a date of birth when the account is created, and it cannot be changed afterwards.</p>
+      <p>The minimum age for FLYP is <strong>thirteen</strong>. We ask for a date of birth when the account is created, and it cannot be changed afterwards.</p>
       <ul>
         <li>Location sharing is completely closed to anyone under eighteen.</li>
         <li>If we learn of an account belonging to a child under thirteen, we close it and delete the data.</li>
@@ -312,6 +312,6 @@ doc('privacy.html',
     u'سياسة الخصوصية', 'Privacy Policy',
     u'ما الذي نجمعه، ولماذا، وكم نحتفظ به، وما الذي يمكنك فعله حياله.',
     'What we collect, why, how long we keep it, and what you can do about it.',
-    u'سياسة خصوصية تطبيق Tenth Tone.', 'The Tenth Tone privacy policy.',
+    u'سياسة خصوصية تطبيق FLYP.', 'The FLYP privacy policy.',
     AR, EN)
 print('privacy done')
