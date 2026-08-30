@@ -345,6 +345,7 @@
     'بثوث أخرى': 'Other broadcasts',
     // Inbox: message requests
     'الطلبات': 'Requests',
+    'قبل طلب المتابعة': 'accepted your follow request',
     'يريد متابعتك': 'wants to follow you',
     // Chat: date dividers and the read receipt
     'تمت المشاهدة': 'Seen',
@@ -1571,6 +1572,18 @@
     '🎤 رسالة صوتية': '🎤 Voice message',
     '📷 صورة': '📷 Photo',
     '🎥 فيديو': '🎥 Video',
+    // Inbox previews for call rows and shared links. The dictionary matches a
+    // whole string, emoji included, so every icon+label pair needs its own key
+    // — the icon comes from the call kind and the label from its status, hence
+    // both phone and camera variants of each.
+    '📞 مكالمة صوتية': '📞 Voice call',
+    '📹 مكالمة فيديو': '📹 Video call',
+    '📞 مكالمة فائتة': '📞 Missed call',
+    '📹 مكالمة فائتة': '📹 Missed call',
+    '📞 مكالمة مرفوضة': '📞 Declined call',
+    '📹 مكالمة مرفوضة': '📹 Declined call',
+    '🔴 بث مباشر': '🔴 Live',
+    '👤 حساب': '👤 Account',
     ' يتحدث الآن...': ' is talking now...',
     'تمام يا غالي! اتفقنا 👍': 'Alright dear! Agreed 👍',
     'يعطيك العافية، فكرة رائعة جداً 🔥': 'God bless you, very great idea 🔥',
@@ -1818,6 +1831,7 @@
     [/^صوت: (.+)$/, (m) => `Sound: ${m[1]}`],
     [/^فيديو · (.+)$/, (m) => `Video · ${m[1]}`],
     [/^علّق: "(.*)"$/, (m) => `commented: "${m[1]}"`],
+    [/^رد على تعليقك: "(.*)"$/, (m) => `replied to your comment: "${m[1]}"`],
     [/^خطأ في التحميل: (.+)$/, (m) => `Load error: ${m[1]}`],
     [/^([\d.,KM]+) متابع$/, (m) => `${m[1]} follower${m[1] === '1' ? '' : 's'}`],
     [/^([\d.,KM]+) فيديو$/, (m) => `${m[1]} video${m[1] === '1' ? '' : 's'}`],

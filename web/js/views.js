@@ -2900,7 +2900,38 @@ function autoPlay(video) {
       });
     }
     function _agoShort(iso) { if (!iso) return ''; const t = Date.now() - new Date(iso).getTime(); const m = Math.floor(t / 60000); if (m < 1) return 'الآن'; if (m < 60) return m + 'د'; const h = Math.floor(m / 60); if (h < 24) return h + 'س'; const d = Math.floor(h / 24); return d + 'ي'; }
-    function _msgPreview(m) { if (!m) return 'ابدأ محادثة'; if (m.type === 'voice') return '🎤 رسالة صوتية'; if (m.type === 'image') return '📷 صورة'; if (m.type === 'video') return '🎥 فيديو'; return (m.text || '').slice(0, 60); }
+    function _msgPreview(m) {
+      if (!m) return 'ابدأ محادثة';
+      if (m.type === 'voice') return '🎤 رسالة صوتية';
+      if (m.type === 'image') return '📷 صورة';
+      if (m.type === 'video') return '🎥 فيديو';
+      // A call row carries JSON in `text`, not a sentence (see the bubble
+      // renderer and migration 0045). Falling through to the generic branch
+      // printed that JSON straight into the inbox — {"kind":"video",...} —
+      // which reads as an error message rather than a call.
+      if (m.type === 'call') {
+        let info = {};
+        try { info = JSON.parse(m.text || '{}'); } catch (e) { info = {}; }
+        const icon = info.kind === 'video' ? '📹' : '📞';
+        const label = info.status === 'declined' ? 'مكالمة مرفوضة'
+                    : info.status === 'missed'   ? 'مكالمة فائتة'
+                    : info.kind === 'video'      ? 'مكالمة فيديو'
+                    : 'مكالمة صوتية';
+        return icon + ' ' + label;
+      }
+      // A shared reel/profile/live is a lone deep link in a text message. The
+      // thread renders it as a card (buildShareCard); without this the inbox
+      // still showed the naked URL, which is what a share looked like before
+      // any of this and the whole reason the thread card exists.
+      const t = String(m.text || '').trim();
+      if (t && !/\s/.test(t) && window.DeepLink && window.DeepLink.routeForUrl) {
+        const r = window.DeepLink.routeForUrl(t);
+        if (r) return r.indexOf('/live/') === 0 ? '🔴 بث مباشر'
+                    : r.indexOf('/profile/') === 0 ? '👤 حساب'
+                    : '🎥 فيديو';
+      }
+      return (m.text || '').slice(0, 60);
+    }
 
     allChats = DB.chats.map(c => ({ id: c.id, title: c.user.name, avatar: c.user.avatar, last_message: { text: c.last, created_at: new Date().toISOString() }, created_at: new Date().toISOString(), is_request: false }));
     if (allChats.length) chatsLoaded = true;   // demo data is an answer of sorts
@@ -3250,10 +3281,23 @@ function autoPlay(video) {
         const secs = Number(info.seconds) || 0;
         const answered = info.status === 'ended' && secs > 0;
 
+        // created_at is stamped when the trigger writes the row, and the
+        // trigger only fires once the call reaches a terminal state — so it
+        // marks when the call ENDED. Subtracting the duration recovers when it
+        // STARTED, which is the timestamp worth leading with and the one the
+        // row never showed. No extra column or migration needed for it.
+        const _end = m.created_at ? new Date(m.created_at) : new Date();
+        const endedAt = isNaN(_end.getTime()) ? new Date() : _end;
+        const startedAt = answered ? new Date(endedAt.getTime() - secs * 1000) : endedAt;
+
         const label = info.status === 'declined' ? 'مكالمة مرفوضة'
                     : info.status === 'missed'   ? 'مكالمة فائتة'
                     : answered                   ? (mine ? 'مكالمة صادرة' : 'مكالمة واردة')
-                    : 'مكالمة لم تكتمل';
+                    // Reached when a call ended without ever being answered:
+                    // hung up before pickup, or under a second long. This used
+                    // to read "call not completed", which sounds like a fault
+                    // in the app rather than simply nobody picking up.
+                    : 'لم يتم الرد';
 
         const rec = el('div', {
           class: 'call-record' + (info.status === 'missed' || info.status === 'declined' ? ' missed' : ''),
@@ -3261,7 +3305,11 @@ function autoPlay(video) {
           el('span', { class: 'cr-icon', html: isVideo ? icons.video : icons.phone }),
           el('span', { class: 'cr-text' }, [
             el('span', { class: 'cr-label' }, label),
-            el('span', { class: 'cr-meta' }, answered ? fmtDuration(secs) : fmtTime(m.created_at)),
+            // Time first, then length — "9:42 م · 3:14" — the shape every
+            // other messenger uses. Unanswered calls have no length to show.
+            el('span', { class: 'cr-meta' }, answered
+              ? (fmtTime(startedAt.toISOString()) + ' · ' + fmtDuration(secs))
+              : fmtTime(endedAt.toISOString())),
           ]),
         ]);
         if (m.id) rec.dataset.msgId = m.id;
@@ -3273,6 +3321,9 @@ function autoPlay(video) {
 
       maybeDateDivider(m.created_at);
       const bubble = el('div', { class: 'bubble ' + (mine ? 'me' : 'them') });
+      // A shared reel/profile/live is a lone deep link in a text message.
+      const shareCard = (!m.attachment_url && (!m.type || m.type === 'text'))
+        ? buildShareCard(m.text) : null;
       if (m.attachment_url && (m.type === 'image' || m.type === 'video')) {
         const tag = m.type === 'image' ? Object.assign(document.createElement('img'), { src: m.attachment_url, style: 'max-width:220px;border-radius:8px' })
                                        : Object.assign(document.createElement('video'), { src: m.attachment_url, controls: true, style: 'max-width:220px;border-radius:8px' });
@@ -3296,6 +3347,10 @@ function autoPlay(video) {
           el('span', {}, 'الموقع الحالي'),
         ]));
         m = Object.assign({}, m, { text: '' }); // the raw URL would be noise
+      } else if (shareCard) {
+        bubble.classList.add('share');
+        bubble.appendChild(shareCard);
+        m = Object.assign({}, m, { text: '' }); // the card IS the link now
       }
       // A quoted copy of what this message answers, above its own text.
       if (m.reply_to) {
@@ -4706,6 +4761,11 @@ function autoPlay(video) {
     function textFor(n) {
       if (n.type === 'like') return 'أعجبه الفيديو الخاص بك';
       if (n.type === 'follow') return 'بدأ بمتابعتك';
+      // A reply carries parent_id; the plain comment notification does not.
+      // Checked first, because a reply is also type 'comment' and would
+      // otherwise be reported as a comment on your video — which it is not.
+      if (n.type === 'comment' && n.payload && n.payload.parent_id)
+        return 'رد على تعليقك: "' + (n.payload.text || '') + '"';
       if (n.type === 'comment') return 'علّق: "' + ((n.payload && n.payload.text) || '') + '"';
       if (n.type === 'mention') return 'ذكرك في تعليق';
       if (n.type === 'message') return 'أرسل رسالة';
@@ -4719,6 +4779,7 @@ function autoPlay(video) {
         const t = (n.payload && n.payload.title) || '';
         return t ? ('بدأ بثًا مباشرًا: ' + t) : 'بدأ بثًا مباشرًا الآن';
       }
+      if (n.type === 'system' && n.payload && n.payload.kind === 'follow_accepted') return 'قبل طلب المتابعة';
       if (n.type === 'system' && n.payload && n.payload.kind === 'location_request') return 'طلب تتبع موقعك';
       if (n.type === 'system' && n.payload && n.payload.kind === 'location_approved') return 'وافق على طلب تتبع موقعه';
       if (n.type === 'system' && n.payload && n.payload.kind === 'location_denied') return 'رفض طلب تتبع موقعه';
@@ -4744,6 +4805,9 @@ function autoPlay(video) {
       if (n.type === 'comment' && p.video_id) return '/comments/' + p.video_id;
       if (n.type === 'message' && p.chat_id) return '/chat/' + p.chat_id;
       if (n.type === 'follow' && n.actor && n.actor.id && n.actor.id !== '_') return '/profile/' + n.actor.id;
+      // An accepted request should land on the profile you can now finally see.
+      if (n.type === 'system' && p.kind === 'follow_accepted' && n.actor && n.actor.id && n.actor.id !== '_')
+        return '/profile/' + n.actor.id;
       // Straight to the approve/decline screen, not to their profile — the
       // notification exists because there is a decision to make.
       if (n.type === 'follow_request') return '/follow-requests';
@@ -5335,16 +5399,27 @@ function autoPlay(video) {
       const goLabel = startBtn.lastChild;
       goLabel.textContent = 'جاري البدء...';
       try {
+        // The cover has to be grabbed BEFORE the camera is released — once
+        // stopPreview() runs the element has no frame left to draw from. A
+        // camera broadcast previously stored no thumbnail at all, which is why
+        // it showed as a blank tile in the live grid.
+        let camCover = null;
+        if (mode === 'camera' && window.API && window.API.uploadLiveThumbnail) {
+          try {
+            const blob = await grabFrame(previewVideo);
+            if (blob) camCover = await window.API.uploadLiveThumbnail(blob);
+          } catch (e) { /* a cover is a nicety — never block going live for it */ }
+        }
         // The preview holds the camera; Agora needs it next. Releasing it
         // first avoids the device being reported as already in use.
         stopPreview();
         if (!window.API) throw new Error('SDK not loaded');
         const live = await window.API.startLive({
           title: titleInput.value || null,
-          // In camera mode there's no still yet, so store nothing rather
-          // than a stock image (this used to persist a sample video's
-          // thumbnail as the real stream's cover).
-          thumbnail: mode === 'background' ? selectedBg.url : null,
+          // Background mode uses the chosen backdrop; camera mode uses the
+          // still grabbed above. Either way it is this broadcast's own image —
+          // an earlier version persisted a sample video's thumbnail here.
+          thumbnail: mode === 'background' ? selectedBg.url : camCover,
           // The audience choice now actually reaches the database. It used
           // to stop at window._ttLiveMeta below, so every stream was public
           // whatever the person picked.
@@ -5447,8 +5522,21 @@ function autoPlay(video) {
       });
     }
 
-    render(DB.lives);
-    (async () => { try { if (window.API) { const real = await window.API.fetchLiveStreams(); if (real && real.length) render(real); } } catch (e) {} })();
+    // Only seed with samples in demo mode. This used to paint DB.lives
+    // unconditionally and then replace them only `if (real && real.length)` —
+    // so with nobody actually streaming, a production user was left looking at
+    // a grid of fabricated broadcasts that open into a stream that isn't there.
+    // Every other screen gates on DEMO; this one was the exception.
+    render(DEMO ? DB.lives : []);
+    (async () => {
+      try {
+        if (!window.API) return;
+        const real = await window.API.fetchLiveStreams();
+        // Render whatever came back, empty included — an empty answer is still
+        // an answer, and "no streams right now" is the honest thing to show.
+        if (!DEMO || (real && real.length)) render(real || []);
+      } catch (e) { console.warn('live streams:', e); }
+    })();
     return root;
   };
 
@@ -5752,7 +5840,22 @@ function autoPlay(video) {
       try {
         if (!window.Agora || !window.Agora.isConfigured()) return;
         if (isHost) {
-          // We're the host — preview already running, just keep it alive
+          // The camera is still publishing — viewers see the stream fine —
+          // but startHost rendered it into the go-live screen's preview
+          // element, and the router tore that screen down on the way here.
+          // Nothing ever re-attached the track, so the host alone stared at
+          // a black screen for the whole broadcast. play() can be called
+          // again to move a track to a new element, so re-attach it here.
+          //
+          // zIndex 2 matches what the viewer path does once video arrives:
+          // it clears the .live-bg layer at 1, and ties with .live-overlay,
+          // which still paints on top because it comes later in the DOM.
+          if (hostSession && hostSession.cam) {
+            try {
+              hostSession.cam.play(videoContainer);
+              videoContainer.style.zIndex = '2';
+            } catch (e) { console.warn('agora host re-attach:', e); }
+          }
           return;
         }
         viewerSession = await window.Agora.startViewer({
@@ -8465,6 +8568,101 @@ function autoPlay(video) {
   function fmtDuration(sec) {
     const m = Math.floor(sec / 60), r = sec % 60;
     return m + ':' + String(r).padStart(2, '0');
+  }
+
+  // A still from a playing <video>, as a JPEG blob. Resolves null when there is
+  // no frame to take — metadata not loaded yet, camera denied, or a tainted
+  // canvas — so every caller can carry on without a cover rather than break.
+  function grabFrame(video, maxSide) {
+    return new Promise((resolve) => {
+      try {
+        const w = video && video.videoWidth, h = video && video.videoHeight;
+        if (!w || !h) return resolve(null);
+        const limit = maxSide || 720;
+        const scale = Math.min(1, limit / Math.max(w, h));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(w * scale);
+        canvas.height = Math.round(h * scale);
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((b) => resolve(b || null), 'image/jpeg', 0.7);
+      } catch (e) { resolve(null); }
+    });
+  }
+
+  // ── Shared reel / profile / live cards ──
+  // An in-app share arrives as a bare deep link inside an ordinary text
+  // message, so the chat used to show a raw URL where Instagram shows a
+  // preview. It is sent that way because messages.type is pinned by a database
+  // constraint (text|voice|image|video|sticker|system|file|location|call);
+  // giving a share its own type would mean a migration. Recognising our own
+  // link instead needs no schema change, and it upgrades every link already
+  // sitting in someone's history.
+  //
+  // Returns null for anything that is not a lone FLYP link — a link with words
+  // around it is a person talking, and unfurling that would hide what they
+  // actually wrote.
+  function buildShareCard(text) {
+    const t = String(text || '').trim();
+    if (!t || /\s/.test(t)) return null;
+    if (!window.DeepLink || !window.DeepLink.routeForUrl) return null;
+    const route = window.DeepLink.routeForUrl(t);
+    if (!route) return null;
+
+    const kind = route.indexOf('/v/') === 0       ? 'video'
+               : route.indexOf('/profile/') === 0 ? 'profile'
+               : route.indexOf('/live/') === 0    ? 'live'
+               : null;
+    if (!kind) return null;
+    const id = route.slice(route.lastIndexOf('/') + 1);
+
+    // Instagram's shape: a tall cover filling the bubble, the author's avatar
+    // and name laid over the top of it, and a play glyph in the middle. The
+    // bubble itself goes transparent (.bubble.share) so the media IS the
+    // message rather than sitting inside a coloured box.
+    const cover = el('div', { class: 'sc-cover' });
+    const byAvatar = el('span', { class: 'sc-avatar' });
+    const byName = el('span', { class: 'sc-name' }, '');
+    cover.appendChild(el('div', { class: 'sc-by' }, [byAvatar, byName]));
+    if (kind !== 'profile') cover.appendChild(el('span', { class: 'sc-play', html: icons.play || '' }));
+    if (kind === 'live') cover.appendChild(el('span', { class: 'sc-live' }, 'بث مباشر'));
+
+    const card = el('button', {
+      class: 'share-card' + (kind === 'profile' ? ' profile' : ''),
+      onclick: () => go(route),
+    }, [cover]);
+
+    // Filled in once the row loads. The card is already tappable before this
+    // resolves, so nothing waits on it and a failure just leaves it plain.
+    (async () => {
+      try {
+        if (!window.API) return;
+        if (kind === 'video' && window.API.fetchVideo) {
+          const v = await window.API.fetchVideo(id);
+          if (!v) return;
+          if (v.thumbnail) cover.style.backgroundImage = 'url(' + v.thumbnail + ')';
+          if (v.user) {
+            byName.textContent = v.user.handle ? '@' + String(v.user.handle).replace('@', '') : (v.user.name || '');
+            if (v.user.avatar_url) byAvatar.style.backgroundImage = 'url(' + v.user.avatar_url + ')';
+          }
+        } else if (kind === 'profile' && window.API.fetchProfile) {
+          const u = await window.API.fetchProfile(id);
+          if (!u) return;
+          if (u.avatar_url) cover.style.backgroundImage = 'url(' + u.avatar_url + ')';
+          byName.textContent = u.handle ? '@' + String(u.handle).replace('@', '') : (u.name || '');
+        } else if (kind === 'live' && window.API.fetchLiveStream) {
+          const l = await window.API.fetchLiveStream(id);
+          if (!l) return;
+          if (l.thumbnail) cover.style.backgroundImage = 'url(' + l.thumbnail + ')';
+          if (l.host) {
+            byName.textContent = l.host.handle ? '@' + String(l.host.handle).replace('@', '') : (l.host.name || '');
+            if (l.host.avatar) byAvatar.style.backgroundImage = 'url(' + l.host.avatar + ')';
+          }
+        }
+      } catch (e) { /* a plain card is a fine fallback */ }
+    })();
+
+    try { if (window.I18N) window.I18N.apply(card); } catch (e) {}
+    return card;
   }
 
   V.call = (params) => {

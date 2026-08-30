@@ -1917,6 +1917,33 @@
   // broadcast believing only they could see it, and be visible to anyone at
   // all, including signed-out visitors. A privacy control that is ignored is
   // worse than not offering one.
+  // Cover image for a live broadcast. A camera stream stored no thumbnail at
+  // all, so it appeared as a blank tile in the live grid — the grid renders
+  // `l.thumbnail || l.bg` and both were null. The frame is grabbed from the
+  // host's own preview the instant they go live.
+  //
+  // Filed under the videos bucket because its policy is exactly what is needed
+  // here: public read, and writes allowed only where the first path segment is
+  // the uploader's id. Failure returns null rather than throwing — a missing
+  // cover must never stop somebody going live.
+  API.uploadLiveThumbnail = async (blob) => {
+    if (!blob) return null;
+    try {
+      const c = await client();
+      const me = await uid();
+      if (!me) return null;
+      const path = `${me}/live-${Date.now()}.jpg`;
+      const { error } = await c.storage.from('videos')
+        .upload(path, blob, { contentType: 'image/jpeg', cacheControl: '3600', upsert: false });
+      if (error) { console.warn('live thumbnail upload failed:', error.message); return null; }
+      const { data: pub } = c.storage.from('videos').getPublicUrl(path);
+      return (pub && pub.publicUrl) || null;
+    } catch (e) {
+      console.warn('live thumbnail:', e && e.message);
+      return null;
+    }
+  };
+
   API.startLive = async ({ title, thumbnail, privacy = 'public' }) => {
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
     // Guard the value rather than trusting the caller: an unrecognised

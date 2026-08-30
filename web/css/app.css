@@ -1798,6 +1798,53 @@ body.lang-en .toast { font-family: 'Cairo', system-ui, sans-serif; }
 }
 .msg-location { font-size: 13px; font-weight: 600; }
 
+/* Shared reel / profile / live card, shaped the way Instagram shows one in a
+   DM: the cover IS the message. The bubble behind it goes transparent, so the
+   media is not sitting inside a coloured box, and the author is laid over the
+   top of the image rather than listed beside it.
+   Declared after .bubble.me/.them and at equal specificity, so source order is
+   what lets it win — keep it below them. */
+.bubble.share { padding: 0; background: none; box-shadow: none; max-width: 62%; }
+.bubble.share .t {
+  position: absolute; inset-inline-end: 10px; bottom: 7px; margin: 0;
+  color: #fff; opacity: 0.95; text-shadow: 0 1px 3px rgba(0,0,0,0.85);
+}
+.share-card {
+  display: block; width: 200px; max-width: 60vw;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  font-family: inherit; color: inherit;
+}
+.share-card .sc-cover {
+  position: relative; width: 100%; aspect-ratio: 9 / 16; overflow: hidden;
+  border-radius: 14px; background: #1b1b1b center/cover no-repeat;
+}
+/* A profile has no reel to preview, so it squares off around the avatar. */
+.share-card.profile .sc-cover { aspect-ratio: 1 / 1; }
+.share-card .sc-by {
+  position: absolute; top: 8px; inset-inline-start: 8px; z-index: 2;
+  display: flex; align-items: center; gap: 6px; max-width: calc(100% - 16px);
+}
+.share-card .sc-avatar {
+  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(255,255,255,0.25) center/cover no-repeat;
+  border: 1px solid rgba(255,255,255,0.7);
+}
+.share-card .sc-name {
+  font-size: 12px; font-weight: 700; color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.85);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.share-card .sc-play {
+  position: absolute; inset: 0; pointer-events: none; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+}
+.share-card .sc-play svg { width: 34px; height: 34px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.7)); }
+.share-card .sc-live {
+  position: absolute; bottom: 8px; inset-inline-start: 8px; z-index: 2;
+  background: linear-gradient(135deg, #ef4444, #e8244c); color: #fff;
+  padding: 3px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 800;
+}
+
 /* Hide native scrollbars app-wide. This is a phone-shaped app; the desktop
    scrollbar sat as a grey bar over the content. Scrolling still works. */
 html, body, .app, .app * {
