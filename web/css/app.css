@@ -3239,6 +3239,32 @@ body.dark .splash .splash-lang .lang-switch,
 .splash .welcome-legal { color: #7a7a89; }
 .splash .welcome-legal .auth-link { color: var(--primary); text-decoration: underline; }
 
+/* ── Welcome illustration ──
+   Replaces the logo, which had a dark background baked into the PNG and so
+   read as a sticker on this light screen. The heading went with it: the name
+   is already on the icon the person tapped, and repeating it crowded the one
+   sentence that says what the app is actually for. That sentence is now the
+   headline, which is why it is set larger and darker than a subtitle. */
+.splash .splash-art {
+  width: 268px; max-width: 78vw; margin: 0 auto;
+  filter: drop-shadow(0 14px 30px rgba(30, 86, 214, 0.16));
+}
+.splash .splash-hero { margin-bottom: 34px; }
+.splash .splash-hero p {
+  font-size: 22px; font-weight: 700; line-height: 1.35;
+  color: #1b1b2e; max-width: 260px; margin: 26px auto 0;
+}
+/* No dark-mode variant on purpose. body.dark .splash (above) repeats the same
+   light background, so this screen stays light in both themes — an earlier
+   attempt at a dark colour here painted near-white text onto a near-white
+   ground and the sentence vanished. */
+
+@media (max-height: 700px) {
+  .splash .splash-art { width: 210px; }
+  .splash .splash-hero p { font-size: 19px; margin-top: 18px; }
+  .splash .splash-hero { margin-bottom: 22px; }
+}
+
 /* ── Auth screens: light surface ──
    Login, signup, OTP, forgot and reset all sit before sign-in, so they match
    the tour and welcome screen rather than the app's theme. Keeping them in
