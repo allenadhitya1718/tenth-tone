@@ -296,8 +296,14 @@ input, textarea, [contenteditable="true"] {
 
 .feed-scroll { height: 100%; overflow-y: auto; scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch; }
 .feed-scroll::-webkit-scrollbar { display: none; }
+/* scroll-snap-stop makes the browser settle on EVERY clip instead of letting
+   momentum carry past several. oneClipPerSwipe in views.js already does this
+   for touch, but it binds touch events only — on a desktop wheel or trackpad
+   nothing was enforcing it, so a quick flick skipped three or four videos.
+   Harmless on a phone, where the JS handler gets there first. */
 .feed-item {
-  height: 100%; scroll-snap-align: start; position: relative; overflow: hidden;
+  height: 100%; scroll-snap-align: start; scroll-snap-stop: always;
+  position: relative; overflow: hidden;
   background-position: center; background-size: cover;
 }
 .feed-item::after {
