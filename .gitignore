@@ -69,3 +69,10 @@ r2_url_rewrite.sql
 # Python bytecode from tools/ — committed by accident once already.
 __pycache__/
 *.pyc
+
+# Agent worktrees live inside the repo and must never be committed —
+# each is a full second checkout of this same repository.
+.claude/worktrees/
+
+# Stray editor backup.
+*.old-backup
