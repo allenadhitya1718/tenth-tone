@@ -620,17 +620,25 @@
     return data || [];
   };
 
-  // Suggested creators for Discover (most-followed, excluding yourself).
+  // Suggested creators for Discover (most-followed, excluding yourself and
+  // anyone either of you has blocked).
+  //
+  // This is where the bug was most visible: the row is ordered by follower
+  // count, so a blocked account with a large following sat near the top of
+  // Discover permanently, no matter how many times you blocked them.
   API.fetchSuggestedProfiles = async (limit = 12) => {
     const c = await client();
+    const { data, error } = await c.rpc('suggested_profiles', { p_limit: limit });
+    if (!error) return data || [];
+    console.warn('suggested_profiles unavailable (is 0065 applied?):', error.message);
     const me = await uid();
     let q = c.from('profiles')
       .select('id, name, handle, avatar_url, bio, verified, followers_count')
       .order('followers_count', { ascending: false }).limit(limit);
     if (me) q = q.neq('id', me);
-    const { data, error } = await q;
-    if (error) return [];
-    return data || [];
+    const r = await q;
+    if (r.error) return [];
+    return _withoutBlocked(r.data || []);
   };
 
   // Popular videos grid on Discover — most-engaged public videos.
@@ -788,16 +796,76 @@
     if (error) console.warn('countShare failed:', error.message);
   };
 
+  // ---------- People search ----------
+  //
+  // Everyone who looks up a person goes through _searchPeople, so blocking is
+  // applied in ONE place rather than being remembered at each call site.
+  //
+  // The old query was `.or(name.ilike, handle.ilike)` straight against
+  // profiles. That gets one direction of blocking for free from 0054's row
+  // policy — the person who blocked you is hidden from you — and misses the
+  // other completely: someone YOU blocked kept coming back in your own
+  // results. search_profiles (0065) filters both directions in the database.
+  //
+  // Why the RPC and not a stricter policy: the Blocked Users screen has to
+  // keep seeing the people you blocked, or you could never unblock them, and
+  // a row policy cannot tell the two situations apart. The long comment at
+  // the top of 0065 has the full reasoning.
+  // The people YOU have blocked, cached for a minute.
+  //
+  // Only that direction, because the `blocks read own` policy (0004) is
+  // `auth.uid() = blocker_id` — the rows where someone blocked YOU are not
+  // readable from here and asking for them would return an empty half. That
+  // direction needs no help anyway: 0054 hides those profiles from you at the
+  // policy level, so they are already absent from anything that joins
+  // profiles.
+  const _blockedIds = async () => {
+    try {
+      return await cached('blockedids', 60000, async () => {
+        const c = await client(); const me = await uid();
+        if (!me) return [];
+        const { data } = await c.from('blocks').select('blocked_id').eq('blocker_id', me);
+        return (data || []).map(r => r.blocked_id);
+      });
+    } catch (e) { return []; }
+  };
+
+  // Only ever used to patch up a fallback path. This is a cosmetic filter and
+  // is written down as one: it covers the window between shipping this build
+  // and running 0065, and nothing that has to HOLD is resting on it.
+  const _withoutBlocked = async (rows) => {
+    if (!rows || !rows.length) return rows || [];
+    const ids = new Set(await _blockedIds());
+    if (!ids.size) return rows;
+    return rows.filter(r => r && !ids.has(r.id));
+  };
+
+  const _searchPeople = async (query, limit) => {
+    const q = String(query || '').trim();
+    if (!q) return [];
+    const c = await client();
+    const { data, error } = await c.rpc('search_profiles', { p_query: q, p_limit: limit });
+    if (!error) return data || [];
+    console.warn('search_profiles unavailable (is 0065 applied?):', error.message);
+    const term = `%${q.replace(/[%_]/g, '\\$&')}%`;
+    const r = await c.from('profiles')
+      .select('id, name, handle, avatar_url, bio, verified, followers_count')
+      .or(`name.ilike.${term},handle.ilike.${term}`).limit(limit);
+    return _withoutBlocked(r.data || []);
+  };
+
   API.searchAll = async (query) => {
     const c = await client();
     const term = `%${query.replace(/[%_]/g, '\\$&')}%`;
-    const [profilesRes, videosRes, soundsRes] = await Promise.all([
-      c.from('profiles').select('id, name, handle, avatar_url, verified, followers_count').or(`name.ilike.${term},handle.ilike.${term}`).limit(20),
+    const [profiles, videosRes, soundsRes] = await Promise.all([
+      _searchPeople(query, 20),
       c.from('videos').select('id, description, thumbnail, video_url, likes_count, created_at, user:profiles!videos_user_id_fkey(id,name,handle,avatar_url)').ilike('description', term).eq('is_draft', false).limit(20),
       c.from('sounds').select('*').or(`title.ilike.${term},author_name.ilike.${term}`).limit(20),
     ]);
     return {
-      profiles: profilesRes.data || [],
+      profiles: profiles || [],
+      // Videos already obey blocking: can_see_posts_of (0049) refuses across
+      // a block in either direction, and the videos policy goes through it.
       videos: videosRes.data || [],
       sounds: soundsRes.data || [],
     };
@@ -1122,14 +1190,10 @@
     });
   };
 
-  API.searchProfiles = async (q) => {
-    const c = await client();
-    const term = `%${q.replace(/[%_]/g, '\\$&')}%`;
-    const { data, error } = await c.from('profiles').select('id, name, handle, avatar_url, verified, followers_count')
-      .or(`name.ilike.${term},handle.ilike.${term}`).limit(30);
-    if (error) throw error;
-    return data || [];
-  };
+  // Used by the new-message picker and the in-list search on followers /
+  // following. Shares _searchPeople with the main search screen so a blocked
+  // account cannot reappear through the one that was forgotten.
+  API.searchProfiles = async (q) => _searchPeople(q, 30);
 
   // ---------- Chats ----------
   // Details for ONE chat (title + photo + members). V.chat only ever fetched
@@ -1172,15 +1236,21 @@
     // The RPCs are wrapped so one missing function cannot take the inbox down
     // with it: without 0041 there are no unread marks, without 0043 nothing
     // is a request, and the conversation list still loads either way.
+    //
+    // The blocked-id lookup rides along in the same batch for the same
+    // reason: it is needed to filter the list below, and it depends on
+    // nothing here, so making it wait would put back one of the round trips
+    // this batch exists to remove.
     const [
       { data: chats }, { data: lastMsgs }, { data: members },
-      unreadRes, flagsRes,
+      unreadRes, flagsRes, blockedList,
     ] = await Promise.all([
       c.from('chats').select('id, type, name, photo_url, created_by, created_at').in('id', chatIds),
       c.from('messages').select('chat_id, text, type, from_user_id, created_at').in('chat_id', chatIds).order('created_at', { ascending: false }),
       c.from('chat_members').select('chat_id, user_id, profiles:profiles!chat_members_user_id_fkey(id, name, handle, avatar_url)').in('chat_id', chatIds),
       c.rpc('chat_unread_counts').then(r => r, e => ({ error: e })),
       c.rpc('chat_request_flags').then(r => r, e => ({ error: e })),
+      _blockedIds(),
     ]);
 
     // Latest message per chat
@@ -1200,7 +1270,23 @@
     if (flagsRes && flagsRes.error) console.warn('request flags unavailable (is 0043 applied?):', flagsRes.error);
     else (flagsRes && flagsRes.data || []).forEach(r => { requestByChat[r.chat_id] = !!r.is_request; });
 
-    return (chats || []).map(c => {
+    // Direct conversations with someone you have blocked drop out of the
+    // inbox. 0049 already stops the messages — may_message_in_chat refuses
+    // the insert — but the thread itself stayed in the list, so blocking
+    // someone left their conversation sitting in your inbox looking live.
+    //
+    // Deliberately DMs only, matching 0049's decision to leave groups alone:
+    // blocking one person should not remove you from a group other people are
+    // still in. This one is a display choice about your own inbox, not a
+    // boundary anyone is protected by, which is why it is fine for it to live
+    // in the client while search moved to the server.
+    const blocked = new Set(blockedList || []);
+
+    return (chats || []).filter(c => {
+      if (c.type === 'group' || !blocked.size) return true;
+      const others = (membersByChat[c.id] || []).filter(m => m.user_id !== me);
+      return !others.some(m => blocked.has(m.user_id));
+    }).map(c => {
       const others = (membersByChat[c.id] || []).filter(m => m.user_id !== me).map(m => m.profiles);
       const last = lastByChat[c.id];
       return {
@@ -2363,21 +2449,66 @@
   // ============================================================
   // ============================ BLOCKS ==========================
   // ============================================================
+  // Blocking changes who may appear in the inbox, in search and in the
+  // suggested row, and all three are cached. Without this the person you
+  // just blocked stayed on screen until the cache aged out, which reads as
+  // the block not having worked.
+  // Blocking also severs the follow in both directions — 0049 does that with
+  // a trigger, so it happens on the server whether or not the app knows — and
+  // the follower/following lists are cached for a minute. Drop them too, or
+  // the counts and the lists disagree with the database until they age out.
+  const _forgetBlockCaches = () => {
+    invalidate('blockedids');
+    invalidate('chats');
+    invalidate('followers:');
+    invalidate('following:');
+    invalidate('isfollowing:');
+    invalidate('feed:');
+  };
+
   API.blockUser = async (userId) => {
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
     const { error } = await c.from('blocks').insert({ blocker_id: me, blocked_id: userId });
     if (error && error.code !== '23505') throw error;
+    _forgetBlockCaches();
   };
   API.unblockUser = async (userId) => {
     const c = await client(); const me = await uid();
+    if (!me) throw new Error('not signed in');
+    if (!userId) throw new Error('no user given');
     const { error } = await c.from('blocks').delete().eq('blocker_id', me).eq('blocked_id', userId);
     if (error) throw error;
+    _forgetBlockCaches();
   };
+
+  // The list behind Settings → Blocked users.
+  //
+  // The old version joined profiles from blocks and dropped anything that
+  // came back null. Under 0054 a profile is hidden from anyone its owner has
+  // blocked, so if someone you blocked had ALSO blocked you, their profile
+  // read as null and `.filter(Boolean)` quietly removed them from the list —
+  // the only screen from which they could be unblocked. The block became
+  // permanent from your side, with no error anywhere to explain it.
+  //
+  // list_blocked (0065) is SECURITY DEFINER for exactly this: it returns only
+  // rows you created yourself by blocking someone, so it can see past that
+  // policy without giving anything else away.
   API.fetchBlocked = async () => {
     const c = await client(); const me = await uid(); if (!me) return [];
-    const { data, error } = await c.from('blocks').select('blocked_id, profiles:profiles!blocks_blocked_id_fkey(id,name,handle,avatar_url)').eq('blocker_id', me);
-    if (error) throw error;
-    return (data || []).map(r => r.profiles).filter(Boolean);
+    const { data, error } = await c.rpc('list_blocked');
+    if (!error) return data || [];
+    console.warn('list_blocked unavailable (is 0065 applied?):', error.message);
+    // Pre-0065 fallback. Keeps a row for a mutual block rather than dropping
+    // it, so the Unblock button still has an id to work with even when the
+    // name and photo cannot be read.
+    const r = await c.from('blocks')
+      .select('blocked_id, created_at, profiles:profiles!blocks_blocked_id_fkey(id,name,handle,avatar_url)')
+      .eq('blocker_id', me).order('created_at', { ascending: false });
+    if (r.error) throw r.error;
+    return (r.data || []).map(row => Object.assign(
+      { id: row.blocked_id, name: '', handle: '', avatar_url: '', blocked_at: row.created_at },
+      row.profiles || {}
+    ));
   };
 
   // ============================================================

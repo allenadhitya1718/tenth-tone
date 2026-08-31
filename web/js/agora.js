@@ -118,6 +118,147 @@
         stop: async () => { await client.leave().catch(() => {}); },
       };
     },
+
+    // ─── 1:1 CALL: both sides publish and both sides subscribe ───
+    //
+    // Live streaming above is mode 'live', which splits everyone into hosts
+    // and audience. A call is symmetric — nobody is the audience — so it
+    // uses 'rtc', where every participant may publish. The signalling
+    // (ringing, accept, decline, hang up) is ours and lives in the calls
+    // table; this only carries the media once both sides have agreed.
+    //
+    // Every control it returns performs the change on the real track and
+    // then reports what the track says AFTERWARDS. Nothing here returns the
+    // value it was asked for. That is the whole point: the call screen used
+    // to flip a CSS class and call it muted, so "muted" was a claim the UI
+    // made rather than a fact about the microphone, and the two could
+    // disagree with nothing to catch it.
+    async startCall({ channel, uid, withVideo, localVideoEl, remoteVideoEl, onRemote, onError }) {
+      if (!AGORA_APP_ID) throw new Error('AGORA_APP_ID not configured');
+      const AgoraRTC = await loadSdk();
+      AgoraRTC.setLogLevel(2);
+      const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+      const userId = uid || Math.floor(Math.random() * 100000);
+      // 'host' is the publishing role in both modes, and a call needs it on
+      // BOTH sides — an 'audience' token cannot publish, so whoever got one
+      // would join the channel able to hear and unable to be heard.
+      const token = await fetchToken(channel, userId, 'host');
+      await client.join(AGORA_APP_ID, channel, token, userId);
+
+      let mic = null, cam = null;
+      try {
+        mic = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig: 'speech_standard' });
+        if (withVideo) {
+          // A refused camera should still leave you an audio call rather than
+          // no call at all, so this one failure is reported and swallowed.
+          try {
+            cam = await AgoraRTC.createCameraVideoTrack({ encoderConfig: '480p_1', facingMode: 'user' });
+            if (localVideoEl) cam.play(localVideoEl);
+          } catch (e) { onError && onError(e); cam = null; }
+        }
+        await client.publish(cam ? [mic, cam] : [mic]);
+      } catch (e) {
+        // We are already in the channel by this point. A denied microphone
+        // would otherwise leave us joined, silent and billing, with no handle
+        // for the caller to leave with — the caller only ever receives the
+        // session object this function returns, and it is not returning one.
+        if (cam) { try { cam.close(); } catch (e2) {} }
+        if (mic) { try { mic.close(); } catch (e2) {} }
+        await client.leave().catch(() => {});
+        throw e;
+      }
+
+      // Remote audio tracks are held so the speaker setting can be applied to
+      // them as they arrive — the other side usually publishes after we have
+      // already joined, and a setting applied only at join time would be lost.
+      const remoteAudio = new Set();
+      // Tracked separately from audio so the caller can tell "they joined" from
+      // "they are sending pictures". Unhiding the video surface on the strength
+      // of an audio publish alone would black out the avatar screen for a video
+      // call in which the other side has their camera off.
+      const remoteVideo = new Set();
+      let speakerOn = true;
+
+      function applySpeakerTo(track) {
+        // Web has no earpiece/loudspeaker switch: routing is decided by the
+        // OS, and changing it needs a native audio plugin this app does not
+        // ship. What IS controllable is the playback level, which is the
+        // audible part of the difference. setVolume is synchronous and
+        // cannot report failure, so the caller verifies by re-reading below.
+        try { track.setVolume(speakerOn ? 100 : 40); return true; }
+        catch (e) { onError && onError(e); return false; }
+      }
+
+      client.on('user-published', async (user, mediaType) => {
+        try {
+          await client.subscribe(user, mediaType);
+          if (mediaType === 'audio' && user.audioTrack) {
+            remoteAudio.add(user.audioTrack);
+            applySpeakerTo(user.audioTrack);
+            user.audioTrack.play();
+          }
+          if (mediaType === 'video' && user.videoTrack) {
+            remoteVideo.add(user.videoTrack);
+            if (remoteVideoEl) user.videoTrack.play(remoteVideoEl);
+          }
+          onRemote && onRemote(state());
+        } catch (e) { onError && onError(e); }
+      });
+      client.on('user-unpublished', (user, mediaType) => {
+        if (mediaType === 'audio' && user.audioTrack) remoteAudio.delete(user.audioTrack);
+        if (mediaType === 'video' && user.videoTrack) remoteVideo.delete(user.videoTrack);
+        onRemote && onRemote(state());
+      });
+
+      function state() {
+        return { hasRemoteAudio: remoteAudio.size > 0, hasRemoteVideo: remoteVideo.size > 0 };
+      }
+
+      return {
+        client, mic, userId,
+
+        // setMuted keeps the track published and sends silence, rather than
+        // unpublishing it. Unpublishing renegotiates the session, which takes
+        // long enough to see and can fail; mute has to be instant.
+        isMuted: () => !!(mic && mic.muted),
+        setMuted: async (on) => {
+          if (mic) await mic.setMuted(!!on);
+          return !!(mic && mic.muted);
+        },
+
+        hasCamera: () => !!cam,
+        isCameraOn: () => !!(cam && cam.enabled),
+        setCameraOn: async (on) => {
+          if (cam) await cam.setEnabled(!!on);
+          return !!(cam && cam.enabled);
+        },
+
+        // Nothing to route until the other side is actually sending audio.
+        canRouteAudio: () => remoteAudio.size > 0,
+        hasRemoteVideo: () => remoteVideo.size > 0,
+        isSpeakerOn: () => speakerOn,
+        setSpeakerOn: (on) => {
+          const wanted = !!on;
+          const before = speakerOn;
+          speakerOn = wanted;
+          let applied = 0;
+          remoteAudio.forEach(t => { if (applySpeakerTo(t)) applied++; });
+          // Report the truth: if every track refused, the setting did not
+          // take and the caller must not draw it as though it had.
+          if (remoteAudio.size && !applied) speakerOn = before;
+          return speakerOn;
+        },
+
+        stop: async () => {
+          try { await client.unpublish(cam ? [mic, cam] : [mic]); } catch (e) {}
+          if (mic) { try { mic.close(); } catch (e) {} }
+          if (cam) { try { cam.close(); } catch (e) {} }
+          remoteAudio.clear();
+          remoteVideo.clear();
+          await client.leave().catch(() => {});
+        },
+      };
+    },
   };
 
   window.Agora = Agora;

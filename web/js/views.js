@@ -7091,34 +7091,67 @@ function autoPlay(video) {
           ]));
           return;
         }
-        rows.forEach(r => {
-          const p = r.profiles || { id: r.blocked_id };
+        // API.fetchBlocked returns profile rows already — { id, name, handle,
+        // avatar_url }. This used to read `r.profiles || { id: r.blocked_id }`,
+        // unwrapping a shape the API stopped returning, so `p` was
+        // `{ id: undefined }` for every row: the whole screen rendered blank
+        // names and bare "@", and Unblock called unblockUser(undefined), which
+        // deleted nothing and still said "تم إلغاء الحظر".
+        rows.forEach(p => {
+          if (!p || !p.id) return;
           const row = el('div', { class: 'inbox-item', style: { padding: '12px 14px', borderBottom: '1px solid var(--border)' } });
 
+          // A mutual block hides the other person's profile from you (0054),
+          // so name and handle can legitimately be empty. Say so rather than
+          // rendering a nameless row you cannot identify.
+          const known = !!(p.name || p.handle);
+          const shownName = p.name || p.handle || 'حساب محظور';
+
           // Avatar: safe DOM-built <img> with URL whitelist
-          row.appendChild(avatar(safeUrl(p.avatar_url) || '', p.name || p.handle || '', 44));
+          row.appendChild(avatar(safeUrl(p.avatar_url) || '', shownName, 44));
 
           row.appendChild(el('div', { style: { flex: '1', minWidth: '0' } }, [
-            el('div', { style: { fontWeight: '600' } }, p.name || ''),
-            el('div', { class: 'muted', style: { fontSize: '12px' } }, '@' + (p.handle || '')),
+            el('div', { style: { fontWeight: '600' } }, shownName),
+            el('div', { class: 'muted', style: { fontSize: '12px' } },
+              known ? '@' + (p.handle || '') : 'هذا الحساب حظرك أيضًا'),
           ]));
 
           const unblockBtn = el('button', { class: 'btn btn-secondary', style: { padding: '6px 14px' } }, 'إلغاء الحظر');
           unblockBtn.onclick = async () => {
             const yes = await confirmDialog({
               title: 'إلغاء الحظر',
-              message: 'سيتمكن ' + (p.name || 'هذا المستخدم') + ' من رؤية حسابك ومراسلتك مجددًا.',
+              message: 'سيتمكن ' + shownName + ' من رؤية حسابك ومراسلتك مجددًا.',
               confirmLabel: 'إلغاء الحظر',
             });
             if (!yes) return;
+            // The row goes only after the delete comes back. Removing it up
+            // front would show a block as lifted that the server still has.
             unblockBtn.disabled = true;
-            try { await window.API.unblockUser(p.id); toast('تم إلغاء الحظر'); load(); }
-            catch (e) { toast(friendlyError(e, 'فشل')); unblockBtn.disabled = false; }
+            const was = unblockBtn.textContent;
+            unblockBtn.textContent = '...';
+            try {
+              await window.API.unblockUser(p.id);
+              toast('تم إلغاء الحظر');
+              load();
+            } catch (e) {
+              unblockBtn.textContent = was;
+              unblockBtn.disabled = false;
+              toast(friendlyError(e, 'تعذر إلغاء الحظر'));
+            }
           };
           row.appendChild(unblockBtn);
           list.appendChild(row);
         });
-      } catch (e) { list.innerHTML = '<div class="muted" style="padding:30px;text-align:center;color:var(--danger)">' + e.message + '</div>'; }
+      } catch (e) {
+        // Was innerHTML with the raw error interpolated into it. Built as a
+        // text node instead, and through friendlyError so the reader gets a
+        // sentence rather than a Postgres code.
+        list.innerHTML = '';
+        list.appendChild(el('div', {
+          class: 'muted',
+          style: { padding: '30px', textAlign: 'center', color: 'var(--danger)' },
+        }, friendlyError(e, 'تعذر تحميل قائمة المحظورين')));
+      }
     }
     load();
     return root;
@@ -9455,30 +9488,115 @@ function autoPlay(video) {
       if (unsub) { try { unsub(); } catch (e) {} unsub = null; }
       if (timer) { clearInterval(timer); timer = null; }
       if (ringTimeout) { clearTimeout(ringTimeout); ringTimeout = null; }
+      // The microphone and camera have to be handed back, and the channel
+      // left, or the call keeps billing and the recording light stays on
+      // after the screen is gone. Detached from `media` first so a second
+      // cleanup — hangup and hashchange both call it — cannot stop it twice.
+      const session = media; media = null;
+      if (session) { Promise.resolve().then(() => session.stop()).catch(() => {}); }
     }
     function leaveScreen() { cleanup(); back(); }
 
     // A labelled round control. Every button carries its own label so none of
-    // them is a bare icon you have to guess at.
+    // them is a bare icon you have to guess at. The icon and the label live
+    // in fields because both change with the control's state.
     function ctl(cls, icon, label, onclick) {
-      const btn = el('button', { class: 'call-btn ' + cls, title: label, onclick }, [el('span', { html: icon })]);
-      return { btn, node: el('div', { class: 'call-ctl' }, [btn, el('small', {}, label)]) };
+      const iconWrap = el('span', { html: icon });
+      const labelEl = el('small', {}, label);
+      const btn = el('button', {
+        class: 'call-btn ' + cls, type: 'button', title: label,
+        'aria-pressed': 'false', onclick,
+      }, [iconWrap]);
+      return { btn, iconWrap, labelEl, node: el('div', { class: 'call-ctl' }, [btn, labelEl]) };
     }
 
-    const mute = ctl('', icons.mic, 'كتم', () => {
-      mute.btn.classList.toggle('on');
-      // (media) mute the local Agora audio track here once configured
-    });
+    // ── Media controls ───────────────────────────────────────
+    //
+    // These three used to be `classList.toggle('on')` and a comment saying
+    // the media layer would arrive later. Two things were wrong with that.
+    //
+    // The visible one: the toggled look never survived the tap. Nothing else
+    // set or cleared `on`, so the class did latch — but the only feedback
+    // anyone noticed was the WebView's blue tap highlight flashing and going
+    // away, and with the icon unchanged there was nothing to read afterwards
+    // that said "this is muted".
+    //
+    // The one underneath: "muted" was a claim the screen made about itself.
+    // Nothing had ever touched a microphone. A local boolean that no device
+    // is attached to cannot be wrong, which is exactly what makes it useless
+    // — it would have gone on looking correct after the media layer landed
+    // and started disagreeing with it.
+    //
+    // So the media layer is attached here, and `paintMedia` is the only thing
+    // that writes to these buttons. It reads the live track every time and
+    // draws that. A handler's job is to ask for a change, wait for it, and
+    // repaint; if the SDK refuses, the repaint puts the button back where the
+    // hardware actually is and the user is told.
+    let media = null;                 // the Agora session, once connected
+    let joining = false;
 
-    const speaker = ctl('', icons.sparkle, 'مكبر الصوت', () => {
-      speaker.btn.classList.toggle('on');
-      // (media) route audio to the loudspeaker once Agora is wired
-    });
+    function paintMedia() {
+      const live = !!media;
 
-    const cam = ctl('', icons.video, 'الكاميرا', () => {
-      cam.btn.classList.toggle('on');
-      // (media) toggle the local Agora video track here once configured
-    });
+      // Mute: active (white, struck-through mic) means the mic is OFF. The
+      // label flips to the action the next tap performs.
+      const muted = live && media.isMuted();
+      mute.btn.disabled = !live;
+      mute.btn.classList.toggle('on', muted);
+      mute.btn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+      mute.iconWrap.innerHTML = muted ? icons.micOff : icons.mic;
+      mute.labelEl.textContent = muted ? 'إلغاء الكتم' : 'كتم';
+      mute.btn.title = mute.labelEl.textContent;
+
+      // Speaker: active means the loudspeaker is ON, which is the opposite
+      // sense to mute. That looks inconsistent written down and is what every
+      // phone does — the button always lights up for the state you switched
+      // INTO, and for a speaker that state is "loud".
+      const spk = live && media.isSpeakerOn();
+      speaker.btn.disabled = !live || !media.canRouteAudio();
+      speaker.btn.classList.toggle('on', !!spk);
+      speaker.btn.setAttribute('aria-pressed', spk ? 'true' : 'false');
+      speaker.iconWrap.innerHTML = spk ? icons.speaker : icons.speakerOff;
+      speaker.labelEl.textContent = spk ? 'مكبر الصوت' : 'سماعة الأذن';
+      speaker.btn.title = speaker.labelEl.textContent;
+
+      // Camera: active means the camera is OFF, matching mute.
+      const camOff = live && media.hasCamera() && !media.isCameraOn();
+      cam.btn.disabled = !live || !media.hasCamera();
+      cam.btn.classList.toggle('on', !!camOff);
+      cam.btn.setAttribute('aria-pressed', camOff ? 'true' : 'false');
+      cam.iconWrap.innerHTML = camOff ? icons.videoOff : icons.video;
+      cam.labelEl.textContent = camOff ? 'تشغيل الكاميرا' : 'إيقاف الكاميرا';
+      cam.btn.title = cam.labelEl.textContent;
+
+      // These labels are written after the screen's one-time I18N.apply has
+      // already run, so they come back as Arabic on an English device unless
+      // each repaint re-translates them.
+      try {
+        if (window.I18N) [mute, speaker, cam].forEach(c => window.I18N.apply(c.node));
+      } catch (e) {}
+    }
+
+    // Shared by all three: run the change, repaint from whatever the track
+    // says afterwards, and say so if it did not take. `paintMedia` runs in
+    // the failure path too — that is what puts a button that refused to move
+    // back where it was instead of leaving it showing a state we only asked
+    // for.
+    async function toggleMedia(fn, failMsg) {
+      if (!media) return;
+      try { await fn(); }
+      catch (e) { console.warn('call media:', e); toast(failMsg); }
+      finally { paintMedia(); }
+    }
+
+    const mute = ctl('', icons.mic, 'كتم', () =>
+      toggleMedia(() => media.setMuted(!media.isMuted()), 'تعذر تغيير حالة الميكروفون'));
+
+    const speaker = ctl('', icons.speakerOff, 'مكبر الصوت', () =>
+      toggleMedia(async () => media.setSpeakerOn(!media.isSpeakerOn()), 'تعذر تغيير مخرج الصوت'));
+
+    const cam = ctl('', icons.video, 'إيقاف الكاميرا', () =>
+      toggleMedia(() => media.setCameraOn(!media.isCameraOn()), 'تعذر تغيير حالة الكاميرا'));
     cam.node.hidden = true;
 
     const end = ctl('end', icons.phone, 'إنهاء', async () => {
@@ -9489,8 +9607,18 @@ function autoPlay(video) {
       leaveScreen();
     });
 
+    // Video surfaces for a video call: the other person fills the screen, you
+    // sit in the corner. Both stay hidden until a track is actually playing
+    // into them, so an audio call — and a video call before it connects — is
+    // the avatar screen it has always been rather than two black rectangles.
+    const remoteVideo = el('div', { class: 'call-remote', hidden: true });
+    const localVideo = el('div', { class: 'call-local', hidden: true });
+    const videoStage = el('div', { class: 'call-stage', hidden: true }, [remoteVideo, localVideo]);
+
+    root.appendChild(videoStage);
     root.appendChild(el('div', { class: 'call-body' }, [kindEl, avWrap, nameEl, statusEl, mediaNote]));
     root.appendChild(el('div', { class: 'call-actions' }, [mute.node, speaker.node, cam.node, end.node]));
+    paintMedia();     // start disabled: there is no microphone to speak of yet
 
     function startTimer() {
       startedAt = Date.now();
@@ -9498,6 +9626,63 @@ function autoPlay(video) {
       timer = setInterval(() => {
         statusEl.textContent = fmtDuration(Math.floor((Date.now() - startedAt) / 1000));
       }, 1000);
+    }
+
+    // Both sides join the same Agora channel the moment the call is accepted.
+    // applyStatus can be handed the same status more than once — the screen
+    // subscribes to the call and also reads it once on open — so this guards
+    // on `joining` as well as on `media`, or a double 'accepted' would join
+    // twice and publish two microphones into the channel.
+    async function joinMedia() {
+      if (media || joining || ended) return;
+      if (!(window.Agora && window.Agora.isConfigured && window.Agora.isConfigured())) {
+        mediaNote.hidden = false;          // no App ID: signalling only
+        paintMedia();                      // and the controls stay disabled
+        return;
+      }
+      joining = true;
+      paintMedia();
+      const isVideo = call && call.kind === 'video';
+      try {
+        const session = await window.Agora.startCall({
+          channel: (call && call.channel) || callId,
+          withVideo: isVideo,
+          localVideoEl: isVideo ? localVideo : null,
+          remoteVideoEl: isVideo ? remoteVideo : null,
+          // Fires when the other side publishes or stops publishing. The
+          // speaker button is dead until there is remote audio to route, so
+          // it has to be repainted when that arrives rather than only on tap.
+          onRemote: (st) => {
+            if (isVideo) {
+              // Only show the far-side surface once they are actually sending
+              // pictures. A video call where they have their camera off keeps
+              // the avatar rather than covering it with a black rectangle.
+              remoteVideo.hidden = !(st && st.hasRemoteVideo);
+              if (!remoteVideo.hidden) videoStage.hidden = false;
+            }
+            paintMedia();
+          },
+          onError: (e) => console.warn('call media:', e),
+        });
+        // Hanging up during the join leaves a session nobody is holding.
+        // Close it rather than leaking the microphone and the channel.
+        if (ended) { try { await session.stop(); } catch (e) {} return; }
+        media = session;
+        if (isVideo && session.hasCamera()) {
+          videoStage.hidden = false;
+          localVideo.hidden = false;
+        }
+      } catch (e) {
+        console.warn('call media join failed:', e);
+        mediaNote.hidden = false;
+        // The overwhelmingly common cause is a refused microphone prompt, and
+        // "أضف Agora App ID" is no help to the person holding the phone.
+        mediaNote.textContent = 'تعذر تشغيل الصوت — تأكد من السماح بالوصول إلى الميكروفون.';
+        try { if (window.I18N) window.I18N.apply(mediaNote); } catch (e2) {}
+      } finally {
+        joining = false;
+        paintMedia();
+      }
     }
 
     function applyStatus(row) {
@@ -9515,10 +9700,7 @@ function autoPlay(video) {
         avWrap.classList.remove('ringing');
         avWrap.classList.add('connected');
         startTimer();
-        // (media) both sides join Agora channel `call.channel` here.
-        if (!(window.Agora && window.Agora.isConfigured && window.Agora.isConfigured())) {
-          mediaNote.hidden = false;
-        }
+        joinMedia();
       } else if (terminal) {
         ended = true;
         cleanup();                       // stop the timer before it overwrites the reason

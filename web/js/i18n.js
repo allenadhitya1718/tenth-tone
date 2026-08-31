@@ -716,6 +716,12 @@
     'إلغاء حظر': 'Unblock',
     'تم إلغاء الحظر': 'Unblocked',
     'هذا المستخدم': 'this user',
+    // Shown when the block is mutual: their profile is hidden from us by the
+    // policy in 0054, so there is no name or photo to put in the row.
+    'حساب محظور': 'Blocked account',
+    'هذا الحساب حظرك أيضًا': 'This account has blocked you too',
+    'تعذر إلغاء الحظر': 'Could not unblock',
+    'تعذر تحميل قائمة المحظورين': 'Could not load the blocked list',
 
     // Profile
     'تعديل البروفايل': 'Edit profile',
@@ -1741,6 +1747,16 @@
     'كتم': 'Mute',
     'الكاميرا': 'Camera',
     'قبول': 'Accept',
+    // Call controls. Each toggle has two labels because the button now says
+    // what the next tap will do, not what the control is called.
+    // ('إلغاء الكتم' is already above, shared with the muted-accounts screen.)
+    'سماعة الأذن': 'Earpiece',
+    'إيقاف الكاميرا': 'Turn camera off',
+    'تشغيل الكاميرا': 'Turn camera on',
+    'تعذر تغيير حالة الميكروفون': 'Could not change the microphone',
+    'تعذر تغيير مخرج الصوت': 'Could not change audio output',
+    'تعذر تغيير حالة الكاميرا': 'Could not change the camera',
+    'تعذر تشغيل الصوت — تأكد من السماح بالوصول إلى الميكروفون.': 'Audio could not start — check that microphone access is allowed.',
     'الصوت والفيديو غير مفعلين — أضف Agora App ID': 'Audio and video are not enabled - add your Agora App ID',
     'لا يمكن بدء المكالمة': 'Cannot start the call',
     'المكالمات الجماعية غير متاحة بعد': 'Group calls are not available yet',

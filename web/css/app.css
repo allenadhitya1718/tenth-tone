@@ -1812,15 +1812,49 @@ body.lang-en .toast { font-family: 'Cairo', system-ui, sans-serif; }
   background: rgba(255,255,255,0.12); border: 0; color: #fff; cursor: pointer;
   width: 62px; height: 62px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  transition: background .18s ease, transform .15s ease;
+  transition: background .18s ease, transform .15s ease, box-shadow .18s ease;
+  /* Android's WebView paints its own blue wash over a tapped button and then
+     fades it out. On these controls that flash was the ONLY feedback anyone
+     reported seeing, which is why the toggles read as momentary. The real
+     state is `.on` below; this stops the highlight competing with it. */
+  -webkit-tap-highlight-color: transparent;
 }
 .call-btn span { display: flex; width: 24px; height: 24px; }
 .call-btn span svg { width: 100%; height: 100%; }
-.call-btn:active { transform: scale(0.92); }
-.call-btn.on { background: #fff; color: #111; }
-.call-btn:disabled { opacity: .5; cursor: default; }
+.call-btn:active:not(:disabled) { transform: scale(0.92); }
+
+/* The toggled state. It has to survive the finger leaving the button, so it
+   is a class the screen sets from the live track — never :active, :focus or
+   :hover, all of which end when the touch does.
+   Colour is not carrying this alone: the icon swaps to a struck-through one
+   at the same time, for anyone who cannot separate the white fill from the
+   grey. */
+.call-btn.on {
+  background: #fff; color: #111;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.24);
+}
+.call-btn.on + small { color: #fff; font-weight: 700; }
+/* Keyboard focus still needs to be visible; it just must not look like `on`. */
+.call-btn:focus-visible { outline: 2px solid rgba(255,255,255,.75); outline-offset: 3px; }
+.call-btn:disabled { opacity: .38; cursor: default; }
 .call-btn.end { background: #ef4444; width: 68px; height: 68px; }
 .call-btn.end span svg { transform: rotate(135deg); }
+
+/* Video call surfaces. Hidden until a track is actually playing into them,
+   so an audio call is unchanged. inset-inline-end keeps the self-view in the
+   trailing corner under RTL as well as LTR. */
+.call-stage { position: absolute; inset: 0; z-index: 0; }
+.call-remote { position: absolute; inset: 0; background: #000; }
+.call-remote video { width: 100%; height: 100%; object-fit: cover; }
+.call-local {
+  position: absolute; inset-block-start: 18px; inset-inline-end: 14px;
+  width: 104px; height: 150px; border-radius: 14px; overflow: hidden;
+  background: #1b1b22; box-shadow: 0 6px 20px rgba(0,0,0,.45);
+  border: 1px solid rgba(255,255,255,.18);
+}
+.call-local video { width: 100%; height: 100%; object-fit: cover; }
+/* The name, status and controls sit above the video, not behind it. */
+.call-screen .call-body, .call-screen .call-actions { position: relative; z-index: 1; }
 
 /* Incoming call — full screen, not a card in the corner.
    A ringing phone should take over the screen; the old small dialog read as
@@ -2284,33 +2318,33 @@ body.dark .sound-fav.on { border-color: var(--primary-2); color: var(--primary-2
   display: flex; flex-direction: column; align-items: center; gap: 5px; width: 58px;
   filter: drop-shadow(0 1px 3px rgba(0,0,0,.6));
 }
-.cam-action:active { transform: scale(0.92); }
-
-/* Holds the record button centred now that the effects button is gone.
-   Same width as .cam-action so the layout is unchanged. */
-.cam-action-spacer { width: 58px; }
-
-/* An enabled timer or torch has to be visible at a glance — these buttons sit
-   over live camera output, where a subtle tint is invisible. */
-.cam-side-btn.active { color: var(--primary); }
-.cam-side-btn.active .csb-icon { filter: drop-shadow(0 0 6px var(--primary)); }
-
-/* Countdown before recording starts. Centred over the preview, deliberately
-   huge: it is read at arm's length by someone who has just stepped back from
-   the phone to be in frame. */
-.cam-countdown {
-  position: absolute; inset: 0; z-index: 12;
-  display: none; align-items: center; justify-content: center;
-  font-size: 116px; font-weight: 800; color: #fff; line-height: 1;
-  text-shadow: 0 4px 24px rgba(0,0,0,.55);
-  pointer-events: none;                    /* the record button underneath stays tappable to cancel */
-  font-variant-numeric: tabular-nums;      /* 3 -> 2 -> 1 must not shift sideways */
-}
-.cam-countdown.show { display: flex; animation: cam-count-pop .9s ease-out; }
-@keyframes cam-count-pop {
-  0%   { transform: scale(1.35); opacity: 0; }
-  18%  { transform: scale(1);    opacity: 1; }
-  100% { transform: scale(1);    opacity: .92; }
+.cam-action:active { transform: scale(0.92); }
+
+/* Holds the record button centred now that the effects button is gone.
+   Same width as .cam-action so the layout is unchanged. */
+.cam-action-spacer { width: 58px; }
+
+/* An enabled timer or torch has to be visible at a glance — these buttons sit
+   over live camera output, where a subtle tint is invisible. */
+.cam-side-btn.active { color: var(--primary); }
+.cam-side-btn.active .csb-icon { filter: drop-shadow(0 0 6px var(--primary)); }
+
+/* Countdown before recording starts. Centred over the preview, deliberately
+   huge: it is read at arm's length by someone who has just stepped back from
+   the phone to be in frame. */
+.cam-countdown {
+  position: absolute; inset: 0; z-index: 12;
+  display: none; align-items: center; justify-content: center;
+  font-size: 116px; font-weight: 800; color: #fff; line-height: 1;
+  text-shadow: 0 4px 24px rgba(0,0,0,.55);
+  pointer-events: none;                    /* the record button underneath stays tappable to cancel */
+  font-variant-numeric: tabular-nums;      /* 3 -> 2 -> 1 must not shift sideways */
+}
+.cam-countdown.show { display: flex; animation: cam-count-pop .9s ease-out; }
+@keyframes cam-count-pop {
+  0%   { transform: scale(1.35); opacity: 0; }
+  18%  { transform: scale(1);    opacity: 1; }
+  100% { transform: scale(1);    opacity: .92; }
 }
 /* These were bare grey squares with no icon in them. */
 .ca-icon {
