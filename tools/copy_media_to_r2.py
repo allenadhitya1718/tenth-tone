@@ -349,11 +349,33 @@ def main():
             fh.write(f"update public.{table}\n")
             fh.write(f"   set {col} = replace({col}, '{old_prefix}', '{new_prefix}')\n")
             fh.write(f" where {col} like '{old_prefix}%';\n\n")
-        fh.write("-- Check before committing: every count should be 0.\n")
+        fh.write("commit;\n\n")
+
+        # ONE query, not five. The Supabase SQL editor displays only the LAST
+        # statement's result, so five separate selects would show a single
+        # count and silently hide the other four — the same trap 0058 hit.
+        #
+        # The verification also comes AFTER the commit rather than before it.
+        # The editor runs the whole file as one batch, so a check placed inside
+        # the transaction cannot prevent anything: it commits either way. What
+        # makes that acceptable is that the update is reversible — swap the two
+        # strings and run it again — so the honest design is "apply, then
+        # prove", not a check that only looks like a gate.
+        fh.write("-- Verify. One query on purpose: the Supabase SQL editor shows\n")
+        fh.write("-- only the LAST statement's result, so separate selects would\n")
+        fh.write("-- report one column and hide the rest.\n")
+        fh.write("-- Every still_on_supabase must be 0, and now_on_r2 should\n")
+        fh.write("-- account for every row that had a URL.\n")
+        parts = []
         for table, col in URL_COLUMNS:
-            fh.write(f"select '{table}.{col}' as col, count(*) as still_on_supabase\n")
-            fh.write(f"  from public.{table} where {col} like '{old_prefix}%';\n")
-        fh.write("\ncommit;\n")
+            parts.append(
+                f"select '{table}.{col}' as column_name,\n"
+                f"       count(*) filter (where {col} like '{old_prefix}%') as still_on_supabase,\n"
+                f"       count(*) filter (where {col} like '{new_prefix}%') as now_on_r2\n"
+                f"  from public.{table}"
+            )
+        fh.write("\nunion all\n".join(parts))
+        fh.write("\n order by 1;\n")
 
     print(f"\ncopied {copied}, skipped {skipped}, failed {failed}")
     print(f"Wrote {sql_path} — read it, then run it in the Supabase SQL editor.")
