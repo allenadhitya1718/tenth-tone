@@ -40,6 +40,24 @@ def qa(ar_q, en_q, ar_a, en_a):
       </div>''' % (t(ar_q, en_q), ar_q, t(ar_a, en_a), ar_a)
 
 
+def qa_more(ar_q, en_q, ar_a, en_a, href, ar_l, en_l):
+    """Same as qa(), plus a link on its own line.
+
+    site.js swaps languages by overwriting textContent, so an anchor cannot
+    live inside a data-ar element - it would be wiped on the first toggle.
+    The answer and the link are therefore separate translatable children of
+    the <dd>, which is left untranslated itself.
+    """
+    return u'''<div>
+        <dt %s>%s</dt>
+        <dd>
+          <span %s>%s</span>
+          <a href="%s" style="display:block;margin-top:8px;text-decoration:underline" %s>%s</a>
+        </dd>
+      </div>''' % (t(ar_q, en_q), ar_q, t(ar_a, en_a), ar_a,
+                   href, t(ar_l, en_l), ar_l)
+
+
 def hcard(ar_h, en_h, ar_p, en_p, mail):
     return u'''<div class="hcard">
         <h3 %s>%s</h3>
@@ -235,11 +253,14 @@ HELP += qa_group(u'الحساب', 'Your account', [
        u'الإعدادات ← الحساب ← تغيير البريد. نطلب كلمة مرورك أولًا، ثم نرسل رمز تأكيد إلى العنوان الجديد.',
        'Settings, Account, Change email. We ask for your password first, then send a confirmation code to the new address.'),
     qa(u'كيف أوقف حسابي مؤقتًا؟', 'How do I deactivate my account?',
-       u'الإعدادات ← الحساب ← إيقاف مؤقت. يختفي ملفك ومحتواك، ويعود كل شيء بمجرد تسجيل الدخول مرة أخرى.',
-       'Settings, Account, Deactivate. Your profile and content disappear, and everything returns the moment you sign in again.'),
-    qa(u'كيف أحذف حسابي نهائيًا؟', 'How do I delete my account permanently?',
-       u'الإعدادات ← الحساب ← حذف الحساب. أمامك ثلاثون يومًا للتراجع، وبعدها يُحذف كل شيء ولا يمكن استرجاعه.',
-       'Settings, Account, Delete account. You have thirty days to change your mind, after which everything is removed and cannot be recovered.'),
+       u'الإعدادات والخصوصية ← منطقة الخطر ← حالة الحساب ← إيقاف الحساب مؤقتًا. يختفي ملفك ومحتواك، ويعود كل شيء بمجرد تسجيل الدخول مرة أخرى.',
+       'Settings &amp; Privacy, Danger zone, Account status, Deactivate account. Your profile and content disappear, and everything returns the moment you sign in again.'),
+    qa_more(u'كيف أحذف حسابي نهائيًا؟', 'How do I delete my account permanently?',
+            u'الإعدادات والخصوصية ← منطقة الخطر ← حالة الحساب ← حذف الحساب نهائيًا. أمامك ثلاثون يومًا للتراجع، وبعدها يُحذف كل شيء ولا يمكن استرجاعه.',
+            'Settings &amp; Privacy, Danger zone, Account status, Delete account permanently. You have thirty days to change your mind, after which everything is removed and cannot be recovered.',
+            'delete-account.html',
+            u'وإن لم يكن التطبيق مثبّتًا لديك: كيف تحذف حسابك',
+            'If you do not have the app installed: how to delete your account'),
     qa(u'كيف أحصل على نسخة من بياناتي؟', 'How do I get a copy of my data?',
        u'الإعدادات ← الأرشفة والتنزيل ← طلب نسخة. نجهّز الملف ونرسل إليك إشعارًا عندما يصبح جاهزًا.',
        'Settings, Archiving and downloading, Request a copy. We prepare the file and notify you when it is ready.'),
