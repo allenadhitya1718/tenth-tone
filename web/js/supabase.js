@@ -244,14 +244,50 @@
 
     async updateProfile(userId, fields) {
       const c = await ready; if (!c) throw new Error('SDK not loaded');
+
+      // ── Screened, because a profile is a public surface ──
+      // A display name and a bio are seen by everyone who opens the account,
+      // on every comment it leaves and every chat row it appears in. They are
+      // read far more often than any single post, and until now nothing looked
+      // at them at all.
+      //
+      // Only the free-text fields are gathered. This function is also called
+      // with flag-only payloads, and sending an empty string would spend a
+      // request against the daily cap to screen nothing.
+      let verdict = null;
+      if (window.Moderation && fields) {
+        const words = [fields.name, fields.bio, fields.link]
+          .filter(v => typeof v === 'string' && v.trim())
+          .join('\n');
+        if (words) {
+          verdict = await window.Moderation.checkText('profile', words);
+          if (verdict.blocked) throw new Error(verdict.message || 'لا يمكن حفظ هذه المعلومات');
+        }
+      }
+
       const { data, error } = await c.from('profiles').update(fields).eq('id', userId).select().single();
       if (error) throw error;
+      // Reports the ACCOUNT, which is the only target_type public.reports
+      // accepts for a profile - there is no 'bio' kind of report, and
+      // inventing one would mean changing the table's check constraint and
+      // every admin screen that renders it.
+      if (verdict) window.Moderation.attach(verdict, 'user', userId);
       return data;
     },
 
     // ---------- Storage ----------
     async uploadAvatar(userId, file) {
       const c = await ready; if (!c) throw new Error('SDK not loaded');
+
+      // Checked as a downscaled copy made in the browser, so a refused avatar
+      // never reaches the bucket at all - not even for the moment it would
+      // take to upload it, look at it and delete it again. The avatars bucket
+      // is public.
+      if (window.Moderation) {
+        const verdict = await window.Moderation.checkImage('avatar', file);
+        if (verdict.blocked) throw new Error(verdict.message || 'لا يمكن استخدام هذه الصورة');
+      }
+
       const ext = (file.name.split('.').pop() || 'png').toLowerCase();
       const path = `${userId}/avatar-${Date.now()}.${ext}`;
       // A year, for the same reason videos get one: the path carries a

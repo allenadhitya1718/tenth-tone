@@ -16,7 +16,7 @@ and the 14-day pile**, and **anything unfinished is a rejection**.
 | Social: report | Report on videos, comments, users | ✅ |
 | Social: blocking | Blocking, and today the Blocked Users screen was fixed — it had been returning undefined ids, so Unblock silently did nothing | ✅ |
 | Social: contact support | `support@flyp-sa.com`, on the store listing and the site | ✅ |
-| **Social: moderate UGC** | **Was the gap.** An agent is adding OpenAI's free moderation endpoint now | ⏳ |
+| **Social: moderate UGC** | Text and images are screened before they are saved, through a Supabase Edge Function calling OpenAI's free moderation endpoint. Video is SAMPLED (three frames), not watched end to end, and the review notes say so in as many words | ✅ code done, ⏳ needs migration 0066 + the `OPENAI_API_KEY` secret |
 | **No unfinished / coming-soon screens** | Five dead camera buttons removed today. An agent is sweeping for the rest — two settings builders fall back to a "قريبًا" toast | ⏳ |
 | Everything works | Four team-reported bugs fixed today; three were worse than reported | ✅ |
 | No dark patterns | No paywall, no subscriptions, no purchases at all | ✅ |
@@ -66,8 +66,25 @@ SAFETY AND MODERATION (Guideline 1.2)
   longer appear in your search results.
 - Blocked accounts are managed at Profile > Settings > Privacy > Blocked
   users, where they can be unblocked.
-- <MODERATION SENTENCE — to be filled from the moderation agent's report.
-  It must state exactly what is screened automatically and what is not.>
+- Text is screened automatically before it is saved. Video captions,
+  comments, live-stream comments and titles, profile names and bios, group
+  names and direct messages are all checked by an automated classifier
+  first, and anything rated severe is refused at that point and never
+  appears in the app.
+- Images are screened the same way, before they are uploaded: profile
+  photos, group photos and live-stream cover images.
+- Uploaded videos are screened in two ways. Three still frames are sampled
+  from each video and checked together with its caption, and a nudity model
+  runs on the device before the file is uploaded at all.
+- What is not screened automatically, stated plainly: we do not check every
+  frame of a video, we do not analyse audio, we do not screen live video
+  while it is broadcasting, and we do not screen photos sent privately
+  inside a direct message. Those rely on reporting, on blocking, and on an
+  administrator who can end any live stream immediately.
+- Anything the classifier rates borderline rather than severe is published
+  and placed in the same moderation queue our team already uses for user
+  reports. If the classifier cannot be reached, the post is allowed and
+  flagged for human review rather than blocked.
 - Reports reach a moderation queue reviewed by our team.
 - Support: support@flyp-sa.com
 
@@ -84,8 +101,11 @@ which signing in again cancels the deletion. Deletion can also be requested
 without the app at <delete-account URL>.
 ```
 
-**Before pasting:** fill in the reviewer credentials, the moderation
-sentence, and the deletion URL. Do not leave a placeholder in the box — an
+**Before pasting:** fill in the reviewer credentials and the deletion URL.
+The moderation lines are filled in and are true of the shipped build ONLY
+once migration 0066 is applied and `moderate-content` is deployed with its
+`OPENAI_API_KEY` secret. Submitting these notes before that is a false
+claim to a reviewer, which is far worse than the gap they describe closing. Do not leave a placeholder in the box — an
 angle bracket left in review notes reads as carelessness on the one document
 whose entire job is to look careful.
 

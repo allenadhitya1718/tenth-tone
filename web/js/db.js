@@ -361,6 +361,21 @@
     const userId = await uid();
     if (!userId) throw new Error('not signed in');
 
+    // ── Screening, before a single byte is uploaded ──
+    // The caption and three sampled frames go in ONE call (moderation.js,
+    // and 0066 for why). Refused here means nothing is stored and nothing is
+    // written, which is the whole reason this sits above the upload rather
+    // than below it. Unreachable means ALLOWED - the verdict then carries a
+    // queue entry instead, attached once the row exists.
+    //
+    // Drafts are screened too. A draft becomes a post with one tap and the
+    // check costs nothing, so skipping them would be a hole with a button on it.
+    let verdict = null;
+    if (window.Moderation) {
+      verdict = await window.Moderation.checkVideo(file, description);
+      if (verdict.blocked) throw new Error(verdict.message || 'لا يمكن نشر هذا المحتوى');
+    }
+
     let video_url = null;
     if (file) {
       const q = await API.uploadQuota();
@@ -396,6 +411,10 @@
       allow_comments, allow_saving,
     }).select().single();
     if (error) throw error;
+
+    // Not awaited, and it cannot throw: filing the queue entry is bookkeeping,
+    // and a post that has already succeeded must never fail behind it.
+    if (verdict && data && data.id) window.Moderation.attach(verdict, 'video', data.id);
 
     // Every public post gets an original sound others can reuse - the loop
     // that makes a short-video app work. Skipped when the user picked an
@@ -987,11 +1006,22 @@
 
   API.postComment = async (videoId, text) => {
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
+
+    // Comments are the highest-volume public surface in the app and the one a
+    // stranger is most likely to be hurt by, so this is the check that earns
+    // its keep. Text only, one call, normally well under a second.
+    let verdict = null;
+    if (window.Moderation) {
+      verdict = await window.Moderation.checkText('comment', text);
+      if (verdict.blocked) throw new Error(verdict.message || 'لا يمكن نشر هذا التعليق');
+    }
+
     const { data, error } = await c.from('comments').insert({ video_id: videoId, user_id: me, text }).select(`
       id, text, likes_count, created_at,
       user:profiles!comments_user_id_fkey ( id, name, handle, avatar_url )
     `).single();
     if (error) throw error;
+    if (verdict && data && data.id) window.Moderation.attach(verdict, 'comment', data.id);
     return data;
   };
 
@@ -1385,6 +1415,14 @@
   API.createGroup = async ({ name, memberIds, photoFile }) => {
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
 
+    // Name and photo together in one call, before the photo is uploaded. Not
+    // queued for review - a private group is private - but a refusal still
+    // stands, and it stands before any bytes reach the bucket.
+    if (window.Moderation && (name || photoFile)) {
+      const verdict = await window.Moderation.checkImage('group', photoFile, name);
+      if (verdict.blocked) throw new Error(verdict.message || 'لا يمكن استخدام هذا الاسم أو هذه الصورة');
+    }
+
     let photo_url = null;
     if (photoFile) {
       const ext = (photoFile.name.split('.').pop() || 'png').toLowerCase();
@@ -1461,6 +1499,22 @@
 
   API.sendMessage = async ({ chatId, text, type = 'text', file, replyToId = null }) => {
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
+
+    // ── A private conversation: screened, never queued ──
+    // A severe message is still refused - "it was a DM" has never been a
+    // defence for a threat. But nothing borderline is put in front of an
+    // administrator and no verdict is attached; see the SURFACE table in
+    // supabase/functions/moderate-content/index.ts. Blocking is safety,
+    // queueing a private chat would be surveillance.
+    //
+    // The attachment is deliberately NOT scanned, only the text. Two people
+    // privately exchanging photos is outside what this layer is for, and
+    // reporting plus blocking remain the answer there.
+    if (window.Moderation && text) {
+      const verdict = await window.Moderation.checkText('message', text);
+      if (verdict.blocked) throw new Error(verdict.message || 'لا يمكن إرسال هذه الرسالة');
+    }
+
     const row = { chat_id: chatId, from_user_id: me, type, text };
     // Only sent when set, so this still works against a database without
     // 0042 applied — an unknown column would otherwise reject every message.
@@ -2195,6 +2249,24 @@
   // cover must never stop somebody going live.
   API.uploadLiveThumbnail = async (blob) => {
     if (!blob) return null;
+
+    // Screened before upload, and a refusal THROWS rather than returning null
+    // - the same distinction uploadMedia() draws between "the service is
+    // broken" (null, fall through) and "the server said no" (throw).
+    //
+    // The one caller, the go-live button in views.js, catches around this and
+    // continues without a cover, which is exactly the behaviour wanted: the
+    // objectionable image is never stored, and nobody is stopped from
+    // broadcasting over a still frame.
+    if (window.Moderation) {
+      const verdict = await window.Moderation.checkImage('live_cover', blob);
+      if (verdict.blocked) {
+        const refusal = new Error(verdict.message || 'لا يمكن استخدام هذه الصورة');
+        refusal.refused = true;
+        throw refusal;
+      }
+    }
+
     try {
       const c = await client();
       const me = await uid();
@@ -2221,10 +2293,22 @@
     // whole broadcast, and defaulting to 'public' on a typo is the wrong way
     // to fail for a privacy setting.
     const p = ['public', 'friends', 'private'].indexOf(privacy) !== -1 ? privacy : 'private';
+
+    // The title is the one part of a live stream screened up front - the cover
+    // was handled by uploadLiveThumbnail above, and the video itself cannot be,
+    // which 0066 says plainly. A running stream is covered by reporting and the
+    // admin kill switch in web/js/admin.js.
+    let verdict = null;
+    if (window.Moderation && title) {
+      verdict = await window.Moderation.checkText('live_title', title);
+      if (verdict.blocked) throw new Error(verdict.message || 'لا يمكن استخدام هذا العنوان');
+    }
+
     const { data, error } = await c.from('live_streams')
       .insert({ host_id: me, title, thumbnail, status: 'live', privacy: p })
       .select().single();
     if (error) throw error;
+    if (verdict && data && data.id) window.Moderation.attach(verdict, 'live_stream', data.id);
     return data;
   };
 
@@ -2287,6 +2371,15 @@
     // Matches the column constraint, so an over-long comment fails here with
     // a readable message instead of a database error.
     if (body.length > 500) throw new Error('التعليق طويل جدًا');
+
+    // Screened and blockable, never queued: live chat is ephemeral and arrives
+    // in bursts, and filing a report for every borderline line would bury the
+    // reports that matter within minutes of the first busy stream.
+    if (window.Moderation) {
+      const verdict = await window.Moderation.checkText('live_comment', body);
+      if (verdict.blocked) throw new Error(verdict.message || 'لا يمكن نشر هذا التعليق');
+    }
+
     const { data, error } = await c.from('live_comments')
       .insert({ live_stream_id: liveStreamId, user_id: me, text: body })
       .select('id, text, created_at')

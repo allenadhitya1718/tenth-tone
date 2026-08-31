@@ -91,5 +91,32 @@ window.TT_CONFIG = (function () {
     if (q.get('r2') === '1') r2Uploads = true;
   } catch (e) { /* URLSearchParams unavailable — keep the default */ }
 
-  return { demoMode, otpMaxLength, otpMinLength, captchaSiteKey, r2Uploads };
+  // ── CONTENT SCREENING ──
+  // true  → text and images are checked by the moderate-content Edge Function
+  //         on their way into the database (see web/js/moderation.js and
+  //         supabase/migrations/0066_content_moderation.sql).
+  // false → the layer is inert. Nothing is called and nothing is blocked.
+  //
+  // Unlike the CAPTCHA switch above, leaving this ON before the server side
+  // exists is SAFE. moderation.js fails open on every path, and after three
+  // failures in a row it stands down for ten minutes on its own - so a build
+  // that reaches a phone before the function is deployed behaves exactly as
+  // it does today, minus one wasted request every ten minutes.
+  //
+  // There is a second switch on the server: public.moderation_settings.enabled.
+  // Prefer that one for turning screening off during an incident - it takes
+  // effect within 60 seconds for everybody, on builds already installed. This
+  // one only helps the build it ships in.
+  //
+  // Overridable per session for testing, without a rebuild:
+  //   ?mod=1  → force on       ?mod=0  → force off
+  let aiModeration = true;
+
+  try {
+    const q = new URLSearchParams(location.search);
+    if (q.get('mod') === '0') aiModeration = false;
+    if (q.get('mod') === '1') aiModeration = true;
+  } catch (e) { /* URLSearchParams unavailable — keep the default */ }
+
+  return { demoMode, otpMaxLength, otpMinLength, captchaSiteKey, r2Uploads, aiModeration };
 })();
