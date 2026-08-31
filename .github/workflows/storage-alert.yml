@@ -66,3 +66,23 @@ jobs:
           if grep -q '"reason":"no_admin_recipients"' /tmp/out.json; then
             echo "::warning::Storage crossed a threshold but NO account has profiles.is_admin set, so nobody was emailed."
           fi
+
+          # ── Email without an email provider ──
+          # GitHub emails the repo owner when a scheduled workflow fails, so a
+          # deliberate failure IS the notification. That makes Resend optional
+          # rather than required: with no mailer configured you still get an
+          # email, it just says "workflow failed" and the detail is in this log.
+          #
+          # Only a real alert fails the run. The ordinary case — nothing
+          # pending, most days — passes quietly, so a red run always means
+          # something actually happened.
+          if grep -q '"alert":true' /tmp/out.json; then
+            PCT=$(grep -o '"pct":[0-9.]*' /tmp/out.json | head -1 | cut -d: -f2)
+            echo "::error::STORAGE ALERT — ${PCT}% of the configured cap. Uploads stop at 100%. See the JSON above for used/limit."
+            exit 1
+          fi
+
+          if grep -q '"reason":"resend_failed"' /tmp/out.json; then
+            echo "::error::Storage alert fired but the email could not be sent — the in-app notification was still written."
+            exit 1
+          fi

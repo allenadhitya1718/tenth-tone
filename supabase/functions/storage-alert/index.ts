@@ -16,13 +16,20 @@
 // reads it, so two overlapping runs cannot both send: the second sees
 // nothing pending.
 //
-// Secrets required (Supabase -> Edge Functions -> Secrets):
-//   RESEND_API_KEY   from resend.com. Free tier covers this many times over.
-//   ALERT_FROM       e.g. "FLYP alerts <alerts@flyp-sa.com>". The domain has
-//                    to be verified in Resend, or delivery fails silently.
-//   ALERT_SECRET     any long random string. The caller must present it, so
-//                    a stranger who finds the URL cannot drain your outbox
-//                    and suppress a real warning.
+// Secrets (Supabase -> Edge Functions -> Secrets):
+//
+//   ALERT_SECRET     REQUIRED. Any long random string. The caller must present
+//                    it, so a stranger who finds the URL cannot drain your
+//                    outbox and suppress a real warning.
+//
+//   RESEND_API_KEY   OPTIONAL. From resend.com, for a properly worded email.
+//   ALERT_FROM       OPTIONAL. e.g. "FLYP alerts <alerts@flyp-sa.com>", on a
+//                    domain verified in Resend or delivery fails silently.
+//
+// Without the Resend pair this still works: the response carries alert:true
+// and the GitHub workflow fails the run, which makes GitHub email the repo
+// owner by itself. That costs nothing to set up and needs no account. Add
+// Resend later if you want a branded message rather than "workflow failed".
 //
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected by the platform.
 // The service role is required: claim_storage_alert_email() reads operator
@@ -74,13 +81,32 @@ Deno.serve(async (req) => {
 
   const recipients: string[] = Array.isArray(data.recipients) ? data.recipients : [];
   if (!recipients.length) {
-    // Worth reporting rather than swallowing: it means no profile has
-    // is_admin set, so the whole alert path has no audience.
-    return json({ sent: false, reason: 'no_admin_recipients', pct: data.pct });
+    // The worst case, not a footnote: storage crossed a threshold and nobody
+    // has profiles.is_admin, so neither the email NOR the in-app notification
+    // reached a single person. Carries alert:true so the caller fails loudly
+    // rather than logging a warning nobody reads.
+    return json({
+      sent: false, reason: 'no_admin_recipients', alert: true,
+      pct: data.pct, band: data.band, used: data.used, limit: data.limit,
+    });
   }
 
+  // Not an error, and deliberately a 200. Running without Resend is a
+  // supported setup: the caller turns "an alert is pending but no mailer is
+  // configured" into a failed workflow run, and GitHub emails the repo owner
+  // about that by itself. Returning 500 here would make an ordinary
+  // configuration look like a broken function.
   if (!RESEND_API_KEY || !ALERT_FROM) {
-    return json({ sent: false, reason: 'mail_not_configured', pct: data.pct, recipients: recipients.length }, 500);
+    return json({
+      sent: false,
+      reason: 'mail_not_configured',
+      alert: true,
+      pct: data.pct,
+      band: data.band,
+      used: data.used,
+      limit: data.limit,
+      recipients: recipients.length,
+    });
   }
 
   const pct = Number(data.pct);
