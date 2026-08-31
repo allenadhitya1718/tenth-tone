@@ -1053,11 +1053,13 @@
       const fallbackUrl = demoBgList.length ? demoBgList[idx % demoBgList.length] : '';
       const videoSrc = (v.video_url && isVideoUrl(v.video_url)) ? v.video_url : ((v.bg && isVideoUrl(v.bg)) ? v.bg : fallbackUrl);
       const isVideo = !!videoSrc;
+      // Hoisted out of the !isVideo branch: a video row has a thumbnail too,
+      // and it was going unused, so a clip that had not loaded showed the
+      // WebView's grey placeholder instead of its own still.
+      const still = (v.poster || v.thumbnail || v.bg || '');
       // Show dark sleek backdrop while video streams
       const item = el('div', { class: 'feed-item', style: { background: '#000' } });
       if (!isVideo) {
-        // Still image (poster/thumbnail) for rows without a playable video
-        const still = (v.poster || v.thumbnail || v.bg || '');
         if (still) {
           item.appendChild(el('div', {
             style: {
@@ -1072,6 +1074,9 @@
         const video = document.createElement('video');
         // The source is deliberately NOT set here — see attachSrc below.
         video.dataset.src = videoSrc;
+        // Its own still if it has one, otherwise a transparent pixel. Either
+        // way, never the WebView's grey play-button placeholder.
+        video.poster = (still && (safeUrl(still) || still)) || BLANK_POSTER;
         // No autoplay ATTRIBUTE. It overrides preload entirely — the browser
         // fetches and plays an autoplay video whatever preload says — which is
         // why setting 'metadata' alone changed nothing. Playback is driven from
@@ -1982,7 +1987,13 @@ function autoPlay(video) {
 
     // Live preview <video>
     const previewWrap = el('div', { class: 'camera-preview' });
-    const previewVideo = Object.assign(document.createElement('video'), { autoplay: true, muted: true, playsInline: true });
+    const previewVideo = Object.assign(document.createElement('video'), {
+      autoplay: true, muted: true, playsInline: true,
+      // Nothing to show until getUserMedia resolves, and the permission
+      // prompt can sit there for a while. Without this the WebView fills the
+      // screen with its placeholder while the user reads the dialog.
+      poster: BLANK_POSTER,
+    });
     previewVideo.setAttribute('playsinline', '');
     previewVideo.style.cssText = 'width:100%;height:100%;object-fit:cover;background:#000';
     previewWrap.appendChild(previewVideo);
@@ -5636,6 +5647,23 @@ function autoPlay(video) {
     const videoContainer = el('div', { id: 'agora-viewer-video', style: { position: 'absolute', inset: 0, background: '#000', zIndex: 0 } });
     root.appendChild(videoContainer);
 
+    // Agora renders its own <video> in here, and that element has no poster
+    // either — so while the stream connected, the WebView's grey placeholder
+    // sat over the whole screen. This is the "it shows during livestream
+    // start" case. Watched rather than set once, because the element does not
+    // exist until the track attaches.
+    (function suppressWebViewPoster() {
+      const apply = () => videoContainer.querySelectorAll('video')
+        .forEach(v => { if (!v.getAttribute('poster')) v.poster = BLANK_POSTER; });
+      apply();
+      const mo = new MutationObserver(apply);
+      mo.observe(videoContainer, { childList: true, subtree: true });
+      // Nothing new is added once the track is attached, so watching for a
+      // short window is enough and avoids leaving an observer running for the
+      // length of a broadcast.
+      setTimeout(() => { try { mo.disconnect(); } catch (e) {} }, 15000);
+    })();
+
     // Fallback background image (shown until Agora video subscribes)
     const liveBg = el('div', { class: 'live-bg', style: { backgroundImage: live.bg ? `url(${live.bg})` : '', zIndex: 1 } });
     root.appendChild(liveBg);
@@ -8675,6 +8703,20 @@ function autoPlay(video) {
     const m = Math.floor(sec / 60), r = sec % 60;
     return m + ':' + String(r).padStart(2, '0');
   }
+
+  // A 1x1 transparent GIF, used as a <video> poster.
+  //
+  // Android's WebView draws its OWN placeholder for a video element that has
+  // no frame yet: a grey box with a large black play triangle. It appeared
+  // while the feed was loading, while the camera was waiting on a permission
+  // prompt, and at the start of a live stream — anywhere a video existed but
+  // had nothing to show. It is not ours and cannot be styled.
+  //
+  // A poster replaces it. Where there is a real thumbnail we use that; where
+  // there is not, this transparent pixel suppresses the placeholder and lets
+  // whatever is behind the element show through. Instagram does the same
+  // thing: the still, the last frame, or nothing — never a grey stand-in.
+  const BLANK_POSTER = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
   // A still from a playing <video>, as a JPEG blob. Resolves null when there is
   // no frame to take — metadata not loaded yet, camera denied, or a tainted
