@@ -2829,8 +2829,11 @@ function autoPlay(video) {
     const commentsToggle = makeToggleEl(true);
     const savingToggle = makeToggleEl(true);
 
-    wrap.appendChild(pubRow('user', 'الإشارة إلى أشخاص', chev(), () => toast('قيد التطوير')));
-    wrap.appendChild(pubRow('mapPin', 'إضافة موقع', chev(), () => toast('قيد التطوير')));
+    // 'الإشارة إلى أشخاص' (tag people) and 'إضافة موقع' (add location) sat
+    // here, each raising a "under development" toast and doing nothing else.
+    // Both need storage the app does not have — there is no tag table, and
+    // videos has no place column — so a row that opened a picker would still
+    // have nowhere to save the answer. Gone rather than still pending.
     wrap.appendChild(pubRow('lock', 'من يستطيع المشاهدة', privacyPill));
     wrap.appendChild(pubRow('comment', 'السماح بالتعليقات', commentsToggle));
     wrap.appendChild(pubRow('bookmark', 'السماح بالحفظ', savingToggle));
@@ -3743,11 +3746,19 @@ function autoPlay(video) {
       el('div', { style: { flex: 1, minWidth: 0 } }, [headerName, headerStatus]),
     ]);
 
+    // Calling is one-to-one: there is no group call to place. These used to be
+    // offered in a group chat and then refuse the tap with "group calls are not
+    // available yet", which is a control that exists only to apologise. They
+    // start hidden and are revealed once the thread is known to be a DM, on the
+    // same condition that makes the header identity tappable.
+    const audioCallBtn = el('button', { class: 'icon-btn', title: 'مكالمة صوتية', hidden: true, html: icons.phone, onclick: () => startCallFromChat('audio') });
+    const videoCallBtn = el('button', { class: 'icon-btn', title: 'مكالمة فيديو', hidden: true, html: icons.video, onclick: () => startCallFromChat('video') });
+
     root.appendChild(el('header', { class: 'chat-header' }, [
       el('button', { class: 'icon-btn back-btn', html: icons.chevL, onclick: () => go('/inbox') }),
       headerIdentity,
-      el('button', { class: 'icon-btn', title: 'مكالمة صوتية', html: icons.phone, onclick: () => startCallFromChat('audio') }),
-      el('button', { class: 'icon-btn', title: 'مكالمة فيديو', html: icons.video, onclick: () => startCallFromChat('video') }),
+      audioCallBtn,
+      videoCallBtn,
     ]));
 
     // These two were decoration - no handler at all. They now place a real
@@ -3758,7 +3769,6 @@ function autoPlay(video) {
         const info = chatInfo || (await window.API.fetchChatInfo(id));
         const other = info && info.others && info.others[0];
         if (!other) { toast('لا يمكن بدء المكالمة'); return; }
-        if (info.type === 'group') { toast('المكالمات الجماعية غير متاحة بعد'); return; }
         const c = await window.API.startCall({ calleeId: other.id, kind, chatId: id });
         go('/call/' + c.id);
       } catch (e) { toast(friendlyError(e, 'تعذر بدء المكالمة')); }
@@ -4173,6 +4183,9 @@ function autoPlay(video) {
           // Only show it as tappable once we know it leads somewhere.
           if (info && info.type !== 'group' && info.others && info.others[0]) {
             headerIdentity.classList.add('tappable');
+            // Only a DM has a single person to call.
+            audioCallBtn.hidden = false;
+            videoCallBtn.hidden = false;
           }
           if (info) {
             headerName.textContent = info.title;
@@ -5531,10 +5544,17 @@ function autoPlay(video) {
                 }
               }
             });
-            return el('div', { class: 'profile-actions' }, [
-              followBtn,
-              el('button', { class: 'btn btn-secondary' }, 'مراسلة'),
-            ]);
+            // Was decoration — no handler at all. Opens the existing DM with
+            // this person, or creates one, exactly as the inbox and the map
+            // sheet already do.
+            const msgBtn = el('button', { class: 'btn btn-secondary' }, 'مراسلة');
+            msgBtn.addEventListener('click', async () => {
+              if (!window.API || !u.id) return;
+              msgBtn.disabled = true;
+              try { go('/chat/' + await window.API.openOrCreateDm(u.id)); }
+              catch (err) { msgBtn.disabled = false; toast(friendlyError(err, 'تعذر فتح المحادثة')); }
+            });
+            return el('div', { class: 'profile-actions' }, [followBtn, msgBtn]);
           })(),
     ]));
     const grid = el('div', { class: 'video-grid', style: { padding: '4px' } });
@@ -6171,12 +6191,28 @@ function autoPlay(video) {
           el('div', { class: 'comment-text' }, richText(c.text)),
           el('div', { class: 'comment-meta' }, [
             el('span', {}, ago(c.created_at) || c.time || ''),
-            el('span', {}, (c.likes_count || c.likes || 0) + ' إعجاب'),
-            el('a', {}, 'رد'),
+            // 'رد' had no handler, and the heart beside it had none either —
+            // there is no comment_likes table, so comments.likes_count is 0 on
+            // every row and nothing can ever raise it. The heart and the count
+            // are gone; Reply now prefills the composer with a mention, which
+            // posts as a real comment that links back to them.
+            el('a', { onclick: () => replyToComment(c) }, 'رد'),
           ]),
         ]),
-        el('button', { class: 'icon-btn', html: icons.heart, style: { color: 'var(--muted)' } }),
       ]));
+    }
+
+    // Threaded replies would need comments.parent_id carried through the query
+    // and a nested list to render into. A mention is the honest version of the
+    // button today: it is a real comment, and tapping the @handle in it opens
+    // that profile.
+    function replyToComment(c) {
+      const handle = String((c.user && c.user.handle) || '').replace(/^@/, '');
+      if (handle) {
+        const at = '@' + handle + ' ';
+        if (cInput.value.indexOf(at) !== 0) cInput.value = at + cInput.value;
+      }
+      cInput.focus();
     }
 
     // Default: load from mock
@@ -7694,9 +7730,14 @@ function autoPlay(video) {
         if (!act && it.right && it.right.classList && it.right.classList.contains('toggle')) {
           act = () => it.right.click();
         }
-        s.appendChild(el('div', { class: 'settings-item', onclick: act || (() => toast('قريبًا')) }, [
-        el('span', { class: 'si-icon', html: icons[it.icon] || icons.settings }),
-        el('span', { class: 'si-text' }, it.label),
+        // No "coming soon" fallback. A row with no action of its own is a
+        // label beside a control that handles its own taps — the language
+        // switch is the only one — so it renders as a plain row rather than
+        // as a button that apologises. The fallback also meant any row added
+        // without a handler silently became a promise the app never keeps.
+        s.appendChild(el('div', { class: 'settings-item' + (act ? '' : ' static'), onclick: act || null }, [
+          el('span', { class: 'si-icon', html: icons[it.icon] || icons.settings }),
+          el('span', { class: 'si-text' }, it.label),
           it.right || el('span', { class: 'chev', html: icons.chevL }),
         ]));
       });
@@ -8265,7 +8306,9 @@ function autoPlay(video) {
       if (!act && it.right && it.right.classList && it.right.classList.contains('toggle')) {
         act = () => it.right.click();
       }
-      box.appendChild(el('div', { class: 'settings-item', onclick: act || (() => toast('قريبًا')) }, [
+      // Same rule as section() above: no action means no onclick, rather than
+      // a row that raises "coming soon".
+      box.appendChild(el('div', { class: 'settings-item' + (act ? '' : ' static'), onclick: act || null }, [
         el('span', { class: 'si-icon', html: icons[it.icon] || icons.settings }),
         el('span', { class: 'si-text' }, it.label),
         it.right || el('span', { class: 'chev', html: icons.chevL }),
