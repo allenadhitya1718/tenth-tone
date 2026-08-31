@@ -1,0 +1,68 @@
+name: Storage alert email
+
+# Drains the storage-alert outbox once a day.
+#
+# The decision to warn is made in the database by public.check_storage_alert(),
+# which pg_cron runs at 07:00 UTC (migration 0059). It writes the in-app
+# notification itself and raises a flag; this job turns that flag into an
+# email. 07:20 gives the database job time to finish first.
+#
+# Why here rather than in Postgres: sending mail needs an outbound HTTP call,
+# which Postgres cannot make without the pg_net extension — not enabled on this
+# project, and not worth enabling for one request a day. Actions is already
+# running the Android build, so this adds no new infrastructure.
+#
+# If this workflow is broken, disabled, or never set up, the IN-APP alert still
+# fires. Losing mail costs you a channel, not the warning.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   STORAGE_ALERT_URL     https://<project-ref>.supabase.co/functions/v1/storage-alert
+#   STORAGE_ALERT_SECRET  must equal the ALERT_SECRET set on the Edge Function
+#   SUPABASE_ANON_KEY     the public anon key; Supabase requires an apikey
+#                         header even when the function does its own auth
+
+on:
+  schedule:
+    - cron: '20 7 * * *'
+  workflow_dispatch:        # so it can be tested without waiting a day
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call the storage-alert function
+        env:
+          URL:    ${{ secrets.STORAGE_ALERT_URL }}
+          SECRET: ${{ secrets.STORAGE_ALERT_SECRET }}
+          ANON:   ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "::warning::STORAGE_ALERT_URL or STORAGE_ALERT_SECRET is not set — skipping."
+            exit 0
+          fi
+
+          # -sS keeps curl quiet but still reports real errors. The response
+          # body is printed because it carries the reason on a no-send, which
+          # is the only way to notice "no_admin_recipients" or a Resend
+          # failure without opening the Supabase logs.
+          HTTP=$(curl -sS -o /tmp/out.json -w '%{http_code}' -X POST "$URL" \
+            -H "x-alert-secret: $SECRET" \
+            -H "apikey: $ANON" \
+            -H "Authorization: Bearer $ANON" \
+            -H 'Content-Type: application/json' \
+            --max-time 30)
+
+          echo "HTTP $HTTP"
+          cat /tmp/out.json; echo
+
+          # A quiet day is a success: most runs return sent:false with
+          # nothing_pending, and that must not turn the log red.
+          if [ "$HTTP" != "200" ]; then
+            echo "::error::storage-alert returned HTTP $HTTP"
+            exit 1
+          fi
+
+          if grep -q '"reason":"no_admin_recipients"' /tmp/out.json; then
+            echo "::warning::Storage crossed a threshold but NO account has profiles.is_admin set, so nobody was emailed."
+          fi

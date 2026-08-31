@@ -23,9 +23,16 @@
 -- Without this the job would repeat the same warning every single day at 71%,
 -- and a daily alert that never changes is one people learn to ignore.
 create table if not exists public.storage_alert_state (
-  id           smallint primary key default 1 check (id = 1),
-  last_band    smallint not null default 0,
-  last_sent_at timestamptz
+  id            smallint primary key default 1 check (id = 1),
+  last_band     smallint not null default 0,
+  last_sent_at  timestamptz,
+  -- Set when an in-app alert is written, cleared once an email has gone out.
+  -- The two are deliberately decoupled: the database decides WHETHER to warn
+  -- and writes the in-app notification itself, while sending mail needs an
+  -- outside network call. Without this flag the email job would have to re-run
+  -- the check, get "already notified", and stay silent for ever.
+  email_pending boolean not null default false,
+  email_payload jsonb
 );
 
 insert into public.storage_alert_state (id) values (1) on conflict (id) do nothing;
@@ -113,7 +120,11 @@ begin
   get diagnostics v_admins = row_count;
 
   update public.storage_alert_state
-     set last_band = v_band, last_sent_at = now()
+     set last_band     = v_band,
+         last_sent_at  = now(),
+         email_pending = true,
+         email_payload = jsonb_build_object('pct', v_pct, 'used', v_used,
+                                            'limit', v_limit, 'band', v_band)
    where id = 1;
 
   return jsonb_build_object('sent', true, 'pct', v_pct, 'band', v_band, 'admins_notified', v_admins);
@@ -121,6 +132,47 @@ end;
 $fn$;
 
 grant execute on function public.check_storage_alert() to authenticated;
+
+
+-- ── Hand the pending alert to whatever sends mail ──
+-- Returns the alert and clears the flag in one statement, so two mailers
+-- running at once cannot both send: the second sees nothing pending. Returns
+-- null when there is nothing to send, which is the normal case.
+--
+-- Also returns the admin addresses, read from auth.users — which is why this
+-- is security definer and granted to service_role only. An ordinary signed-in
+-- user must never be able to list operator emails.
+create or replace function public.claim_storage_alert_email()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, auth
+as $fn$
+declare
+  v_payload jsonb;
+  v_emails  text[];
+begin
+  update public.storage_alert_state
+     set email_pending = false
+   where id = 1 and email_pending
+  returning email_payload into v_payload;
+
+  if v_payload is null then
+    return null;
+  end if;
+
+  select array_agg(u.email)
+    into v_emails
+    from auth.users u
+    join public.profiles p on p.id = u.id
+   where p.is_admin and u.email is not null;
+
+  return v_payload || jsonb_build_object('recipients', to_jsonb(coalesce(v_emails, '{}')));
+end;
+$fn$;
+
+revoke all on function public.claim_storage_alert_email() from public, anon, authenticated;
+grant execute on function public.claim_storage_alert_email() to service_role;
 
 -- ── Schedule it ──
 -- pg_cron is already enabled and running two jobs (see 0051). Guarded the same
