@@ -65,3 +65,7 @@ r2-migrate.env
 # Notepad appends .txt silently, which slips past the *.env rule above.
 *.env.txt
 r2_url_rewrite.sql
+
+# Python bytecode from tools/ — committed by accident once already.
+__pycache__/
+*.pyc
