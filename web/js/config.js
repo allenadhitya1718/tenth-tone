@@ -110,7 +110,11 @@ window.TT_CONFIG = (function () {
   //
   // Overridable per session for testing, without a rebuild:
   //   ?mod=1  → force on       ?mod=0  → force off
-  let aiModeration = true;
+  // TURNED OFF 2026-08-31: the provider was returning rate_limited on every
+  // call, so each message paid the full round trip and got nothing back.
+  // A check that always fails is pure latency. Turn back on once the Gemini
+  // swap is deployed and a test call returns allow rather than unavailable.
+  let aiModeration = false;
 
   try {
     const q = new URLSearchParams(location.search);
