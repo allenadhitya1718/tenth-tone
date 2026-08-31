@@ -56,3 +56,10 @@ android/app/build/
 android/app/src/main/assets/public/
 out/
 web/BUILD_INFO.txt
+
+# R2 migration credentials. Holds the Supabase service_role key, which
+# bypasses every RLS policy in the database, alongside the R2 secret.
+# tools/copy_media_to_r2.py reads it; delete the file once the copy is done.
+*.env
+r2-migrate.env
+r2_url_rewrite.sql
