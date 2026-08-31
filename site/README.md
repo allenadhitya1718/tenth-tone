@@ -23,18 +23,24 @@ folder as-is to any static host (Cloudflare Pages, Netlify, Hostinger, GitHub Pa
 ## Before you publish
 
 Everything still to be filled in is **highlighted in yellow** on the page, so open
-each page once and look for the highlights. There are two groups.
+each page once and look for the highlights.
 
-**1. Company details** in `_build/p_privacy.py`, `_build/p_terms.py`, `_build/p_rules.py`,
-or directly in the generated HTML:
+**1. Company details — done.** The legal name, entity type, Unified National Number
+and governing law are filled in from the commercial registration certificate, in
+`_build/p_privacy.py`, `_build/p_terms.py`, `_build/p_rules.py` and in the generated
+HTML. The `.fill` highlight was removed from each one: that class means "not yet
+filled in", so leaving it on a real value would make finished text look unfinished.
 
-- `[COMPANY LEGAL NAME]` / `[الاسم القانوني للشركة]`
-- `[REGISTERED ADDRESS]` / `[العنوان المسجل]`
-- `[COUNTRY AND COURTS]` / `[الدولة والمحكمة المختصة]` — the governing law in the terms
-- The email addresses: `support@`, `privacy@`, `legal@`, `copyright@`, `press@`, `business@`
+One thing is deliberately still missing: **the registered postal address**. The
+certificate does not carry one and nobody has supplied it, so the sentences that
+used to say "based at [REGISTERED ADDRESS]" now identify the company by legal name
+and Unified National Number instead, and each spot carries an HTML comment. A wrong
+address in a privacy policy is worse than no address, so add the real one when it
+arrives rather than inventing a placeholder that reads like a fact.
 
-App store review checks that the privacy policy names a real controller and a
-working contact address, so these cannot stay as placeholders.
+Still to check: the email addresses `support@`, `privacy@`, `legal@`, `copyright@`,
+`press@`, `business@` must actually receive mail. App store review checks that the
+privacy policy names a real controller and a working contact address.
 
 **2. Store links** at the top of `site.js`:
 
