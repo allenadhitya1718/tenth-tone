@@ -77,13 +77,29 @@ Only you can do these. I never handle the keys.
    every upload fail from the phone while working fine in a desktop browser:
 
    ```json
-   [{ "AllowedOrigins": ["https://localhost", "capacitor://localhost"],
+   [{ "AllowedOrigins": ["https://localhost",
+                         "capacitor://localhost",
+                         "flyp://localhost",
+                         "http://127.0.0.1:5599",
+                         "http://localhost:5599"],
       "AllowedMethods": ["PUT"],
       "AllowedHeaders": ["*"],
       "MaxAgeSeconds": 3600 }]
    ```
 
-   `https://localhost` is what Capacitor serves the Android app from.
+   Every origin here is one the app actually runs from, taken from
+   `capacitor.config.json`:
+
+   - `https://localhost` — Android, because `androidScheme` is `https`
+   - `flyp://localhost` — iOS, because `iosScheme` is `flyp` (not built yet,
+     but free to allow now and invisible to debug later)
+   - `capacitor://localhost` — older Capacitor iOS default
+   - `127.0.0.1:5599` / `localhost:5599` — the local server used for browser
+     testing, so `?r2=1` can be exercised before any APK is built
+
+   A missing origin does not produce a useful error. The browser blocks the
+   PUT before it leaves, so it surfaces as an opaque network failure that
+   looks exactly like a bug in the Edge Function.
 
 4. **Public access.** Either attach a custom domain (needs the domain's DNS on
    Cloudflare — `flyp-sa.com` is currently on HostCarts, so this means moving

@@ -57,7 +57,8 @@
 // In Cloudflare: R2 -> your bucket -> Settings -> CORS policy:
 //
 //   [{ "AllowedOrigins": ["https://localhost", "capacitor://localhost",
-//                         "http://localhost:5173"],
+//                         "flyp://localhost", "http://127.0.0.1:5599",
+//                         "http://localhost:5599"],
 //      "AllowedMethods": ["PUT"],
 //      "AllowedHeaders": ["*"],
 //      "MaxAgeSeconds": 3600 }]
