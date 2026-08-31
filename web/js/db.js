@@ -1521,13 +1521,33 @@
     if (replyToId) row.reply_to_id = replyToId;
     if (file) {
       const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
-      const path = `${chatId}/${Date.now()}-${me}.${ext}`;
+      // Sender's id FIRST, then the chat. This is not cosmetic: the storage
+      // policy for chat-media is
+      //   (storage.foldername(name))[1] = auth.uid()::text
+      // so a path beginning with the chat id fails that check on every single
+      // upload. Chat attachments — photos, videos, voice notes, files — have
+      // never once succeeded; they returned "new row violates row-level
+      // security policy" and the message went out with no attachment.
+      //
+      // user_uploads_today() reads the same first segment to count a person's
+      // daily bytes, so chat media was also invisible to the quota. Owner-first
+      // fixes both at once, and keeps the chat id in the filename so an object
+      // can still be traced back to its conversation.
+      const path = `${me}/${chatId}/${Date.now()}.${ext}`;
       const q = await API.uploadQuota();
       if (q && !q.allowed) throw new Error(API.quotaMessage(q));
       // Immutable path, so a year rather than the one-hour default.
       const { error: upErr } = await c.storage.from('chat-media').upload(path, file, { cacheControl: '31536000' });
       if (upErr) throw upErr;
-      const { data: signed } = await c.storage.from('chat-media').createSignedUrl(path, 60 * 60 * 24 * 7);
+      // Checked rather than assumed: without a SELECT policy on the bucket this
+      // returns null, and reading .signedUrl off it threw "Cannot read
+      // properties of null" — which looks like a client bug and is actually a
+      // missing database policy.
+      const { data: signed, error: signErr } = await c.storage
+        .from('chat-media').createSignedUrl(path, 60 * 60 * 24 * 7);
+      if (signErr || !signed || !signed.signedUrl) {
+        throw new Error('تعذر تجهيز المرفق — تحقق من صلاحيات التخزين');
+      }
       row.attachment_url = signed.signedUrl;
     }
     const { data, error } = await c.from('messages').insert(row).select().single();
