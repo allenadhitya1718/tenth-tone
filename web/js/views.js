@@ -7982,7 +7982,10 @@ function autoPlay(video) {
           [
             ['الشروط وسياسة الخصوصية', () => { close(); go('/legal'); }],
             ['تواصل معنا', () => { close(); go('/contact'); }],
-            ['تواصل معنا', () => { close(); window.location.href = 'mailto:support@flyp-sa.com'; }],
+            // Was a second button labelled 'تواصل معنا' as well: two identical
+            // buttons doing different things. Named for what it does, matching
+            // the wording the Contact screen already uses for the same action.
+            ['مراسلتنا بالبريد', () => { close(); window.location.href = 'mailto:support@flyp-sa.com'; }],
           ].forEach(([l, fn]) => sheet.appendChild(el('button', { class: 'sheet-opt', onclick: fn }, l)));
           sheet.appendChild(el('div', { class: 'about-foot' }, '© 2026 FLYP'));
           try { if (window.I18N) window.I18N.apply(sheet); } catch (e) {}
