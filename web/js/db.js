@@ -378,10 +378,23 @@
 
     let video_url = null;
     if (file) {
-      const q = await API.uploadQuota();
-      if (q && !q.allowed) throw new Error(API.quotaMessage(q));
-      if (q && q.max_video_bytes && file.size > q.max_video_bytes) {
-        throw new Error('حجم الملف كبير جدًا (الحد الأقصى ' + Math.floor(q.max_video_bytes / 1048576) + ' ميجابايت)');
+      // Skipped entirely on the R2 path, because it is asked and answered
+      // twice: media-upload runs upload_quota_status() itself before it will
+      // sign anything, AND compares the declared size against the ceiling — so
+      // an oversized file is refused before a byte moves either way. Doing it
+      // here as well cost a full Supabase round trip on every upload for an
+      // answer we were about to get anyway. Measured: sign 1.3-3.0s, PUT to
+      // Cloudflare 0.45s, confirm 1.8s — the round trips ARE the upload time,
+      // so removing a whole one is worth more than it looks.
+      //
+      // On the Supabase path it is still the only pre-flight check there is.
+      const r2on = !!(window.TT_CONFIG && window.TT_CONFIG.r2Uploads);
+      if (!r2on) {
+        const q = await API.uploadQuota();
+        if (q && !q.allowed) throw new Error(API.quotaMessage(q));
+        if (q && q.max_video_bytes && file.size > q.max_video_bytes) {
+          throw new Error('حجم الملف كبير جدًا (الحد الأقصى ' + Math.floor(q.max_video_bytes / 1048576) + ' ميجابايت)');
+        }
       }
       const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
 
