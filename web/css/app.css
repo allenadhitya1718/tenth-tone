@@ -2191,7 +2191,34 @@ body.dark .sound-fav.on { border-color: var(--primary-2); color: var(--primary-2
   display: flex; flex-direction: column; align-items: center; gap: 5px; width: 58px;
   filter: drop-shadow(0 1px 3px rgba(0,0,0,.6));
 }
-.cam-action:active { transform: scale(0.92); }
+.cam-action:active { transform: scale(0.92); }
+
+/* Holds the record button centred now that the effects button is gone.
+   Same width as .cam-action so the layout is unchanged. */
+.cam-action-spacer { width: 58px; }
+
+/* An enabled timer or torch has to be visible at a glance — these buttons sit
+   over live camera output, where a subtle tint is invisible. */
+.cam-side-btn.active { color: var(--primary); }
+.cam-side-btn.active .csb-icon { filter: drop-shadow(0 0 6px var(--primary)); }
+
+/* Countdown before recording starts. Centred over the preview, deliberately
+   huge: it is read at arm's length by someone who has just stepped back from
+   the phone to be in frame. */
+.cam-countdown {
+  position: absolute; inset: 0; z-index: 12;
+  display: none; align-items: center; justify-content: center;
+  font-size: 116px; font-weight: 800; color: #fff; line-height: 1;
+  text-shadow: 0 4px 24px rgba(0,0,0,.55);
+  pointer-events: none;                    /* the record button underneath stays tappable to cancel */
+  font-variant-numeric: tabular-nums;      /* 3 -> 2 -> 1 must not shift sideways */
+}
+.cam-countdown.show { display: flex; animation: cam-count-pop .9s ease-out; }
+@keyframes cam-count-pop {
+  0%   { transform: scale(1.35); opacity: 0; }
+  18%  { transform: scale(1);    opacity: 1; }
+  100% { transform: scale(1);    opacity: .92; }
+}
 /* These were bare grey squares with no icon in them. */
 .ca-icon {
   width: 40px; height: 40px; border-radius: 11px;

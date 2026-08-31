@@ -2069,6 +2069,21 @@ function autoPlay(video) {
     let facingMode = 'user'; // 'user' | 'environment'
     let secs = 0, timer = null;
     let maxSecs = 90;
+
+    // Countdown and torch state live up here, beside the rest of the camera
+    // state, rather than beside the buttons that drive them. stopAll() is
+    // defined further up this function and touches both, and reading a `let`
+    // before its declaration is a TDZ error rather than undefined — so
+    // declaring them where they are used would make teardown throw.
+    let countdownSecs = 0;
+    let countdownHandle = null;
+    let torchOn = false;
+
+    // Torch availability is a property of the TRACK, not the device, so it has
+    // to be re-read after every getUserMedia — flipping to the front camera
+    // usually loses it. startCamera() runs before the buttons exist, so this
+    // starts as a no-op and is replaced once they do.
+    let onCameraReady = () => {};
     const dur = el('span', { class: 'camera-side-pill' }, '00:00');
 
     // Reads the standing decision without triggering a prompt. Returns
@@ -2129,6 +2144,7 @@ function autoPlay(video) {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: true });
         root.classList.remove('cam-blocked');
         previewVideo.srcObject = stream;
+        try { onCameraReady(); } catch (e) {}
         return;
       } catch (e) {
         // Camera and microphone are one request, so a refused microphone
@@ -2139,6 +2155,7 @@ function autoPlay(video) {
             stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: false });
             root.classList.remove('cam-blocked');
             previewVideo.srcObject = stream;
+            try { onCameraReady(); } catch (e) {}
             // The camera works; it was the microphone. Recording silently
             // would be worse than saying so.
             toast('الميكروفون محظور — سيتم التسجيل بدون صوت');
@@ -2182,6 +2199,12 @@ function autoPlay(video) {
 
     function stopAll() {
       if (timer) clearInterval(timer);
+      cancelCountdown();
+      // Leaving the screen must not leave the lamp burning.
+      try {
+        const t = stream && stream.getVideoTracks()[0];
+        if (t && torchOn && t.applyConstraints) t.applyConstraints({ advanced: [{ torch: false }] });
+      } catch (e) {}
       try { if (recorder && recorder.state !== 'inactive') recorder.stop(); } catch (e) {}
       try { soundAudio.pause(); } catch (e) {}
       if (stream) stream.getTracks().forEach(t => t.stop());
@@ -2314,18 +2337,109 @@ function autoPlay(video) {
       el('span', { class: 'csb-icon', html: icons[icon] || '' }),
       el('span', { class: 'csb-label' }, label),
     ]);
+    // ── Countdown timer ──
+    // Cycles off -> 3s -> 10s -> off. The label doubles as the indicator, so
+    // the current setting is readable without opening anything.
+    // Appended to root rather than previewWrap on purpose: showCamError()
+    // clears previewWrap with innerHTML = '', which detached this element for
+    // good. The countdown then silently never appeared again after any camera
+    // error the user retried past. .camera is position:relative, so an
+    // inset:0 overlay lands identically either way.
+    const countdownEl = el('div', { class: 'cam-countdown' });
+    root.appendChild(countdownEl);
+
+    function cancelCountdown() {
+      if (countdownHandle) clearInterval(countdownHandle);
+      countdownHandle = null;
+      countdownEl.classList.remove('show');
+    }
+
+    function runCountdown(from, done) {
+      let n = from;
+      countdownEl.textContent = n;
+      countdownEl.classList.add('show');
+      countdownHandle = setInterval(() => {
+        n -= 1;
+        if (n <= 0) { cancelCountdown(); done(); }
+        else { countdownEl.textContent = n; }
+      }, 1000);
+    }
+
+    // The default label is captured on first use rather than hardcoded: i18n
+    // rewrites this text after render, so restoring a literal 'مؤقت' would
+    // flip an English UI back to Arabic. Reading it at the first click is
+    // reliable because the button is always in its translated default then.
+    //
+    // The active state shows the bare number, which needs no translation.
+    let timerDefaultLabel = null;
+    const timerBtn = sideBtn('timer', 'مؤقت', () => {
+      const lab = timerBtn.querySelector('.csb-label');
+      if (timerDefaultLabel === null) timerDefaultLabel = lab.textContent;
+      countdownSecs = countdownSecs === 0 ? 3 : (countdownSecs === 3 ? 10 : 0);
+      timerBtn.classList.toggle('active', countdownSecs > 0);
+      lab.textContent = countdownSecs ? String(countdownSecs) : timerDefaultLabel;
+    });
+
+    // ── Flash / torch ──
+    // Genuinely controls the lamp rather than brightening the picture, so it
+    // only exists where the hardware does. Hidden rather than disabled on the
+    // front camera: a button that is visible and refuses reads as broken.
+    const flashBtn = sideBtn('flash', 'فلاش', async () => {
+      const track = stream && stream.getVideoTracks()[0];
+      if (!track || !track.applyConstraints) return;
+      torchOn = !torchOn;
+      try {
+        await track.applyConstraints({ advanced: [{ torch: torchOn }] });
+        flashBtn.classList.toggle('active', torchOn);
+      } catch (e) {
+        torchOn = false;
+        flashBtn.classList.remove('active');
+        toast('تعذر تشغيل الفلاش');
+      }
+    });
+
+    function refreshTorch() {
+      torchOn = false;
+      flashBtn.classList.remove('active');
+      const track = stream && stream.getVideoTracks()[0];
+      const caps = track && track.getCapabilities ? track.getCapabilities() : null;
+      flashBtn.style.display = (caps && caps.torch) ? '' : 'none';
+    }
+    onCameraReady = refreshTorch;
+    refreshTorch();   // the camera may already have started
+
     root.appendChild(el('div', { class: 'camera-side' }, [
       // Label was 'قلب' which the dictionary maps to "Heart" - the word means
       // both "flip" and "heart" in Arabic. 'تبديل الكاميرا' has no collision.
-      sideBtn('flip', 'تبديل الكاميرا', async () => { facingMode = facingMode === 'user' ? 'environment' : 'user'; await startCamera(); }),
-      sideBtn('sparkle', 'تجميل', () => toast('التجميل غير متاح بعد')),
-      sideBtn('timer', 'مؤقت', () => toast('المؤقت غير متاح بعد')),
-      sideBtn('filter', 'فلاتر', () => toast('الفلاتر غير متاحة بعد')),
-      sideBtn('flash', 'فلاش', () => toast('الفلاش غير متاح بعد')),
+      sideBtn('flip', 'تبديل الكاميرا', async () => {
+        cancelCountdown();
+        facingMode = facingMode === 'user' ? 'environment' : 'user';
+        await startCamera();
+      }),
+      timerBtn,
+      flashBtn,
+      // 'تجميل' (beautify), 'فلاتر' (filters) and 'مؤثرات' (effects) used to
+      // sit here, each showing a "not available yet" toast. They are gone
+      // rather than still pending.
+      //
+      // Beautify and effects need face landmarks — an ML pipeline, not a
+      // button. Filters look trivial and are not: MediaRecorder records the
+      // camera STREAM, so a CSS filter would appear in the preview and be
+      // absent from the saved clip. Baking one in means drawing every frame
+      // through a canvas, re-attaching the microphone track to the canvas
+      // stream, and paying for it in frames and battery on exactly the cheap
+      // phones this app targets. Worth doing properly one day; not worth a
+      // control that lies about what it recorded.
     ]));
 
     const recBtn = el('button', { class: 'record-btn', onclick: () => {
-      if (!recorder || recorder.state === 'inactive') startRec(); else stopRec();
+      // Mid-countdown, the button is a cancel. Otherwise there is no way to
+      // stop a 10-second timer you started by mistake except leaving.
+      if (countdownHandle) { cancelCountdown(); return; }
+      if (!recorder || recorder.state === 'inactive') {
+        if (countdownSecs > 0) runCountdown(countdownSecs, startRec);
+        else startRec();
+      } else stopRec();
     } }, [el('div', { class: 'rb-inner' })]);
 
     const durationsRow = el('div', { class: 'cam-durations' }, [
@@ -2346,7 +2460,10 @@ function autoPlay(video) {
 
     root.appendChild(el('div', { class: 'camera-bottom' }, [
       el('div', { class: 'camera-record' }, [
-        sideAction('sparkle', 'مؤثرات', () => toast('المؤثرات غير متاحة بعد')),
+        // The left slot held 'مؤثرات' (effects), which only ever produced a
+        // "not available yet" toast. Kept as an empty spacer so the record
+        // button stays centred.
+        el('span', { class: 'cam-action-spacer' }),
         recBtn,
         sideAction('image', 'رفع', () => { stopAll(); go('/upload'); }),
       ]),
