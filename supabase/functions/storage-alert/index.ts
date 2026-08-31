@@ -34,6 +34,17 @@
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected by the platform.
 // The service role is required: claim_storage_alert_email() reads operator
 // addresses out of auth.users and is granted to service_role alone.
+//
+// DEPLOY WITH --no-verify-jwt:
+//
+//   npx supabase functions deploy storage-alert --no-verify-jwt
+//
+// Edge Functions demand a valid JWT by default, and the caller here is
+// send_storage_alert_email() in the database going out through pg_net, which
+// sends no user token. Without that flag the request is rejected by the
+// platform before any of this code runs, and the alert dies silently. The
+// ALERT_SECRET check below is what replaces JWT verification, which is why it
+// is required rather than optional.
 // =============================================================
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
