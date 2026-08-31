@@ -8717,11 +8717,23 @@ function autoPlay(video) {
     // bubble itself goes transparent (.bubble.share) so the media IS the
     // message rather than sitting inside a coloured box.
     const cover = el('div', { class: 'sc-cover' });
-    const byAvatar = el('span', { class: 'sc-avatar' });
-    const byName = el('span', { class: 'sc-name' }, '');
-    cover.appendChild(el('div', { class: 'sc-by' }, [byAvatar, byName]));
+    const by = el('div', { class: 'sc-by' });
+    cover.appendChild(by);
     if (kind !== 'profile') cover.appendChild(el('span', { class: 'sc-play', html: icons.play || '' }));
     if (kind === 'live') cover.appendChild(el('span', { class: 'sc-live' }, 'بث مباشر'));
+
+    // Built through avatar() rather than a bare styled circle, so an account
+    // with no picture gets its initial on a colour derived from the name —
+    // the same fallback used everywhere else in the app. A plain circle just
+    // rendered as an empty grey hole, which is what it looked like next to
+    // Instagram. Filled in once the row loads, so nothing is drawn from a
+    // guess in the meantime.
+    function setAuthor(src, name, handle) {
+      by.innerHTML = '';
+      const label = handle ? '@' + String(handle).replace('@', '') : (name || '');
+      by.appendChild(avatar(src || '', name || label, 22));
+      by.appendChild(el('span', { class: 'sc-name' }, label));
+    }
 
     const card = el('button', {
       class: 'share-card' + (kind === 'profile' ? ' profile' : ''),
@@ -8737,23 +8749,17 @@ function autoPlay(video) {
           const v = await window.API.fetchVideo(id);
           if (!v) return;
           if (v.thumbnail) cover.style.backgroundImage = 'url(' + v.thumbnail + ')';
-          if (v.user) {
-            byName.textContent = v.user.handle ? '@' + String(v.user.handle).replace('@', '') : (v.user.name || '');
-            if (v.user.avatar_url) byAvatar.style.backgroundImage = 'url(' + v.user.avatar_url + ')';
-          }
+          if (v.user) setAuthor(v.user.avatar_url, v.user.name, v.user.handle);
         } else if (kind === 'profile' && window.API.fetchProfile) {
           const u = await window.API.fetchProfile(id);
           if (!u) return;
           if (u.avatar_url) cover.style.backgroundImage = 'url(' + u.avatar_url + ')';
-          byName.textContent = u.handle ? '@' + String(u.handle).replace('@', '') : (u.name || '');
+          setAuthor(u.avatar_url, u.name, u.handle);
         } else if (kind === 'live' && window.API.fetchLiveStream) {
           const l = await window.API.fetchLiveStream(id);
           if (!l) return;
           if (l.thumbnail) cover.style.backgroundImage = 'url(' + l.thumbnail + ')';
-          if (l.host) {
-            byName.textContent = l.host.handle ? '@' + String(l.host.handle).replace('@', '') : (l.host.name || '');
-            if (l.host.avatar) byAvatar.style.backgroundImage = 'url(' + l.host.avatar + ')';
-          }
+          if (l.host) setAuthor(l.host.avatar, l.host.name, l.host.handle);
         }
       } catch (e) { /* a plain card is a fine fallback */ }
     })();

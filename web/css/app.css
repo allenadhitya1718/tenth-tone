@@ -1836,9 +1836,11 @@ body.lang-en .toast { font-family: 'Cairo', system-ui, sans-serif; }
    Declared after .bubble.me/.them and at equal specificity, so source order is
    what lets it win — keep it below them. */
 .bubble.share { padding: 0; background: none; box-shadow: none; max-width: 62%; }
+/* Under the card, not across it. Instagram puts nothing on the media, and a
+   time stamped over the corner of somebody's video looked like a watermark. */
 .bubble.share .t {
-  position: absolute; inset-inline-end: 10px; bottom: 7px; margin: 0;
-  color: #fff; opacity: 0.95; text-shadow: 0 1px 3px rgba(0,0,0,0.85);
+  margin: 4px 2px 0; text-align: end;
+  color: var(--muted); opacity: 1; text-shadow: none;
 }
 .share-card {
   display: block; width: 200px; max-width: 60vw;
@@ -1855,21 +1857,29 @@ body.lang-en .toast { font-family: 'Cairo', system-ui, sans-serif; }
   position: absolute; top: 8px; inset-inline-start: 8px; z-index: 2;
   display: flex; align-items: center; gap: 6px; max-width: calc(100% - 16px);
 }
-.share-card .sc-avatar {
-  width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
-  background: rgba(255,255,255,0.25) center/cover no-repeat;
-  border: 1px solid rgba(255,255,255,0.7);
+/* avatar() supplies its own gradient and initial, so this only adds the ring
+   that keeps it legible against a bright thumbnail. */
+.share-card .sc-by .avatar {
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.75), 0 1px 3px rgba(0,0,0,0.5);
 }
 .share-card .sc-name {
   font-size: 12px; font-weight: 700; color: #fff;
   text-shadow: 0 1px 3px rgba(0,0,0,0.85);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* Small, in the corner. A 34px glyph in the dead centre covered the subject
+   of the clip; Instagram marks a reel with a discreet badge instead and lets
+   the thumbnail speak. */
 .share-card .sc-play {
-  position: absolute; inset: 0; pointer-events: none; color: #fff;
+  position: absolute; bottom: 8px; inset-inline-start: 8px;
+  pointer-events: none; color: #fff;
   display: flex; align-items: center; justify-content: center;
 }
-.share-card .sc-play svg { width: 34px; height: 34px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.7)); }
+.share-card .sc-play svg {
+  width: 20px; height: 20px;
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.8));
+}
 .share-card .sc-live {
   position: absolute; bottom: 8px; inset-inline-start: 8px; z-index: 2;
   background: linear-gradient(135deg, #ef4444, #e8244c); color: #fff;
