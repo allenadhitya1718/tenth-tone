@@ -2779,8 +2779,10 @@ function autoPlay(video) {
 
     const inputField = el('input', { placeholder: 'اكتب رسالة...', id: 'chat-input-field' });
 
-    // ─── TRUE Walkie-Talkie button — live audio broadcast while holding ───
-    const pttBtn = el('button', { class: 'icon-btn', html: icons.mic, title: 'اضغط مطولًا للتحدث', style: { transition: 'transform 120ms ease, background 120ms ease', borderRadius: '50%' } });
+    // ─── Walkie-talkie: receive side only ───
+    // The mic button no longer broadcasts while held — see the voice-note
+    // recorder further down for why. This half stays put, so a client that
+    // still streams into the channel is still heard.
     const talkingBanner = el('div', { style: { display: 'none', position: 'absolute', top: '0', left: '0', right: '0', background: 'var(--danger)', color: '#fff', textAlign: 'center', padding: '6px 10px', fontSize: '12.5px', fontWeight: 700, zIndex: '10' } });
     root.appendChild(talkingBanner);
 
@@ -2813,50 +2815,566 @@ function autoPlay(video) {
       });
     }
 
-    // Sender side
-    let pttRecorder = null;
-    let pttStream = null;
-    let seq = 0;
-    async function startPtt() {
+    // ─── Voice notes: hold to record, slide to cancel, tap to lock ───────
+    // The mic button used to be a live walkie-talkie: it streamed raw
+    // MediaRecorder chunks to the other side while held and kept nothing.
+    // That is why there was no timer, no level meter and nothing to review —
+    // and it is also why "cancel" could never have been honest there, since
+    // the audio had already left the device. It now records a voice note
+    // locally, shows what the microphone is genuinely picking up, and sends
+    // only when the user taps send.
+    const VN_MAX_SECS   = 300;  // 5 min, then it stops itself
+    const VN_MIN_MS     = 700;  // shorter than this is a mis-tap, not a note
+    const VN_TAP_MS     = 260;  // a press shorter than this is a tap
+    const VN_SLOP_PX    = 10;   // wobble that still counts as "did not move"
+    const VN_CANCEL_PX  = 88;   // inline drag that aborts the recording
+    const VN_LOCK_PX    = 56;   // upward drag that locks it hands-free
+
+    // helpers.js is shared with every other screen, so the three icons only
+    // this composer needs live here instead of being added to the global set.
+    const vnIco = {
+      stop:  '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2.5"/></svg>',
+      pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1.4"/><rect x="14" y="4" width="4" height="16" rx="1.4"/></svg>',
+      trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
+    };
+
+    // +1 when the inline axis runs left→right, -1 in RTL. Read live rather
+    // than hardcoded: the language switch flips <html dir> at runtime, and
+    // "slide left to cancel" in English has to become slide *right* in Arabic.
+    function vnAxis() {
+      try { return getComputedStyle(document.documentElement).direction === 'rtl' ? -1 : 1; }
+      catch (e) { return 1; }
+    }
+    function vnFmt(s) {
+      s = Math.max(0, Math.floor(s));
+      return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    }
+
+    const micBtn = el('button', {
+      class: 'icon-btn vn-mic', type: 'button', html: icons.mic,
+      title: 'اضغط مطولًا للتسجيل، أو انقر للتسجيل بدون إمساك',
+      'aria-label': 'تسجيل رسالة صوتية',
+    });
+
+    // ── recording bar (covers the composer while the mic is open) ──
+    const recTime  = el('span', { class: 'vn-time', dir: 'ltr', role: 'timer' }, '0:00');
+    const recWave  = el('canvas', { class: 'vn-wave', 'aria-hidden': 'true' });
+    // The chevron points toward the inline start; app.css mirrors it in RTL.
+    const recHint  = el('div', { class: 'vn-hint' }, [
+      el('span', { class: 'vn-hint-chev', html: icons.chevL }),
+      el('span', {}, 'اسحب للإلغاء'),
+    ]);
+    const recAbort = el('button', { class: 'vn-btn vn-btn-abort', type: 'button', hidden: true, html: icons.x, title: 'إلغاء', 'aria-label': 'إلغاء التسجيل' });
+    const recStop  = el('button', { class: 'vn-btn vn-btn-stop', type: 'button', hidden: true, html: vnIco.stop, title: 'إيقاف', 'aria-label': 'إيقاف التسجيل' });
+    const recBar   = el('div', { class: 'vn-bar', hidden: true }, [
+      el('span', { class: 'vn-dot' }), recTime, recWave, recHint, recAbort, recStop,
+    ]);
+
+    // ── the lock affordance, floating just above the mic ──
+    const lockPill = el('div', { class: 'vn-lock', hidden: true }, [
+      el('span', { class: 'vn-lock-ico', html: icons.lock }),
+      el('span', { class: 'vn-lock-up', html: icons.arrowUp }),
+    ]);
+
+    // ── playback preview (nothing is sent until send is tapped) ──
+    const pvDel   = el('button', { class: 'vn-btn vn-btn-del', type: 'button', html: vnIco.trash, title: 'حذف', 'aria-label': 'حذف التسجيل' });
+    const pvPlay  = el('button', { class: 'vn-btn vn-btn-play', type: 'button', html: icons.play, title: 'تشغيل', 'aria-label': 'تشغيل المعاينة' });
+    const pvWave  = el('canvas', { class: 'vn-wave vn-wave-pv', 'aria-hidden': 'true' });
+    const pvTime  = el('span', { class: 'vn-time', dir: 'ltr' }, '0:00');
+    const pvSend  = el('button', { class: 'vn-btn vn-btn-send', type: 'button', html: icons.send, title: 'إرسال', 'aria-label': 'إرسال الرسالة الصوتية' });
+    const previewBar = el('div', { class: 'vn-preview', hidden: true }, [pvDel, pvPlay, pvWave, pvTime, pvSend]);
+
+    let vnStream = null, vnRec = null, vnChunks = [], vnMime = '';
+    let vnCtx = null, vnAnalyser = null, vnBuf = null, vnRaf = 0;
+    let vnTick = null, vnStartAt = 0;
+    let vnPeaks = [], vnLive = [];                 // real amplitudes, not decoration
+    let vnLocked = false, vnDiscard = false, vnStarting = false, vnAbandon = false;
+    let vnHolding = false, vnPendingLock = false, vnPointerId = null;
+    let vnPressX = 0, vnPressY = 0, vnPressAt = 0, vnMoved = false;
+    let vnBlob = null, vnUrl = '', vnAudio = null, vnDur = 0, vnPlayRaf = 0;
+    let vnColorsDirty = true, vnLiveColor = '#ef4444', vnPvColor = '#6c2bd9', vnPvDim = '#d4d4d8';
+    // Cached: vnAxis() forces a style recalc, so it must not run per frame or
+    // per pointermove. Refreshed on every state change via vnSyncColors().
+    let vnRtl = vnAxis() < 0;
+    function vnAx() { return vnRtl ? -1 : 1; }
+    let vnPadEnd = '';   // room kept clear for the mic, measured not guessed
+
+    // The mic keeps its place in the row while the bar is drawn over the rest
+    // of the composer, so both the lock and the bar are placed from the mic's
+    // real position. getBoundingClientRect is physical, hence the RTL branch.
+    function vnPlaceOverlays() {
       try {
-        pttStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : (MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : 'audio/webm');
-        pttRecorder = new MediaRecorder(pttStream, { mimeType: mime, audioBitsPerSecond: 32000 });
-        seq = 0;
-        pttRecorder.ondataavailable = async e => {
-          if (!e.data || !e.data.size) return;
-          // Encode to base64 and broadcast immediately
-          const buf = await e.data.arrayBuffer();
-          let binary = '';
-          const bytes = new Uint8Array(buf);
-          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-          const b64 = btoa(binary);
-          if (walkie) walkie.sendChunk({ data: b64, mime, seq: seq++ });
+        const b = micBtn.getBoundingClientRect();
+        const p = inputBar.getBoundingClientRect();
+        if (!b.width || !p.width) return;
+        const rtl = vnAxis() < 0;
+        const lockOff = (rtl ? (p.right - b.right) : (b.left - p.left)) + b.width / 2 - 19;
+        lockPill.style.insetInlineStart = Math.max(4, lockOff).toFixed(1) + 'px';
+        vnPadEnd = Math.max(8, (rtl ? (b.right - p.left) : (p.right - b.left)) + 8).toFixed(0) + 'px';
+      } catch (e) { vnPadEnd = ''; }
+    }
+
+    function vnSyncColors() {
+      // Read once per state change, not per frame — and only colours, which
+      // are not transitioned here, so there is no pre-transition value to read.
+      try {
+        const a = getComputedStyle(recWave);
+        vnLiveColor = a.color || vnLiveColor;
+        const b = getComputedStyle(pvWave);
+        vnPvColor = b.color || vnPvColor;
+        vnPvDim = (b.getPropertyValue('--vn-dim') || '').trim() || vnPvDim;
+      } catch (e) {}
+      vnRtl = vnAxis() < 0;
+      vnColorsDirty = false;
+    }
+
+    function vnFitCanvas(cv) {
+      const dpr = Math.min(3, window.devicePixelRatio || 1);
+      const w = Math.max(1, Math.round(cv.clientWidth * dpr));
+      const h = Math.max(1, Math.round(cv.clientHeight * dpr));
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    }
+
+    // Live meter: newest sample enters at the inline start and scrolls away.
+    function vnDrawLive() {
+      const g = recWave.getContext && recWave.getContext('2d');
+      if (!g) return;
+      if (vnColorsDirty) vnSyncColors();
+      vnFitCanvas(recWave);
+      const W = recWave.width, H = recWave.height;
+      g.clearRect(0, 0, W, H);
+      const rtl = vnRtl;
+      const step = Math.max(3, Math.round(W / 84));
+      const bw = Math.max(2, step - Math.max(1, Math.round(step / 3)));
+      g.fillStyle = vnLiveColor;
+      const n = Math.min(vnLive.length, Math.floor(W / step));
+      for (let i = 0; i < n; i++) {
+        const v = vnLive[vnLive.length - 1 - i];
+        const x = rtl ? W - (i + 1) * step : i * step;
+        // A floor of 2px, never a floor that moves: a silent room draws a
+        // flat line, which is the whole point of metering the real stream.
+        const h = Math.max(2, v * (H - 4));
+        g.fillRect(x + (step - bw) / 2, (H - h) / 2, bw, h);
+      }
+    }
+
+    // Static waveform for the preview, filled up to `progress` (0..1).
+    function vnDrawPeaks(progress) {
+      const g = pvWave.getContext && pvWave.getContext('2d');
+      if (!g) return;
+      if (vnColorsDirty) vnSyncColors();
+      vnFitCanvas(pvWave);
+      const W = pvWave.width, H = pvWave.height;
+      g.clearRect(0, 0, W, H);
+      const rtl = vnRtl;
+      const step = Math.max(3, Math.round(W / 56));
+      const bars = Math.max(1, Math.floor(W / step));
+      const bw = Math.max(2, step - Math.max(1, Math.round(step / 3)));
+      for (let i = 0; i < bars; i++) {
+        let peak = 0;
+        if (vnPeaks.length) {
+          const from = Math.floor(i * vnPeaks.length / bars);
+          const to = Math.max(from + 1, Math.floor((i + 1) * vnPeaks.length / bars));
+          for (let k = from; k < to && k < vnPeaks.length; k++) peak = Math.max(peak, vnPeaks[k]);
+        }
+        const h = Math.max(2, peak * (H - 4));
+        const x = rtl ? W - (i + 1) * step : i * step;
+        g.fillStyle = ((i + 1) / bars) <= progress ? vnPvColor : vnPvDim;
+        g.fillRect(x + (step - bw) / 2, (H - h) / 2, bw, h);
+      }
+    }
+
+    function vnPickMime() {
+      const cands = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/ogg'];
+      for (const m of cands) {
+        try { if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m; }
+        catch (e) {}
+      }
+      return '';
+    }
+
+    // Analyser on the live MediaStream. It is never connected to the audio
+    // destination — that would loop the mic back out of the speaker.
+    function vnMeterStart(stream) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;                    // no meter; recording still works
+      try {
+        vnCtx = new AC();
+        if (vnCtx.state === 'suspended') { try { vnCtx.resume(); } catch (e) {} }
+        vnAnalyser = vnCtx.createAnalyser();
+        vnAnalyser.fftSize = 1024;
+        vnAnalyser.smoothingTimeConstant = 0.5;
+        vnCtx.createMediaStreamSource(stream).connect(vnAnalyser);
+        vnBuf = new Uint8Array(vnAnalyser.fftSize);
+      } catch (e) { vnCtx = null; vnAnalyser = null; vnBuf = null; return; }
+      let lastPeak = 0;
+      const loop = () => {
+        vnRaf = requestAnimationFrame(loop);
+        if (!vnAnalyser || !vnBuf) return;
+        vnAnalyser.getByteTimeDomainData(vnBuf);
+        let sum = 0;
+        for (let i = 0; i < vnBuf.length; i++) { const v = (vnBuf[i] - 128) / 128; sum += v * v; }
+        const level = Math.min(1, Math.sqrt(sum / vnBuf.length) * 3.2);   // RMS of real samples
+        vnLive.push(level);
+        if (vnLive.length > 120) vnLive.shift();
+        const now = (window.performance && performance.now()) || Date.now();
+        if (now - lastPeak >= 70) { lastPeak = now; vnPeaks.push(level); }
+        vnDrawLive();
+      };
+      vnRaf = requestAnimationFrame(loop);
+    }
+
+    // A live track keeps the system microphone indicator lit and keeps
+    // draining the battery, so nothing may outlive the recording.
+    function vnReleaseMic() {
+      if (vnTick) { clearInterval(vnTick); vnTick = null; }
+      if (vnRaf) { cancelAnimationFrame(vnRaf); vnRaf = 0; }
+      if (vnRec) {
+        try {
+          vnRec.ondataavailable = null; vnRec.onstop = null;
+          if (vnRec.state !== 'inactive') vnRec.stop();
+        } catch (e) {}
+        vnRec = null;
+      }
+      if (vnStream) {
+        try { vnStream.getTracks().forEach(t => t.stop()); } catch (e) {}
+        vnStream = null;
+      }
+      if (vnAnalyser) { try { vnAnalyser.disconnect(); } catch (e) {} vnAnalyser = null; }
+      if (vnCtx) { try { vnCtx.close(); } catch (e) {} vnCtx = null; }
+      vnBuf = null;
+    }
+
+    function vnStopPlayback(resetPos) {
+      if (vnPlayRaf) { cancelAnimationFrame(vnPlayRaf); vnPlayRaf = 0; }
+      if (vnAudio) {
+        try { vnAudio.pause(); } catch (e) {}
+        if (resetPos) { try { vnAudio.currentTime = 0; } catch (e) {} }
+      }
+      pvPlay.innerHTML = icons.play;
+      pvPlay.title = 'تشغيل';
+      pvPlay.setAttribute('aria-label', 'تشغيل المعاينة');
+    }
+
+    function vnDropPreview() {
+      vnStopPlayback(true);
+      if (vnAudio) { try { vnAudio.removeAttribute('src'); vnAudio.load(); } catch (e) {} vnAudio = null; }
+      if (vnUrl) { try { URL.revokeObjectURL(vnUrl); } catch (e) {} vnUrl = ''; }
+      vnBlob = null; vnDur = 0;
+    }
+
+    function vnReset() {
+      vnReleaseMic();
+      vnDropPreview();
+      vnPeaks = []; vnLive = [];
+      vnLocked = false; vnHolding = false; vnPendingLock = false; vnDiscard = false;
+      recBar.hidden = true; previewBar.hidden = true; lockPill.hidden = true;
+      recAbort.hidden = true; recStop.hidden = true; recHint.hidden = false;
+      recBar.style.paddingInlineEnd = '';
+      lockPill.classList.remove('armed');
+      lockPill.style.transform = '';
+      micBtn.hidden = false;
+      micBtn.style.transform = '';
+      micBtn.classList.remove('vn-recording', 'vn-cancelling');
+      recHint.style.transform = ''; recHint.style.opacity = '';
+      recTime.textContent = '0:00';
+      inputBar.classList.remove('vn-active', 'vn-locked');
+    }
+
+    function vnSetLocked(on) {
+      vnLocked = !!on;
+      inputBar.classList.toggle('vn-locked', vnLocked);
+      micBtn.classList.toggle('vn-locked', vnLocked);
+      // Hands-free: the drag targets go away and explicit buttons take over.
+      lockPill.hidden = vnLocked;
+      recHint.hidden = vnLocked;
+      recAbort.hidden = !vnLocked;
+      recStop.hidden = !vnLocked;
+      micBtn.hidden = vnLocked;
+      micBtn.style.transform = '';
+      // Hands-free frees up the space the mic was holding.
+      recBar.style.paddingInlineEnd = vnLocked ? '' : vnPadEnd;
+      vnColorsDirty = true;
+    }
+
+    async function vnStart(lockNow) {
+      if (vnStarting || vnRec || !previewBar.hidden) return;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+        toast('التسجيل الصوتي غير مدعوم على هذا الجهاز'); return;
+      }
+      vnStarting = true; vnAbandon = false; vnDiscard = false; vnPendingLock = !!lockNow;
+      let stream = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        });
+      } catch (e) {
+        // A refusal must never leave a bar on screen pretending to record.
+        vnStarting = false;
+        vnReset();
+        const n = (e && e.name) || '';
+        if (n === 'NotAllowedError' || n === 'PermissionDeniedError' || n === 'SecurityError') {
+          toast('لم يتم السماح بالوصول إلى الميكروفون — فعّل الإذن من إعدادات التطبيق ثم أعد المحاولة');
+        } else if (n === 'NotFoundError' || n === 'DevicesNotFoundError' || n === 'OverconstrainedError') {
+          toast('لا يوجد ميكروفون متاح على هذا الجهاز');
+        } else if (n === 'NotReadableError' || n === 'TrackStartError' || n === 'AbortError') {
+          toast('الميكروفون مستخدم من تطبيق آخر');
+        } else {
+          toast('تعذر بدء التسجيل');
+        }
+        return;
+      }
+      vnStarting = false;
+      // The permission sheet can outlive the press. If the finger is already
+      // up and this was a hold rather than a tap, no recording was asked for —
+      // hand the microphone straight back instead of opening one in silence.
+      if (vnAbandon) { try { stream.getTracks().forEach(t => t.stop()); } catch (e) {} return; }
+      vnStream = stream;
+      vnMime = vnPickMime();
+      try {
+        vnRec = new MediaRecorder(stream, vnMime ? { mimeType: vnMime, audioBitsPerSecond: 64000 } : undefined);
+      } catch (e) {
+        vnReleaseMic(); vnReset();
+        toast('المتصفح لا يدعم تسجيل الصوت'); return;
+      }
+      vnChunks = []; vnPeaks = []; vnLive = []; vnDiscard = false;
+      vnRec.ondataavailable = (e) => { if (e.data && e.data.size) vnChunks.push(e.data); };
+      vnRec.onstop = vnOnStop;
+      try { vnRec.start(); }
+      catch (e) { vnReleaseMic(); vnReset(); toast('تعذر بدء التسجيل'); return; }
+
+      vnStartAt = Date.now();
+      vnRtl = vnAxis() < 0;
+      vnColorsDirty = true;
+      recTime.textContent = '0:00';
+      vnPlaceOverlays();
+      recBar.hidden = false;
+      lockPill.hidden = false;
+      inputBar.classList.add('vn-active');
+      micBtn.classList.add('vn-recording');
+      vnMeterStart(stream);
+      vnSetLocked(vnPendingLock);
+      vnTick = setInterval(() => {
+        const s = (Date.now() - vnStartAt) / 1000;
+        recTime.textContent = vnFmt(s);
+        if (s >= VN_MAX_SECS) { toast('تم بلوغ الحد الأقصى لمدة التسجيل'); vnStop(); }
+      }, 200);
+    }
+
+    function vnStop() {
+      // A cancel already in flight owns the recorder; a stray pointerup after
+      // it must not turn the discarded take back into a preview.
+      if (vnDiscard) return;
+      if (vnStarting) { vnAbandon = true; vnDiscard = true; vnReset(); return; }
+      if (!vnRec) { vnReset(); return; }
+      // Only the timer and the meter stop here; the recorder still has to emit
+      // its last chunk, so the microphone is released inside onstop.
+      if (vnTick) { clearInterval(vnTick); vnTick = null; }
+      if (vnRaf) { cancelAnimationFrame(vnRaf); vnRaf = 0; }
+      if (vnRec.state === 'inactive') { vnOnStop(); return; }
+      try { vnRec.stop(); } catch (e) { vnReset(); }
+    }
+
+    function vnCancel(msg) {
+      vnHolding = false;   // the gesture is over the moment the threshold is crossed
+      vnDiscard = true;
+      if (vnStarting) { vnAbandon = true; vnReset(); if (msg) toast(msg); return; }
+      if (vnTick) { clearInterval(vnTick); vnTick = null; }
+      if (vnRaf) { cancelAnimationFrame(vnRaf); vnRaf = 0; }
+      if (vnRec && vnRec.state !== 'inactive') { try { vnRec.stop(); } catch (e) { vnReset(); } }
+      else { vnReset(); }
+      if (msg) toast(msg);
+    }
+
+    function vnOnStop() {
+      const heldMs = Date.now() - vnStartAt;
+      const chunks = vnChunks.slice();
+      const peaks = vnPeaks.slice();
+      const mime = (vnRec && vnRec.mimeType) || vnMime || 'audio/webm';
+      const discard = vnDiscard;
+      vnReleaseMic();
+      if (discard) { vnReset(); return; }
+      if (heldMs < VN_MIN_MS || !chunks.length) {
+        vnReset();
+        toast('اضغط مطولًا للتسجيل');
+        return;
+      }
+      vnBlob = new Blob(chunks, { type: mime });
+      vnPeaks = peaks;
+      vnDur = heldMs / 1000;
+      vnShowPreview();
+    }
+
+    function vnShowPreview() {
+      recBar.hidden = true;
+      lockPill.hidden = true;
+      micBtn.hidden = true;
+      previewBar.hidden = false;
+      inputBar.classList.add('vn-active');
+      inputBar.classList.remove('vn-locked');
+      vnColorsDirty = true;
+      vnUrl = URL.createObjectURL(vnBlob);
+      vnAudio = new Audio();
+      vnAudio.preload = 'metadata';
+      vnAudio.src = vnUrl;
+      pvTime.textContent = vnFmt(vnDur);
+      vnAudio.addEventListener('loadedmetadata', () => {
+        // A streamed webm often reports Infinity, so the wall clock stays the
+        // source of truth unless the file gives a real number.
+        const d = vnAudio.duration;
+        if (isFinite(d) && d > 0) { vnDur = d; if (vnAudio.paused) pvTime.textContent = vnFmt(vnDur); }
+      });
+      vnAudio.addEventListener('ended', () => { vnStopPlayback(true); vnDrawPeaks(0); pvTime.textContent = vnFmt(vnDur); });
+      vnAudio.addEventListener('error', () => { toast('تعذر تشغيل التسجيل'); });
+      vnDrawPeaks(0);
+    }
+
+    function vnPlayLoop() {
+      vnPlayRaf = requestAnimationFrame(vnPlayLoop);
+      if (!vnAudio) return;
+      const t = vnAudio.currentTime || 0;
+      pvTime.textContent = vnFmt(t);
+      vnDrawPeaks(vnDur ? Math.min(1, t / vnDur) : 0);
+    }
+
+    function vnTogglePlay() {
+      if (!vnAudio) return;
+      if (vnAudio.paused) {
+        const p = vnAudio.play();
+        const started = () => {
+          pvPlay.innerHTML = vnIco.pause;
+          pvPlay.title = 'إيقاف مؤقت';
+          pvPlay.setAttribute('aria-label', 'إيقاف المعاينة مؤقتًا');
+          if (!vnPlayRaf) vnPlayLoop();
         };
-        // Emit every 250ms for ~real-time feel
-        pttRecorder.start(250);
-        const myName = (await window.SB.getUser())?.user_metadata?.name || 'أنت';
-        if (walkie) walkie.sendTalking(true, myName);
-        pttBtn.style.background = 'var(--danger)';
-        pttBtn.style.color = '#fff';
-        pttBtn.style.transform = 'scale(1.3)';
-      } catch (e) { toast('السماح بالميكروفون مطلوب'); }
+        if (p && p.then) p.then(started).catch(() => toast('تعذر تشغيل التسجيل'));
+        else started();
+      } else {
+        vnStopPlayback(false);   // paused: the clock keeps the position it reached
+      }
     }
-    async function stopPtt() {
-      pttBtn.style.background = '';
-      pttBtn.style.color = '';
-      pttBtn.style.transform = '';
-      if (!pttRecorder || pttRecorder.state === 'inactive') return;
-      pttRecorder.stop();
-      if (pttStream) pttStream.getTracks().forEach(t => t.stop());
-      if (walkie) walkie.sendTalking(false);
+
+    async function vnSend() {
+      if (!vnBlob) return;
+      const blob = vnBlob;
+      const mime = blob.type || 'audio/webm';
+      const ext = mime.indexOf('mp4') >= 0 ? 'm4a' : mime.indexOf('ogg') >= 0 ? 'ogg' : 'webm';
+      const fname = 'voice-' + Date.now() + '.' + ext;
+      // sendMessage() derives the storage extension from file.name, so a bare
+      // Blob would be uploaded as ".bin" and would never play back.
+      let file;
+      try { file = new File([blob], fname, { type: mime }); }
+      catch (e) { file = blob; try { file.name = fname; } catch (e2) {} }
+      const localUrl = URL.createObjectURL(blob);
+      appendMessage({
+        from_user_id: myUserId || 'me', text: '', created_at: new Date().toISOString(),
+        type: 'voice', attachment_url: localUrl,
+      });
+      msgs.scrollTop = msgs.scrollHeight;
+      vnReset();                        // frees the preview URL, not localUrl
+      if (window.API && isRealId(id)) {
+        try { await window.API.sendMessage({ chatId: id, text: '', type: 'voice', file }); }
+        catch (e) { toast((e && e.message) || 'تعذر إرسال الرسالة الصوتية'); }
+      }
     }
-    pttBtn.addEventListener('mousedown', startPtt);
-    pttBtn.addEventListener('mouseup', stopPtt);
-    pttBtn.addEventListener('mouseleave', stopPtt);
-    pttBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startPtt(); }, { passive: false });
-    pttBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopPtt(); });
-    pttBtn.addEventListener('touchcancel', stopPtt);
+
+    recStop.addEventListener('click', () => vnStop());
+    recAbort.addEventListener('click', () => vnCancel('تم إلغاء التسجيل'));
+    pvPlay.addEventListener('click', vnTogglePlay);
+    pvDel.addEventListener('click', () => { vnReset(); toast('تم حذف التسجيل'); });
+    pvSend.addEventListener('click', () => { vnSend(); });
+
+    // ── the press gesture ──
+    // Held: records while held, released to review. Dragged toward the inline
+    // start: cancelled. Dragged up onto the lock: hands-free. Tapped: starts
+    // hands-free straight away, so a plain tap is never a no-op.
+    function vnMoveTo(inlineD, upD) {
+      const px = -inlineD * vnAx();
+      micBtn.style.transform = 'translate(' + px.toFixed(1) + 'px, ' + (-upD).toFixed(1) + 'px)';
+      recHint.style.transform = 'translateX(' + (px * 0.6).toFixed(1) + 'px)';
+      recHint.style.opacity = String(Math.max(0, 1 - inlineD / VN_CANCEL_PX));
+      micBtn.classList.toggle('vn-cancelling', inlineD >= VN_CANCEL_PX * 0.6);
+    }
+
+    function vnOnDown(e) {
+      if (vnLocked || !previewBar.hidden) return;
+      if (e.button != null && e.button !== 0) return;
+      e.preventDefault();
+      vnPressX = e.clientX; vnPressY = e.clientY;
+      vnPressAt = Date.now(); vnMoved = false; vnHolding = true;
+      vnPointerId = (e.pointerId != null) ? e.pointerId : null;
+      if (vnPointerId != null && micBtn.setPointerCapture) {
+        try { micBtn.setPointerCapture(vnPointerId); } catch (er) {}
+      }
+      vnStart(false);
+    }
+
+    function vnOnMove(e) {
+      if (!vnHolding) return;
+      const inlineD = (vnPressX - e.clientX) * vnAx();     // + = toward inline start
+      const upD = vnPressY - e.clientY;                    // + = upward
+      if (Math.abs(inlineD) > VN_SLOP_PX || Math.abs(upD) > VN_SLOP_PX) vnMoved = true;
+      if (!vnRec) return;                                  // nothing to steer yet
+      if (upD > VN_SLOP_PX && upD > inlineD) {
+        const lift = Math.min(upD, VN_LOCK_PX);
+        lockPill.style.transform = 'translateY(' + (-(lift / VN_LOCK_PX) * 10).toFixed(1) + 'px)';
+        lockPill.classList.toggle('armed', upD >= VN_LOCK_PX);
+        vnMoveTo(0, lift);
+      } else {
+        lockPill.classList.remove('armed');
+        lockPill.style.transform = '';
+        const d = Math.max(0, inlineD);
+        vnMoveTo(d, 0);
+        if (d >= VN_CANCEL_PX) vnCancel('تم إلغاء التسجيل');
+      }
+    }
+
+    function vnOnUp() {
+      if (!vnHolding) return;
+      vnHolding = false;
+      if (vnPointerId != null && micBtn.releasePointerCapture) {
+        try { micBtn.releasePointerCapture(vnPointerId); } catch (er) {}
+      }
+      vnPointerId = null;
+      const armed = lockPill.classList.contains('armed');
+      const quickTap = (Date.now() - vnPressAt) < VN_TAP_MS && !vnMoved;
+      lockPill.classList.remove('armed');
+      lockPill.style.transform = '';
+      vnMoveTo(0, 0);
+      micBtn.style.transform = '';
+      if (armed || quickTap) {
+        vnPendingLock = true;               // applied when the stream arrives
+        if (vnRec) vnSetLocked(true);
+        return;
+      }
+      if (vnStarting) { vnAbandon = true; return; }   // permission sheet outlived the press
+      vnStop();
+    }
+
+    if (window.PointerEvent) {
+      micBtn.addEventListener('pointerdown', vnOnDown);
+      window.addEventListener('pointermove', vnOnMove);
+      window.addEventListener('pointerup', vnOnUp);
+      window.addEventListener('pointercancel', vnOnUp);
+    } else {
+      // No pointer events: fall back to tap to start hands-free, tap to stop.
+      micBtn.addEventListener('click', () => {
+        if (vnRec || vnStarting) vnStop(); else vnStart(true);
+      });
+    }
+
+    // Leaving the chat has to hand the microphone back even mid-recording,
+    // and the window-level listeners must not outlive this view.
+    function vnDestroy() {
+      vnDiscard = true; vnAbandon = true; vnHolding = false;
+      vnReleaseMic();
+      vnDropPreview();
+      window.removeEventListener('pointermove', vnOnMove);
+      window.removeEventListener('pointerup', vnOnUp);
+      window.removeEventListener('pointercancel', vnOnUp);
+    }
+    window.addEventListener('hashchange', vnDestroy, { once: true });
+    window.addEventListener('pagehide', vnDestroy, { once: true });
 
     // Cleanup walkie channel when leaving chat
     window.addEventListener('hashchange', () => { if (walkie) try { walkie.close(); } catch (e) {} }, { once: true });
@@ -2910,10 +3428,16 @@ function autoPlay(video) {
       el('button', { class: 'icon-btn', html: icons.paperclip, onclick: () => openAttachSheet(), title: 'إرفاق' }),
       fileInput, videoInput, cameraInput, galleryInput, docInput,
       inputField,
-      pttBtn,                                                                                  // push-to-talk
       el('button', { class: 'icon-btn', html: icons.video, onclick: () => videoInput.click(), title: 'إرسال مقطع فيديو' }),
       el('button', { class: 'icon-btn', html: icons.image, onclick: () => fileInput.click(), title: 'صورة' }),
+      // The mic sits next to send, at the inline end of the row. It used to be
+      // three buttons further in, which left the recording bar barely 30px of
+      // room for its level meter on a 360px screen.
+      micBtn,
       sendBtn,
+      // Absolutely positioned over the row, so the composer keeps its layout
+      // (and the mic keeps its place) while a recording is in progress.
+      recBar, previewBar, lockPill,
     ]);
     root.appendChild(inputBar);
 

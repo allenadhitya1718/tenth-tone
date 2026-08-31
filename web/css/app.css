@@ -2799,3 +2799,122 @@ body.dark .auth-screen .lang-opt.active,
 
 /* Resend line on the OTP screen */
 .auth-screen .otp-resend { color: #6b6b7b; }
+
+/* === Voice notes (chat composer) ===
+   Hold the mic to record, drag toward the inline start to cancel, drag up (or
+   tap the mic) to keep recording hands-free, then review before sending.
+   Everything here is laid out on the logical axis: the app flips <html dir>
+   when the language is switched, so "slide left" in English has to become
+   slide right in Arabic without a second set of rules. */
+.chat-input { position: relative; }
+/* The recording/preview bars are drawn over the row rather than replacing it,
+   so the composer never reflows mid-gesture and the mic stays exactly where
+   the finger came down on it. */
+.chat-input.vn-active > input:not([type="file"]) { visibility: hidden; }
+
+.vn-mic { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.vn-mic[hidden] { display: none; }
+.chat-input.vn-active .vn-mic {
+  position: relative; z-index: 3;
+  background: var(--danger); color: #fff;
+  box-shadow: 0 0 0 7px rgba(239, 68, 68, 0.16);
+  /* transform is set inline while dragging - transitioning it would make the
+     mic lag the finger, so only the paint properties animate. */
+  transition: background 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+}
+.chat-input.vn-active .vn-mic.vn-cancelling {
+  opacity: 0.55;
+  box-shadow: 0 0 0 11px rgba(239, 68, 68, 0.28);
+}
+
+.vn-bar, .vn-preview {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg);
+  padding: 10px 8px calc(10px + var(--safe-bottom));
+}
+.vn-bar[hidden], .vn-preview[hidden] { display: none; }
+
+.vn-dot {
+  flex: none; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--danger); animation: vn-pulse 1.4s ease-in-out infinite;
+}
+@keyframes vn-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+/* Tabular figures so the seconds digit does not shove the rest of the row
+   sideways every time it ticks. */
+.vn-time {
+  flex: none; min-width: 38px; text-align: center;
+  font-size: 13px; font-weight: 700; color: var(--text);
+  font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+  direction: ltr; unicode-bidi: isolate;
+}
+
+/* Canvas, not CSS: the bars are drawn from the RMS of the live microphone
+   stream, so a silent room really does draw a flat line. */
+.vn-wave { flex: 1 1 auto; min-width: 56px; height: 28px; display: block; color: var(--danger); }
+.vn-wave-pv { color: var(--primary); --vn-dim: #d7d7de; }
+
+/* On a narrow screen the hint gives up its width before the meter does -
+   a 30px waveform would be decoration, and the point of it is that it is not. */
+.vn-hint {
+  flex: 0 1 auto; min-width: 0; overflow: hidden;
+  display: flex; align-items: center; gap: 4px;
+  font-size: 12.5px; color: var(--muted); white-space: nowrap;
+  pointer-events: none;
+}
+.vn-hint[hidden] { display: none; }
+.vn-hint-chev { flex: none; display: block; animation: vn-chev 1.4s ease-in-out infinite; }
+.vn-hint-chev svg { width: 15px; height: 15px; display: block; }
+/* The chevron points at the inline start, which is the right-hand side in RTL. */
+[dir="rtl"] .vn-hint-chev { transform: scaleX(-1); }
+@keyframes vn-chev { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+.vn-btn {
+  flex: none; width: 36px; height: 36px; padding: 0;
+  border: 0; border-radius: 50%; background: transparent; color: var(--text);
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 120ms ease, transform 120ms ease;
+}
+.vn-btn[hidden] { display: none; }
+.vn-btn svg { width: 20px; height: 20px; display: block; }
+.vn-btn:active { transform: scale(0.9); }
+.vn-btn-stop { background: var(--danger); color: #fff; }
+.vn-btn-abort, .vn-btn-del { color: var(--danger); }
+.vn-btn-play, .vn-btn-send { background: var(--primary); color: #fff; }
+.vn-btn-send { box-shadow: 0 3px 10px rgba(108, 43, 217, 0.35); }
+.vn-btn-send svg { width: 18px; height: 18px; }
+[dir="rtl"] .vn-btn-send svg { transform: scaleX(-1); }
+
+/* Floats above the mic; its inline offset is measured from the mic itself,
+   because the mic's place in the row depends on which buttons precede it. */
+.vn-lock {
+  position: absolute; bottom: calc(100% + 10px); z-index: 4;
+  width: 38px; padding: 8px 0 6px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: var(--bg); color: var(--muted);
+  border: 1px solid var(--border); border-radius: 19px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.14);
+  pointer-events: none;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+.vn-lock[hidden] { display: none; }
+.vn-lock svg { width: 15px; height: 15px; display: block; }
+.vn-lock-up { display: block; animation: vn-bob 1.5s ease-in-out infinite; }
+@keyframes vn-bob { 0%, 100% { transform: translateY(0); opacity: 0.4; } 50% { transform: translateY(-4px); opacity: 1; } }
+.vn-lock.armed { background: var(--primary); color: #fff; border-color: var(--primary); }
+.vn-lock.armed .vn-lock-up { animation: none; opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vn-dot, .vn-lock-up, .vn-hint-chev { animation: none; }
+}
+
+/* A sent voice note renders as a native <audio controls>, whose default
+   width overflowed the bubble. */
+.bubble audio { display: block; width: 210px; max-width: 58vw; }
+
+body.dark .vn-bar, body.dark .vn-preview { background: var(--bg-2); }
+/* --bg-2 is what the composer and the message list already use in dark, so
+   the pill would vanish into both; --bg-3 keeps it readable as an object. */
+body.dark .vn-lock { background: var(--bg-3); border-color: var(--border); }
+body.dark .vn-wave-pv { --vn-dim: #3f3f47; }
