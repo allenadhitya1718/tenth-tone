@@ -254,7 +254,13 @@
       const c = await ready; if (!c) throw new Error('SDK not loaded');
       const ext = (file.name.split('.').pop() || 'png').toLowerCase();
       const path = `${userId}/avatar-${Date.now()}.${ext}`;
-      const { error } = await c.storage.from('avatars').upload(path, file, { upsert: true, cacheControl: '3600' });
+      // A year, for the same reason videos get one: the path carries a
+      // timestamp and is never reused, so the bytes behind a given URL can
+      // never change. At 3600 every phone re-fetched every avatar it had
+      // already seen once an hour — and avatars appear on every feed item,
+      // every comment and every chat row, so that was the second largest
+      // draw on the egress allowance after video itself.
+      const { error } = await c.storage.from('avatars').upload(path, file, { upsert: true, cacheControl: '31536000' });
       if (error) throw error;
       const { data: pub } = c.storage.from('avatars').getPublicUrl(path);
       return pub.publicUrl;

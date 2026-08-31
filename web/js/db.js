@@ -1174,7 +1174,8 @@
     if (photoFile) {
       const ext = (photoFile.name.split('.').pop() || 'png').toLowerCase();
       const path = `${me}/group-${Date.now()}.${ext}`;
-      const { error: upErr } = await c.storage.from('group-photos').upload(path, photoFile, { upsert: true });
+      // Immutable path, so a year rather than the one-hour default.
+      const { error: upErr } = await c.storage.from('group-photos').upload(path, photoFile, { upsert: true, cacheControl: '31536000' });
       if (upErr) throw upErr;
       const { data: pub } = c.storage.from('group-photos').getPublicUrl(path);
       photo_url = pub.publicUrl;
@@ -1254,7 +1255,8 @@
       const path = `${chatId}/${Date.now()}-${me}.${ext}`;
       const q = await API.uploadQuota();
       if (q && !q.allowed) throw new Error(API.quotaMessage(q));
-      const { error: upErr } = await c.storage.from('chat-media').upload(path, file);
+      // Immutable path, so a year rather than the one-hour default.
+      const { error: upErr } = await c.storage.from('chat-media').upload(path, file, { cacheControl: '31536000' });
       if (upErr) throw upErr;
       const { data: signed } = await c.storage.from('chat-media').createSignedUrl(path, 60 * 60 * 24 * 7);
       row.attachment_url = signed.signedUrl;
