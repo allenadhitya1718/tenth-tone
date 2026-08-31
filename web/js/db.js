@@ -234,6 +234,110 @@
     }
   } catch (e) {}
 
+  // =====================================================================
+  //  Cloudflare R2 uploads
+  //
+  //  Supabase Storage enforced the upload quota itself: the INSERT into
+  //  storage.objects was refused by a Postgres policy, so even someone
+  //  talking to the storage API directly with the public key got nothing.
+  //
+  //  R2 has no policies and no database, so that gate had to be rebuilt as
+  //  the media-upload Edge Function. The R2 credentials live only there,
+  //  which means asking it is the only way to put a byte in the bucket, and
+  //  it runs the same within_upload_quota() check on the way past.
+  //
+  //  Three steps: ask for a signed URL, PUT the bytes straight to R2 (they
+  //  never pass through Supabase, which is the point), then confirm so the
+  //  server can measure what actually landed and record it.
+  // =====================================================================
+
+  // Deliberate refusals from the gate, as opposed to something being broken.
+  // These must NEVER fall back to Supabase: the server said no, and quietly
+  // succeeding against the other backend would show the person an upload the
+  // quota had just declined.
+  const R2_REFUSALS = new Set([
+    'quota_exceeded', 'file_too_large', 'too_many_pending',
+    'bad_extension', 'bad_content_type', 'bad_size',
+  ]);
+
+  async function r2Call(body) {
+    const c = await client();
+    const { data, error } = await c.functions.invoke('media-upload', { body });
+    if (error) {
+      // The function puts a readable reason in the body; the SDK only reports
+      // "non-2xx status code" unless you dig it out.
+      let payload = null;
+      try { payload = await error.context.json(); } catch (e) {}
+      const code = (payload && payload.error) || '';
+      if (R2_REFUSALS.has(code)) {
+        const refusal = new Error(code);
+        refusal.refused = true;
+        refusal.payload = payload;
+        throw refusal;
+      }
+      throw new Error(code || error.message || 'upload service unavailable');
+    }
+    return data;
+  }
+
+  // Returns the public URL on success.
+  //
+  // Returns NULL when R2 is switched off, or when the service is unreachable
+  // and the caller should use its existing Supabase path instead. A null is
+  // "not applicable", never "refused" - anything the gate deliberately
+  // declined is thrown, so it reaches the person as a real message rather
+  // than being retried somewhere that might answer differently.
+  API.uploadMedia = async (file, { bucket = 'videos', ext, contentType } = {}) => {
+    if (!(window.TT_CONFIG && window.TT_CONFIG.r2Uploads)) return null;
+    if (!file || !file.size) return null;
+
+    const type = contentType || file.type || 'application/octet-stream';
+    const extension = (ext || (file.name || '').split('.').pop() || '').toLowerCase();
+    if (!extension) return null;
+
+    let sig;
+    try {
+      sig = await r2Call({ action: 'sign', bucket, ext: extension, contentType: type, size: file.size });
+    } catch (e) {
+      if (e && e.refused) throw e;
+      console.warn('R2 sign failed, using Supabase:', e && e.message);
+      return null;
+    }
+    if (!sig || !sig.uploadUrl) return null;
+
+    // Every header the sign step returned was part of the signature, so they
+    // have to go back byte for byte - except content-length. That is a
+    // forbidden header name: the browser sets it from the body itself and
+    // will not let us. Its value is the same number either way, so the
+    // signature still matches; we simply must not send it by hand.
+    const headers = Object.assign({}, sig.headers || {});
+    delete headers['content-length'];
+    delete headers['Content-Length'];
+
+    const put = await fetch(sig.uploadUrl, { method: 'PUT', headers, body: file });
+    if (!put.ok) {
+      // Past this point the bytes may be in the bucket behind an unconfirmed
+      // ledger row. The reconcile job sweeps those, so nothing is orphaned -
+      // but the upload has failed and must not quietly retry against Supabase,
+      // or one clip would end up stored in both places.
+      throw new Error('upload failed (' + put.status + ')');
+    }
+
+    // The size recorded in the ledger comes from R2 during this call, not from
+    // us. Retried once because the bytes are already stored: losing the race
+    // here would leave a real object behind an unconfirmed row for the sweeper.
+    let done;
+    try {
+      done = await r2Call({ action: 'confirm', id: sig.id });
+    } catch (e) {
+      if (e && e.refused) throw e;
+      await new Promise(r => setTimeout(r, 800));
+      done = await r2Call({ action: 'confirm', id: sig.id });
+    }
+
+    return (done && done.publicUrl) || sig.publicUrl;
+  };
+
   // ---------- Videos ----------
   API.publishVideo = async ({ file, thumbnail_url, description, music, sound_id = null, privacy = 'public', is_draft = false, allow_comments = true, allow_saving = true }) => {
     const c = await client();
@@ -248,17 +352,25 @@
         throw new Error('حجم الملف كبير جدًا (الحد الأقصى ' + Math.floor(q.max_video_bytes / 1048576) + ' ميجابايت)');
       }
       const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
+
+      // R2 first when it is switched on. Null means "not applicable" - either
+      // off, or the service could not be reached - so the original Supabase
+      // path below still runs. A refusal throws and never reaches it.
+      video_url = await API.uploadMedia(file, { bucket: 'videos', ext });
+
       const path = `${userId}/${Date.now()}.${ext}`;
       // A year, not an hour. The path carries a timestamp and is never reused,
       // so the bytes at a given URL can never change — which makes a short TTL
       // pure waste: at 3600 a phone re-downloaded the same clip every hour it
       // was watched, and every one of those came out of the egress allowance.
       // It also decides how well a CDN can hold the file once one is in front.
-      const { error: upErr } = await c.storage.from('videos')
-        .upload(path, file, { cacheControl: '31536000', upsert: false });
-      if (upErr) throw upErr;
-      const { data: pub } = c.storage.from('videos').getPublicUrl(path);
-      video_url = pub.publicUrl;
+      if (!video_url) {
+        const { error: upErr } = await c.storage.from('videos')
+          .upload(path, file, { cacheControl: '31536000', upsert: false });
+        if (upErr) throw upErr;
+        const { data: pub } = c.storage.from('videos').getPublicUrl(path);
+        video_url = pub.publicUrl;
+      }
     }
 
     const { data, error } = await c.from('videos').insert({
@@ -1984,6 +2096,9 @@
       const c = await client();
       const me = await uid();
       if (!me) return null;
+      const viaR2 = await API.uploadMedia(blob, { bucket: 'videos', ext: 'jpg', contentType: 'image/jpeg' });
+      if (viaR2) return viaR2;
+
       const path = `${me}/live-${Date.now()}.jpg`;
       const { error } = await c.storage.from('videos')
         .upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false });

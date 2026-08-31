@@ -59,5 +59,37 @@ window.TT_CONFIG = (function () {
   //   4. Only once people are on that build, enable it in the dashboard.
   const captchaSiteKey = '0x4AAAAAAEiD4fQMLJ_1A_JQ';
 
-  return { demoMode, otpMaxLength, otpMinLength, captchaSiteKey };
+  // ── CLOUDFLARE R2 UPLOADS ──
+  // false → videos and live covers upload to Supabase Storage, exactly as they
+  //         always have. Nothing about this build behaves differently.
+  // true  → they go to R2 instead, via the media-upload Edge Function.
+  //
+  // Off by default so a build carrying this code is safe to ship before any of
+  // the Cloudflare side exists.
+  //
+  // Turn it on only AFTER all of these are true, in this order:
+  //   1. Migration 0062 applied — the quota must be able to SEE R2 before
+  //      anything is written there. Skip this and storage_used_bytes() keeps
+  //      reporting the old Supabase total for ever, the ceiling stops
+  //      existing, and R2 fills toward the 10 GB where billing starts with
+  //      nothing to warn you. See supabase/R2_ROLLOUT.md.
+  //   2. The bucket, its CORS policy, and the five secrets are in place.
+  //   3. `media-upload` is deployed and the step 5 tests in R2_ROLLOUT.md pass.
+  //
+  // Unlike the CAPTCHA switch this one is reversible without locking anybody
+  // out: set it back to false and uploads return to Supabase. Files already in
+  // R2 keep serving — their URLs are stored per row, so old and new can coexist
+  // indefinitely.
+  //
+  // Overridable per session for testing, without a rebuild:
+  //   ?r2=1  → force on       ?r2=0  → force off
+  let r2Uploads = false;
+
+  try {
+    const q = new URLSearchParams(location.search);
+    if (q.get('r2') === '0') r2Uploads = false;
+    if (q.get('r2') === '1') r2Uploads = true;
+  } catch (e) { /* URLSearchParams unavailable — keep the default */ }
+
+  return { demoMode, otpMaxLength, otpMinLength, captchaSiteKey, r2Uploads };
 })();

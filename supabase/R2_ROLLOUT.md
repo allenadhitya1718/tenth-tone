@@ -41,7 +41,7 @@ select public.storage_used_bytes()                                as used,
 ```
 
 Expect `ledger_rows = 0`, `used` identical to before, `still_allowed = true`.
-Write `used` down — step 7 checks against it.
+Write `used` down — step 8 checks against it.
 
 ---
 
@@ -172,27 +172,79 @@ update public.app_limits set global_max_bytes = 8589934592 where id = 1;  -- 8 G
 
 ---
 
-## Step 6 — switch uploads over (me)
+## Step 6 — deploy the sweeper
 
-`db.js` `createVideo` and `uploadLiveThumbnail` move from
-`c.storage.from('videos').upload(...)` to sign → PUT → confirm, behind a flag
-so it can be turned off without a rebuild if anything misbehaves.
+```bash
+npx supabase functions deploy media-reconcile --no-verify-jwt
+```
+
+Plus one more secret, `RECONCILE_SECRET` — any long random string.
+
+This deletes bytes nobody is accounting for: a phone that uploaded and then
+died before confirming leaves a real object behind a `pending` row, and after
+15 minutes that row stops counting toward usage. Storage you are billed for
+and cannot see — the exact blindness this whole design exists to prevent.
+
+Run it **hourly**; that interval is the longest an unaccounted object can sit
+in the bucket. Add it to `.github/workflows/storage-alert.yml` or call it from
+pg_cron. Check the response: `list_truncated: true` means the bucket holds
+more than one run could walk, and some orphans were not examined.
 
 ---
 
-## Step 7 — move the ~200 MB that already exists (script by me, run by you)
+## Step 7 — switch uploads over
 
-Needs the `service_role` key, so you run it and delete the file afterwards.
-It copies each object to R2, rewrites `videos.video_url` / `videos.thumbnail`,
-and only then removes the Supabase copy.
+Already written and shipped inert. In `web/js/config.js`:
 
-Afterwards, `used` from step 1 should be roughly unchanged — the same bytes,
+```js
+let r2Uploads = false;   // -> true
+```
+
+`publishVideo` and `uploadLiveThumbnail` try R2 first and fall back to Supabase
+when it is off or unreachable. A **deliberate refusal** — quota exceeded, file
+too large — throws instead, so a person never sees a successful upload that the
+quota just declined.
+
+Test it without a rebuild first: open the app with **`?r2=1`** and post a clip.
+Then check the ledger and the bucket before changing the file.
+
+---
+
+## Step 8 — move the ~200 MB that already exists
+
+```bash
+python tools/copy_media_to_r2.py --env r2-migrate.env            # dry run
+python tools/copy_media_to_r2.py --env r2-migrate.env --copy     # do it
+```
+
+You run this, not me — it needs the `service_role` key. Put the values in
+`r2-migrate.env`, run, then **delete that file**. Never commit it.
+
+It copies, verifies each object by asking R2 its size, writes the ledger rows,
+and emits `r2_url_rewrite.sql` for you to read and run. It deliberately does
+not rewrite any URL itself and does not delete anything.
+
+The rewrite covers **five** columns, not two:
+
+| Table | Column | Why |
+|---|---|---|
+| `videos` | `video_url`, `thumbnail` | the clip and its poster |
+| `sounds` | `audio_url`, `cover_url` | every public post gets an original sound carrying the video's own URL |
+| `live_streams` | `thumbnail` | live covers are filed in the videos bucket |
+
+Missing the last three would leave sounds and live covers pointing at files
+that no longer exist.
+
+Only after the SQL has run, the app has been opened, and video actually plays
+should you come back with `--delete-source`.
+
+Afterwards `used` from step 1 should be roughly unchanged — the same bytes,
 counted on the other side of the ledger. **If it dropped, the ledger is not
-seeing R2 and you must stop and fix that before anything else.**
+seeing R2. Stop and fix that before anything else.**
 
 ---
 
-## Step 8 — set the real ceiling
+## Step 9 — set the real ceiling
 
 ```sql
 update public.app_limits set global_max_bytes = 8589934592 where id = 1;  -- 8 GB
@@ -204,7 +256,7 @@ warns at 5.6 GB (70%), 6.8 GB (85%) and 7.6 GB (95%).
 
 ---
 
-## Step 9 — the leaks worth closing
+## Step 10 — the leaks worth closing
 
 Not blockers, but they cost money on a metered store in a way they did not on
 a free one:
