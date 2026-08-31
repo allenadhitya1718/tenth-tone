@@ -156,11 +156,17 @@ larger than 1 MB to the returned URL.
 - If R2 refuses with 403, the content-length binding is working.
 - If R2 accepts it, that guard is not active on this runtime — expected, and
   the reason it is documented as a bonus rather than a defence. **Then call
-  confirm**: it must return `413 file_too_large`, delete the object from R2,
-  and leave a `rejected` row.
+  confirm**: it must return `413` with `reason: "larger_than_declared"`,
+  delete the object from R2, and leave a `rejected` row.
 
 Either outcome is acceptable. What is *not* acceptable is confirm returning
 `ok` — that would mean a client can put unmeasured bytes in your bucket.
+
+Confirm compares against the DECLARED size, not just the 60 MB bucket ceiling.
+That distinction matters: the quota at sign time was evaluated against what the
+caller claimed, so "declared 1 KB, stored 59 MB" passed a check that was
+answering a different question, and a bucket-ceiling-only test would wave it
+through.
 
 **5c — the file is actually cacheable.** The single check that decides whether
 your egress bill stays at zero:

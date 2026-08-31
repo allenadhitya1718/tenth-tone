@@ -314,8 +314,21 @@ Deno.serve(async (req) => {
     const actual = Number(head.headers.get('content-length') ?? 0);
     const rules = BUCKETS[row.bucket];
     const max = rules?.max ?? 0;
+    const declared = Number(row.size_bytes ?? 0);
 
-    if (!actual || (max && actual > max)) {
+    // ── Did they upload what they asked to upload? ──
+    // Checking only against the bucket maximum is not enough. The quota at
+    // sign time was evaluated against the DECLARED size, so a caller who says
+    // "1 KB" and then stores 59 MB passed a check that was answering a
+    // different question. The bucket ceiling alone would wave that through.
+    //
+    // declared is file.size, which is exact, so this should match to the byte.
+    // The slack is for transfer-layer differences rather than for tolerating
+    // a discrepancy — anything beyond it is a lie, not a rounding error.
+    const slack = Math.max(1024, Math.ceil(declared * 0.01));
+    const overDeclared = declared > 0 && actual > declared + slack;
+
+    if (!actual || (max && actual > max) || overDeclared) {
       // Measured and refused. The bytes go immediately — an oversized object
       // left in the bucket is a bill. The row stays as 'rejected' rather than
       // being deleted, so the attempt still counts against the daily quota and
@@ -324,7 +337,11 @@ Deno.serve(async (req) => {
       await db.from('media_objects')
         .update({ status: 'rejected', size_bytes: actual, confirmed_at: new Date().toISOString() })
         .eq('id', row.id);
-      return json({ error: 'file_too_large', actual, max }, 413);
+      return json({
+        error: 'file_too_large',
+        reason: overDeclared ? 'larger_than_declared' : 'over_bucket_max',
+        actual, declared, max,
+      }, 413);
     }
 
     const { error: updErr } = await db
