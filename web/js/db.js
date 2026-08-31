@@ -1486,6 +1486,29 @@
   };
 
   // Returns the emoji now standing, or null when the reaction was cleared.
+  // Deleting your own message. The database has allowed this since 0018
+  // ("messages delete own", using auth.uid() = from_user_id) — there was
+  // simply no function and no UI, so the capability sat unused and people
+  // could not take back something they had sent.
+  //
+  // The attachment is deliberately left in storage. Deriving its path from the
+  // signed URL means parsing a URL to reconstruct a key, and getting that
+  // wrong deletes somebody else's file. An orphaned attachment costs a little
+  // space; a wrong delete costs data.
+  API.deleteMessage = async (messageId) => {
+    const c = await client();
+    // .select() so the result says WHAT was deleted. Deleting a row the policy
+    // hides does not raise — it removes nothing and reports success, so a
+    // caller that only checks `error` would report a message as deleted while
+    // it is still there, and it would reappear on the next load. Verified:
+    // account B deleting account A's message lands here with zero rows.
+    const { data, error } = await c.from('messages').delete().eq('id', messageId).select('id');
+    if (error) throw error;
+    if (!data || !data.length) throw new Error('لا يمكنك حذف هذه الرسالة');
+    invalidate('chats');   // the preview line and the ordering both change
+    return true;
+  };
+
   API.toggleMessageReaction = async (messageId, emoji) => {
     const c = await client(); const me = await uid();
     if (!me) throw new Error('not signed in');
@@ -2904,6 +2927,23 @@
     const { data, error } = await q;
     if (error) throw error;
     return data || [];
+  };
+
+  // Deleting your own post. Needs 0068 applied; before that the delete
+  // removes nothing and this reports it honestly rather than claiming success.
+  //
+  // Does NOT remove the file from R2 — see the note in 0068. The row goes, the
+  // bytes stay, and that is the deliberate trade for now.
+  API.deleteVideo = async (videoId) => {
+    const c = await client();
+    // .select() so a policy-blocked delete is distinguishable from a real one:
+    // deleting a row you may not delete removes nothing and raises nothing.
+    const { data, error } = await c.from('videos').delete().eq('id', videoId).select('id');
+    if (error) throw error;
+    if (!data || !data.length) throw new Error('لا يمكنك حذف هذا المقطع');
+    invalidate('feed:');
+    invalidate('uservideos:');
+    return true;
   };
 
   API.adminDeleteVideo = async (videoId) => {

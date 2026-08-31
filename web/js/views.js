@@ -991,7 +991,45 @@
       sheet.appendChild(interestedRow);
       sheet.appendChild(el('div', { class: 'divider' }));
       sheet.appendChild(reportRow);
-      sheet.appendChild(row(null, 'إلغاء', () => close()));
+      const cancelRow = row(null, 'إلغاء', () => close());
+      sheet.appendChild(cancelRow);
+
+      // Delete, but only on your own post. Ownership needs the session, which
+      // is async, and this sheet is built synchronously — so the row is added
+      // once the answer arrives rather than blocking the sheet from opening.
+      // On someone else's video nothing is ever added, so there is no flash of
+      // a control that then disappears.
+      (async () => {
+        try {
+          if (!window.API || !window.API.deleteVideo || !window.SB) return;
+          const s = await window.SB.getSession();
+          const meId = s && s.user && s.user.id;
+          const ownerId = (v.user && v.user.id) || v.user_id;
+          if (!meId || !ownerId || meId !== ownerId) return;
+
+          const delRow = row(icons.trash || icons.x, 'حذف المقطع', async () => {
+            close();
+            const yes = await confirmDialog({
+              title: 'حذف المقطع',
+              message: 'سيُحذف هذا المقطع نهائيًا مع تعليقاته وإعجاباته.',
+              confirmLabel: 'حذف',
+            });
+            if (!yes) return;
+            try {
+              await window.API.deleteVideo(v.id);
+              if (itemEl) {
+                itemEl.style.transition = 'opacity .25s';
+                itemEl.style.opacity = '0';
+                setTimeout(() => itemEl.remove(), 250);
+              }
+              toast('تم حذف المقطع');
+            } catch (e) {
+              toast(friendlyError(e, 'تعذر حذف المقطع'));
+            }
+          }, true);
+          sheet.insertBefore(delRow, cancelRow);
+        } catch (e) { /* ownership unknown — simply do not offer delete */ }
+      })();
 
       const close = modal(sheet);
     }
@@ -2196,6 +2234,11 @@ function autoPlay(video) {
       }
     }
     startCamera();
+
+    // The nudity model takes ~12.8s to fetch and initialise on first use, and
+    // it is not needed until the person STOPS recording. Started here, that
+    // whole cost happens while they are still filming.
+    if (window.NSFWCheck && window.NSFWCheck.warmUp) window.NSFWCheck.warmUp();
 
     function stopAll() {
       if (timer) clearInterval(timer);
@@ -4066,6 +4109,35 @@ function autoPlay(video) {
           class: 'reaction-pick' + (myReaction === e ? ' on' : ''), type: 'button',
           onclick: () => { close(); react(e); },
         }, e)));
+
+        // Deleting your own message. Only ever offered on your own, because
+        // the policy behind it (0018) refuses anything else — offering it more
+        // widely would be a button that fails.
+        if (mine && m.id && window.API && window.API.deleteMessage) {
+          bar.appendChild(el('button', {
+            class: 'reaction-pick msg-delete', type: 'button', title: 'حذف',
+            onclick: async () => {
+              close();
+              const yes = await confirmDialog({
+                title: 'حذف الرسالة',
+                message: 'سيتم حذف هذه الرسالة نهائيًا.',
+                confirmLabel: 'حذف',
+              });
+              if (!yes) return;
+              // Removed from the screen first, and put back if the delete
+              // fails, so the common case feels immediate and a failure is
+              // still honest.
+              const parent = bubble.parentNode, next = bubble.nextSibling;
+              bubble.remove();
+              try { await window.API.deleteMessage(m.id); }
+              catch (e) {
+                if (parent) parent.insertBefore(bubble, next);
+                toast('تعذر حذف الرسالة');
+              }
+            },
+          }, '🗑'));
+        }
+
         const close = modal(bar);
       }
 

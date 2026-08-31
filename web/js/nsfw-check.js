@@ -144,5 +144,18 @@ window.NSFWCheck = (function () {
     }
   }
 
-  return { checkFile };
+  // Starts the download and the TensorFlow warm-up without checking
+  // anything. Measured cost of a cold checkFile(): 12.8 SECONDS, nearly all of
+  // it fetching and initialising the model rather than looking at the video.
+  // Called when the camera screen opens, that happens while the person is
+  // still filming, and by the time they stop it is already in memory.
+  //
+  // Safe to call repeatedly: loadModel() memoises, so extra calls return the
+  // same promise. Failures are swallowed — a warm-up that fails must not break
+  // the screen, and checkFile() will simply pay the cost later.
+  function warmUp() {
+    try { loadModel().catch(() => {}); } catch (e) {}
+  }
+
+  return { checkFile, warmUp };
 })();

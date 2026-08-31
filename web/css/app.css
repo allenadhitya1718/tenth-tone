@@ -3841,3 +3841,15 @@ body.dark .vn-bar, body.dark .vn-preview { background: var(--bg-2); }
    the pill would vanish into both; --bg-3 keeps it readable as an object. */
 body.dark .vn-lock { background: var(--bg-3); border-color: var(--border); }
 body.dark .vn-wave-pv { --vn-dim: #3f3f47; }
+
+/* Delete shares the long-press bar with the reactions, but must not read as
+   one more emoji to send — it is the only destructive control in the row, so
+   it sits behind a divider and stays desaturated until pressed. */
+.reaction-bar .msg-delete {
+  margin-inline-start: 6px;
+  border-inline-start: 1px solid rgba(128,128,128,.28);
+  padding-inline-start: 10px;
+  filter: grayscale(1);
+  opacity: .75;
+}
+.reaction-bar .msg-delete:active { filter: none; opacity: 1; }
