@@ -239,11 +239,27 @@ Deno.serve(async (req) => {
     // object instead of trusting anyone), the in-flight cap above, and the
     // reconcile job. Verify this one explicitly with the oversize test in
     // R2_ROLLOUT.md before relying on it for anything.
+    // ── Cache-Control is stored ON the object ──
+    // R2 replays this header on every GET, and it is what lets Cloudflare's
+    // edge hold the file. Without it nothing caches: every view in Saudi
+    // Arabia would travel to wherever the bucket physically lives, and the
+    // bucket's region would suddenly matter enormously. With it, the region
+    // only affects the first request per edge location.
+    //
+    // A year, and immutable, for the same reason the Supabase uploads use one:
+    // the key carries a timestamp and a uuid and is never reused, so the bytes
+    // behind a URL can never change. `immutable` additionally stops browsers
+    // revalidating on refresh.
+    const cacheControl = 'public, max-age=31536000, immutable';
+
+    const putHeaders: Record<string, string> = {
+      'content-length': String(size),
+      'content-type': contentType,
+      'cache-control': cacheControl,
+    };
+
     const signed = await r2.sign(
-      new Request(signUrl, {
-        method: 'PUT',
-        headers: { 'content-length': String(size), 'content-type': contentType },
-      }),
+      new Request(signUrl, { method: 'PUT', headers: putHeaders }),
       { aws: { signQuery: true, allHeaders: true } },
     );
 
@@ -253,6 +269,11 @@ Deno.serve(async (req) => {
       uploadUrl: signed.url,
       publicUrl: `${R2_PUBLIC_BASE}/${key}`,
       expiresIn: 120,
+      // Returned rather than hardcoded in the app: every header named here was
+      // part of the signature, so the PUT must send them back byte for byte or
+      // R2 rejects it. Handing them over means the cache policy can change here
+      // without shipping a new build.
+      headers: putHeaders,
     });
   }
 

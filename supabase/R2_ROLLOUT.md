@@ -49,8 +49,27 @@ Write `used` down — step 7 checks against it.
 
 Only you can do these. I never handle the keys.
 
-1. **R2 → Create bucket** → `flyp-media`. Location: Automatic, or EU if you
-   want the bytes near Saudi Arabia.
+1. **R2 → Create bucket** → `flyp-media`.
+
+   - **Location:** do *not* accept the Automatic guess if it says Asia Pacific.
+     Click *Provide a location hint* and choose **Western Europe**. Saudi
+     traffic routes west through the Red Sea cables — roughly 90–110 ms to
+     Frankfurt against 140–170 ms to Singapore.
+
+     This matters less than it looks: objects are stored with a year-long
+     `Cache-Control`, so Cloudflare's edge (which has presence in Jeddah and
+     Riyadh) serves almost every request and the bucket's region only affects
+     the first miss per location. Set it right anyway — it is free to get
+     right now and annoying to change later.
+
+   - **Storage class: Standard.** Not Infrequent Access. IA charges a
+     per-GB *retrieval* fee, which would put a meter back on exactly the reads
+     that R2 was chosen to make free, and bills a 30-day minimum per object.
+
+   - Leave **Specify jurisdiction** alone. It is a data-residency lock for
+     GDPR-style requirements and only adds constraints here. (Saudi Arabia's
+     PDPL has its own rules about personal data leaving the country, and user
+     video would count — worth reviewing before public launch, not now.)
 2. **R2 → Manage API Tokens → Create API token** → permission **Object Read &
    Write**, scoped to `flyp-media` only. Copy the Access Key ID and Secret —
    the secret is shown once.
@@ -127,7 +146,22 @@ larger than 1 MB to the returned URL.
 Either outcome is acceptable. What is *not* acceptable is confirm returning
 `ok` — that would mean a client can put unmeasured bytes in your bucket.
 
-**5c — the quota still bites.** Set the ceiling below current usage, ask to
+**5c — the file is actually cacheable.** The single check that decides whether
+your egress bill stays at zero:
+
+```bash
+curl -sI "https://<R2_PUBLIC_BASE>/<key from 5a>" | grep -i "cache-control\|cf-cache-status"
+```
+
+Expect `cache-control: public, max-age=31536000, immutable`. If that header is
+missing, the object was uploaded without it — the PUT must send back every
+header the sign step returned, because they were all part of the signature.
+Nothing caches without it, every view goes to the bucket, and the region you
+picked in step 2 suddenly matters a great deal.
+
+Fetch it twice: `cf-cache-status` should go `MISS` then `HIT`.
+
+**5d — the quota still bites.** Set the ceiling below current usage, ask to
 sign, put it back:
 
 ```sql
