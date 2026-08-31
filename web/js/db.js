@@ -69,7 +69,24 @@
   // Only a few keys are worth keeping, and only for a day. Everything is
   // stamped with whose data it is and erased on sign-out, so one account's
   // conversations can never be shown to whoever opens the app next.
-  const PERSIST_KEY = 'tt-cache-v1';
+  // ── Bumped to v2 when media moved to Cloudflare R2 ──
+  // The persisted feed holds fully-formed video URLs, and every one written
+  // before that migration points at a Supabase file that has since been
+  // deleted. A device carrying that cache would show a feed of broken videos
+  // for up to PERSIST_MAX_AGE — a full day — with nothing on screen
+  // suggesting an app restart would help.
+  //
+  // Changing the key sidesteps it completely: the new build looks for a name
+  // the old one never wrote, finds nothing, and fetches fresh.
+  //
+  // Bump this again on any change that alters the SHAPE or the meaning of
+  // cached values. Stale-but-valid data is what PERSIST_MAX_AGE is for;
+  // this is for data that is no longer true.
+  const PERSIST_KEY = 'tt-cache-v2';
+
+  // Cleared rather than left behind: localStorage is a small shared quota, and
+  // an abandoned 400KB blob nothing will ever read again is pure waste.
+  ['tt-cache-v1'].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
   const PERSIST_PREFIXES = ['chats', 'feed:', 'profile:', 'uservideos:'];
   const PERSIST_MAX_CHARS = 400000;   // ~400KB; storage is small and shared
   const PERSIST_MAX_AGE = 24 * 60 * 60 * 1000;
