@@ -11,7 +11,7 @@ Total time: **~45 minutes of clicking + 1 hour for Google's first review**. No m
 Have these open in browser tabs:
 
 - [ ] https://play.google.com/console/u/0/signup
-- [ ] https://github.com/meeranpmo-svg/Tiktok/settings/secrets/actions
+- [ ] https://github.com/allenadhitya1718/tenth-tone/settings/secrets/actions
 
 Have these tools ready:
 - [ ] Your Google account (Gmail) password — same one you'd use for Play Store
@@ -46,7 +46,7 @@ You need `keytool` to generate your Play Store upload keystore. It comes with an
 
 1. In PowerShell, run (replace `YourPassword123!` with a real strong password — write it down):
    ```powershell
-   cd C:\Users\Syed\Desktop\Tiktok
+   cd C:\dev\TenthTone\Tiktok
    keytool -genkey -v `
      -keystore upload-keystore.jks `
      -alias flyp-upload `
@@ -58,12 +58,12 @@ You need `keytool` to generate your Play Store upload keystore. It comes with an
 2. The file `upload-keystore.jks` (~3 KB) is created in your Tiktok folder
 3. **Move it OUT of the repo** — never commit it:
    ```powershell
-   mkdir C:\Users\Syed\Documents\FLYPKeys
-   move upload-keystore.jks C:\Users\Syed\Documents\FLYPKeys\
+   mkdir C:\dev\FLYPKeys
+   move upload-keystore.jks C:\dev\FLYPKeys\
    ```
 4. Save a backup copy to a second location (cloud drive, USB stick, password manager). If you lose this file you cannot update the app on Play Store.
 
-**Checkpoint:** ✅ The `upload-keystore.jks` file exists at `C:\Users\Syed\Documents\FLYPKeys\upload-keystore.jks` AND you have the password written down.
+**Checkpoint:** ✅ The `upload-keystore.jks` file exists at `C:\dev\FLYPKeys\upload-keystore.jks` AND you have the password written down.
 
 ---
 
@@ -73,7 +73,7 @@ Same trick as the Apple `.p8` file — GitHub secrets store text only.
 
 1. In PowerShell:
    ```powershell
-   [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\Users\Syed\Documents\FLYPKeys\upload-keystore.jks"))
+   [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\dev\FLYPKeys\upload-keystore.jks"))
    ```
 2. Copy the **entire output** (one long line, ~5 000 base64 characters).
 
@@ -83,7 +83,7 @@ Same trick as the Apple `.p8` file — GitHub secrets store text only.
 
 ## Step 4 — Add 4 GitHub secrets ⏱️ 3 min
 
-1. Open https://github.com/meeranpmo-svg/Tiktok/settings/secrets/actions
+1. Open https://github.com/allenadhitya1718/tenth-tone/settings/secrets/actions
 2. Click **New repository secret** and add **each one**:
 
 | # | Name (exact, case-sensitive) | Value |
@@ -141,7 +141,7 @@ You're now on the app dashboard with a long left sidebar of tasks (Store listing
 ## Step 7 — Trigger the signed release build ⏱️ 1 min push + 6 min CI
 
 ```bash
-cd /c/Users/Syed/Desktop/Tiktok
+cd /c/dev/TenthTone/Tiktok
 git pull              # make sure you have the latest workflow
 git tag v1.0.0
 git push origin v1.0.0
@@ -149,7 +149,7 @@ git push origin v1.0.0
 
 This pushes a version tag. The workflow detects the 4 secrets you set in Step 4 and produces a **signed release AAB** (Android App Bundle) ready for Play Console.
 
-**Watch the build:** https://github.com/meeranpmo-svg/Tiktok/actions/workflows/android-build.yml
+**Watch the build:** https://github.com/allenadhitya1718/tenth-tone/actions/workflows/android-build.yml
 
 You should see steps:
 - ✅ Detect signing secrets → "Signing secrets present"
@@ -282,7 +282,7 @@ ANDROID_KEYSTORE_PASSWORD  = the password you set in keytool  (Step 2)
 ANDROID_KEY_ALIAS          = flyp-upload
 ANDROID_KEY_PASSWORD       = same as ANDROID_KEYSTORE_PASSWORD
 
-Keystore location  = C:\Users\Syed\Documents\FLYPKeys\upload-keystore.jks
+Keystore location  = C:\dev\FLYPKeys\upload-keystore.jks
 Bundle ID          = com.flyp.app   (matches Apple, matches capacitor.config.json)
 App name           = FLYP
 Default language   = Arabic
