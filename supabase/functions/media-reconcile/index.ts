@@ -50,11 +50,16 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { AwsClient } from 'npm:aws4fetch@1.0.20';
 
-const R2_ACCOUNT_ID = Deno.env.get('R2_ACCOUNT_ID') ?? '';
-const R2_BUCKET = Deno.env.get('R2_BUCKET') ?? '';
-const RECONCILE_SECRET = Deno.env.get('RECONCILE_SECRET') ?? '';
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
-const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+// Trimmed for the same reason as media-upload: these are pasted into a web
+// form by hand, and a leading space in the account id or bucket name breaks
+// every signature with an error that never mentions whitespace.
+const env = (k: string) => (Deno.env.get(k) ?? '').trim();
+
+const R2_ACCOUNT_ID = env('R2_ACCOUNT_ID');
+const R2_BUCKET = env('R2_BUCKET');
+const RECONCILE_SECRET = env('RECONCILE_SECRET');
+const SUPABASE_URL = env('SUPABASE_URL');
+const SERVICE_KEY = env('SUPABASE_SERVICE_ROLE_KEY');
 
 // An object must be this old before it can be deleted for having no ledger
 // row. Without the grace period a sweep running at the wrong moment could
@@ -67,8 +72,8 @@ const GRACE_MS = 2 * 60 * 60 * 1000;   // 2 hours
 const MAX_PAGES = 50;
 
 const r2 = new AwsClient({
-  accessKeyId: Deno.env.get('R2_ACCESS_KEY_ID') ?? '',
-  secretAccessKey: Deno.env.get('R2_SECRET_ACCESS_KEY') ?? '',
+  accessKeyId: env('R2_ACCESS_KEY_ID'),
+  secretAccessKey: env('R2_SECRET_ACCESS_KEY'),
   service: 's3',
   region: 'auto',
 });
