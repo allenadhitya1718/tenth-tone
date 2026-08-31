@@ -31,6 +31,10 @@ FOOT_COLS = [
     ]),
     ('قانوني', 'Legal', [
         ('privacy.html', 'سياسة الخصوصية', 'Privacy policy'),
+        # Google Play requires a deletion URL reachable without the app, and
+        # checks that it is actually findable. The footer is on every page, so
+        # this is the one link that guarantees that.
+        ('delete-account.html', 'حذف الحساب', 'Delete your account'),
         ('terms.html', 'شروط الاستخدام', 'Terms of use'),
         ('copyright.html', 'حقوق النشر', 'Copyright'),
         ('law-enforcement.html', 'طلبات الجهات الرسمية', 'Law enforcement'),

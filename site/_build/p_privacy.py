@@ -143,8 +143,8 @@ AR = [
         <li><strong>الاطلاع:</strong> ملفك الشخصي ومحتواك ورسائلك ظاهرة لك في التطبيق.</li>
         <li><strong>الحصول على نسخة:</strong> الإعدادات ← الأرشفة والتنزيل ← طلب نسخة من بياناتك.</li>
         <li><strong>التصحيح:</strong> الإعدادات ← تعديل الملف الشخصي.</li>
-        <li><strong>الحذف:</strong> الإعدادات ← الحساب ← حذف الحساب. مهلة ثلاثين يومًا للتراجع.</li>
-        <li><strong>الإيقاف المؤقت:</strong> الإعدادات ← الحساب ← إيقاف الحساب مؤقتًا، ويعود بمجرد تسجيل الدخول.</li>
+        <li><strong>الحذف:</strong> الإعدادات والخصوصية ← منطقة الخطر ← حالة الحساب ← حذف الحساب نهائيًا. مهلة ثلاثين يومًا للتراجع. وإن لم يكن التطبيق مثبّتًا لديك، يمكنك طلب الحذف بالبريد الإلكتروني: <a href="delete-account.html">كيف تحذف حسابك</a>.</li>
+        <li><strong>الإيقاف المؤقت:</strong> الإعدادات والخصوصية ← منطقة الخطر ← حالة الحساب ← إيقاف الحساب مؤقتًا، ويعود بمجرد تسجيل الدخول.</li>
         <li><strong>سحب الموافقة:</strong> أطفئ مشاركة الموقع أو الإشعارات من الإعدادات.</li>
         <li><strong>الاعتراض والشكوى:</strong> راسلنا على %(mp)s. ولك أيضًا حق تقديم شكوى إلى الجهة المختصة بحماية البيانات في بلدك.</li>
       </ul>
@@ -314,8 +314,8 @@ EN = [
         <li><strong>Access:</strong> your profile, content and messages are visible to you in the app.</li>
         <li><strong>Get a copy:</strong> Settings, then Archiving and downloading, then request a copy of your data.</li>
         <li><strong>Correction:</strong> Settings, then Edit profile.</li>
-        <li><strong>Deletion:</strong> Settings, then Account, then Delete account. Thirty days to change your mind.</li>
-        <li><strong>Deactivation:</strong> Settings, then Account, then Deactivate. It comes back the moment you sign in.</li>
+        <li><strong>Deletion:</strong> Settings &amp; Privacy, then Danger zone, then Account status, then Delete account permanently. Thirty days to change your mind. If you no longer have the app installed, you can ask by email instead: <a href="delete-account.html">how to delete your account</a>.</li>
+        <li><strong>Deactivation:</strong> Settings &amp; Privacy, then Danger zone, then Account status, then Deactivate account. It comes back the moment you sign in.</li>
         <li><strong>Withdraw consent:</strong> turn off location sharing or notifications in Settings.</li>
         <li><strong>Object and complain:</strong> write to %(mp)s. You also have the right to complain to the data protection authority in your country.</li>
       </ul>

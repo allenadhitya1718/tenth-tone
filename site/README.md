@@ -15,6 +15,7 @@ folder as-is to any static host (Cloudflare Pages, Netlify, Hostinger, GitHub Pa
 | `contact.html` | Which address to write to for what |
 | `guidelines.html` | Community guidelines. Referenced by the terms |
 | `privacy.html` | Privacy policy. Required by both app stores |
+| `delete-account.html` | How to delete your account, in the app or by email. Required by Google Play |
 | `terms.html` | Terms of use |
 | `copyright.html` | Copyright and trademark complaints, and disputes |
 | `law-enforcement.html` | For authorities. Not linked from the main navigation |
@@ -95,10 +96,10 @@ and the Arabic page no untranslated English.
 ## Editing
 
 The header and footer are repeated in every file, so a change to either means editing
-all twelve. The scripts in `_build/` generate the pages and keep them consistent:
+all thirteen. The scripts in `_build/` generate the pages and keep them consistent:
 
 ```bash
-cd _build && python pages_main.py && python p_privacy.py && python p_terms.py && python p_rules.py && python p_support.py
+cd _build && python pages_main.py && python p_privacy.py && python p_terms.py && python p_rules.py && python p_support.py && python p_delete_account.py
 ```
 
 **If you edit the `.html` files by hand, do not run those scripts afterwards** — they
