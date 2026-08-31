@@ -1,4 +1,4 @@
-/* === Content screening (server-side, OpenAI omni-moderation) ===
+/* === Content screening (server-side, Google Gemini) ===
  *
  * The thin browser end of the `moderate-content` Edge Function. Everything of
  * consequence — the API key, the thresholds, the decision, the audit row —
@@ -252,7 +252,7 @@ window.Moderation = (function () {
   }
 
   // A video and its description in ONE request: the caption and three sampled
-  // frames are a single call, which matters because the free OpenAI tier is
+  // frames are a single call, which matters because the free Gemini tier is
   // capped per day and a per-frame call would burn it four times as fast.
   async function checkVideo(file, description) {
     if (!enabled()) return PASS;

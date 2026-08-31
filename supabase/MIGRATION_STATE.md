@@ -10,7 +10,7 @@ bundle files, which were all wrong — see below).
 | Migration | State | Note |
 |---|---|---|
 | `0001`–`0014` | applied | |
-| `0015_ai_moderation` | **SUPERSEDED by 0066 — never apply** | Needed a paid moderation API (Sightengine, ~$29/mo minimum for video) AND `pg_net`, which is not enabled here — so its trigger would have been a silent no-op even if applied. 0066 does the same job through an Edge Function, on OpenAI's free moderation endpoint, with no pg_net dependency. |
+| `0015_ai_moderation` | **SUPERSEDED by 0066 — never apply** | Needed a paid moderation API (Sightengine, ~$29/mo minimum for video) AND `pg_net`, which is not enabled here — so its trigger would have been a silent no-op even if applied. 0066 does the same job through an Edge Function, with no pg_net dependency. The provider is Google Gemini — OpenAI was tried first and returned rate_limited on the third call, because a new account with no payment method has effectively zero quota. |
 | `0016`–`0047` | applied | |
 | `0048_security_fixes` | applied 2026-08-30 | **Critical.** Any user could set their own `profiles.is_admin`. Also forged call-record messages, a reaction that could be moved into a private chat, and viewer counts anyone could rewrite. |
 | `0049_blocking_fixes` | applied 2026-08-30 | Blocked users could still comment, message, and read your videos; blocks left follows intact. |

@@ -1418,10 +1418,9 @@
     // Name and photo together in one call, before the photo is uploaded. Not
     // queued for review - a private group is private - but a refusal still
     // stands, and it stands before any bytes reach the bucket.
-    if (window.Moderation && (name || photoFile)) {
-      const verdict = await window.Moderation.checkImage('group', photoFile, name);
-      if (verdict.blocked) throw new Error(verdict.message || 'لا يمكن استخدام هذا الاسم أو هذه الصورة');
-    }
+    // NOT SCREENED, for the same reason as direct messages: a private group's
+    // name and photo are private content, and the unpaid Gemini tier trains on
+    // what it is sent. See the note in sendMessage.
 
     let photo_url = null;
     if (photoFile) {
@@ -1510,10 +1509,20 @@
     // The attachment is deliberately NOT scanned, only the text. Two people
     // privately exchanging photos is outside what this layer is for, and
     // reporting plus blocking remain the answer there.
-    if (window.Moderation && text) {
-      const verdict = await window.Moderation.checkText('message', text);
-      if (verdict.blocked) throw new Error(verdict.message || 'لا يمكن إرسال هذه الرسالة');
-    }
+    // NOT SCREENED, deliberately. Direct messages are private, and the
+    // moderation provider is Gemini on its UNPAID tier, whose terms say
+    // Google may use submitted content to improve their products and that
+    // "human reviewers may read, annotate, and process" it. Sending people's
+    // private conversations through that is a worse trade than the abuse it
+    // would catch — especially when blocking and reporting already cover DMs,
+    // and Apple's Guideline 1.2 is about content users ENCOUNTER, not private
+    // correspondence between two people who chose to talk.
+    //
+    // It also removes a ~400ms wait from every single message, which testers
+    // reported as chat being slow.
+    //
+    // Revisit only if this moves to a paid tier, where Google states prompts
+    // are not used to improve their products.
 
     const row = { chat_id: chatId, from_user_id: me, type, text };
     // Only sent when set, so this still works against a database without

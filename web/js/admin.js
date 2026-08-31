@@ -422,7 +422,7 @@
           // last day that could not be screened at all. Steadily non-zero means
           // the OPENAI_API_KEY is wrong or the daily request cap was reached,
           // not that people stopped posting.
-          if (q.scans_unavailable_24h) items.push(['نُشر دون فحص تلقائي خلال ٢٤ ساعة: ' + q.scans_unavailable_24h + ' — تحقق من مفتاح OpenAI أو الحصة اليومية', '#/reports']);
+          if (q.scans_unavailable_24h) items.push(['نُشر دون فحص تلقائي خلال ٢٤ ساعة: ' + q.scans_unavailable_24h + ' — تحقق من مفتاح Gemini أو الحصة اليومية', '#/reports']);
           if (q.open_tickets) items.push(['بلاغ دعم مفتوح: ' + q.open_tickets, '#/tickets']);
           if (q.pending_exports) items.push(['طلب بيانات بانتظار المعالجة: ' + q.pending_exports, '#/exports']);
           if (q.pending_deletions) items.push(['حساب مجدول للحذف: ' + q.pending_deletions, '#/deletions']);

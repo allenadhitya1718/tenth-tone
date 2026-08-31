@@ -16,7 +16,7 @@ and the 14-day pile**, and **anything unfinished is a rejection**.
 | Social: report | Report on videos, comments, users | ✅ |
 | Social: blocking | Blocking, and today the Blocked Users screen was fixed — it had been returning undefined ids, so Unblock silently did nothing | ✅ |
 | Social: contact support | `support@flyp-sa.com`, on the store listing and the site | ✅ |
-| **Social: moderate UGC** | Text and images are screened before they are saved, through a Supabase Edge Function calling OpenAI's free moderation endpoint. Video is SAMPLED (three frames), not watched end to end, and the review notes say so in as many words | ✅ code done, ⏳ needs migration 0066 + the `OPENAI_API_KEY` secret |
+| **Social: moderate UGC** | PUBLIC text and images are screened before they are saved, via a Supabase Edge Function calling Google Gemini. Video is SAMPLED (three frames), not watched end to end. Private content — direct messages, private group names and photos — is deliberately NOT screened; see the note below | ✅ code done, ⏳ needs migration 0066 + the `GEMINI_API_KEY` secret |
 | **No unfinished / coming-soon screens** | Swept. Thirteen findings: the two settings builders no longer fall back to a "قريبًا" toast, tagging/place/comment-likes removed for having no table behind them, Message and Reply implemented, group call buttons hidden rather than shown and refused. **Zero coming-soon toasts remain in the app.** | ✅ |
 | Everything works | Four team-reported bugs fixed today; three were worse than reported | ✅ |
 | No dark patterns | No paywall, no subscriptions, no purchases at all | ✅ |
@@ -66,11 +66,10 @@ SAFETY AND MODERATION (Guideline 1.2)
   longer appear in your search results.
 - Blocked accounts are managed at Profile > Settings > Privacy > Blocked
   users, where they can be unblocked.
-- Text is screened automatically before it is saved. Video captions,
-  comments, live-stream comments and titles, profile names and bios, group
-  names and direct messages are all checked by an automated classifier
-  first, and anything rated severe is refused at that point and never
-  appears in the app.
+- Public text is screened automatically before it is saved. Video captions,
+  comments, live-stream comments and titles, and profile names and bios are
+  checked by an automated classifier first, and anything rated severe is
+  refused at that point and never appears in the app.
 - Images are screened the same way, before they are uploaded: profile
   photos, group photos and live-stream cover images.
 - Uploaded videos are screened in two ways. Three still frames are sampled
@@ -78,9 +77,11 @@ SAFETY AND MODERATION (Guideline 1.2)
   runs on the device before the file is uploaded at all.
 - What is not screened automatically, stated plainly: we do not check every
   frame of a video, we do not analyse audio, we do not screen live video
-  while it is broadcasting, and we do not screen photos sent privately
-  inside a direct message. Those rely on reporting, on blocking, and on an
-  administrator who can end any live stream immediately.
+  while it is broadcasting, and we do not screen private content at all —
+  neither direct messages nor private group names and photos. Private
+  conversations are not sent to a third-party classifier by design. Those
+  rely on reporting, on blocking, and on an administrator who can end any
+  live stream immediately.
 - Anything the classifier rates borderline rather than severe is published
   and placed in the same moderation queue our team already uses for user
   reports. If the classifier cannot be reached, the post is allowed and
