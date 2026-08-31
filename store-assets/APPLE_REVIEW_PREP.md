@@ -17,7 +17,7 @@ and the 14-day pile**, and **anything unfinished is a rejection**.
 | Social: blocking | Blocking, and today the Blocked Users screen was fixed — it had been returning undefined ids, so Unblock silently did nothing | ✅ |
 | Social: contact support | `support@flyp-sa.com`, on the store listing and the site | ✅ |
 | **Social: moderate UGC** | Text and images are screened before they are saved, through a Supabase Edge Function calling OpenAI's free moderation endpoint. Video is SAMPLED (three frames), not watched end to end, and the review notes say so in as many words | ✅ code done, ⏳ needs migration 0066 + the `OPENAI_API_KEY` secret |
-| **No unfinished / coming-soon screens** | Five dead camera buttons removed today. An agent is sweeping for the rest — two settings builders fall back to a "قريبًا" toast | ⏳ |
+| **No unfinished / coming-soon screens** | Swept. Thirteen findings: the two settings builders no longer fall back to a "قريبًا" toast, tagging/place/comment-likes removed for having no table behind them, Message and Reply implemented, group call buttons hidden rather than shown and refused. **Zero coming-soon toasts remain in the app.** | ✅ |
 | Everything works | Four team-reported bugs fixed today; three were worse than reported | ✅ |
 | No dark patterns | No paywall, no subscriptions, no purchases at all | ✅ |
 | Not a 1:1 copy | Arabic-first, RTL, Saudi market, own identity and feature mix | ✅ |
