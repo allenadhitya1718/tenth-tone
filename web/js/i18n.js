@@ -1717,6 +1717,10 @@
     'الموقع الحالي': 'Current location',
     'ملف': 'File',
     'تعذر إرسال المرفق': 'Could not send the attachment',
+    // Upload restrictions. The first was added with the video-only rule and
+    // never given a translation, so English users saw Arabic on a rejection.
+    'يمكنك نشر مقاطع الفيديو فقط': 'You can only post videos',
+    'يمكنك إرسال الصور ومقاطع الفيديو فقط': 'You can only send photos and videos',
     'الموقع غير مدعوم على هذا الجهاز': 'Location is not supported on this device',
     'جاري تحديد الموقع...': 'Getting your location...',
     'تعذر إرسال الموقع': 'Could not send the location',

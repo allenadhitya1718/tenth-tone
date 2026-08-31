@@ -3631,17 +3631,29 @@ function autoPlay(video) {
     })();
 
     // Hidden file pickers — separate ones for video clips vs other attachments
-    const fileInput = el('input', { type: 'file', accept: 'image/*,video/*,audio/*', style: { display: 'none' } });
+    // Photos and clips only. `audio/*` came off because voice notes are
+    // RECORDED in the app, not picked off the disk, so dropping it costs the
+    // feature nothing and removes a way to post arbitrary audio files.
+    const fileInput = el('input', { type: 'file', accept: 'image/*,video/*', style: { display: 'none' } });
     const videoInput = el('input', { type: 'file', accept: 'video/*', style: { display: 'none' } });
     // Camera capture and documents need their own inputs: `capture` opens the
     // camera directly, and documents must not be filtered to media types.
     const cameraInput = el('input', { type: 'file', accept: 'image/*', capture: 'environment', style: { display: 'none' } });
     const galleryInput = el('input', { type: 'file', accept: 'image/*', style: { display: 'none' } });
-    const docInput = el('input', { type: 'file', style: { display: 'none' } });
+    // The document picker is gone. It carried no `accept` at all, so any file
+    // type up to 20 MB could be posted into a chat — general file storage and
+    // a way to pass executables around, with no product reason behind it.
 
     // Send any picked file, showing it optimistically first.
     async function sendPickedFile(f, type) {
       if (!f) return;
+      // `accept` only filters what the picker SHOWS: the OS dialog offers "All
+      // files" and a drag-and-drop ignores it outright. This is the rule, and
+      // it is the one place every attachment path converges on.
+      if (!/^(image|video)\//.test(f.type || '')) {
+        toast('يمكنك إرسال الصور ومقاطع الفيديو فقط');
+        return;
+      }
       const isMedia = (type === 'image' || type === 'video');
       const temp = {
         from_user_id: myUserId || 'me',
@@ -3659,7 +3671,7 @@ function autoPlay(video) {
 
     cameraInput.addEventListener('change', () => { sendPickedFile(cameraInput.files[0], 'image'); cameraInput.value = ''; });
     galleryInput.addEventListener('change', () => { sendPickedFile(galleryInput.files[0], 'image'); galleryInput.value = ''; });
-    docInput.addEventListener('change', () => { sendPickedFile(docInput.files[0], 'file'); docInput.value = ''; });
+
 
     async function shareCurrentLocation() {
       if (!navigator.geolocation) { toast('الموقع غير مدعوم على هذا الجهاز'); return; }
@@ -3683,7 +3695,7 @@ function autoPlay(video) {
         { k: 'camera',   l: 'الكاميرا',  icon: 'camera',    cls: 'cam',  act: () => cameraInput.click() },
         { k: 'gallery',  l: 'الصور',     icon: 'image',     cls: 'gal',  act: () => galleryInput.click() },
         { k: 'video',    l: 'فيديو',     icon: 'video',     cls: 'vid',  act: () => videoInput.click() },
-        { k: 'doc',      l: 'مستند',     icon: 'paperclip', cls: 'doc',  act: () => docInput.click() },
+
         { k: 'location', l: 'الموقع',    icon: 'mapPin',    cls: 'loc',  act: () => shareCurrentLocation() },
       ];
       const grid = el('div', { class: 'attach-grid' });
@@ -3876,7 +3888,7 @@ function autoPlay(video) {
     // in a row that was already tight. Removed at the user's request.
     const inputBar = el('div', { class: 'chat-input' }, [
       el('button', { class: 'icon-btn', html: icons.paperclip, onclick: () => openAttachSheet(), title: 'إرفاق' }),
-      fileInput, videoInput, cameraInput, galleryInput, docInput,
+      fileInput, videoInput, cameraInput, galleryInput,
       inputField,
       pttBtn,                                                                                  // push-to-talk
       // One gallery button rather than separate photo and video ones. The

@@ -249,7 +249,13 @@
       }
       const ext = (file.name.split('.').pop() || 'mp4').toLowerCase();
       const path = `${userId}/${Date.now()}.${ext}`;
-      const { error: upErr } = await c.storage.from('videos').upload(path, file, { cacheControl: '3600', upsert: false });
+      // A year, not an hour. The path carries a timestamp and is never reused,
+      // so the bytes at a given URL can never change — which makes a short TTL
+      // pure waste: at 3600 a phone re-downloaded the same clip every hour it
+      // was watched, and every one of those came out of the egress allowance.
+      // It also decides how well a CDN can hold the file once one is in front.
+      const { error: upErr } = await c.storage.from('videos')
+        .upload(path, file, { cacheControl: '31536000', upsert: false });
       if (upErr) throw upErr;
       const { data: pub } = c.storage.from('videos').getPublicUrl(path);
       video_url = pub.publicUrl;
@@ -1978,7 +1984,7 @@
       if (!me) return null;
       const path = `${me}/live-${Date.now()}.jpg`;
       const { error } = await c.storage.from('videos')
-        .upload(path, blob, { contentType: 'image/jpeg', cacheControl: '3600', upsert: false });
+        .upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false });
       if (error) { console.warn('live thumbnail upload failed:', error.message); return null; }
       const { data: pub } = c.storage.from('videos').getPublicUrl(path);
       return (pub && pub.publicUrl) || null;
