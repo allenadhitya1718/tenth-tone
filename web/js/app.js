@@ -147,6 +147,29 @@
     location.hash = '#/';
   }
 
+  // Coming back cancels leaving.
+  //
+  // Both the account-status screen and the privacy policy promise that a
+  // deactivated account returns "the moment you sign in", and that signing in
+  // during the 30-day grace period cancels a scheduled deletion. Nothing kept
+  // that promise: reactivate_account() (migration 0034) existed and was
+  // wrapped as API.reactivateAccount, but nothing ever called it, and no
+  // trigger did it either. A deactivated account therefore stayed invisible
+  // forever, and the only working way out of a scheduled deletion was the
+  // explicit button on the account-status screen.
+  //
+  // The status read is one indexed primary-key lookup, and the write only
+  // happens for the rare account that is actually dormant.
+  async function reactivateIfDormant() {
+    const API = window.API;
+    if (!API || !API.fetchAccountStatus || !API.reactivateAccount) return;
+    // null when migration 0034 has not been applied yet, or when the profile
+    // row does not exist yet (a brand-new sign-up reaches here too).
+    const st = await API.fetchAccountStatus();
+    if (!st || (!st.deactivated_at && !st.deletion_scheduled_at)) return;
+    await API.reactivateAccount();
+  }
+
   // Listen for sign-in / sign-out events from Supabase to keep `session` fresh
   if (window.SB) {
     window.SB.onAuthChange((event, sess) => {
@@ -160,6 +183,14 @@
       // login alert (see record_session in migration 0027).
       if (event === 'SIGNED_IN' && window.API && window.API.recordSession) {
         window.API.recordSession().catch(() => {});
+      }
+      // Signing in is the clearest possible statement that the account was
+      // not meant to go away. Not awaited: it changes how OTHER people see
+      // this account, so nothing on the screen we are about to render is
+      // waiting on it. If it fails, the account-status screen still offers
+      // the explicit cancel button.
+      if (event === 'SIGNED_IN') {
+        reactivateIfDormant().catch(e => console.warn('reactivate on sign-in failed:', e && e.message));
       }
     });
   }
