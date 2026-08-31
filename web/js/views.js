@@ -4825,6 +4825,10 @@ function autoPlay(video) {
         return t ? ('بدأ بثًا مباشرًا: ' + t) : 'بدأ بثًا مباشرًا الآن';
       }
       if (n.type === 'system' && n.payload && n.payload.kind === 'follow_accepted') return 'قبل طلب المتابعة';
+      // Written by the daily job in 0059, to admins only. Worded exactly as the
+      // admin dashboard banner, so the two never appear to disagree.
+      if (n.type === 'system' && n.payload && n.payload.kind === 'storage_alert')
+        return 'التخزين ممتلئ بنسبة ' + n.payload.pct + '% — سيتوقف الرفع عند بلوغ السقف';
       if (n.type === 'system' && n.payload && n.payload.kind === 'location_request') return 'طلب تتبع موقعك';
       if (n.type === 'system' && n.payload && n.payload.kind === 'location_approved') return 'وافق على طلب تتبع موقعه';
       if (n.type === 'system' && n.payload && n.payload.kind === 'location_denied') return 'رفض طلب تتبع موقعه';
