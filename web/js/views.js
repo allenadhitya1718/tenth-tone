@@ -4847,6 +4847,13 @@ function autoPlay(video) {
         return t ? ('بدأ بثًا مباشرًا: ' + t) : 'بدأ بثًا مباشرًا الآن';
       }
       if (n.type === 'system' && n.payload && n.payload.kind === 'follow_accepted') return 'قبل طلب المتابعة';
+      // Written by the triggers in 0061. The toasts these replace were all
+      // missable — one was gated behind Agora being configured, another was
+      // followed straight away by a navigation that destroyed it.
+      if (n.type === 'system' && n.payload && n.payload.kind === 'live_started') return 'بدأ بثك المباشر';
+      if (n.type === 'system' && n.payload && n.payload.kind === 'live_ended')
+        return 'انتهى بثك · ' + fmtDuration(Number(n.payload.seconds) || 0) +
+               ' · أعلى عدد مشاهدين ' + fmt(Number(n.payload.peak) || 0);
       // Written by the daily job in 0059, to admins only. Worded exactly as the
       // admin dashboard banner, so the two never appear to disagree.
       if (n.type === 'system' && n.payload && n.payload.kind === 'storage_alert')
@@ -4885,6 +4892,8 @@ function autoPlay(video) {
       // Straight into the stream — a live alert is worthless if it takes you
       // anywhere but the broadcast, since it will be over shortly.
       if (n.type === 'live' && p.live_id) return '/live/' + p.live_id;
+      // A finished stream has nowhere useful to go, so only the start links.
+      if (n.type === 'system' && p.kind === 'live_started' && p.stream_id) return '/live/' + p.stream_id;
       return null;
     }
 
