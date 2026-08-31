@@ -23,7 +23,12 @@ window.Compress = (function () {
   //
   // Bandwidth is the real cost on a video app — storage is capped at 9 GB by
   // 0031 and sits at 147 MB, while egress has no cap at all.
-  const TARGET_BITRATE     = 1_400_000;           // 1.4 Mbps video
+  // Lowered from 1.4 to 1.1 Mbps. Instagram delivers roughly 0.7-1.3 Mbps,
+  // but it gets there with adaptive streaming and server-side multi-pass
+  // encoding; a single-pass browser encode at the bottom of that range looks
+  // visibly worse. 1.1 sits inside their range with room for one file to
+  // serve every connection, since we store one rendition, not a ladder.
+  const TARGET_BITRATE     = 1_100_000;           // 1.1 Mbps video
   const AUDIO_BITRATE      = 128_000;             // 128 kbps audio
 
   // Used only when a file's duration cannot be read. Nothing this pipeline
@@ -205,12 +210,24 @@ window.Compress = (function () {
         recorder.start();
 
         let rafId;
-        function drawFrame() {
+        // captureStream samples at 30fps, but requestAnimationFrame fires at
+        // the display rate — 60Hz or more — so half of every scale-and-draw
+        // was thrown away before it could be sampled. That waste is what
+        // pushed the encode below real time, and because MediaRecorder stamps
+        // wall-clock time, falling behind is exactly what stretched the output
+        // (13.0s in, 24.6s out). Drawing only when a frame is due matches the
+        // work to what is actually captured.
+        const FRAME_MS = 1000 / 30;
+        let lastDraw = -Infinity;
+        function drawFrame(now) {
+          rafId = requestAnimationFrame(drawFrame);
+          const t = typeof now === 'number' ? now : 0;
+          if (t - lastDraw < FRAME_MS - 1) return;
+          lastDraw = t;
           ctx.drawImage(video, 0, 0, w, h);
           if (onProgress && video.duration) {
             onProgress(Math.min(video.currentTime / video.duration, 0.99));
           }
-          rafId = requestAnimationFrame(drawFrame);
         }
 
         video.onended = () => {
@@ -243,6 +260,186 @@ window.Compress = (function () {
     });
   }
 
+  // ── WebCodecs path ──
+  // MediaRecorder ignores videoBitsPerSecond outright: asking for 400 kbps and
+  // for 2500 kbps both produced ~2360 kbps, and VP9/VP8 behaved the same way.
+  // It runs at a fixed quality we can neither raise nor lower, and on real
+  // footage that quality is visibly blocky. VideoEncoder honours `bitrate`,
+  // which is the entire reason this path exists.
+  //
+  // Frames arrive through MediaStreamTrackProcessor, so they carry MEDIA
+  // timestamps rather than wall-clock ones. The stretch that MediaRecorder
+  // suffered when it fell behind therefore cannot happen here — falling behind
+  // costs frames, not duration. It still runs in real time, because the
+  // browser has no demuxer to decode a file faster than it plays.
+  function webCodecsSupported() {
+    return typeof VideoEncoder !== 'undefined'
+        && typeof VideoFrame !== 'undefined'
+        && typeof MediaStreamTrackProcessor !== 'undefined'
+        && !!(window.Mp4Muxer && window.Mp4Muxer.Muxer);
+  }
+
+  async function compressViaWebCodecs(file, onProgress) {
+    const src = URL.createObjectURL(file);
+    const video = Object.assign(document.createElement('video'), {
+      src, muted: true, playsInline: true,
+    });
+    video.setAttribute('playsinline', '');
+    // In the document because a detached element is not driven at all. Size and
+    // opacity turned out not to matter — throttling follows the window, not the
+    // element — so it stays out of the way.
+    video.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;' +
+                          'opacity:0.01;pointer-events:none;z-index:-1;';
+    document.body.appendChild(video);
+
+    const cleanup = () => {
+      try { URL.revokeObjectURL(src); } catch (e) {}
+      try { video.remove(); } catch (e) {}
+    };
+
+    try {
+      await new Promise((resolve, reject) => {
+        video.onloadedmetadata = () => resolve();
+        video.onerror = () => reject(new Error('Video load error during compression'));
+        video.load();
+      });
+
+      const { w, h } = scaleDimensions(video.videoWidth || 720, video.videoHeight || 1280);
+      const duration = video.duration || 0;
+
+      const muxer = new window.Mp4Muxer.Muxer({
+        target: new window.Mp4Muxer.ArrayBufferTarget(),
+        video: { codec: 'avc', width: w, height: h },
+        audio: { codec: 'aac', numberOfChannels: 2, sampleRate: 48000 },
+        fastStart: 'in-memory',
+      });
+
+      let encodeError = null;
+      const vEnc = new VideoEncoder({
+        output: (chunk, meta) => {
+          try { muxer.addVideoChunk(chunk, meta); } catch (e) { encodeError = e; }
+        },
+        error: (e) => { encodeError = e; },
+      });
+      // Configured at the TARGET size while frames arrive at the source size:
+      // the encoder rescales them itself. Measured 1080x1920 in, 720x1280 out.
+      vEnc.configure({
+        codec: 'avc1.42001f', width: w, height: h,
+        bitrate: TARGET_BITRATE, framerate: 30, avc: { format: 'avc' },
+      });
+
+      // Audio comes off a track, which is fine: audio production is not tied to
+      // rendering. Its timestamps are system-clock, so they are rebased to
+      // their own zero; both tracks then start at 0, because playback starts
+      // them together.
+      const stream = video.captureStream ? video.captureStream() : null;
+      const aTrack = stream ? (stream.getAudioTracks()[0] || null) : null;
+      let audioBase = null;
+      let aEnc = null;
+      if (aTrack) {
+        aEnc = new AudioEncoder({
+          output: (chunk, meta) => {
+            try {
+              if (audioBase === null) audioBase = chunk.timestamp;
+              muxer.addAudioChunk(chunk, meta, Math.max(0, chunk.timestamp - audioBase));
+            } catch (e) { /* audio is not worth losing the video over */ }
+          },
+          error: () => {},
+        });
+        aEnc.configure({ codec: 'mp4a.40.2', sampleRate: 48000, numberOfChannels: 2, bitrate: AUDIO_BITRATE });
+      }
+
+      let frameCount = 0, dropped = 0, rafId = null, stopped = false;
+      let lastMediaTime = -1;
+      const FRAME_US = Math.round(1e6 / 30);
+      // Phones commonly record at 60fps; encoding every frame would double the
+      // file for motion nobody perceives on a short clip. One frame per ~1/30s
+      // of MEDIA time halves it, and works whatever the source rate is.
+      const MIN_GAP = 1 / 31;
+
+      const useRVFC = typeof video.requestVideoFrameCallback === 'function';
+      function schedule() {
+        if (stopped) return;
+        if (useRVFC) video.requestVideoFrameCallback(onFrame);
+        else rafId = requestAnimationFrame(() => onFrame(0, null));
+      }
+
+      function onFrame(now, metadata) {
+        schedule();
+        if (stopped || video.readyState < 2) return;
+        const mediaTime = (metadata && typeof metadata.mediaTime === 'number')
+          ? metadata.mediaTime : video.currentTime;
+        if (mediaTime - lastMediaTime < MIN_GAP) return;
+        lastMediaTime = mediaTime;
+        try {
+          // Straight from the element. Measured at 0.01ms per frame, against
+          // 187ms going through a 2D canvas — that canvas round-trip forced a
+          // GPU readback and was the entire reason this ran at 3fps.
+          const frame = new VideoFrame(video, {
+            timestamp: Math.max(0, Math.round(mediaTime * 1e6)),
+            duration: FRAME_US,
+          });
+          if (vEnc.encodeQueueSize <= 8) {
+            vEnc.encode(frame, { keyFrame: frameCount % 60 === 0 });
+            frameCount++;
+          } else {
+            dropped++;
+          }
+          frame.close();
+        } catch (e) { encodeError = encodeError || e; }
+        if (onProgress && duration) onProgress(Math.min(mediaTime / duration, 0.99));
+      }
+
+      const aReader = (aTrack && aEnc)
+        ? new MediaStreamTrackProcessor({ track: aTrack }).readable.getReader() : null;
+      const pumpAudio = aReader ? (async () => {
+        for (;;) {
+          const { value: data, done } = await aReader.read();
+          if (done || !data) break;
+          try { if (aEnc.encodeQueueSize <= 8) aEnc.encode(data); } catch (e) {}
+          data.close();
+        }
+      })() : Promise.resolve();
+
+      const ended = new Promise((resolve) => {
+        video.onended = () => resolve();
+        // A stalled file must not hang the upload for ever.
+        setTimeout(resolve, Math.max(30000, (duration + 15) * 1000));
+      });
+
+      await video.play();
+      schedule();
+      await ended;
+      stopped = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      if (aTrack) aTrack.stop();
+      await pumpAudio;
+
+      await vEnc.flush();
+      if (aEnc) { try { await aEnc.flush(); } catch (e) {} }
+      try { vEnc.close(); } catch (e) {}
+      if (aEnc) { try { aEnc.close(); } catch (e) {} }
+      if (encodeError) throw encodeError;
+
+      const fps = duration ? frameCount / duration : 0;
+      console.info('[Compress] webcodecs encoded=' + frameCount + ' dropped=' + dropped +
+                   ' fps=' + fps.toFixed(1));
+      // Too few frames means a visibly juddering clip. Better to hand back the
+      // original than to publish a slideshow.
+      if (duration > 1 && fps < 12) throw new Error('too few frames captured (' + fps.toFixed(1) + 'fps)');
+
+      muxer.finalize();
+      const buf = muxer.target.buffer;
+      cleanup();
+      if (onProgress) onProgress(1);
+      const name = file.name.replace(/\.[^.]+$/, '') + '-compressed.mp4';
+      return new File([buf], name, { type: 'video/mp4' });
+    } catch (e) {
+      cleanup();
+      throw e;
+    }
+  }
+
   async function video(file, { onProgress } = {}) {
     if (!file || !file.type.startsWith('video/')) {
       // Not a video (e.g. image) — pass through unchanged
@@ -254,13 +451,31 @@ window.Compress = (function () {
       return { file, originalSize: file.size, compressedSize: file.size, skipped: true, reason: 'small-enough' };
     }
 
-    if (!window.MediaRecorder) {
-      // Runtime doesn't support MediaRecorder
-      return { file, originalSize: file.size, compressedSize: file.size, skipped: true, reason: 'no-mediarecorder' };
+    if (!webCodecsSupported() && !window.MediaRecorder) {
+      // Nothing here can re-encode; upload what we were given.
+      return { file, originalSize: file.size, compressedSize: file.size, skipped: true, reason: 'no-encoder' };
     }
 
     try {
-      const compressed = await compressViaMediaRecorder(file, onProgress);
+      // WebCodecs first, because it is the only one of the two that honours a
+      // bitrate. MediaRecorder stays as the fallback for runtimes without it —
+      // its output is over-compressed and blocky, but a blocky upload beats a
+      // failed one, and the duration guard below still applies to both.
+      let compressed = null;
+      let via = null;
+      if (webCodecsSupported()) {
+        try {
+          compressed = await compressViaWebCodecs(file, onProgress);
+          via = 'webcodecs';
+        } catch (e) {
+          console.warn('[Compress] WebCodecs failed, falling back to MediaRecorder:', e && e.message);
+        }
+      }
+      if (!compressed) {
+        if (!window.MediaRecorder) throw new Error('no encoder available');
+        compressed = await compressViaMediaRecorder(file, onProgress);
+        via = 'mediarecorder';
+      }
       if (onProgress) onProgress(1);
 
       // Sanity check: if compression made it larger, use original
@@ -286,6 +501,7 @@ window.Compress = (function () {
         compressedSize: compressed.size,
         skipped: false,
         reason: 'compressed',
+        via,
       };
     } catch (err) {
       console.warn('[Compress] compression failed, using original:', err);

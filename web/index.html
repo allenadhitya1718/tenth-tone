@@ -60,7 +60,11 @@
   <script src="js/config.js?v=8"></script>
   <script src="js/captcha.js?v=2"></script>
   <script src="js/supabase.js?v=31"></script>
-  <script src="js/compress.js?v=4"></script>
+  <!-- mp4-muxer (MIT). WebCodecs emits encoded frames, not a file; this turns
+       them into a playable MP4. Vendored rather than loaded from a CDN so the
+       APK works offline and nothing third-party is fetched at runtime. -->
+  <script src="js/vendor/mp4-muxer.js?v=1"></script>
+  <script src="js/compress.js?v=5"></script>
   <script src="js/nsfw-check.js?v=3"></script>
   <script src="js/db.js?v=71"></script>
   <script src="js/agora.js?v=23"></script>
