@@ -59,7 +59,7 @@
   <div class="wrap">
     <h1 data-ar="سياسة الخصوصية" data-en="Privacy Policy">سياسة الخصوصية</h1>
     <p class="lede" data-ar="ما الذي نجمعه، ولماذا، وكم نحتفظ به، وما الذي يمكنك فعله حياله." data-en="What we collect, why, how long we keep it, and what you can do about it.">ما الذي نجمعه، ولماذا، وكم نحتفظ به، وما الذي يمكنك فعله حياله.</p>
-    <p class="updated" data-ar="آخر تحديث: 29 أغسطس 2026" data-en="Last updated: 29 August 2026">آخر تحديث: 29 أغسطس 2026</p>
+    <p class="updated" data-ar="آخر تحديث: 31 أغسطس 2026" data-en="Last updated: 31 August 2026">آخر تحديث: 31 أغسطس 2026</p>
   </div>
 </section>
 
@@ -87,7 +87,8 @@
     <div class="prose">
       <h2 id="ar-who">من نحن</h2>
 
-      <p>تطبيق Tenth Tone تديره <span class="fill">[الاسم القانوني للشركة]</span>، ومقرها <span class="fill">[العنوان المسجل]</span>. عندما تستخدم التطبيق فإن الشركة هي المسؤولة عن بياناتك الشخصية، أي أنها من يقرر لماذا تُجمع وكيف تُستخدم.</p>
+      <!-- العنوان المسجّل غير مذكور عمدًا: لم يصلنا بعد. يُضاف هنا حين يزوّدنا به العميل، ولا يُخترع عنوان بديل. -->
+      <p>تطبيق Tenth Tone تديره شركة فلايب، وهي شركة ذات مسؤولية محدودة مسجّلة في المملكة العربية السعودية بالرقم الوطني الموحد 7054999391. عندما تستخدم التطبيق فإن الشركة هي المسؤولة عن بياناتك الشخصية، أي أنها من يقرر لماذا تُجمع وكيف تُستخدم، ويمكن مراسلتها على privacy@flyp-sa.com.</p>
       <p>هذه الصفحة تشرح ما نجمعه، ولماذا، وكم نحتفظ به، وما الذي يمكنك فعله حيال ذلك. كُتبت بلغة واضحة عن قصد.</p>
 
       <h2 id="ar-collect">ما الذي نجمعه</h2>
@@ -145,11 +146,23 @@
 
       <p>نشارك أقل قدر ممكن، ومع الجهات التالية فقط:</p>
       <ul>
-        <li><strong>مزوّدو الخدمة التقنية:</strong> استضافة قاعدة البيانات والملفات، وإرسال البريد، وخدمة البث المباشر. يعملون بموجب عقود تلزمهم بحماية البيانات واستخدامها لخدمتنا فقط.</li>
+        <li><strong>مزوّدو الخدمة التقنية:</strong> استضافة قاعدة البيانات والملفات، وإرسال البريد، وخدمة البث المباشر. يعملون بموجب عقود تلزمهم بحماية البيانات واستخدامها لخدمتنا فقط، ونذكرهم بالاسم في القائمة التالية.</li>
         <li><strong>المستخدمون الآخرون:</strong> ما تنشره علنًا يراه الآخرون. إن كان حسابك خاصًا فلا يراه إلا من وافقت على متابعته لك.</li>
         <li><strong>الجهات الرسمية:</strong> عند تلقي طلب قانوني صحيح، أو عند وجود خطر وشيك على حياة شخص. تفاصيل ذلك في <a href="law-enforcement.html">صفحة طلبات الجهات الرسمية</a>.</li>
         <li><strong>في حال بيع الشركة أو اندماجها:</strong> قد تنتقل البيانات إلى المالك الجديد، وسنخبرك قبل حدوث ذلك.</li>
       </ul>
+
+      <h3>مزوّدو الخدمة الذين نستعين بهم</h3>
+
+      <p>لا نبني كل شيء بأنفسنا. هذه هي الشركات التقنية التي تمر بياناتك عبرها، وما يصل إلى كل واحدة منها:</p>
+      <ul>
+        <li><strong>Supabase:</strong> قاعدة البيانات وتسجيل الدخول وتخزين الملفات. يمر عبرها ما يخصّ حسابك: بريدك وكلمة مرورك المشفّرة، وملفك الشخصي، ومنشوراتك وتعليقاتك، ورسائلك ومرفقاتها، وصورتك الشخصية، ورسائل البريد التي نرسلها إليك مثل رمز التحقق.</li>
+        <li><strong>Cloudflare R2:</strong> تخزين المقاطع التي ترفعها وصور الغلاف الخاصة بها، وإيصالها إلى المشاهدين. ترفع هذه الملفات إليها من جهازك مباشرة، أمّا ما رُفع قبل انتقال التخزين إليها فلا يزال محفوظًا لدى Supabase.</li>
+        <li><strong>Cloudflare Turnstile:</strong> التحقق من أنك شخص لا برنامج آلي، عند إنشاء الحساب وتسجيل الدخول وإعادة تعيين كلمة المرور. يفحص إشارات من متصفّحك وعنوان IP الخاص بك، ولا يطّلع على محتوى حسابك.</li>
+        <li><strong>Agora:</strong> البث المباشر والمكالمات الصوتية والمرئية. يمر الصوت والصورة عبر شبكتها لحظيًا ليصلا إلى الطرف الآخر، ولا نسجّلهما ولا يُخزّنان عندها.</li>
+        <li><strong>OpenStreetMap:</strong> صور الخريطة في ميزة مشاركة الموقع. عند فتح الخريطة يصل إلى خوادمها عنوان IP الخاص بك والجزء المعروض من الخريطة فقط، ولا تصل إليها إحداثياتك المحفوظة ولا أي بيانات عن حسابك.</li>
+      </ul>
+      <p>كل جهة من هذه الجهات تعالج البيانات نيابة عنّا وبموجب شروطها التعاقدية، وليس لها أن تستخدمها لأغراضها هي. وقد تكون خوادمها خارج المملكة، فراجع <a href="#ar-transfer">نقل البيانات خارج بلدك</a>. وإن أضفنا مزوّدًا جديدًا فسنذكره هنا قبل أن تمر بياناتك عبره.</p>
 
       <h2 id="ar-location">الموقع بالتفصيل</h2>
 
@@ -225,7 +238,8 @@
       <ul>
         <li>خصوصية وبيانات: privacy@flyp-sa.com</li>
         <li>دعم عام: support@flyp-sa.com</li>
-        <li>العنوان: <span class="fill">[العنوان المسجل]</span></li>
+        <!-- العنوان المسجّل غير مذكور عمدًا: لم يصلنا بعد. يُضاف هنا حين يزوّدنا به العميل، ولا يُخترع عنوان بديل. -->
+        <li>الجهة المسؤولة: شركة فلايب، شركة ذات مسؤولية محدودة في المملكة العربية السعودية، الرقم الوطني الموحد 7054999391</li>
       </ul>
       <p>ويمكنك أيضًا استخدام <strong>الإعدادات ← الإبلاغ عن مشكلة</strong> داخل التطبيق، ويصل البلاغ إلى الفريق مباشرة.</p>
 
@@ -253,7 +267,8 @@
     <div class="prose">
       <h2 id="en-who">Who we are</h2>
 
-      <p>Tenth Tone is operated by <span class="fill">[COMPANY LEGAL NAME]</span>, based at <span class="fill">[REGISTERED ADDRESS]</span>. When you use the app, that company is the controller of your personal data, meaning it decides why data is collected and how it is used.</p>
+      <!-- Registered address deliberately omitted: we do not have it yet. Add it here once the client supplies it; do not invent one. -->
+      <p>Tenth Tone is operated by FLYP Company, a limited liability company registered in the Kingdom of Saudi Arabia under Unified National Number 7054999391. When you use the app, that company is the controller of your personal data, meaning it decides why data is collected and how it is used, and you can write to it at privacy@flyp-sa.com.</p>
       <p>This page explains what we collect, why, how long we keep it, and what you can do about it. It is deliberately written in plain language.</p>
 
       <h2 id="en-collect">What we collect</h2>
@@ -311,11 +326,23 @@
 
       <p>We share as little as possible, and only with these parties:</p>
       <ul>
-        <li><strong>Technical providers:</strong> database and file hosting, email delivery, and the live streaming service. They work under contracts that require them to protect the data and use it only for our service.</li>
+        <li><strong>Technical providers:</strong> database and file hosting, email delivery, and the live streaming service. They work under contracts that require them to protect the data and use it only for our service, and they are named one by one in the list below.</li>
         <li><strong>Other people on Tenth Tone:</strong> what you post publicly is visible to others. If your account is private, only the people you approve can see it.</li>
         <li><strong>Authorities:</strong> when we receive a valid legal request, or when there is an immediate risk to someone's life. Details are on the <a href="law-enforcement.html">law enforcement page</a>.</li>
         <li><strong>If the company is sold or merges:</strong> data may pass to the new owner, and we will tell you before that happens.</li>
       </ul>
+
+      <h3>The providers we rely on</h3>
+
+      <p>We do not build all of this ourselves. These are the technical companies your data passes through, and what reaches each one:</p>
+      <ul>
+        <li><strong>Supabase:</strong> the database, signing in, and file storage. Everything tied to your account passes through it: your email and hashed password, your profile, your posts and comments, your messages and their attachments, your profile photo, and the emails we send you such as your verification code.</li>
+        <li><strong>Cloudflare R2:</strong> storing the clips you upload and their cover images, and delivering them to viewers. Those files upload to it straight from your device. Anything uploaded before storage moved there is still held at Supabase.</li>
+        <li><strong>Cloudflare Turnstile:</strong> checking that you are a person and not a script, when you create an account, sign in, or reset your password. It reads signals from your browser and your IP address, and sees nothing inside your account.</li>
+        <li><strong>Agora:</strong> live streaming and voice and video calls. Audio and video travel through its network in real time to reach the other side. We do not record them and it does not store them.</li>
+        <li><strong>OpenStreetMap:</strong> the map imagery in the location sharing feature. When you open the map, its servers receive your IP address and the part of the map on screen, and nothing else. Your saved coordinates and your account details are never sent to them.</li>
+      </ul>
+      <p>Each of these processes data on our behalf under its contract terms and may not use it for its own purposes. Their servers may sit outside the Kingdom, so see <a href="#en-transfer">Sending data outside your country</a>. If we add a new provider we will name it here before your data starts passing through it.</p>
 
       <h2 id="en-location">Location in detail</h2>
 
@@ -391,7 +418,8 @@
       <ul>
         <li>Privacy and data: privacy@flyp-sa.com</li>
         <li>General support: support@flyp-sa.com</li>
-        <li>Address: <span class="fill">[REGISTERED ADDRESS]</span></li>
+        <!-- Registered address deliberately omitted: we do not have it yet. Add it here once the client supplies it; do not invent one. -->
+        <li>Controller: FLYP Company, a limited liability company in the Kingdom of Saudi Arabia, Unified National Number 7054999391</li>
       </ul>
       <p>You can also use <strong>Settings, then Report a problem</strong> inside the app, which reaches the team directly.</p>
 

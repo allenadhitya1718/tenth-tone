@@ -4,21 +4,33 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from docs import doc
 
 F = u'<span class="fill">%s</span>'
-CO_AR = F % u'[الاسم القانوني للشركة]'
-CO_EN = F % '[COMPANY LEGAL NAME]'
-ADDR_AR = F % u'[العنوان المسجل]'
-ADDR_EN = F % '[REGISTERED ADDRESS]'
-LAW_AR = F % u'[الدولة]'
-LAW_EN = F % '[COUNTRY]'
+# Company details, taken from the commercial registration certificate.
+# The `.fill` highlight is deliberately NOT applied to these: that class is the
+# "still to be filled in" marker, so leaving it on a real value would make
+# finished text look unfinished.
+#
+# There is deliberately no registered address. The certificate does not carry
+# one and nobody has supplied it, so the sentences below identify the company by
+# legal name and Unified National Number instead. Add the address when it
+# arrives; do not invent one - a wrong address is worse than no address.
+CO_AR = u'شركة فلايب، وهي شركة ذات مسؤولية محدودة مسجّلة في المملكة العربية السعودية بالرقم الوطني الموحد 7054999391'
+CO_EN = 'FLYP Company, a limited liability company registered in the Kingdom of Saudi Arabia under Unified National Number 7054999391'
+CO_SHORT_AR = u'شركة فلايب، شركة ذات مسؤولية محدودة في المملكة العربية السعودية، الرقم الوطني الموحد 7054999391'
+CO_SHORT_EN = 'FLYP Company, a limited liability company in the Kingdom of Saudi Arabia, Unified National Number 7054999391'
+LAW_AR = u'المملكة العربية السعودية'
+LAW_EN = 'the Kingdom of Saudi Arabia'
+NOTE_AR = u'<!-- العنوان المسجّل غير مذكور عمدًا: لم يصلنا بعد. يُضاف هنا حين يزوّدنا به العميل، ولا يُخترع عنوان بديل. -->'
+NOTE_EN = '<!-- Registered address deliberately omitted: we do not have it yet. Add it here once the client supplies it; do not invent one. -->'
 MAIL_P = 'privacy@flyp-sa.com'
 MAIL_S = 'support@flyp-sa.com'
 
 AR = [
 
 ('who', u'من نحن', u'''
-      <p>تطبيق Tenth Tone تديره %(co)s، ومقرها %(addr)s. عندما تستخدم التطبيق فإن الشركة هي المسؤولة عن بياناتك الشخصية، أي أنها من يقرر لماذا تُجمع وكيف تُستخدم.</p>
+      %(note)s
+      <p>تطبيق Tenth Tone تديره %(co)s. عندما تستخدم التطبيق فإن الشركة هي المسؤولة عن بياناتك الشخصية، أي أنها من يقرر لماذا تُجمع وكيف تُستخدم، ويمكن مراسلتها على privacy@flyp-sa.com.</p>
       <p>هذه الصفحة تشرح ما نجمعه، ولماذا، وكم نحتفظ به، وما الذي يمكنك فعله حيال ذلك. كُتبت بلغة واضحة عن قصد.</p>
-''' % dict(co=CO_AR, addr=ADDR_AR)),
+''' % dict(co=CO_AR, note=NOTE_AR)),
 
 ('collect', u'ما الذي نجمعه', u'''
       <h3>بيانات تقدّمها أنت</h3>
@@ -74,11 +86,23 @@ AR = [
 ('share', u'مع من نشاركها', u'''
       <p>نشارك أقل قدر ممكن، ومع الجهات التالية فقط:</p>
       <ul>
-        <li><strong>مزوّدو الخدمة التقنية:</strong> استضافة قاعدة البيانات والملفات، وإرسال البريد، وخدمة البث المباشر. يعملون بموجب عقود تلزمهم بحماية البيانات واستخدامها لخدمتنا فقط.</li>
+        <li><strong>مزوّدو الخدمة التقنية:</strong> استضافة قاعدة البيانات والملفات، وإرسال البريد، وخدمة البث المباشر. يعملون بموجب عقود تلزمهم بحماية البيانات واستخدامها لخدمتنا فقط، ونذكرهم بالاسم في القائمة التالية.</li>
         <li><strong>المستخدمون الآخرون:</strong> ما تنشره علنًا يراه الآخرون. إن كان حسابك خاصًا فلا يراه إلا من وافقت على متابعته لك.</li>
         <li><strong>الجهات الرسمية:</strong> عند تلقي طلب قانوني صحيح، أو عند وجود خطر وشيك على حياة شخص. تفاصيل ذلك في <a href="law-enforcement.html">صفحة طلبات الجهات الرسمية</a>.</li>
         <li><strong>في حال بيع الشركة أو اندماجها:</strong> قد تنتقل البيانات إلى المالك الجديد، وسنخبرك قبل حدوث ذلك.</li>
       </ul>
+
+      <h3>مزوّدو الخدمة الذين نستعين بهم</h3>
+
+      <p>لا نبني كل شيء بأنفسنا. هذه هي الشركات التقنية التي تمر بياناتك عبرها، وما يصل إلى كل واحدة منها:</p>
+      <ul>
+        <li><strong>Supabase:</strong> قاعدة البيانات وتسجيل الدخول وتخزين الملفات. يمر عبرها ما يخصّ حسابك: بريدك وكلمة مرورك المشفّرة، وملفك الشخصي، ومنشوراتك وتعليقاتك، ورسائلك ومرفقاتها، وصورتك الشخصية، ورسائل البريد التي نرسلها إليك مثل رمز التحقق.</li>
+        <li><strong>Cloudflare R2:</strong> تخزين المقاطع التي ترفعها وصور الغلاف الخاصة بها، وإيصالها إلى المشاهدين. ترفع هذه الملفات إليها من جهازك مباشرة، أمّا ما رُفع قبل انتقال التخزين إليها فلا يزال محفوظًا لدى Supabase.</li>
+        <li><strong>Cloudflare Turnstile:</strong> التحقق من أنك شخص لا برنامج آلي، عند إنشاء الحساب وتسجيل الدخول وإعادة تعيين كلمة المرور. يفحص إشارات من متصفّحك وعنوان IP الخاص بك، ولا يطّلع على محتوى حسابك.</li>
+        <li><strong>Agora:</strong> البث المباشر والمكالمات الصوتية والمرئية. يمر الصوت والصورة عبر شبكتها لحظيًا ليصلا إلى الطرف الآخر، ولا نسجّلهما ولا يُخزّنان عندها.</li>
+        <li><strong>OpenStreetMap:</strong> صور الخريطة في ميزة مشاركة الموقع. عند فتح الخريطة يصل إلى خوادمها عنوان IP الخاص بك والجزء المعروض من الخريطة فقط، ولا تصل إليها إحداثياتك المحفوظة ولا أي بيانات عن حسابك.</li>
+      </ul>
+      <p>كل جهة من هذه الجهات تعالج البيانات نيابة عنّا وبموجب شروطها التعاقدية، وليس لها أن تستخدمها لأغراضها هي. وقد تكون خوادمها خارج المملكة، فراجع <a href="#ar-transfer">نقل البيانات خارج بلدك</a>. وإن أضفنا مزوّدًا جديدًا فسنذكره هنا قبل أن تمر بياناتك عبره.</p>
 '''),
 
 ('location', u'الموقع بالتفصيل', u'''
@@ -154,19 +178,21 @@ AR = [
       <ul>
         <li>خصوصية وبيانات: %(mp)s</li>
         <li>دعم عام: %(ms)s</li>
-        <li>العنوان: %(addr)s</li>
+        %(note)s
+        <li>الجهة المسؤولة: %(co)s</li>
       </ul>
       <p>ويمكنك أيضًا استخدام <strong>الإعدادات ← الإبلاغ عن مشكلة</strong> داخل التطبيق، ويصل البلاغ إلى الفريق مباشرة.</p>
-''' % dict(mp=MAIL_P, ms=MAIL_S, addr=ADDR_AR)),
+''' % dict(mp=MAIL_P, ms=MAIL_S, co=CO_SHORT_AR, note=NOTE_AR)),
 ]
 
 
 EN = [
 
 ('who', 'Who we are', '''
-      <p>Tenth Tone is operated by %(co)s, based at %(addr)s. When you use the app, that company is the controller of your personal data, meaning it decides why data is collected and how it is used.</p>
+      %(note)s
+      <p>Tenth Tone is operated by %(co)s. When you use the app, that company is the controller of your personal data, meaning it decides why data is collected and how it is used, and you can write to it at privacy@flyp-sa.com.</p>
       <p>This page explains what we collect, why, how long we keep it, and what you can do about it. It is deliberately written in plain language.</p>
-''' % dict(co=CO_EN, addr=ADDR_EN)),
+''' % dict(co=CO_EN, note=NOTE_EN)),
 
 ('collect', 'What we collect', '''
       <h3>Things you give us</h3>
@@ -222,11 +248,23 @@ EN = [
 ('share', 'Who we share it with', '''
       <p>We share as little as possible, and only with these parties:</p>
       <ul>
-        <li><strong>Technical providers:</strong> database and file hosting, email delivery, and the live streaming service. They work under contracts that require them to protect the data and use it only for our service.</li>
+        <li><strong>Technical providers:</strong> database and file hosting, email delivery, and the live streaming service. They work under contracts that require them to protect the data and use it only for our service, and they are named one by one in the list below.</li>
         <li><strong>Other people on Tenth Tone:</strong> what you post publicly is visible to others. If your account is private, only the people you approve can see it.</li>
         <li><strong>Authorities:</strong> when we receive a valid legal request, or when there is an immediate risk to someone's life. Details are on the <a href="law-enforcement.html">law enforcement page</a>.</li>
         <li><strong>If the company is sold or merges:</strong> data may pass to the new owner, and we will tell you before that happens.</li>
       </ul>
+
+      <h3>The providers we rely on</h3>
+
+      <p>We do not build all of this ourselves. These are the technical companies your data passes through, and what reaches each one:</p>
+      <ul>
+        <li><strong>Supabase:</strong> the database, signing in, and file storage. Everything tied to your account passes through it: your email and hashed password, your profile, your posts and comments, your messages and their attachments, your profile photo, and the emails we send you such as your verification code.</li>
+        <li><strong>Cloudflare R2:</strong> storing the clips you upload and their cover images, and delivering them to viewers. Those files upload to it straight from your device. Anything uploaded before storage moved there is still held at Supabase.</li>
+        <li><strong>Cloudflare Turnstile:</strong> checking that you are a person and not a script, when you create an account, sign in, or reset your password. It reads signals from your browser and your IP address, and sees nothing inside your account.</li>
+        <li><strong>Agora:</strong> live streaming and voice and video calls. Audio and video travel through its network in real time to reach the other side. We do not record them and it does not store them.</li>
+        <li><strong>OpenStreetMap:</strong> the map imagery in the location sharing feature. When you open the map, its servers receive your IP address and the part of the map on screen, and nothing else. Your saved coordinates and your account details are never sent to them.</li>
+      </ul>
+      <p>Each of these processes data on our behalf under its contract terms and may not use it for its own purposes. Their servers may sit outside the Kingdom, so see <a href="#en-transfer">Sending data outside your country</a>. If we add a new provider we will name it here before your data starts passing through it.</p>
 '''),
 
 ('location', 'Location in detail', '''
@@ -302,10 +340,11 @@ EN = [
       <ul>
         <li>Privacy and data: %(mp)s</li>
         <li>General support: %(ms)s</li>
-        <li>Address: %(addr)s</li>
+        %(note)s
+        <li>Controller: %(co)s</li>
       </ul>
       <p>You can also use <strong>Settings, then Report a problem</strong> inside the app, which reaches the team directly.</p>
-''' % dict(mp=MAIL_P, ms=MAIL_S, addr=ADDR_EN)),
+''' % dict(mp=MAIL_P, ms=MAIL_S, co=CO_SHORT_EN, note=NOTE_EN)),
 ]
 
 doc('privacy.html',

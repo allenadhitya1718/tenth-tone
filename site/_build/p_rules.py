@@ -5,10 +5,19 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from docs import doc
 
 F = u'<span class="fill">%s</span>'
-CO_AR = F % u'[الاسم القانوني للشركة]'
-CO_EN = F % '[COMPANY LEGAL NAME]'
-ADDR_AR = F % u'[العنوان المسجل]'
-ADDR_EN = F % '[REGISTERED ADDRESS]'
+# Company details, taken from the commercial registration certificate.
+# The `.fill` highlight is deliberately NOT applied to these: that class is the
+# "still to be filled in" marker, so leaving it on a real value would make
+# finished text look unfinished.
+#
+# There is deliberately no registered address. The certificate does not carry
+# one and nobody has supplied it, so the sentences below identify the company by
+# legal name and Unified National Number instead. Add the address when it
+# arrives; do not invent one - a wrong address is worse than no address.
+CO_AR = u'شركة فلايب، وهي شركة ذات مسؤولية محدودة مسجّلة في المملكة العربية السعودية بالرقم الوطني الموحد 7054999391'
+CO_EN = 'FLYP Company, a limited liability company registered in the Kingdom of Saudi Arabia under Unified National Number 7054999391'
+NOTE_AR = u'<!-- العنوان المسجّل غير مذكور عمدًا: لم يصلنا بعد. يُضاف هنا حين يزوّدنا به العميل، ولا يُخترع عنوان بديل. -->'
+NOTE_EN = '<!-- Registered address deliberately omitted: we do not have it yet. Add it here once the client supplies it; do not invent one. -->'
 M_COPY = 'copyright@flyp-sa.com'
 M_LAW = 'legal@flyp-sa.com'
 M_SUP = 'support@flyp-sa.com'
@@ -327,8 +336,9 @@ doc('copyright.html',
 L_AR = [
 ('who', u'لمن هذه الصفحة', u'''
       <p>هذه الصفحة موجهة إلى الجهات الرسمية وجهات إنفاذ القانون. إن كنت مستخدمًا عاديًا وتريد الإبلاغ عن محتوى، استخدم زر الإبلاغ داخل التطبيق أو <a href="contact.html">صفحة التواصل</a>.</p>
-      <p>الخدمة تديرها %(co)s، ومقرها %(addr)s.</p>
-''' % dict(co=CO_AR, addr=ADDR_AR)),
+      %(note)s
+      <p>الخدمة تديرها %(co)s.</p>
+''' % dict(co=CO_AR, note=NOTE_AR)),
 ('send', u'كيف تُرسَل الطلبات', u'''
       <p>تُرسل الطلبات إلى %(ml)s من عنوان بريد رسمي تابع للجهة الطالبة. يجب أن يتضمن الطلب:</p>
       <ul>
@@ -368,8 +378,9 @@ L_AR = [
 L_EN = [
 ('who', 'Who this page is for', '''
       <p>This page is for authorities and law enforcement. If you are an ordinary user wanting to report content, use the report button inside the app or the <a href="contact.html">contact page</a>.</p>
-      <p>The service is operated by %(co)s, based at %(addr)s.</p>
-''' % dict(co=CO_EN, addr=ADDR_EN)),
+      %(note)s
+      <p>The service is operated by %(co)s.</p>
+''' % dict(co=CO_EN, note=NOTE_EN)),
 ('send', 'How to send requests', '''
       <p>Send requests to %(ml)s from an official address belonging to the requesting body. The request must include:</p>
       <ul>

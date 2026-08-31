@@ -1,0 +1,33 @@
+# Netlify deploy config for the marketing / legal site.
+#
+# This exists so the privacy policy has a public URL. Both Google Play and the
+# App Store refuse a submission without one, and it was the last item blocking
+# both.
+#
+# Publish directory is `site`, NOT `web`.
+#   site/ = the marketing and legal pages (privacy, terms, guidelines...)
+#   web/  = the app itself, which is what vercel.json already deploys
+# The two are separate deployments on purpose. Pointing Netlify at `web` would
+# publish the app and leave the privacy policy with no URL at all.
+#
+# No build command: site/ is plain HTML, one stylesheet, one script. The Python
+# scripts in site/_build/ are authoring tools that run on a developer's machine
+# and write the .html files into the repo - they are not a build step and must
+# not run here.
+
+[build]
+  publish = "site"
+
+# `site/_build` holds the page generators (Python) and would otherwise be served
+# as part of the site. Nothing links to it, but it does not belong on a public
+# host, so redirect it away rather than expose the sources.
+[[redirects]]
+  from = "/_build/*"
+  to = "/404.html"
+  status = 404
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

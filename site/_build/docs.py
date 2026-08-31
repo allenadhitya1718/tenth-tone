@@ -4,8 +4,8 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_site import page, t
 
-UPDATED_AR = u'آخر تحديث: 29 أغسطس 2026'
-UPDATED_EN = 'Last updated: 29 August 2026'
+UPDATED_AR = u'آخر تحديث: 31 أغسطس 2026'
+UPDATED_EN = 'Last updated: 31 August 2026'
 
 TOC_AR = u'في هذه الصفحة'
 TOC_EN = 'On this page'

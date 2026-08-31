@@ -4,10 +4,19 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from docs import doc
 
 F = u'<span class="fill">%s</span>'
-CO_AR = F % u'[الاسم القانوني للشركة]'
-CO_EN = F % '[COMPANY LEGAL NAME]'
-LAW_AR = F % u'[الدولة والمحكمة المختصة]'
-LAW_EN = F % '[COUNTRY AND COURTS]'
+# Company details, taken from the commercial registration certificate.
+# The `.fill` highlight is deliberately NOT applied to these: that class is the
+# "still to be filled in" marker, so leaving it on a real value would make
+# finished text look unfinished.
+#
+# There is deliberately no registered address. The certificate does not carry
+# one and nobody has supplied it, so the sentences below identify the company by
+# legal name and Unified National Number instead. Add the address when it
+# arrives; do not invent one - a wrong address is worse than no address.
+CO_AR = u'شركة فلايب، وهي شركة ذات مسؤولية محدودة مسجّلة في المملكة العربية السعودية بالرقم الوطني الموحد 7054999391'
+CO_EN = 'FLYP Company, a limited liability company registered in the Kingdom of Saudi Arabia under Unified National Number 7054999391'
+LAW_AR = u'المملكة العربية السعودية'
+LAW_EN = 'the Kingdom of Saudi Arabia'
 MAIL_S = 'support@flyp-sa.com'
 MAIL_L = 'legal@flyp-sa.com'
 
@@ -119,7 +128,7 @@ AR = [
 '''),
 
 ('law', u'القانون المطبّق', u'''
-      <p>تخضع هذه الشروط لقوانين %(law)s، وتُنظر أي نزاعات أمام محاكمها المختصة.</p>
+      <p>تخضع هذه الشروط لأنظمة %(law)s، وتُنظر أي نزاعات أمام محاكمها المختصة.</p>
       <p>إن كنت مستهلكًا مقيمًا في دولة تمنحك حقوقًا إضافية لا يمكن التنازل عنها، فتلك الحقوق تبقى قائمة.</p>
 ''' % dict(law=LAW_AR)),
 
