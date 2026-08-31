@@ -62,4 +62,6 @@ web/BUILD_INFO.txt
 # tools/copy_media_to_r2.py reads it; delete the file once the copy is done.
 *.env
 r2-migrate.env
+# Notepad appends .txt silently, which slips past the *.env rule above.
+*.env.txt
 r2_url_rewrite.sql

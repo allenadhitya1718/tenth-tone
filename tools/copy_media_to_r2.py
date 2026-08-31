@@ -52,6 +52,7 @@ size, and ledger rows upsert on (bucket, key).
 
 import argparse
 import datetime
+import functools
 import hashlib
 import hmac
 import os
@@ -62,6 +63,12 @@ try:
     import requests
 except ImportError:
     sys.exit("This needs `requests`:  python -m pip install requests")
+
+# Python buffers stdout when it is redirected to a file, and this job prints
+# roughly 5 KB in total — less than one buffer — so a redirected run showed
+# NOTHING at all until it exited. For a job that moves hundreds of megabytes
+# over several minutes, "no output" and "hung" look identical.
+print = functools.partial(print, flush=True)  # noqa: A001
 
 
 # ── The five columns that can hold a videos-bucket URL ──
