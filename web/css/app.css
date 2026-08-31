@@ -22,8 +22,23 @@
   --tiktok-dark: #000;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
-  --max-w: 430px;
+  /* Phones fill the screen. The phone-shaped column exists so the app is not
+     stretched across a tablet or a desktop browser — but on a handset wider
+     than 430px it just letterboxed: a 480px Android showed 25px of page
+     background down each side and a 540px foldable showed 55px. That is the
+     "the sides are not complete" report.
+
+     Set on the VARIABLE rather than on .app, because the bottom nav, the
+     sheets and the sticky headers all size themselves from it. Capping only
+     .app would leave them 430px wide inside a wider app, misaligned. */
+  --max-w: 100%;
   --bn-h: 60px;
+}
+
+/* Above any phone in portrait, bring the column back so the layout is not
+   stretched edge to edge on a tablet or a desktop browser. */
+@media (min-width: 600px) {
+  :root { --max-w: 430px; }
 }
 
 * { box-sizing: border-box; }
