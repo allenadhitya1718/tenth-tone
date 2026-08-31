@@ -2799,3 +2799,186 @@ body.dark .auth-screen .lang-opt.active,
 
 /* Resend line on the OTP screen */
 .auth-screen .otp-resend { color: #6b6b7b; }
+
+/* === Location picker + location message preview ===
+   Attach > Location used to send the raw GPS fix on tap, and the message
+   rendered as a one-line link. This is the picker that was missing and the
+   map preview that replaces the link. Tiles are the same free OpenStreetMap
+   source the /map screen already uses — no key, no paid provider. */
+
+.loc-picker {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: var(--max-w); height: 100vh; height: 100dvh;
+  /* Below the incoming-call overlay (200) so a ringing call still wins. */
+  z-index: 150;
+  background: var(--bg); color: var(--text);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.lp-header {
+  display: flex; align-items: center; gap: 6px; flex: none;
+  padding: calc(8px + var(--safe-top)) 8px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.lp-title { font-size: 16px; font-weight: 800; }
+
+.lp-search { display: flex; align-items: center; gap: 6px; flex: none; padding: 10px 12px; }
+.lp-search-ico { display: inline-flex; width: 17px; height: 17px; color: var(--muted); flex: none; }
+.lp-search-ico svg { width: 100%; height: 100%; }
+.lp-search-input {
+  flex: 1 1 auto; min-width: 0;
+  background: var(--bg-2); color: var(--text);
+  border: 0; outline: 0; border-radius: 999px;
+  padding-block: 10px; padding-inline: 14px;
+  font-size: 14px;
+}
+.lp-search-btn {
+  flex: none; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--primary); color: #fff;
+  width: 40px; height: 40px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.lp-search-btn svg { width: 19px; height: 19px; }
+.lp-search-btn:active { background: var(--primary-pressed); }
+
+.lp-map-wrap { position: relative; flex: 1 1 auto; min-height: 0; background: #e6f0ff; }
+/* Map geometry is physical, not reading order — keep the canvas itself LTR. */
+.lp-map { position: absolute; inset: 0; direction: ltr; }
+
+/* Centred pin. Laid out with inset-inline + auto margins rather than a
+   left/translate pair so it stays centred under either text direction. */
+.lp-pin {
+  position: absolute; inset-inline: 0; margin-inline: auto;
+  top: 50%; width: 34px; height: 34px;
+  color: var(--primary);
+  transform: translateY(-100%);
+  transition: transform 140ms ease;
+  pointer-events: none; z-index: 1000;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.35));
+}
+.lp-pin svg { width: 100%; height: 100%; fill: currentColor; stroke: #fff; stroke-width: 1.7; }
+/* Lifts while the map is moving, the way a dropped pin reads. */
+.lp-pin.lifted { transform: translateY(-100%) translateY(-9px); }
+
+.lp-hint {
+  position: absolute; inset-inline: 0; margin-inline: auto; top: 10px;
+  width: fit-content; max-width: 88%;
+  /* The tiles are always light, so this is pinned light in both themes. */
+  background: rgba(255, 255, 255, 0.94); color: #16161a;
+  font-size: 11.5px; font-weight: 600;
+  padding-block: 6px; padding-inline: 12px; border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  pointer-events: none; z-index: 1000;
+  transition: opacity 300ms ease;
+}
+.lp-hint.gone { opacity: 0; }
+
+.lp-locate {
+  position: absolute; inset-inline-end: 12px; bottom: 14px;
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 0; cursor: pointer; z-index: 1000;
+  background: #fff; color: #16161a;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.24);
+}
+.lp-locate svg { width: 21px; height: 21px; }
+.lp-locate:active { background: #ececef; }
+
+/* Own-position dot, drawn under the centre pin. */
+.lp-me-dot {
+  display: block; width: 14px; height: 14px; margin: 3px;
+  border-radius: 50%; background: #2f80ed;
+  border: 2.5px solid #fff; box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.28);
+}
+
+.lp-results {
+  position: absolute; inset-inline: 0; top: 0; max-height: 62%;
+  overflow-y: auto; z-index: 1100;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+.lp-res-msg { padding: 16px; font-size: 13px; color: var(--muted); text-align: center; }
+.lp-res {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: transparent; border: 0; cursor: pointer;
+  padding-block: 10px; padding-inline: 14px;
+  text-align: start; color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.lp-res:active { background: var(--bg-2); }
+.lp-res-ico { display: inline-flex; width: 18px; height: 18px; color: var(--primary); flex: none; }
+.lp-res-ico svg { width: 100%; height: 100%; }
+.lp-res-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lp-res-name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lp-res-addr { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.lp-foot {
+  flex: none; border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-bottom); background: var(--bg);
+}
+.lp-opt {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  background: transparent; border: 0; cursor: pointer;
+  padding-block: 12px; padding-inline: 16px;
+  text-align: start; color: var(--text);
+}
+.lp-opt + .lp-opt { border-top: 1px solid var(--border); }
+.lp-opt:active:not(:disabled) { background: var(--bg-2); }
+.lp-opt:disabled { opacity: 0.55; cursor: default; }
+.lp-opt-ico {
+  width: 38px; height: 38px; border-radius: 50%; flex: none; color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.lp-opt-ico svg { width: 20px; height: 20px; }
+.lp-opt.cur .lp-opt-ico { background: #2f80ed; }
+.lp-opt.sel .lp-opt-ico { background: var(--primary); }
+.lp-opt-body { display: flex; flex-direction: column; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.lp-opt-title { font-size: 14.5px; font-weight: 700; }
+.lp-opt-sub {
+  font-size: 11.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* The sub line is a place name in Arabic or a pair of latin coordinates —
+     let each run pick its own direction instead of forcing one. */
+  unicode-bidi: plaintext;
+}
+.lp-opt-send { display: inline-flex; width: 19px; height: 19px; color: var(--primary); flex: none; }
+.lp-opt-send svg { width: 100%; height: 100%; }
+[dir="rtl"] .lp-opt-send svg { transform: scaleX(-1); }
+.lp-opt:disabled .lp-opt-send { visibility: hidden; }
+
+/* ── Location message bubble: a real map picture, not a bare link ── */
+.bubble.has-map { padding: 4px; }
+.msg-map { display: block; text-decoration: none; color: inherit; max-width: 100%; }
+.msg-map-canvas {
+  position: relative; overflow: hidden;
+  border-radius: 12px; background: #e6f0ff;
+}
+.msg-map-canvas img { display: block; border: 0; }
+.msg-map-pin {
+  position: absolute; inset-inline: 0; margin-inline: auto; top: 50%;
+  width: 26px; height: 26px; color: var(--primary);
+  transform: translateY(-100%);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4));
+}
+.msg-map-pin svg { width: 100%; height: 100%; fill: currentColor; stroke: #fff; stroke-width: 1.7; }
+.msg-map-credit {
+  position: absolute; inset-inline-end: 3px; bottom: 2px;
+  font-size: 8px; line-height: 1.2; color: #3c3c46;
+  background: rgba(255, 255, 255, 0.72);
+  padding-block: 1px; padding-inline: 3px; border-radius: 3px;
+}
+.msg-map-foot {
+  display: flex; align-items: center; gap: 8px;
+  padding-block: 7px 4px; padding-inline: 6px 2px;
+}
+.msg-map-foot .mm-icon { display: inline-flex; width: 15px; height: 15px; flex: none; opacity: 0.85; }
+.msg-map-foot .mm-icon svg { width: 100%; height: 100%; }
+.msg-map-foot .mm-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.msg-map-foot .mm-title {
+  font-size: 13px; font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.msg-map-foot .mm-sub {
+  font-size: 10.5px; opacity: 0.72; unicode-bidi: plaintext;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}

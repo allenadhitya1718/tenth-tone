@@ -2567,6 +2567,379 @@ function autoPlay(video) {
     return root;
   };
 
+  // ===== Location sharing (picker + map preview) =====
+  // Deliberately key-free. Tiles come from the same public OpenStreetMap
+  // endpoint the /map screen already uses, and the only geocoder is
+  // Nominatim (OSM's own, free). No paid provider is configured anywhere in
+  // this repo and none is introduced here.
+
+  // The wire format is unchanged: a location message is still a plain Google
+  // Maps link in `text` with type 'location'. That means messages already in
+  // the database render with the new preview, and older app builds still get
+  // a working link. The optional "(label)" suffix is Google Maps' own
+  // labelled-point syntax, so it degrades to a normal link everywhere.
+  const LOC_RE = /[?&]q=(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)(?:\s*\(([^)]*)\))?/;
+
+  function parseLocation(text) {
+    if (typeof text !== 'string') return null;
+    const m = LOC_RE.exec(text);
+    if (!m) return null;
+    const lat = parseFloat(m[1]);
+    const lng = parseFloat(m[2]);
+    if (!isFinite(lat) || !isFinite(lng)) return null;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    let label = '';
+    if (m[3]) { try { label = decodeURIComponent(m[3]); } catch (e) { label = m[3]; } }
+    return { lat, lng, label };
+  }
+
+  function locationLink(lat, lng, label) {
+    const base = 'https://www.google.com/maps?q=' + lat.toFixed(6) + ',' + lng.toFixed(6);
+    // The parentheses are the syntax, so only the label itself is encoded.
+    return label ? base + '(' + encodeURIComponent(label) + ')' : base;
+  }
+
+  function fmtCoords(lat, lng) { return lat.toFixed(5) + ', ' + lng.toFixed(5); }
+
+  // No crosshair in the shared icon set, and this is the only screen that
+  // wants one, so it lives here rather than in helpers.js.
+  const CROSSHAIR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor" stroke="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>';
+
+  // A map picture without a static-map API key: the handful of raw OSM tiles
+  // that cover the box, offset so the point sits dead centre, with a pin
+  // drawn over them. A few <img> loads instead of a whole Leaflet instance
+  // per chat bubble.
+  function staticMapNode(lat, lng, opts) {
+    const o = opts || {};
+    // A real pixel width on purpose: the tile offsets below are derived from
+    // it, so capping the box with a CSS max-width instead would slide the
+    // point off centre on a narrow phone. Clamp it here where the maths sees it.
+    const w = o.w || Math.max(150, Math.min(224, Math.floor((window.innerWidth || 360) * 0.6)));
+    const h = o.h || 132, zoom = o.zoom || 15;
+    const box = el('div', { class: 'msg-map-canvas', style: { width: w + 'px', height: h + 'px' } });
+    // Map geometry is physical, not reading order. Pinning the tile layer to
+    // LTR keeps the offsets below correct on this RTL page — using logical
+    // properties here would mirror the world east-to-west.
+    box.setAttribute('dir', 'ltr');
+    const n = Math.pow(2, zoom);
+    const latRad = lat * Math.PI / 180;
+    const wx = (lng + 180) / 360 * n * 256;
+    const wy = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n * 256;
+    const left = wx - w / 2, top = wy - h / 2;
+    for (let ty = Math.floor(top / 256); ty <= Math.floor((top + h - 1) / 256); ty++) {
+      if (ty < 0 || ty >= n) continue; // past the poles — leave it blank
+      for (let tx = Math.floor(left / 256); tx <= Math.floor((left + w - 1) / 256); tx++) {
+        const wrapped = ((tx % n) + n) % n; // the world repeats east-west
+        const img = el('img', {
+          src: 'https://tile.openstreetmap.org/' + zoom + '/' + wrapped + '/' + ty + '.png',
+          alt: '', loading: 'lazy', decoding: 'async',
+          style: {
+            position: 'absolute', width: '256px', height: '256px',
+            left: (tx * 256 - left) + 'px', top: (ty * 256 - top) + 'px',
+          },
+        });
+        // Offline or a blocked tile host would otherwise leave broken-image
+        // glyphs scattered over the bubble.
+        img.addEventListener('error', () => { img.style.visibility = 'hidden'; });
+        box.appendChild(img);
+      }
+    }
+    box.appendChild(el('span', { class: 'msg-map-pin', html: icons.mapPin }));
+    box.appendChild(el('span', { class: 'msg-map-credit' }, '© OpenStreetMap'));
+    return box;
+  }
+
+  // ── Nominatim, OpenStreetMap's own geocoder ──
+  // Its usage policy caps callers at one request per second and explicitly
+  // rules out autocomplete, so: every call is funnelled through this gate,
+  // place search only fires on an explicit submit (never per keystroke), and
+  // reverse lookups wait until the map has stopped moving. The browser sets
+  // Referer for us; a page cannot set User-Agent, so if OSM ever blocks this
+  // origin the UI below says so out loud rather than going quiet.
+  let nomAt = 0;
+  function nominatim(path, params) {
+    const q = new URLSearchParams(Object.assign({ format: 'jsonv2', 'accept-language': 'ar' }, params));
+    const wait = Math.max(0, 1100 - (Date.now() - nomAt));
+    return new Promise((resolve, reject) => {
+      setTimeout(() => {
+        nomAt = Date.now();
+        // No custom headers on purpose: that keeps this a simple CORS request
+        // with no preflight, which Nominatim answers with a wildcard origin.
+        fetch('https://nominatim.openstreetmap.org' + path + '?' + q.toString())
+          .then(r => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
+          .then(resolve, reject);
+      }, wait);
+    });
+  }
+
+  function reverseGeocode(lat, lng) {
+    return nominatim('/reverse', { lat: lat.toFixed(6), lon: lng.toFixed(6), zoom: 18 })
+      .then(d => (d && (d.name || d.display_name)) || '');
+  }
+
+  function searchPlaces(q) {
+    return nominatim('/search', { q: q, limit: 8 })
+      .then(d => (Array.isArray(d) ? d.filter(r => isFinite(parseFloat(r.lat)) && isFinite(parseFloat(r.lon))) : []));
+  }
+
+  // Leaflet measures the container once, at construction. This screen is
+  // built before it has a height, which is what made the /map screen paint a
+  // single tile on grey; wait for a real size first, same as it does.
+  function waitForMapSize(elm) {
+    return new Promise(resolve => {
+      if (elm.isConnected && elm.clientHeight > 0) return resolve();
+      let tries = 0;
+      const t = setInterval(() => {
+        if ((elm.isConnected && elm.clientHeight > 0) || ++tries > 80) { clearInterval(t); resolve(); }
+      }, 50);
+    });
+  }
+
+  // Full-screen location picker. Attach > Location used to fire off the
+  // current GPS fix with no map and no choice; this is the picker that was
+  // missing. Calls onPick({ lat, lng, label }) only when the user actually
+  // chooses to send — closing it sends nothing.
+  function openLocationPicker(onPick) {
+    if (typeof window.L === 'undefined') { toast('تعذر تحميل الخريطة'); return; }
+
+    let map = null, meMarker = null, ro = null;
+    let myFix = null;            // last GPS fix
+    let selected = null;         // whatever sits under the centre pin
+    let myLabel = '', selectedLabel = '';
+    let moveTimer = null, moveSeq = 0, searchSeq = 0;
+    let skipNextReverse = false, closed = false;
+
+    const mapEl = el('div', { class: 'lp-map' });
+    const pin = el('div', { class: 'lp-pin', html: icons.mapPin });
+    const hint = el('div', { class: 'lp-hint' }, 'حرّك الخريطة أو اضغط عليها لاختيار مكان');
+    const locateBtn = el('button', { class: 'lp-locate', title: 'موقعي الحالي', html: CROSSHAIR });
+    const results = el('div', { class: 'lp-results', hidden: true });
+    const searchInput = el('input', {
+      class: 'lp-search-input', type: 'search', placeholder: 'ابحث عن مكان', enterkeyhint: 'search',
+    });
+    const searchBtn = el('button', { class: 'lp-search-btn', title: 'بحث', html: icons.search });
+
+    function optRow(cls, iconHtml, title) {
+      const t = el('div', { class: 'lp-opt-title' }, title);
+      const s = el('div', { class: 'lp-opt-sub' }, '');
+      const btn = el('button', { class: 'lp-opt ' + cls, disabled: true }, [
+        el('span', { class: 'lp-opt-ico', html: iconHtml }),
+        el('span', { class: 'lp-opt-body' }, [t, s]),
+        el('span', { class: 'lp-opt-send', html: icons.send }),
+      ]);
+      return { btn: btn, sub: s };
+    }
+    const optCurrent = optRow('cur', CROSSHAIR, 'إرسال موقعي الحالي');
+    const optSelected = optRow('sel', icons.mapPin, 'إرسال الموقع المحدد');
+
+    function close() {
+      if (closed) return;
+      closed = true;
+      clearTimeout(moveTimer);
+      if (ro) { try { ro.disconnect(); } catch (e) {} }
+      if (map) { try { map.remove(); } catch (e) {} map = null; }
+      window.removeEventListener('hashchange', close);
+      overlay.remove();
+    }
+
+    const overlay = el('div', { class: 'loc-picker' }, [
+      el('header', { class: 'lp-header' }, [
+        el('button', { class: 'icon-btn', title: 'إغلاق', html: icons.x, onclick: () => close() }),
+        el('div', { class: 'lp-title' }, 'الموقع'),
+      ]),
+      el('div', { class: 'lp-search' }, [
+        el('span', { class: 'lp-search-ico', html: icons.search }),
+        searchInput,
+        searchBtn,
+      ]),
+      el('div', { class: 'lp-map-wrap' }, [mapEl, pin, hint, locateBtn, results]),
+      el('div', { class: 'lp-foot' }, [optCurrent.btn, optSelected.btn]),
+    ]);
+    document.body.appendChild(overlay);
+    // Leaving the chat while the picker is open would otherwise strand a live
+    // Leaflet instance and its tile requests behind the next screen.
+    window.addEventListener('hashchange', close);
+
+    function hideResults() { results.hidden = true; results.innerHTML = ''; }
+
+    function renderResults(state, items) {
+      results.innerHTML = '';
+      results.hidden = false;
+      if (state === 'loading') { results.appendChild(el('div', { class: 'lp-res-msg' }, 'جاري البحث...')); return; }
+      if (state === 'error') {
+        results.appendChild(el('div', { class: 'lp-res-msg' }, 'تعذر البحث عن الأماكن الآن — اختر المكان من الخريطة'));
+        return;
+      }
+      if (!items.length) { results.appendChild(el('div', { class: 'lp-res-msg' }, 'لا توجد نتائج')); return; }
+      items.forEach(r => {
+        const full = r.display_name || '';
+        const name = r.name || full.split(',')[0] || 'مكان';
+        results.appendChild(el('button', {
+          class: 'lp-res',
+          onclick: () => {
+            hideResults();
+            try { searchInput.blur(); } catch (e) {}
+            if (!map) return;
+            // The pending reverse lookup would only re-derive the same place,
+            // and the search result's own name is the better label.
+            skipNextReverse = true;
+            map.setView([parseFloat(r.lat), parseFloat(r.lon)], 17);
+            selectedLabel = name;
+            optSelected.sub.textContent = full || name;
+          },
+        }, [
+          el('span', { class: 'lp-res-ico', html: icons.mapPin }),
+          el('span', { class: 'lp-res-body' }, [
+            el('span', { class: 'lp-res-name' }, name),
+            el('span', { class: 'lp-res-addr' }, full),
+          ]),
+        ]));
+      });
+    }
+
+    function doSearch() {
+      const q = searchInput.value.trim();
+      if (!q) { hideResults(); return; }
+      const seq = ++searchSeq;
+      renderResults('loading');
+      searchPlaces(q).then(items => {
+        if (closed || seq !== searchSeq) return;
+        renderResults('ok', items);
+      }, () => {
+        if (closed || seq !== searchSeq) return;
+        renderResults('error');
+      });
+    }
+    // Bound to submit, never to input: Nominatim's usage policy rules out
+    // using the public instance for autocomplete.
+    searchBtn.onclick = doSearch;
+    searchInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+    });
+    searchInput.addEventListener('input', () => { if (!searchInput.value.trim()) hideResults(); });
+
+    function onMove() {
+      if (!map) return;
+      const c = map.getCenter();
+      selected = { lat: c.lat, lng: c.lng };
+      optSelected.btn.disabled = false;
+      selectedLabel = '';
+      // Coordinates go up immediately, so the row is never blank even if the
+      // geocoder is unreachable; the name replaces them if one comes back.
+      optSelected.sub.textContent = fmtCoords(c.lat, c.lng);
+      clearTimeout(moveTimer);
+      // Bump the sequence before the skip check, not after: a lookup already
+      // in flight for the previous centre has to be invalidated either way.
+      const seq = ++moveSeq;
+      if (skipNextReverse) { skipNextReverse = false; return; }
+      moveTimer = setTimeout(() => {
+        reverseGeocode(c.lat, c.lng).then(name => {
+          if (closed || seq !== moveSeq || !name) return;
+          selectedLabel = name;
+          optSelected.sub.textContent = name;
+        }, () => { /* the label is a nicety — the coordinates already stand */ });
+      }, 700);
+    }
+
+    function drawMe() {
+      if (!map || !myFix) return;
+      if (meMarker) { try { map.removeLayer(meMarker); } catch (e) {} }
+      meMarker = window.L.marker([myFix.lat, myFix.lng], {
+        icon: window.L.divIcon({ className: 'lp-me-icon', html: '<span class="lp-me-dot"></span>', iconSize: [20, 20], iconAnchor: [10, 10] }),
+        interactive: false, zIndexOffset: 400,
+      }).addTo(map);
+    }
+
+    function locate(initial) {
+      if (!navigator.geolocation) {
+        optCurrent.sub.textContent = 'الموقع غير مدعوم على هذا الجهاز';
+        return;
+      }
+      optCurrent.sub.textContent = 'جاري تحديد موقعك...';
+      navigator.geolocation.getCurrentPosition(pos => {
+        if (closed) return;
+        myFix = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        optCurrent.btn.disabled = false;
+        optCurrent.sub.textContent = fmtCoords(myFix.lat, myFix.lng);
+        drawMe();
+        if (map) { skipNextReverse = true; map.setView([myFix.lat, myFix.lng], 16); }
+        // Centre and fix are the same point right now, so one lookup labels
+        // both rows instead of burning two against the 1/sec budget.
+        reverseGeocode(myFix.lat, myFix.lng).then(name => {
+          if (closed || !name || !myFix) return;
+          myLabel = name;
+          optCurrent.sub.textContent = name;
+          if (selected && Math.abs(selected.lat - myFix.lat) < 1e-6 && Math.abs(selected.lng - myFix.lng) < 1e-6) {
+            selectedLabel = name;
+            optSelected.sub.textContent = name;
+          }
+        }, () => {});
+      }, err => {
+        if (closed) return;
+        optCurrent.btn.disabled = true;
+        optCurrent.sub.textContent = (err && err.code === 1)
+          ? 'إذن الموقع مرفوض — فعّله من إعدادات الجهاز'
+          : 'تعذر تحديد موقعك';
+        if (initial) toast('تعذر الوصول إلى موقعك — اختر مكانًا من الخريطة');
+      }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
+    }
+    locateBtn.onclick = () => {
+      if (myFix && map) {
+        // This point's name is already known, so recentring must not spend
+        // another lookup re-deriving it.
+        skipNextReverse = true;
+        map.setView([myFix.lat, myFix.lng], 16);
+        selectedLabel = myLabel;
+        if (myLabel) optSelected.sub.textContent = myLabel;
+      } else locate(false);
+    };
+
+    function pick(p, label) {
+      if (!p) return;
+      close();
+      try { onPick({ lat: p.lat, lng: p.lng, label: label || '' }); } catch (e) {}
+    }
+    optCurrent.btn.onclick = () => pick(myFix, myLabel);
+    optSelected.btn.onclick = () => pick(selected, selectedLabel);
+
+    (async function initPickerMap() {
+      await waitForMapSize(mapEl);
+      if (closed) return;
+      // Same tiles and default centre (Riyadh) as the /map screen.
+      map = window.L.map(mapEl, { zoomControl: false, attributionControl: true }).setView([24.7136, 46.6753], 12);
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '© OpenStreetMap',
+      }).addTo(map);
+      map.attributionControl.setPosition('bottomright');
+      map.invalidateSize();
+      requestAnimationFrame(() => { if (map) map.invalidateSize(); });
+      setTimeout(() => { if (map) map.invalidateSize(); }, 300);
+      if (window.ResizeObserver) {
+        ro = new ResizeObserver(() => { if (map) map.invalidateSize(); });
+        ro.observe(mapEl);
+      }
+      map.on('movestart', () => pin.classList.add('lifted'));
+      // The hint teaches the gesture once; it should not sit over the tiles
+      // for the whole session. Both events below are user-initiated only.
+      const dropHint = () => hint.classList.add('gone');
+      map.on('dragstart', dropHint);
+      map.on('click', dropHint);
+      setTimeout(dropHint, 6000);
+      map.on('moveend', () => { pin.classList.remove('lifted'); onMove(); });
+      // Tap-to-choose as well as drag-to-choose: the tapped point becomes the
+      // centre, which is where the pin always sits.
+      map.on('click', e => { hideResults(); map.panTo(e.latlng); });
+      // Seed the selected point without naming it: this is still the default
+      // centre, and the GPS fix below is about to move it anyway.
+      skipNextReverse = true;
+      onMove();
+      locate(true);
+    })();
+
+    try { if (window.I18N) window.I18N.apply(overlay); } catch (e) {}
+    return close;
+  }
+
   // ===== Chat =====
   V.chat = (params) => {
     hideNav();
@@ -2633,12 +3006,37 @@ function autoPlay(video) {
         ]));
         m = Object.assign({}, m, { text: '' }); // filename is already shown
       } else if (m.type === 'location') {
-        bubble.appendChild(el('a', {
-          class: 'msg-location', href: m.text || '#', target: '_blank', rel: 'noopener',
-        }, [
-          el('span', { class: 'ml-icon', html: icons.mapPin || icons.search }),
-          el('span', {}, 'الموقع الحالي'),
-        ]));
+        // A bare link told you nothing about where the pin actually was.
+        // `m.text` comes from the database and is therefore attacker-supplied:
+        // the old code piped it straight into href, so a crafted 'location'
+        // row could ship a javascript: URL. The link is now rebuilt from the
+        // parsed coordinates and from nothing else.
+        const loc = parseLocation(m.text);
+        if (loc) {
+          bubble.classList.add('has-map');
+          bubble.appendChild(el('a', {
+            class: 'msg-map', href: locationLink(loc.lat, loc.lng, loc.label),
+            target: '_blank', rel: 'noopener noreferrer',
+          }, [
+            staticMapNode(loc.lat, loc.lng),
+            el('span', { class: 'msg-map-foot' }, [
+              el('span', { class: 'mm-icon', html: icons.mapPin }),
+              el('span', { class: 'mm-body' }, [
+                el('span', { class: 'mm-title' }, loc.label || 'موقع مشارَك'),
+                el('span', { class: 'mm-sub' }, fmtCoords(loc.lat, loc.lng)),
+              ]),
+            ]),
+          ]));
+        } else {
+          // Not a coordinate link we understand — keep the old plain row
+          // rather than draw a map of nowhere. safeUrl blocks javascript:.
+          bubble.appendChild(el('a', {
+            class: 'msg-location', href: safeUrl(m.text) || '#', target: '_blank', rel: 'noopener noreferrer',
+          }, [
+            el('span', { class: 'ml-icon', html: icons.mapPin || icons.search }),
+            el('span', {}, 'الموقع'),
+          ]));
+        }
         m = Object.assign({}, m, { text: '' }); // the raw URL would be noise
       }
       if (m.text) bubble.appendChild(document.createTextNode(m.text));
@@ -2729,19 +3127,18 @@ function autoPlay(video) {
     galleryInput.addEventListener('change', () => { sendPickedFile(galleryInput.files[0], 'image'); galleryInput.value = ''; });
     docInput.addEventListener('change', () => { sendPickedFile(docInput.files[0], 'file'); docInput.value = ''; });
 
-    async function shareCurrentLocation() {
-      if (!navigator.geolocation) { toast('الموقع غير مدعوم على هذا الجهاز'); return; }
-      toast('جاري تحديد الموقع...');
-      navigator.geolocation.getCurrentPosition(async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        const link = 'https://www.google.com/maps?q=' + latitude + ',' + longitude;
-        appendMessage({ from_user_id: myUserId || 'me', text: link, created_at: new Date().toISOString(), type: 'location' });
-        msgs.scrollTop = msgs.scrollHeight;
-        if (window.API && typeof id === 'string' && id.length >= 30) {
-          try { await window.API.sendMessage({ chatId: id, text: link, type: 'location' }); }
-          catch (e) { toast('تعذر إرسال الموقع'); }
-        }
-      }, () => { toast('تعذر الوصول إلى الموقع'); }, { enableHighAccuracy: true, timeout: 10000 });
+    // Attach > Location used to fire the current GPS fix straight into the
+    // thread — no map, no confirmation, no way to send anywhere else. The
+    // picker now chooses the point and this only does the sending.
+    async function sendLocation(p) {
+      if (!p) return;
+      const link = locationLink(p.lat, p.lng, p.label);
+      appendMessage({ from_user_id: myUserId || 'me', text: link, created_at: new Date().toISOString(), type: 'location' });
+      msgs.scrollTop = msgs.scrollHeight;
+      if (window.API && typeof id === 'string' && id.length >= 30) {
+        try { await window.API.sendMessage({ chatId: id, text: link, type: 'location' }); }
+        catch (e) { toast('تعذر إرسال الموقع'); }
+      }
     }
 
     // WhatsApp-style attachment sheet. The paperclip used to jump straight
@@ -2752,7 +3149,7 @@ function autoPlay(video) {
         { k: 'gallery',  l: 'الصور',     icon: 'image',     cls: 'gal',  act: () => galleryInput.click() },
         { k: 'video',    l: 'فيديو',     icon: 'video',     cls: 'vid',  act: () => videoInput.click() },
         { k: 'doc',      l: 'مستند',     icon: 'paperclip', cls: 'doc',  act: () => docInput.click() },
-        { k: 'location', l: 'الموقع',    icon: 'mapPin',    cls: 'loc',  act: () => shareCurrentLocation() },
+        { k: 'location', l: 'الموقع',    icon: 'mapPin',    cls: 'loc',  act: () => openLocationPicker(sendLocation) },
       ];
       const grid = el('div', { class: 'attach-grid' });
       const sheet = el('div', { class: 'sheet attach-sheet' }, [
