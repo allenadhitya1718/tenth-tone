@@ -39,6 +39,14 @@ window.Compress = (function () {
                                                  // matches the storage bucket cap set in 0031
   const MAX_DURATION_SECS  = 90;                  // hard reject above 1.5 minutes
 
+  // How far the re-encoded clip may drift from the source before it is thrown
+  // away. The canvas + MediaRecorder path records in WALL-CLOCK time, so when
+  // the encode cannot keep up with playback the recording simply runs on past
+  // the end of the video: measured at 13.0s in, 24.6s out, with the bitrate
+  // collapsing to 0.08 Mbps. That is a slow-motion, badly degraded clip, and
+  // it was being uploaded silently while the screen reported "95% saved".
+  const DURATION_TOLERANCE = 0.10;                // 10%
+
   // Reads video duration without fully decoding the file.
   function readDuration(file) {
     return new Promise((resolve, reject) => {
@@ -258,6 +266,18 @@ window.Compress = (function () {
       // Sanity check: if compression made it larger, use original
       if (compressed.size >= file.size) {
         return { file, originalSize: file.size, compressedSize: file.size, skipped: true, reason: 'no-gain' };
+      }
+
+      // ...and if it came out a different length, it is not the same video.
+      // Unverifiable durations fall through rather than blocking the upload:
+      // that is how this behaved before, and a clip we cannot measure is not
+      // evidence of a bad one.
+      const srcDur = await readDuration(file).catch(() => null);
+      const outDur = await readDuration(compressed).catch(() => null);
+      if (srcDur && outDur && Math.abs(outDur - srcDur) / srcDur > DURATION_TOLERANCE) {
+        console.warn('[Compress] output drifted ' + srcDur.toFixed(2) + 's -> ' + outDur.toFixed(2) +
+                     's, discarding the re-encode and uploading the original');
+        return { file, originalSize: file.size, compressedSize: file.size, skipped: true, reason: 'duration-drift' };
       }
 
       return {

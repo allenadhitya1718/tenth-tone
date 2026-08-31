@@ -1072,7 +1072,11 @@
         const video = document.createElement('video');
         // The source is deliberately NOT set here — see attachSrc below.
         video.dataset.src = videoSrc;
-        video.autoplay = PLAYBACK.autoplay;
+        // No autoplay ATTRIBUTE. It overrides preload entirely — the browser
+        // fetches and plays an autoplay video whatever preload says — which is
+        // why setting 'metadata' alone changed nothing. Playback is driven from
+        // JS instead: autoPlay() on load and the IntersectionObserver on
+        // scroll, both of which already check the clip is actually on screen.
         // Sound is a session preference, not a per-clip one. Once someone
         // turns it on it stays on as they scroll, the way every short video
         // app behaves. Starting muted is still required: browsers refuse to
@@ -1091,7 +1095,7 @@
         video.setAttribute('playsinline', '');
         video.setAttribute('webkit-playsinline', '');
         if (PLAYBACK.muted) video.setAttribute('muted', '');
-        if (PLAYBACK.autoplay) video.setAttribute('autoplay', '');
+        // (see above: playback is started from JS, not the attribute)
         video.setAttribute('loop', '');
         video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;z-index:1;pointer-events:none;';
 
@@ -1116,7 +1120,12 @@
         function attachSrc() {
           if (video.getAttribute('src')) return;
           video.setAttribute('src', video.dataset.src);
-          video.preload = preloadMode();
+          // 'metadata', not 'auto'. Attaching happens a full screen before the
+          // clip is visible, and 'auto' told the browser to pull the WHOLE
+          // file — so opening the feed downloaded two complete videos, about
+          // 10 MB, before anything had been watched. The clip that actually
+          // plays is upgraded in autoPlay(); this one may never be reached.
+          video.preload = 'metadata';
           try { video.load(); } catch (e) {}
         }
         function detachSrc() {
@@ -1522,7 +1531,10 @@ try {
   refreshPlaybackPrefs();
 
   // Data saver keeps the file off the wire until it is actually wanted.
-  function preloadMode() { return PLAYBACK.dataSaver ? 'metadata' : 'auto'; }
+  // preloadMode() lived here and returned 'auto' whenever data saver was off.
+  // Both callers now attach at 'metadata' and let autoPlay() upgrade only the
+  // clip on screen, so returning 'auto' from a shared helper would just invite
+  // the whole-file downloads back.
 
   // Every automatic play goes through here, so one preference governs them all.
   // Applies the sound preference to every video on the page, so a change
@@ -1587,6 +1599,10 @@ function autoPlay(video) {
     // clips only fires when visibility changes, and these never became
     // visible in the first place.
     if (!isOnScreen(video)) return;
+    // This is the one clip worth buffering ahead, so it gets upgraded from the
+    // 'metadata' it was attached with. Data saver keeps it at metadata and
+    // lets playback pull only what it needs.
+    if (!PLAYBACK.dataSaver && video.preload !== 'auto') video.preload = 'auto';
     try { video.play().catch(() => {}); } catch (e) {}
   }
 
@@ -1625,15 +1641,18 @@ function autoPlay(video) {
     const video = document.createElement('video');
     video.src = videoSrc;
     if (posterSrc && !posterSrc.endsWith('.mp4')) video.poster = posterSrc;
-    video.autoplay = PLAYBACK.autoplay;
+    // No autoplay attribute here either — see the feed path.
     video.muted = true;
     video.loop = true;
     video.playsInline = true;
-    video.preload = preloadMode();
+    // Grids attach a src to every card at once, so 'auto' here meant a whole
+    // screen of full video downloads — far more than the feed ever cost.
+    // autoPlay() upgrades whichever card is actually on screen.
+    video.preload = 'metadata';
     video.setAttribute('playsinline', '');
     video.setAttribute('webkit-playsinline', '');
     video.setAttribute('muted', '');
-    if (PLAYBACK.autoplay) video.setAttribute('autoplay', '');
+    // (playback started from JS)
     video.setAttribute('loop', '');
     video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;';
 
@@ -2104,8 +2123,22 @@ function autoPlay(video) {
       if (!stream) return;
       chunks = [];
       const mimeType = pickMime();
-      try { recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined); }
-      catch (e) { toast('المتصفح لا يدعم التسجيل'); return; }
+      // Record at the size we actually want, rather than recording at whatever
+      // the browser defaults to and re-encoding afterwards. A clip captured
+      // here never goes near the compressor, so it costs no quality and cannot
+      // hit the timing problems re-encoding has. Kept in step with
+      // compress.js's TARGET_BITRATE — this is the same 1.4 Mbps at 720p, and
+      // the voice recorder already pins audioBitsPerSecond the same way.
+      const recOpts = { videoBitsPerSecond: 1400000, audioBitsPerSecond: 128000 };
+      if (mimeType) recOpts.mimeType = mimeType;
+      try { recorder = new MediaRecorder(stream, recOpts); }
+      catch (e) {
+        // Some runtimes reject the options object wholesale rather than
+        // ignoring a field they do not know. Recording at the default is far
+        // better than not recording at all.
+        try { recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined); }
+        catch (e2) { toast('المتصفح لا يدعم التسجيل'); return; }
+      }
       recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
       recorder.onstop = () => {
         const ext = (recorder.mimeType || '').includes('mp4') ? 'mp4' : 'webm';
