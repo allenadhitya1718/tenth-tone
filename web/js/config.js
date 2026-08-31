@@ -83,7 +83,7 @@ window.TT_CONFIG = (function () {
   //
   // Overridable per session for testing, without a rebuild:
   //   ?r2=1  → force on       ?r2=0  → force off
-  let r2Uploads = false;
+  let r2Uploads = true;
 
   try {
     const q = new URLSearchParams(location.search);
