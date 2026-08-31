@@ -3518,6 +3518,28 @@ function autoPlay(video) {
         bubble.addEventListener('touchcancel', release, { passive: true });
       })();
 
+      // ── The same thing, for a mouse ──
+      // swipeToReply above binds touch events only, so on a desktop browser
+      // there was no way to reply to a particular message at all — no button,
+      // no menu, nothing. Harmless in the APK; a dead end on the website.
+      //
+      // The button is the discoverable route and right-click is the shortcut
+      // for people who reach for it. Both are hidden on touch devices by a
+      // (hover: hover) query in app.css, where the swipe already covers this
+      // and a permanent button would only clutter the bubble.
+      if (m.id) {
+        bubble.appendChild(el('button', {
+          class: 'bubble-reply',
+          title: 'رد',
+          html: icons.arrowL || '',
+          onclick: (e) => { e.stopPropagation(); setReplyTo(m); },
+        }));
+        bubble.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          setReplyTo(m);
+        });
+      }
+
       msgs.appendChild(bubble);
       return bubble; // the sender tracks this node until its echo arrives
     }

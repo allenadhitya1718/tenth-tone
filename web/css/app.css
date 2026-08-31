@@ -863,6 +863,31 @@ body.dark .see-more-link { color: var(--primary-2); }
 .bubble.image { padding: 4px; }
 .bubble.image img { width: 220px; max-width: 60vw; border-radius: 12px; display: block; }
 
+/* Reply, for a mouse. swipeToReply in views.js is touch-only, so a desktop
+   visitor had no way to reply to a specific message. Gated on a real pointer
+   so it never appears on a phone, where the swipe already does this and a
+   button on every bubble would just be clutter. */
+.bubble-reply { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .bubble-reply {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    display: flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 0; padding: 0; cursor: pointer;
+    background: var(--bg-3); color: var(--muted);
+    opacity: 0; pointer-events: none; transition: opacity .12s ease;
+  }
+  /* Outside the bubble, on the side facing the middle of the thread — so it
+     never covers the message and never runs off the edge of the screen.
+     Logical properties, so this follows the Arabic layout without a second
+     rule. */
+  .bubble.me   .bubble-reply { inset-inline-end:   calc(100% + 6px); }
+  .bubble.them .bubble-reply { inset-inline-start: calc(100% + 6px); }
+  .bubble:hover .bubble-reply { opacity: 1; pointer-events: auto; }
+  .bubble-reply:hover { color: var(--text); }
+  .bubble-reply svg { width: 14px; height: 14px; }
+}
+
 /* Date divider. A thread was one unbroken run of bubbles with only clock
    times on them, so this morning and three weeks ago looked identical. */
 .chat-day { align-self: center; margin: 10px 0 4px; }
