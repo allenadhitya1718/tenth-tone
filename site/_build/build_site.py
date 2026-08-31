@@ -2,7 +2,9 @@
 """Writes the FLYP marketing site. Each output file is standalone HTML."""
 import io, os, re
 
-OUT = r'C:\Users\admin\OneDrive\Desktop\FLYP-source-v1.1\Tiktok\site'
+# The site/ folder that holds this _build/ directory. Derived from the script's
+# own location so the generators work from any checkout, whatever the cwd.
+OUT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 CSSV = 8
 JSV = 3
 IMGV = 2  # bump whenever a photo in assets/ is replaced
@@ -118,7 +120,7 @@ def page(filename, title_ar, title_en, desc_ar, desc_en, content, here=''):
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>%(tar)s</title>
 <meta name="description" content="%(dar)s">
-<meta name="theme-color" content="#6c2bd9">
+<meta name="theme-color" content="#1e56d6">
 <meta name="tt-title-ar" content="%(tar)s">
 <meta name="tt-title-en" content="%(ten)s">
 <meta name="tt-desc-en" content="%(den)s">
