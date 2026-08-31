@@ -18,7 +18,7 @@ Writes:
 
 import os
 import sys
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
@@ -31,10 +31,23 @@ SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, 'resources', 'fly
 # P ends at x=1050, with the artwork band running y=458..802.
 LOCKUP = (215, 458, 1050, 802)
 
+# The icon uses the WAVEFORM ALONE, not the lockup. The app's name already
+# appears under the icon on every home screen, so the mark only has to be
+# recognisable — which is why Instagram, TikTok and WhatsApp all use a
+# wordless symbol. Squeezed into 32px the "FLYP" text was an unreadable
+# smudge, while the waveform keeps its silhouette at every size and survives
+# Android cropping it to a circle.
+#
+# The waveform runs to x=545; the F of FLYP starts around x=575, so the right
+# edge has to stay under 566 or a sliver of the letter creeps in.
+MARK = (215, 458, 545, 802)
+MARK_MARGIN = 24          # a little real artwork around the mark
+MARK_RIGHT_LIMIT = 566    # keeps the F out
+
 # Android crops adaptive icons to a circle or squircle and only the middle
 # ~66% is guaranteed to survive. The foreground layer therefore needs much
 # more padding than the plain icon does.
-PAD_STANDARD = 0.10
+PAD_STANDARD = 0.30    # 'roomy' — the chosen framing
 PAD_ADAPTIVE = 0.42
 
 
@@ -45,6 +58,45 @@ def squared(im, box, pad_ratio, size, bg):
     canvas = Image.new('RGBA', (side, side), bg)
     canvas.paste(im.crop(box), ((side - cw) // 2, (side - ch) // 2))
     return canvas.resize((size, size), Image.LANCZOS)
+
+
+def marked(im, pad_ratio, size):
+    """The waveform, padded by extending its own edges outward.
+
+    Padding with a flat colour leaves a visible seam. The master is not flat:
+    it is a dark blue gradient inside a glowing frame, so a fill sampled from
+    the corner (0, 4, 33) does not match the (5, 26, 109) sitting right beside
+    the mark, and the join shows as a rectangle around the artwork.
+
+    Cropping a wider square from the real artwork would avoid that, but the
+    mark is not centred in the logo — anything roomy enough reaches the F.
+
+    So the outermost rows and columns are stretched outward instead. The
+    padding then follows the artwork's own gradient and cannot seam, and a
+    gentle blur hides the streaking that stretching produces. The mark itself
+    is pasted back on top untouched.
+    """
+    x0, y0, x1, y1 = MARK
+    src = im.crop((x0 - MARK_MARGIN, y0 - MARK_MARGIN,
+                   min(x1 + MARK_MARGIN, MARK_RIGHT_LIMIT), y1 + MARK_MARGIN))
+    cw, ch = src.size
+    side = int(max(cw, ch) * (1 + pad_ratio * 2))
+    canvas = Image.new('RGB', (side, side))
+    ox, oy = (side - cw) // 2, (side - ch) // 2
+
+    left = src.crop((0, 0, 1, ch)).resize((ox, ch), Image.NEAREST)
+    right = src.crop((cw - 1, 0, cw, ch)).resize((side - ox - cw, ch), Image.NEAREST)
+    canvas.paste(left, (0, oy))
+    canvas.paste(right, (ox + cw, oy))
+    canvas.paste(src.convert('RGB'), (ox, oy))
+    top = canvas.crop((0, oy, side, oy + 1)).resize((side, oy), Image.NEAREST)
+    canvas.paste(top, (0, 0))
+    bottom = canvas.crop((0, oy + ch - 1, side, oy + ch)).resize((side, side - oy - ch), Image.NEAREST)
+    canvas.paste(bottom, (0, oy + ch))
+
+    out = canvas.filter(ImageFilter.GaussianBlur(18))
+    out.paste(src.convert('RGB'), (ox, oy))
+    return out.resize((size, size), Image.LANCZOS).convert('RGBA')
 
 
 def write(img, path):
@@ -62,7 +114,9 @@ def main():
     print('source:', os.path.relpath(SRC, ROOT), im.size, 'background', bg[:3])
 
     def icon(size, pad=PAD_STANDARD):
-        return squared(im, LOCKUP, pad, size, bg)
+        # PAD_STANDARD is the "roomy" framing that was chosen; the adaptive
+        # sizes pass their own, larger value because Android crops them.
+        return marked(im, pad, size)
 
     print('web/icons:')
     web = os.path.join(ROOT, 'web', 'icons')
