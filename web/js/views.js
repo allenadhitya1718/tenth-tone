@@ -6048,8 +6048,13 @@ function autoPlay(video) {
     ov.appendChild(cmts);
 
     function addComment(name, text) {
+      // No colon after the name, and no bubble around the row. Instagram runs
+      // the handle and the message together on one line over the video, which
+      // reads as commentary on what you are watching rather than as a chat
+      // window sitting on top of it. Legibility comes from a text shadow in
+      // the CSS instead of from a filled background.
       const row = el('div', { class: 'live-cmt' }, [
-        el('span', { class: 'u' }, (name || 'مستخدم') + ':'),
+        el('span', { class: 'u' }, name || 'مستخدم'),
         document.createTextNode(' ' + text),
       ]);
       cmts.appendChild(row);
@@ -6115,22 +6120,53 @@ function autoPlay(video) {
     }
     cmtInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendLiveComment(); });
 
+    // ─── Reactions ───
+    // The heart button used to send a random pick from five near-identical
+    // heart emoji, which is one reaction wearing five costumes. A viewer who
+    // wanted to react with anything other than affection had no way to.
+    const REACTIONS = ['❤️', '🔥', '👏', '😂', '😮', '💯'];
+
+    // Floats locally AND broadcasts, so the host — the one person a reaction
+    // is aimed at — actually sees it. Several staggered copies per tap, which
+    // is what makes a burst feel like a reaction rather than a click.
+    function sendReaction(emoji) {
+      for (let i = 0; i < 3; i++) setTimeout(floatHeart, i * 90, emoji);
+      if (reactions) reactions.send(emoji);
+    }
+
+    let trayTimer = null;
+    const reactionTray = el('div', { class: 'live-reactions' },
+      REACTIONS.map(emoji => el('button', {
+        class: 'lr-emoji', type: 'button',
+        onclick: (e) => { e.stopPropagation(); sendReaction(emoji); holdTrayOpen(); },
+      }, emoji)));
+
+    // Closes itself, because there is nothing else to dismiss it: the rest of
+    // the screen is video, and a tray that stays put covers the stream. Each
+    // tap restarts the clock so rapid reacting is never cut off mid-burst.
+    function holdTrayOpen() {
+      reactionTray.classList.add('open');
+      if (trayTimer) clearTimeout(trayTimer);
+      trayTimer = setTimeout(() => reactionTray.classList.remove('open'), 4000);
+    }
+    ov.appendChild(reactionTray);
+
     ov.appendChild(el('div', { class: 'live-bottom' }, [
-      cmtInput,
-      el('button', { class: 'icon-btn', html: icons.send, onclick: sendLiveComment }),
-      el('button', { class: 'icon-btn', html: icons.heart, onclick: () => {
-        const picks = ['❤️', '💖', '💕', '💗', '✨'];
-        const pick = () => picks[Math.floor(Math.random() * picks.length)];
-        // Emit a few hearts (TikTok rapid-tap feel)
-        for (let i = 0; i < 4; i++) setTimeout(floatHeart, i * 80, pick());
-        // ...and let the room see them. These used to float on the tapper's
-        // own screen only, so the host — the one person a reaction is aimed
-        // at — never saw a single one.
-        if (reactions) reactions.send(pick());
-      } }),
+      el('div', { class: 'live-input-wrap' }, [
+        cmtInput,
+        el('button', { class: 'lb-send', html: icons.send, onclick: sendLiveComment }),
+      ]),
       // Was sharing the stream id as though it were a video, so the link
       // opened a video that does not exist. Shares the live link instead.
-      el('button', { class: 'icon-btn', html: icons.share, onclick: () => go('/share/' + liveId + '?kind=live') }),
+      el('button', { class: 'icon-btn live-round-btn', html: icons.share, onclick: () => go('/share/' + liveId + '?kind=live') }),
+      // One tap sends a heart immediately and opens the tray. Both at once so
+      // the common case stays a single tap while the choice is one tap away —
+      // making the tray the only route would slow down the thing people do
+      // most.
+      el('button', { class: 'icon-btn live-round-btn live-heart-btn', html: icons.heart, onclick: () => {
+        sendReaction('❤️');
+        holdTrayOpen();
+      } }),
     ]));
     root.appendChild(ov);
 

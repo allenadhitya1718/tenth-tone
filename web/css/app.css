@@ -1160,9 +1160,41 @@ body.dark .see-more-link { color: var(--primary-2); }
 .live-host-info .avatar img { width: 100%; height: 100%; object-fit: cover; }
 .live-pill { background: var(--danger); color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; }
 .live-pill.viewers { background: rgba(0,0,0,0.4); padding: 4px 10px; backdrop-filter: blur(8px); }
-.live-comments { flex: 1; padding: 0 14px 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 6px; overflow: hidden; }
-.live-cmt { background: rgba(0,0,0,0.35); border-radius: 14px; padding: 6px 10px; font-size: 12.5px; max-width: 80%; backdrop-filter: blur(8px); }
-.live-cmt .u { font-weight: 700; opacity: 0.85; margin-end: 6px; }
+/* Instagram runs comments straight over the video with no bubbles, and lets
+   them fade out at the top rather than stopping at a hard edge. The result
+   reads as commentary on what you are watching instead of a chat window
+   parked on top of it. Legibility comes from a text shadow, which costs
+   nothing, rather than from a blurred panel behind every line — that panel
+   was covering a third of the broadcast. */
+.live-comments {
+  flex: 1; display: flex; flex-direction: column;
+  /* The bottom padding reserves the band the reaction tray opens into, so a
+     comment can never be covered by it. Held permanently rather than added
+     when the tray opens, which would shove every comment upward mid-read.
+     It matters most in Arabic: comments start from the trailing edge, which
+     is exactly where the tray lives, so an overlap would hide the beginning
+     of the line rather than the end. */
+  padding: 0 14px 54px;
+  justify-content: flex-end; gap: 7px; overflow: hidden;
+  max-height: 42%;                       /* never let chatter eat the stream */
+  /* max-height caps a flex:1 child, so it stops absorbing the leftover space
+     and the bottom bar rides up to meet it — it was floating in the middle of
+     the video. The auto margin swallows that leftover above the comments
+     instead, which puts the bar back on the floor. */
+  margin-block-start: auto;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 24%);
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 24%);
+}
+.live-cmt {
+  font-size: 13px; line-height: 1.35; max-width: 78%;
+  color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.8), 0 0 12px rgba(0,0,0,.5);
+  animation: liveCmtIn .28s ease-out;
+}
+.live-cmt .u { font-weight: 800; margin-inline-end: 6px; opacity: .95; }
+@keyframes liveCmtIn {
+  from { opacity: 0; transform: translateY(7px); }
+  to   { opacity: 1; transform: none; }
+}
 /* ── Live viewer header ──
    Host identity on one side, stream state on the other, so a glance tells you
    who is broadcasting, how many are watching and how long it has been running
@@ -1186,6 +1218,12 @@ body.dark .see-more-link { color: var(--primary-2); }
 .live-pill .lp-icon svg { width: 100%; height: 100%; }
 .live-pill.viewers { display: inline-flex; align-items: center; gap: 5px; }
 .live-pill.elapsed { font-variant-numeric: tabular-nums; }
+/* Instagram's live badge is a magenta-to-orange gradient, which is what makes
+   it read as "live" at a glance rather than as a generic error pill. */
+.live-pill.live-badge {
+  background: linear-gradient(105deg, #d92d7a 0%, #f0503a 55%, #f9a03f 100%);
+  letter-spacing: .3px;
+}
 .live-badge::before {
   content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
   background: #fff; margin-inline-end: 5px; vertical-align: 1px;
@@ -1305,10 +1343,65 @@ body.dark .see-more-link { color: var(--primary-2); }
 @keyframes liveDot { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .live-go-dot { animation: none; } }
 
-.live-bottom { padding: 12px 12px calc(14px + var(--safe-bottom)); display: flex; gap: 10px; align-items: center; }
-.live-bottom input { flex: 1; background: rgba(0,0,0,0.4); border: 0; outline: 0; padding: 10px 14px; border-radius: 999px; color: #fff; font-size: 14px; backdrop-filter: blur(8px); }
-.live-bottom input::placeholder { color: rgba(255,255,255,0.7); }
-.live-bottom .icon-btn { background: rgba(0,0,0,0.4); color: #fff; backdrop-filter: blur(8px); }
+.live-bottom {
+  padding: 10px 12px calc(12px + var(--safe-bottom));
+  display: flex; gap: 9px; align-items: center;
+}
+
+/* Instagram's comment field is an outlined capsule rather than a filled one,
+   so the video keeps showing through it. The send button lives INSIDE the
+   capsule, which is what stops the row turning into a line of loose buttons. */
+.live-input-wrap {
+  flex: 1; min-width: 0; display: flex; align-items: center;
+  background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.55);
+  border-radius: 999px; padding-inline-start: 15px; padding-inline-end: 5px;
+  backdrop-filter: blur(10px);
+}
+.live-bottom input {
+  flex: 1; min-width: 0; background: transparent; border: 0; outline: 0;
+  padding: 10px 0; color: #fff; font-size: 14px;
+}
+.live-bottom input::placeholder { color: rgba(255,255,255,.75); }
+.lb-send {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border: 0; border-radius: 50%;
+  background: transparent; color: #fff; cursor: pointer; padding: 0;
+}
+.lb-send svg { width: 19px; height: 19px; }
+.lb-send:active { transform: scale(.88); }
+
+.live-round-btn {
+  flex: none; width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.35);
+  color: #fff; backdrop-filter: blur(10px);
+}
+.live-heart-btn:active { transform: scale(.86); }
+
+/* ── Reaction tray ──
+   Absolute rather than in the flex column: it appears above the bottom bar
+   without shifting the comments, so opening it never makes the stream jump.
+   Anchored to the end edge so it rises out of the heart button that opened
+   it. */
+.live-reactions {
+  position: absolute; z-index: 8;
+  inset-inline-end: 12px; bottom: calc(66px + var(--safe-bottom));
+  display: flex; gap: 4px; padding: 6px;
+  background: rgba(0,0,0,.42); border: 1px solid rgba(255,255,255,.16);
+  border-radius: 999px; backdrop-filter: blur(14px);
+  opacity: 0; transform: translateY(8px) scale(.9); transform-origin: 100% 100%;
+  pointer-events: none;                       /* invisible must also mean untappable */
+  transition: opacity .18s ease, transform .18s cubic-bezier(.2,.9,.3,1.3);
+}
+.live-reactions.open { opacity: 1; transform: none; pointer-events: auto; }
+.lr-emoji {
+  border: 0; background: transparent; cursor: pointer; padding: 0;
+  width: 34px; height: 34px; border-radius: 50%; font-size: 21px; line-height: 1;
+  transition: transform .12s ease;
+}
+.lr-emoji:active { transform: scale(1.35); }
+
+/* The tray is a live control; a finished stream must not still offer it. */
+.live-over .live-reactions { display: none; }
 
 .sheet-scroll { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: 100%; max-width: var(--max-w); background: #1a1a1a; color: #fff; z-index: 100; border-radius: 18px 18px 0 0; padding: 14px 16px calc(14px + var(--safe-bottom)); animation: sheet-in 240ms ease-out; }
 .wallet-balance { display: flex; justify-content: space-between; align-items: center; padding: 8px 0 14px; }
