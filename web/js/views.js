@@ -4405,6 +4405,20 @@ function autoPlay(video) {
           }
         } catch (e2) { console.warn('chat info:', e2); }
 
+        // 0069 lets the recipient refuse DMs outright. Until now the composer
+        // stayed fully enabled in a conversation the database would reject, so
+        // every message typed into it was written, refused, and thrown away -
+        // and the person saw their own words sitting on screen above a "send
+        // failed". Saying so before they type is the honest version.
+        try {
+          const other = chatInfo && chatInfo.type !== 'group' && chatInfo.others && chatInfo.others[0];
+          if (other && window.API.canMessage && !(await window.API.canMessage(other.id))) {
+            inputField.disabled = true;
+            inputField.placeholder = 'لا يستقبل هذا الشخص الرسائل';
+            try { if (window.I18N) window.I18N.apply(inputField); } catch (e3) {}
+          }
+        } catch (e2) { /* never block the thread on an advisory check */ }
+
         const messages = await window.API.fetchMessages(id);
         msgs.innerHTML = '';
         if (!messages.length) {
