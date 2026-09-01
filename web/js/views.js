@@ -5817,7 +5817,9 @@ function autoPlay(video) {
       ].filter(Boolean)),
     ]));
     root.appendChild(el('div', { class: 'profile-top' }, [
-      el('div', { class: 'profile-avatar' }, [avatar(u.avatar, u.name, 92)]),
+      el('div', { class: 'profile-avatar' + (u.avatar ? ' tappable' : ''),
+                  title: u.avatar ? 'عرض الصورة' : '',
+                  onclick: () => viewPhoto(u.avatar, u.name) }, [avatar(u.avatar, u.name, 92)]),
       el('p', { class: 'profile-name' }, u.name + (u.verified ? ' ✓' : '')),
       el('p', { class: 'profile-handle' }, [
         document.createTextNode(u.handle),
@@ -6023,6 +6025,121 @@ function autoPlay(video) {
   }
 
   // ===== Edit profile =====
+  // -- Choosing a profile photo should be a decision, not an accident --
+  // Picking a file used to save it immediately, whole and uncropped, so a
+  // landscape photo became a face squashed into the corner of a circle with no
+  // way to influence it. Every comparable app lets you place the picture first.
+  //
+  // Resolves the cropped File, or null if the person backed out.
+  function cropImage(file) {
+    return new Promise((resolve) => {
+      const srcUrl = URL.createObjectURL(file);
+      const img = new Image();
+      img.onerror = () => { URL.revokeObjectURL(srcUrl); toast('\u062a\u0639\u0630\u0631 \u0641\u062a\u062d \u0627\u0644\u0635\u0648\u0631\u0629'); resolve(null); };
+      img.onload = () => {
+        const V = Math.min(Math.round(innerWidth * 0.86), 340);   // frame side
+        const OUT = 512;                                          // exported size
+        // 'cover': the smallest scale at which the image fills the frame, so
+        // there is never a transparent gap inside the circle.
+        const fit = Math.max(V / img.naturalWidth, V / img.naturalHeight);
+        let zoom = 1, tx = 0, ty = 0;
+
+        const stage = el('div', { class: 'crop-stage' });
+        const imgEl = el('img', { src: srcUrl, alt: '', class: 'crop-img', draggable: false });
+        stage.appendChild(imgEl);
+        stage.style.width = V + 'px';
+        stage.style.height = V + 'px';
+
+        function clamp() {
+          // Never let an edge of the photo inside the frame.
+          const w = img.naturalWidth * fit * zoom;
+          const h = img.naturalHeight * fit * zoom;
+          const mx = Math.max(0, (w - V) / 2);
+          const my = Math.max(0, (h - V) / 2);
+          tx = Math.max(-mx, Math.min(mx, tx));
+          ty = Math.max(-my, Math.min(my, ty));
+        }
+        function paint() {
+          clamp();
+          imgEl.style.width = (img.naturalWidth * fit * zoom) + 'px';
+          imgEl.style.height = (img.naturalHeight * fit * zoom) + 'px';
+          imgEl.style.transform = 'translate(-50%, -50%) translate(' + tx + 'px,' + ty + 'px)';
+        }
+
+        let dragging = false, lastX = 0, lastY = 0;
+        stage.addEventListener('pointerdown', (e) => {
+          dragging = true; lastX = e.clientX; lastY = e.clientY;
+          try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+        });
+        stage.addEventListener('pointermove', (e) => {
+          if (!dragging) return;
+          tx += e.clientX - lastX; ty += e.clientY - lastY;
+          lastX = e.clientX; lastY = e.clientY;
+          paint();
+        });
+        stage.addEventListener('pointerup', () => { dragging = false; });
+        stage.addEventListener('pointercancel', () => { dragging = false; });
+
+        // A slider rather than pinch alone: pinch is undiscoverable, and this
+        // works with one thumb on a phone and with a mouse on a desktop.
+        const slider = el('input', { type: 'range', min: '100', max: '300', value: '100', class: 'crop-zoom' });
+        slider.addEventListener('input', () => { zoom = Number(slider.value) / 100; paint(); });
+        stage.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          zoom = Math.max(1, Math.min(3, zoom + (e.deltaY < 0 ? 0.08 : -0.08)));
+          slider.value = String(Math.round(zoom * 100));
+          paint();
+        }, { passive: false });
+
+        function finish(result) {
+          try { URL.revokeObjectURL(srcUrl); } catch (e) {}
+          close();
+          resolve(result);
+        }
+
+        const sheet = el('div', { class: 'sheet crop-sheet' }, [
+          el('div', { class: 'crop-title' }, '\u062d\u0631\u0651\u0643 \u0627\u0644\u0635\u0648\u0631\u0629 \u0648\u0643\u0628\u0651\u0631\u0647\u0627'),
+          stage,
+          slider,
+          el('div', { class: 'crop-actions' }, [
+            el('button', { class: 'btn btn-secondary', onclick: () => finish(null) }, '\u0625\u0644\u063a\u0627\u0621'),
+            el('button', { class: 'btn', onclick: () => {
+              const total = fit * zoom;
+              const w = img.naturalWidth * total, h = img.naturalHeight * total;
+              // Where the frame sits over the source image, in source pixels.
+              const left = (V - w) / 2 + tx, top = (V - h) / 2 + ty;
+              const sx = Math.max(0, -left / total), sy = Math.max(0, -top / total);
+              const sw = Math.min(img.naturalWidth - sx, V / total);
+              const sh = Math.min(img.naturalHeight - sy, V / total);
+              const c = Object.assign(document.createElement('canvas'), { width: OUT, height: OUT });
+              c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, OUT, OUT);
+              c.toBlob((blob) => {
+                if (!blob) { toast('\u062a\u0639\u0630\u0631 \u0642\u0635 \u0627\u0644\u0635\u0648\u0631\u0629'); return finish(null); }
+                finish(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
+              }, 'image/jpeg', 0.9);
+            } }, '\u062d\u0641\u0638'),
+          ]),
+        ]);
+        const close = modal(sheet);
+        paint();
+      };
+      img.src = srcUrl;
+    });
+  }
+
+  // Tapping a profile photo should show it, the way every app does. Before
+  // this the avatar was decoration: there was no way to look at someone's
+  // picture at any size larger than 92 pixels.
+  function viewPhoto(url, label) {
+    if (!url) return;
+    const box = el('div', { class: 'photo-view' }, [
+      el('img', { src: url, alt: label || '', class: 'photo-view-img' }),
+      label ? el('div', { class: 'photo-view-name' }, label) : null,
+    ]);
+    const close = modal(box);
+    box.addEventListener('click', () => close());
+  }
+
   V.editProfile = () => {
     hideNav();
     const u = DB.me;
@@ -6056,9 +6173,14 @@ function autoPlay(video) {
       avHolder,
       el('span', { class: 'ep-cam', html: icons.camera }),
     ]);
-    fileInput.addEventListener('change', (e) => {
-      avatarFile = e.target.files[0];
-      if (!avatarFile) return;
+    fileInput.addEventListener('change', async (e) => {
+      const picked = e.target.files[0];
+      fileInput.value = '';        // so re-picking the same file re-opens the cropper
+      if (!picked) return;
+      // Place it first. Backing out here must leave the old photo alone.
+      const cropped = await cropImage(picked);
+      if (!cropped) return;
+      avatarFile = cropped;
       const url = URL.createObjectURL(avatarFile);
       avHolder.innerHTML = '';
       const img = el('img', { src: url, alt: 'صورة الملف الشخصي', class: 'ep-preview' });

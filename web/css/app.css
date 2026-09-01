@@ -4016,3 +4016,39 @@ body.dark .vn-wave-pv { --vn-dim: #3f3f47; }
 .call-screen.has-remote-video .call-status {
   font-size: 12.5px; opacity: .85; text-shadow: 0 1px 4px rgba(0,0,0,.6);
 }
+
+/* ── Placing a profile photo before it is saved ──
+   Picking a file used to commit it immediately, uncropped, so a landscape
+   photo became a face jammed into the corner of a circle. */
+.crop-sheet { padding: 16px 16px calc(16px + var(--safe-bottom)); text-align: center; }
+.crop-title { font-weight: 700; margin-bottom: 12px; }
+.crop-stage {
+  position: relative; margin: 0 auto; overflow: hidden;
+  border-radius: 50%;                 /* the circle it will actually appear in */
+  background: #000; touch-action: none;   /* we handle the drag ourselves */
+  cursor: grab;
+}
+.crop-stage:active { cursor: grabbing; }
+.crop-img {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  max-width: none; user-select: none; -webkit-user-drag: none;
+}
+.crop-zoom { width: 80%; margin: 16px auto 4px; display: block; }
+.crop-actions { display: flex; gap: 10px; margin-top: 12px; }
+.crop-actions .btn { flex: 1; }
+
+/* Looking at a profile photo, rather than only a 92px disc of it. */
+.photo-view {
+  position: fixed; inset: 0; z-index: 120;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 24px; background: rgba(0,0,0,.92);
+}
+.photo-view-img {
+  max-width: min(92vw, 520px); max-height: 72vh;
+  border-radius: 50%; object-fit: cover; aspect-ratio: 1 / 1;
+  box-shadow: 0 12px 48px rgba(0,0,0,.6);
+}
+.photo-view-name { color: #fff; font-weight: 700; font-size: 16px; }
+.profile-avatar.tappable { cursor: pointer; }
+.profile-avatar.tappable:active { transform: scale(.97); }
