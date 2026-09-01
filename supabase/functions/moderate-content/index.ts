@@ -157,6 +157,17 @@ const endpointFor = (m: string) =>
 // Warm invocations reuse this; a cold start pays one extra request, once.
 let resolvedModel: string | null = null;
 
+// What discovery last saw. Attached to a DEGRADED reply only, so that
+// diagnosing "screening is off and nobody can see why" does not depend on
+// somebody finding the right log stream in a dashboard. Model names are not
+// secrets and the key itself never appears here.
+let discovery: {
+  listStatus?: number | string;
+  picked?: string;
+  offered?: string[];
+  detail?: string;
+} = {};
+
 async function resolveModel(): Promise<string | null> {
   if (resolvedModel) return resolvedModel;
   try {
@@ -164,7 +175,9 @@ async function resolveModel(): Promise<string | null> {
       headers: { 'x-goog-api-key': GEMINI_API_KEY },
     });
     if (!res.ok) {
-      console.warn('[moderate-content] model list failed', res.status);
+      discovery.listStatus = res.status;
+      discovery.detail = (await res.text()).slice(0, 200);
+      console.warn('[moderate-content] model list failed', res.status, discovery.detail);
       // Fall back to the first preference and let the call surface its own
       // error, rather than refusing to screen because discovery failed.
       return PREFERRED_MODELS[0];
@@ -176,9 +189,12 @@ async function resolveModel(): Promise<string | null> {
           (m.supportedGenerationMethods ?? []).includes('generateContent'))
         .map((m: { name: string }) => String(m.name).replace(/^models\//, '')),
     );
+    discovery.listStatus = 200;
+    discovery.offered = [...usable].slice(0, 25);
     for (const want of PREFERRED_MODELS) {
       if (usable.has(want)) {
         resolvedModel = want;
+        discovery.picked = want;
         console.log('[moderate-content] using model', want);
         return want;
       }
@@ -187,8 +203,9 @@ async function resolveModel(): Promise<string | null> {
                  'the key offers:', [...usable].slice(0, 12).join(', '));
     return null;
   } catch (e) {
-    console.warn('[moderate-content] model discovery threw:',
-                 e instanceof Error ? e.message : e);
+    discovery.listStatus = 'threw';
+    discovery.detail = e instanceof Error ? e.message : String(e);
+    console.warn('[moderate-content] model discovery threw:', discovery.detail);
     return PREFERRED_MODELS[0];
   }
 }
@@ -720,6 +737,7 @@ Deno.serve(async (req) => {
     return json({
       decision: 'allow', eventId, attach: surface.queue && !!eventId,
       target: surface.target, degraded: true, reason: 'no_model',
+      diag: discovery,
     });
   }
   // A model that does not think by default cannot spend the output budget
@@ -787,6 +805,10 @@ Deno.serve(async (req) => {
       // INVALID_ARGUMENT — indistinguishable from a malformed request unless the
       // body is read. Naming it `bad_key` is what turns a puzzling afternoon
       // into a thirty-second fix.
+      // Google's own words, carried back on the degraded reply. "model not
+      // found" and "API not enabled" are both 404s and are fixed in completely
+      // different places, so the status alone is not enough to act on.
+      discovery.detail = detail.slice(0, 300);
       if (res.status === 429) answer = { kind: 'fail', reason: 'rate_limited' };
       else if (/API[_ ]?key/i.test(detail)) answer = { kind: 'fail', reason: 'bad_key' };
       else answer = { kind: 'fail', reason: `http_${res.status}` };
@@ -812,6 +834,9 @@ Deno.serve(async (req) => {
     return json({
       decision: 'allow', eventId, attach: surface.queue && !!eventId,
       target: surface.target, degraded: true, reason: answer.reason,
+      // Only on the degraded path, and only ever model names and an HTTP
+      // status. A working scan returns none of this.
+      diag: { model, ...discovery },
     });
   }
 
