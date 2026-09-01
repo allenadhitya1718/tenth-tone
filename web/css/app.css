@@ -3853,3 +3853,17 @@ body.dark .vn-wave-pv { --vn-dim: #3f3f47; }
   opacity: .75;
 }
 .reaction-bar .msg-delete:active { filter: none; opacity: 1; }
+
+/* A draft looks identical to a post in the grid, so it has to say what it is
+   — otherwise the tab reads as a second copy of your videos. */
+.draft-badge {
+  position: absolute; inset-block-start: 6px; inset-inline-start: 6px;
+  background: rgba(0,0,0,.66); color: #fff; font-size: 10px; font-weight: 800;
+  padding: 3px 7px; border-radius: 6px; backdrop-filter: blur(6px);
+}
+.draft-publish {
+  position: absolute; inset-block-end: 6px; inset-inline-end: 6px;
+  background: var(--primary); color: #fff; border: 0; cursor: pointer;
+  font-size: 11px; font-weight: 800; padding: 5px 11px; border-radius: 999px;
+}
+.draft-publish:active { transform: scale(.94); }

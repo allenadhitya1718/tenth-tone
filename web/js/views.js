@@ -5639,6 +5639,7 @@ function autoPlay(video) {
         ? { icon: 'video', title: 'لم تنشر أي فيديو بعد', sub: 'أنشئ أول فيديو لك وشاركه مع العالم', actionLabel: 'إنشاء فيديو', onAction: () => go('/create') }
         : { icon: 'video', title: 'لا توجد فيديوهات', sub: 'لم ينشر هذا المستخدم أي فيديو بعد' },
       saved:  { icon: 'bookmark', title: 'لا توجد عناصر محفوظة', sub: 'احفظ الفيديوهات لمشاهدتها لاحقًا — ستظهر هنا' },
+      drafts: { icon: 'video', title: 'لا توجد مسودات', sub: 'المقاطع التي تحفظها كمسودة تظهر هنا قبل نشرها' },
     };
 
     let gridToken = 0; // guards against a slow tab response overwriting a newer one
@@ -5680,6 +5681,29 @@ function autoPlay(video) {
             });
             card.appendChild(btn);
           }
+
+          // A draft is only useful if it can become a post. Without this the
+          // tab would just prove the work still exists without giving it back.
+          if (type === 'drafts' && isRealId(v && v.id)) {
+            card.appendChild(el('span', { class: 'draft-badge' }, 'مسودة'));
+            card.appendChild(el('button', {
+              class: 'draft-publish', title: 'نشر',
+              onclick: async (e) => {
+                e.stopPropagation();
+                const yes = await confirmDialog({
+                  title: 'نشر المسودة',
+                  message: 'سيصبح هذا المقطع مرئيًا حسب إعدادات الخصوصية التي اخترتها له.',
+                  confirmLabel: 'نشر',
+                });
+                if (!yes) return;
+                try {
+                  await window.API.publishDraft(v.id);
+                  toast('تم النشر');
+                  renderGrid('drafts');
+                } catch (err) { toast(friendlyError(err, 'تعذر النشر')); }
+              },
+            }, 'نشر'));
+          }
           grid.appendChild(card);
         });
       };
@@ -5692,6 +5716,8 @@ function autoPlay(video) {
         let rows = [];
         if (type === 'videos') {
           rows = targetId ? await window.API.fetchUserVideos(targetId) : [];
+        } else if (type === 'drafts') {
+          rows = await window.API.fetchDrafts();      // always your own; never cached
         } else if (type === 'saved') {
           rows = await window.API.fetchSavedVideos(); // always the signed-in user's own
         }
@@ -5709,7 +5735,7 @@ function autoPlay(video) {
       // 'Liked' was removed: it showed OTHER people's liked videos on their
       // profile, which leaks what they engage with. TikTok keeps likes private.
       { id: 'videos', label: 'فيديوهات' },
-      ...(isMe ? [{ id: 'saved', label: 'محفوظ' }] : [])
+      ...(isMe ? [{ id: 'saved', label: 'محفوظ' }, { id: 'drafts', label: 'مسودات' }] : [])
     ];
 
     tabConfigs.forEach((t, i) => {

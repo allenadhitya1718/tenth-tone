@@ -272,6 +272,22 @@
       // inventing one would mean changing the table's check constraint and
       // every admin screen that renders it.
       if (verdict) window.Moderation.attach(verdict, 'user', userId);
+
+      // The read cache holds profiles under a `profile:` prefix and is also
+      // written to device storage for a day. Without this, saving your bio
+      // updated the database and the app kept showing the old one — the edit
+      // screen said it saved, the profile disagreed, and nothing was actually
+      // wrong except that nobody had told the cache.
+      //
+      // Guarded because supabase.js is loaded before db.js; at call time API
+      // always exists, at definition time it may not.
+      try {
+        if (window.API && window.API.invalidate) {
+          window.API.invalidate('profile:');
+          window.API.invalidate('uservideos:');
+        }
+      } catch (e) { /* a stale cache is not worth failing a saved edit over */ }
+
       return data;
     },
 

@@ -916,6 +916,39 @@
     return data || null;
   };
 
+  // Your own drafts. The publish screen has always offered "حفظ كمسودة" and
+  // the row was written correctly with is_draft = true — but nothing ever read
+  // it back. fetchUserVideos() filters is_draft = false, so a saved draft
+  // disappeared the moment it was saved, with no list, no route and no way to
+  // reach it again. The button did not fail; it swallowed the work.
+  //
+  // Not cached: you arrive here straight after saving one, and a stale list
+  // would look exactly like the bug this fixes.
+  API.fetchDrafts = async () => {
+    const me = await uid();
+    if (!me) return [];
+    const c = await client();
+    const { data, error } = await c.from('videos')
+      .select('id, description, thumbnail, video_url, likes_count, created_at')
+      .eq('user_id', me).eq('is_draft', true).eq('is_archived', false)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  };
+
+  // Turning a draft into a post. Only flips the flag — the file, the caption
+  // and the sound were all settled when the draft was saved.
+  API.publishDraft = async (videoId) => {
+    const c = await client();
+    const { data, error } = await c.from('videos')
+      .update({ is_draft: false }).eq('id', videoId).select('id');
+    if (error) throw error;
+    if (!data || !data.length) throw new Error('تعذر نشر المسودة');
+    invalidate('uservideos:');
+    invalidate('feed:');
+    return true;
+  };
+
   API.fetchUserVideos = async (userId) => {
     if (!userId) return [];
     return cached('uservideos:' + userId, 60000, async () => {
