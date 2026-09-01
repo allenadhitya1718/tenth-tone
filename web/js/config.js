@@ -127,11 +127,41 @@ window.TT_CONFIG = (function () {
   // would have done anyway.
   let aiModeration = true;
 
+  // ── APP VERSION ──
+  // Was the literal '1.0.0' hardcoded in three places, so the About screen said
+  // 1.0.0 no matter which APK was installed - which made it impossible to tell
+  // a tester's build apart from a six-week-old one. That cost real time during
+  // a live bug hunt: two phones reporting "version 1.0.0" told us nothing.
+  //
+  // Keep in step with versionName in android/app/build.gradle. On a device the
+  // native shell overwrites it below with the REAL installed version, so a
+  // stale constant here can only ever be wrong in the browser.
+  let appVersion = '1.0.2';
+
+  try {
+    const cap = window.Capacitor;
+    if (cap && cap.Plugins && cap.Plugins.App && cap.Plugins.App.getInfo) {
+      cap.Plugins.App.getInfo().then(function (info) {
+        if (info && info.version) {
+          appVersion = info.version;
+          window.TT_CONFIG.appVersion = info.version;
+          // Repaint anything already showing the fallback.
+          try {
+            document.querySelectorAll('[data-app-version]').forEach(function (el) {
+              el.textContent = info.version;
+            });
+          } catch (e) {}
+        }
+      }).catch(function () {});
+    }
+  } catch (e) { /* browser, or an older Capacitor - the constant stands */ }
+
+
   try {
     const q = new URLSearchParams(location.search);
     if (q.get('mod') === '0') aiModeration = false;
     if (q.get('mod') === '1') aiModeration = true;
   } catch (e) { /* URLSearchParams unavailable — keep the default */ }
 
-  return { demoMode, otpMaxLength, otpMinLength, captchaSiteKey, r2Uploads, aiModeration };
+  return { demoMode, otpMaxLength, otpMinLength, captchaSiteKey, r2Uploads, aiModeration, appVersion };
 })();

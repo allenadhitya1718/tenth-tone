@@ -151,6 +151,32 @@ window.Compress = (function () {
     return '';
   }
 
+  // A media element only has an audio track once it has STARTED PLAYING.
+  // Both re-encode paths called video.captureStream() from onloadedmetadata -
+  // before play() - where getAudioTracks() returns an empty array. Nothing was
+  // added, the catch had no error to swallow, and every clip that went through
+  // the compressor came out with picture and no sound. That is every video in
+  // the library: they are all named `reencoded-` and all report
+  // webkitAudioDecodedByteCount 0 while decoding megabytes of video.
+  //
+  // It also has to happen BEFORE `new MediaRecorder(stream)`. A track added to
+  // a MediaStream after the recorder is constructed is not recorded, so moving
+  // the capture without also moving the construction would have fixed nothing
+  // and looked right.
+  //
+  // Returns the number of audio tracks attached, so the caller can decide
+  // whether to ask for an audio bitrate at all.
+  function attachAudio(video, canvasStream) {
+    try {
+      const s = video.captureStream ? video.captureStream() : null;
+      const tracks = s ? s.getAudioTracks() : [];
+      tracks.forEach(t => canvasStream.addTrack(t));
+      return tracks.length;
+    } catch (_) {
+      return 0;   // a source with no audio at all is normal, not an error
+    }
+  }
+
   function scaleDimensions(vw, vh) {
     const ratio = Math.min(TARGET_WIDTH / vw, TARGET_HEIGHT / vh, 1);
     return {
@@ -176,47 +202,10 @@ window.Compress = (function () {
         // Capture canvas stream at 30 fps
         const canvasStream = canvas.captureStream(30);
 
-        // Try to add audio from the source video
-        let audioStream = null;
-        try {
-          audioStream = video.captureStream ? video.captureStream(30) : null;
-          if (audioStream) {
-            audioStream.getAudioTracks().forEach(t => canvasStream.addTrack(t));
-          }
-        } catch (_) { /* audio capture not available — video-only */ }
-
+        // Audio is attached inside play() below, not here - see attachAudio().
         const mimeType = pickMime();
-        let recorder;
-        try {
-          const opts = { videoBitsPerSecond: TARGET_BITRATE };
-          if (mimeType) opts.mimeType = mimeType;
-          if (audioStream) opts.audioBitsPerSecond = AUDIO_BITRATE;
-          recorder = new MediaRecorder(canvasStream, opts);
-        } catch (e) {
-          URL.revokeObjectURL(src);
-          reject(e);
-          return;
-        }
-
         const chunks = [];
-        recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-
-        recorder.onstop = () => {
-          URL.revokeObjectURL(src);
-          const ext = (mimeType || '').includes('mp4') ? 'mp4' : 'webm';
-          const type = mimeType || ('video/' + ext);
-          const blob = new Blob(chunks, { type });
-          const name = file.name.replace(/\.[^.]+$/, '') + '-compressed.' + ext;
-          resolve(new File([blob], name, { type }));
-        };
-
-        recorder.onerror = e => {
-          URL.revokeObjectURL(src);
-          reject(e.error || new Error('MediaRecorder error'));
-        };
-
-        recorder.start();
-
+        let recorder = null;
         let rafId;
         // captureStream samples at 30fps, but requestAnimationFrame fires at
         // the display rate — 60Hz or more — so half of every scale-and-draw
@@ -240,18 +229,44 @@ window.Compress = (function () {
 
         video.onended = () => {
           cancelAnimationFrame(rafId);
-          recorder.stop();
+          try { if (recorder && recorder.state !== 'inactive') recorder.stop(); } catch (_) {}
           canvasStream.getTracks().forEach(t => t.stop());
         };
 
         video.onerror = () => {
           cancelAnimationFrame(rafId);
-          try { recorder.stop(); } catch (_) {}
+          try { if (recorder && recorder.state !== 'inactive') recorder.stop(); } catch (_) {}
           URL.revokeObjectURL(src);
           reject(new Error('Video load error during compression'));
         };
 
+        // play() FIRST, then capture the audio, then build the recorder. A
+        // track added after construction is not recorded, so all three have to
+        // happen in this order.
         video.play().then(() => {
+          const nAudio = attachAudio(video, canvasStream);
+          try {
+            const opts = { videoBitsPerSecond: TARGET_BITRATE };
+            if (mimeType) opts.mimeType = mimeType;
+            if (nAudio) opts.audioBitsPerSecond = AUDIO_BITRATE;
+            recorder = new MediaRecorder(canvasStream, opts);
+          } catch (e) { URL.revokeObjectURL(src); reject(e); return; }
+
+          recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+          recorder.onstop = () => {
+            URL.revokeObjectURL(src);
+            const ext = (mimeType || '').includes('mp4') ? 'mp4' : 'webm';
+            const type = mimeType || ('video/' + ext);
+            const blob = new Blob(chunks, { type });
+            const name = file.name.replace(/\.[^.]+$/, '') + '-compressed.' + ext;
+            resolve(new File([blob], name, { type }));
+          };
+          recorder.onerror = e => {
+            URL.revokeObjectURL(src);
+            reject(e.error || new Error('MediaRecorder error'));
+          };
+
+          recorder.start();
           drawFrame();
         }).catch(e => {
           URL.revokeObjectURL(src);
@@ -543,40 +558,18 @@ window.Compress = (function () {
         const ctx = canvas.getContext('2d');
         const canvasStream = canvas.captureStream(30);
 
-        try {
-          const a = video.captureStream ? video.captureStream(30) : null;
-          if (a) a.getAudioTracks().forEach(t => canvasStream.addTrack(t));
-        } catch (_) { /* video-only */ }
-
         const mimeType = pickMime();
-        let recorder;
-        try {
-          const opts = { videoBitsPerSecond: TARGET_BITRATE };
-          if (mimeType) opts.mimeType = mimeType;
-          recorder = new MediaRecorder(canvasStream, opts);
-        } catch (e) { cleanup(); reject(e); return; }
-
         const chunks = [];
+        let recorder = null;
         let rafId = null;
         let stopped = false;
-
-        recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-        recorder.onstop = () => {
-          cleanup();
-          const ext = (mimeType || '').includes('mp4') ? 'mp4' : 'webm';
-          const type = mimeType || ('video/' + ext);
-          const blob = new Blob(chunks, { type });
-          const name = file.name.replace(/\.[^.]+$/, '') + '-trimmed.' + ext;
-          resolve(new File([blob], name, { type }));
-        };
-        recorder.onerror = e => { cleanup(); reject(e.error || new Error('MediaRecorder error')); };
 
         function finish() {
           if (stopped) return;
           stopped = true;
           if (rafId) cancelAnimationFrame(rafId);
           try { video.pause(); } catch (_) {}
-          try { recorder.stop(); } catch (_) {}
+          try { if (recorder && recorder.state !== 'inactive') recorder.stop(); } catch (_) {}
           canvasStream.getTracks().forEach(t => t.stop());
         }
 
@@ -595,8 +588,31 @@ window.Compress = (function () {
 
         video.onseeked = () => {
           video.onseeked = null;
-          recorder.start();
-          video.play().then(draw).catch(err => { cleanup(); reject(err); });
+          // play() FIRST, then capture, then build the recorder. See
+          // attachAudio(): the order is the whole bug.
+          video.play().then(() => {
+            const nAudio = attachAudio(video, canvasStream);
+            try {
+              const opts = { videoBitsPerSecond: TARGET_BITRATE };
+              if (mimeType) opts.mimeType = mimeType;
+              if (nAudio) opts.audioBitsPerSecond = AUDIO_BITRATE;
+              recorder = new MediaRecorder(canvasStream, opts);
+            } catch (e) { cleanup(); reject(e); return; }
+
+            recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+            recorder.onstop = () => {
+              cleanup();
+              const ext = (mimeType || '').includes('mp4') ? 'mp4' : 'webm';
+              const type = mimeType || ('video/' + ext);
+              const blob = new Blob(chunks, { type });
+              const name = file.name.replace(/\.[^.]+$/, '') + '-trimmed.' + ext;
+              resolve(new File([blob], name, { type }));
+            };
+            recorder.onerror = e => { cleanup(); reject(e.error || new Error('MediaRecorder error')); };
+
+            recorder.start();
+            draw();
+          }).catch(err => { cleanup(); reject(err); });
         };
         video.currentTime = from;
       };

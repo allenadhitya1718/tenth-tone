@@ -697,7 +697,6 @@
     'المستهلك': 'Used',
     'الشروط وسياسة الخصوصية': 'Terms & Privacy Policy',
     'حول التطبيق': 'About',
-    'الإصدار 1.0.0': 'Version 1.0.0',
     'منطقة الخطر': 'Danger zone',
     'حذف الحساب نهائيًا': 'Delete account permanently',
     'هل أنت متأكد من حذف حسابك؟\n\nسيتم حذف جميع الفيديوهات والمحفظة والمحادثات. لا يمكن التراجع عن هذا الإجراء.': 'Are you sure you want to delete your account?\n\nAll videos, wallet, and chats will be deleted. This action cannot be undone.',
@@ -1987,6 +1986,7 @@
     // is no substring pass, so a partial key like ' تعليقات' never matches.
     [/^أعجبه تعليقك: "(.*)"$/, (m) => `liked your comment: "${m[1]}"`],
     [/^بدأ بثًا مباشرًا: (.+)$/, (m) => `Started a live: ${m[1]}`],
+    [/^الإصدار (.+)$/, (m) => `Version ${m[1]}`],
     [/^(\d+) تعليقات$/, (m) => `${m[1]} comments`],
     [/^(\d+) تعليقًا$/, (m) => `${m[1]} comments`],
     [/^التخزين ممتلئ بنسبة (.*)% — سيتوقف الرفع عند بلوغ السقف$/, (m) => `Storage is ${m[1]}% full — uploads will stop at the cap`],

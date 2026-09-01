@@ -1926,7 +1926,7 @@
       category: category || 'other',
       subject: subject || null,
       message: message,
-      app_version: '1.0.0',
+      app_version: (window.TT_CONFIG && window.TT_CONFIG.appVersion) || 'unknown',
       device: (navigator.userAgent || '').slice(0, 200),
     });
     if (error) {

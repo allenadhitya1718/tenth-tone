@@ -1,6 +1,15 @@
 /* === Mobile views === */
 (function () {
   const { el, esc, safeUrl, fmt, go, back, toast, haptic, modal, ask, confirmDialog, richText, icons, svg, bottomNav, hideNav, topBar, avatar, emptyState, errorState, friendlyError } = window.H;
+  // The version shown in Settings and the About sheet. Reads the config, which
+  // the native shell overwrites with the REAL installed version on a device.
+  // It was the literal '1.0.0' in three places, so every build reported 1.0.0
+  // and there was no way to tell a tester's APK from a six-week-old one.
+  function appVersionLabel() {
+    var v = (window.TT_CONFIG && window.TT_CONFIG.appVersion) || '';
+    return v ? ('الإصدار ' + v) : 'الإصدار';
+  }
+
   const DB = window.DB;
   const V = window.Views = {};
 
@@ -8363,12 +8372,12 @@ function autoPlay(video) {
       { icon: 'flag', label: 'الإبلاغ عن مشكلة', onclick: () => go('/report-problem') },
       { icon: 'mail', label: 'تواصل معنا', onclick: () => go('/contact') },
       { icon: 'globe', label: 'الشروط وسياسة الخصوصية', onclick: () => go('/legal') },
-      { icon: 'sparkle', label: 'حول التطبيق', right: el('span', { class: 'muted' }, 'الإصدار 1.0.0'),
+      { icon: 'sparkle', label: 'حول التطبيق', right: el('span', { class: 'muted', 'data-app-version': '' }, appVersionLabel()),
         onclick: () => {
           const sheet = el('div', { class: 'sheet about-sheet' });
           const close = modal(sheet);
           sheet.appendChild(el('div', { class: 'about-logo' }, 'FLYP'));
-          sheet.appendChild(el('div', { class: 'about-ver' }, 'الإصدار 1.0.0'));
+          sheet.appendChild(el('div', { class: 'about-ver', 'data-app-version': '' }, appVersionLabel()));
           [
             ['الشروط وسياسة الخصوصية', () => { close(); go('/legal'); }],
             ['تواصل معنا', () => { close(); go('/contact'); }],
