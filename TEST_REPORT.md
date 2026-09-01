@@ -152,6 +152,44 @@ when the camera opens, so it loads while the person is still filming.
 **Not tested:** signup and onboarding. Creating an account means entering a
 password, which I do not do — that one needs you.
 
+### Third pass — hardware paths, with a synthetic camera and microphone
+
+Chrome relaunched with `--use-fake-device-for-media-stream`, so these are the
+real code paths with real media, not simulations of them.
+
+| Feature | Result |
+|---|---|
+| Camera preview | ✅ live stream, 640×480, `readyState 4` |
+| **Flash button hides itself** | ✅ correctly absent — the fake device has no torch |
+| Recording via the record button | ✅ `recording` class set, timer reached `00:03`, 210 KB clip produced, routed to review |
+| Voice note — real microphone | ✅ records |
+| Voice note — timer | ✅ counts 0:01 → 0:03 |
+| **Voice note — waveform** | ✅ genuinely driven by the mic: canvas ink increased as audio arrived, rather than animating regardless |
+| Voice note — play/pause preview | ✅ |
+| **Voice note — Send could do nothing** | ❌→✅ **fixed.** `if (!vnBlob) return;` left the preview open and said nothing |
+| **Voice note — English labels** | ❌→✅ **fixed.** Read "Resume" and "Deactivate" |
+| Live — host camera preview | ✅ real stream on the setup screen |
+| **Live — Agora token** | ✅ a real token was issued by the Edge Function |
+| Live — viewer side | ✅ A saw the reaction tray, input, Live badge, viewer count 1 |
+| Live — end | ✅ |
+| Map — Leaflet render | ✅ 9 tiles, marker present |
+| Map — app pushes a GPS fix | ✅ Riyadh coordinates stored in `user_locations` |
+
+**Honest limits of this pass.** The camera and microphone are Chrome's
+synthetic devices, not real hardware — so codec selection on a real Android
+encoder is still unverified (see below), and audio quality is untested. The
+geolocation result used a stubbed `navigator.geolocation`, because Chrome's
+CDP override would not take on an externally-launched browser; it proves the
+app handles a fix correctly, not that Chrome's GPS stack works.
+
+**One risk found, not fixed.** `pickMime()` falls back to bare `video/mp4`
+when H.264 is unavailable, and Chrome then fills that container with VP9 — an
+`.mp4` file iOS cannot decode. Real Android encoders do support H.264, so the
+first candidate normally wins and this never fires. Small clips can also skip
+the compressor (which does target H.264), so nothing downstream would correct
+it. Worth a look before iOS launch; not worth restructuring the recording
+pipeline overnight.
+
 ## Still open
 
 **Finding #14 — blocking does not hide the profile row.** `0054`'s policy is
