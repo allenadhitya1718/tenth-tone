@@ -988,6 +988,12 @@
 
     // Hashtag results in Discover search.
     'الهاشتاقات': 'Hashtags',
+
+    // Returned by the moderate-content Edge Function, not built in the app -
+    // which is exactly why they were missed. A blocked English user was being
+    // refused in Arabic, at the one moment the wording has to be understood.
+    'لا يمكن نشر هذا المحتوى لأنه يخالف إرشادات المجتمع': 'This cannot be posted because it breaks the community guidelines',
+    'محتوى مخالف': 'Content violation',
     'أعجبه تعليقك': 'liked your comment',
 
     // Bios of FLYP's own seeded catalog accounts (0040). App content, not
