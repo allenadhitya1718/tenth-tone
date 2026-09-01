@@ -4013,6 +4013,14 @@ function autoPlay(video) {
     // for their realtime echo. Together these stop a sent message appearing
     // twice in the sender's own thread — see appendMessage.
     const renderedIds = new Set();
+    // Cleared on EVERY outcome, including a send that succeeded but came back
+    // without an id. A tracker left behind is not harmless: the next message
+    // of the same type and text would have its echo adopt this dead node, and
+    // that message would never appear at all.
+    function untrackSend(tracked) {
+      const i = pendingSends.indexOf(tracked);
+      if (i !== -1) pendingSends.splice(i, 1);
+    }
     const pendingSends = [];
     // The message the composer is currently replying to, if any.
     let replyTo = null;
@@ -4578,19 +4586,25 @@ function autoPlay(video) {
         attachment_url: isMedia || type === 'file' ? URL.createObjectURL(f) : null,
       };
       const tempNode = appendMessage(temp); msgs.scrollTop = msgs.scrollHeight;
+      // Registered BEFORE the await, not after it. Claiming the id once
+      // sendMessage() resolves is a race the sender loses on a fast link:
+      // Supabase pushes the realtime INSERT the moment the row lands, which
+      // is earlier than the HTTP response arriving back here, so appendMessage
+      // saw an id it had never heard of and drew a SECOND bubble. pendingSends
+      // lets that echo adopt this bubble instead. Only the text path had ever
+      // been given it - which is why this was reported twice, for voice notes.
+      const tracked = { text: temp.text, type, node: tempNode };
+      pendingSends.push(tracked);
       if (window.API && typeof id === 'string' && id.length >= 30) {
         try {
           const saved = await window.API.sendMessage({ chatId: id, text: temp.text, type, file: f });
-        // Claim the id, exactly as the text path does. appendMessage dedupes on
-        // m.id and an optimistic bubble has none, so without this the realtime
-        // echo of the saved row drew a SECOND copy - the sender saw their own
-        // attachment twice until they left the chat and came back.
-        if (saved && saved.id) {
-          renderedIds.add(saved.id);
-          if (tempNode) tempNode.dataset.msgId = saved.id;
+          if (saved && saved.id) {
+            renderedIds.add(saved.id);
+            if (tempNode) tempNode.dataset.msgId = saved.id;
+          }
+          untrackSend(tracked);
         }
-        }
-        catch (e) { undoOptimistic(tempNode); toast(sendFailMessage(e)); }
+        catch (e) { untrackSend(tracked); undoOptimistic(tempNode); toast(sendFailMessage(e)); }
       }
     }
 
@@ -4606,19 +4620,25 @@ function autoPlay(video) {
       const link = locationLink(p.lat, p.lng, p.label);
       const tempNode = appendMessage({ from_user_id: myUserId || 'me', text: link, created_at: new Date().toISOString(), type: 'location' });
       msgs.scrollTop = msgs.scrollHeight;
+      // Registered BEFORE the await, not after it. Claiming the id once
+      // sendMessage() resolves is a race the sender loses on a fast link:
+      // Supabase pushes the realtime INSERT the moment the row lands, which
+      // is earlier than the HTTP response arriving back here, so appendMessage
+      // saw an id it had never heard of and drew a SECOND bubble. pendingSends
+      // lets that echo adopt this bubble instead. Only the text path had ever
+      // been given it - which is why this was reported twice, for voice notes.
+      const tracked = { text: link, type: 'location', node: tempNode };
+      pendingSends.push(tracked);
       if (window.API && typeof id === 'string' && id.length >= 30) {
         try {
           const saved = await window.API.sendMessage({ chatId: id, text: link, type: 'location' });
-        // Claim the id, exactly as the text path does. appendMessage dedupes on
-        // m.id and an optimistic bubble has none, so without this the realtime
-        // echo of the saved row drew a SECOND copy - the sender saw their own
-        // attachment twice until they left the chat and came back.
-        if (saved && saved.id) {
-          renderedIds.add(saved.id);
-          if (tempNode) tempNode.dataset.msgId = saved.id;
+          if (saved && saved.id) {
+            renderedIds.add(saved.id);
+            if (tempNode) tempNode.dataset.msgId = saved.id;
+          }
+          untrackSend(tracked);
         }
-        }
-        catch (e) { undoOptimistic(tempNode); toast(sendFailMessage(e)); }
+        catch (e) { untrackSend(tracked); undoOptimistic(tempNode); toast(sendFailMessage(e)); }
       }
     }
 
@@ -4647,19 +4667,25 @@ function autoPlay(video) {
       const f = videoInput.files[0]; if (!f) return;
       const tempMsg = { from_user_id: myUserId || 'me', text: '', created_at: new Date().toISOString(), type: 'video', attachment_url: URL.createObjectURL(f) };
       const tempNode = appendMessage(tempMsg); msgs.scrollTop = msgs.scrollHeight;
+      // Registered BEFORE the await, not after it. Claiming the id once
+      // sendMessage() resolves is a race the sender loses on a fast link:
+      // Supabase pushes the realtime INSERT the moment the row lands, which
+      // is earlier than the HTTP response arriving back here, so appendMessage
+      // saw an id it had never heard of and drew a SECOND bubble. pendingSends
+      // lets that echo adopt this bubble instead. Only the text path had ever
+      // been given it - which is why this was reported twice, for voice notes.
+      const tracked = { text: '', type: 'video', node: tempNode };
+      pendingSends.push(tracked);
       if (window.API && typeof id === 'string' && id.length >= 30) {
         try {
           const saved = await window.API.sendMessage({ chatId: id, text: '', type: 'video', file: f });
-        // Claim the id, exactly as the text path does. appendMessage dedupes on
-        // m.id and an optimistic bubble has none, so without this the realtime
-        // echo of the saved row drew a SECOND copy - the sender saw their own
-        // attachment twice until they left the chat and came back.
-        if (saved && saved.id) {
-          renderedIds.add(saved.id);
-          if (tempNode) tempNode.dataset.msgId = saved.id;
+          if (saved && saved.id) {
+            renderedIds.add(saved.id);
+            if (tempNode) tempNode.dataset.msgId = saved.id;
+          }
+          untrackSend(tracked);
         }
-        }
-        catch (e) { undoOptimistic(tempNode); toast(sendFailMessage(e)); }
+        catch (e) { untrackSend(tracked); undoOptimistic(tempNode); toast(sendFailMessage(e)); }
       }
       videoInput.value = '';
     });
@@ -5167,19 +5193,25 @@ function autoPlay(video) {
       });
       msgs.scrollTop = msgs.scrollHeight;
       vnReset();                        // frees the preview URL, not localUrl
+      // Registered BEFORE the await, not after it. Claiming the id once
+      // sendMessage() resolves is a race the sender loses on a fast link:
+      // Supabase pushes the realtime INSERT the moment the row lands, which
+      // is earlier than the HTTP response arriving back here, so appendMessage
+      // saw an id it had never heard of and drew a SECOND bubble. pendingSends
+      // lets that echo adopt this bubble instead. Only the text path had ever
+      // been given it - which is why this was reported twice, for voice notes.
+      const tracked = { text: '', type: 'voice', node: tempNode };
+      pendingSends.push(tracked);
       if (window.API && isRealId(id)) {
         try {
           const saved = await window.API.sendMessage({ chatId: id, text: '', type: 'voice', file });
-        // Claim the id, exactly as the text path does. appendMessage dedupes on
-        // m.id and an optimistic bubble has none, so without this the realtime
-        // echo of the saved row drew a SECOND copy - the sender saw their own
-        // attachment twice until they left the chat and came back.
-        if (saved && saved.id) {
-          renderedIds.add(saved.id);
-          if (tempNode) tempNode.dataset.msgId = saved.id;
+          if (saved && saved.id) {
+            renderedIds.add(saved.id);
+            if (tempNode) tempNode.dataset.msgId = saved.id;
+          }
+          untrackSend(tracked);
         }
-        }
-        catch (e) { undoOptimistic(tempNode); toast(sendFailMessage(e)); }
+        catch (e) { untrackSend(tracked); undoOptimistic(tempNode); toast(sendFailMessage(e)); }
       }
     }
 
@@ -5350,14 +5382,12 @@ function autoPlay(video) {
           // adopted and this is a no-op.
           if (saved && saved.id) {
             renderedIds.add(saved.id);
-            const i = pendingSends.indexOf(tracked);
-            if (i !== -1) pendingSends.splice(i, 1);
             if (tempNode) tempNode.dataset.msgId = saved.id;
           }
+          untrackSend(tracked);
         }
         catch (e) {
-          const i = pendingSends.indexOf(tracked);
-          if (i !== -1) pendingSends.splice(i, 1);
+          untrackSend(tracked);
           // Nothing was written, so take the bubble back and hand the text to
           // the composer rather than losing what was typed.
           undoOptimistic(tempNode);
