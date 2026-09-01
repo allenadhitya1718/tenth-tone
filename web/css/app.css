@@ -1933,6 +1933,19 @@ body.lang-en .toast { font-family: 'Cairo', system-ui, sans-serif; }
   padding: 14px 2px 16px; scrollbar-width: none;
 }
 .social-row::-webkit-scrollbar { display: none; }
+/* A row that scrolls with no scrollbar and no cut-off item looks like a row
+   that ends. Fading the trailing edge is the only thing on screen saying
+   there is more; mask-image is used rather than an overlay so it works on
+   any sheet background. Logical direction, so it fades the correct edge in
+   RTL. */
+.social-row {
+  -webkit-mask-image: linear-gradient(to left, transparent 0, #000 26px);
+          mask-image: linear-gradient(to left, transparent 0, #000 26px);
+}
+[dir='ltr'] .social-row {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 26px);
+          mask-image: linear-gradient(to right, transparent 0, #000 26px);
+}
 .social-item { flex: 0 0 auto; width: 60px; }
 .social-icon.telegram { background: #229ED9; }
 .social-icon.x { background: #000; color: #fff; border: 1px solid var(--border); }

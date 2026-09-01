@@ -1042,6 +1042,7 @@
             close();
             const yes = await confirmDialog({
               title: 'حذف المقطع',
+              danger: true,
               message: 'سيُحذف هذا المقطع نهائيًا مع تعليقاته وإعجاباته.',
               confirmLabel: 'حذف',
             });
@@ -4188,6 +4189,7 @@ function autoPlay(video) {
               close();
               const yes = await confirmDialog({
                 title: 'حذف الرسالة',
+                danger: true,
                 message: 'سيتم حذف هذه الرسالة نهائيًا.',
                 confirmLabel: 'حذف',
               });
@@ -5879,6 +5881,7 @@ function autoPlay(video) {
       if (saveAction.disabled) return back();
       const leave = await confirmDialog({
         title: 'تجاهل التعديلات؟',
+        danger: true,
         message: 'لم يتم حفظ تغييراتك. سيتم فقدانها إذا خرجت الآن.',
         confirmLabel: 'تجاهل',
         cancelLabel: 'متابعة التعديل',
@@ -6434,6 +6437,7 @@ function autoPlay(video) {
         meta.push(el('a', { class: 'comment-del', onclick: async () => {
           const yes = await confirmDialog({
             title: 'حذف التعليق',
+            danger: true,
             message: 'سيتم حذف هذا التعليق نهائيًا.',
             confirmLabel: 'حذف',
           });
@@ -6656,14 +6660,18 @@ function autoPlay(video) {
     const isLiveShare = shareKind === 'live';
 
     const canNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
+    // Copy link is second, not seventh. The row scrolls horizontally and only
+    // about five items fit, so the single most-used target in the sheet was
+    // off-screen every time it opened - reachable only by a swipe nothing
+    // advertised. Order now follows how often each is actually used.
     const socials = [
       { k: 'native',   l: 'مشاركة',      icon: 'share' },
+      { k: 'copy',     l: 'نسخ الرابط',  icon: 'link' },
       { k: 'whatsapp', l: 'WhatsApp',    icon: 'whatsapp' },
       { k: 'snapchat', l: 'Snapchat',    icon: 'snapchat' },
-      { k: 'facebook', l: 'Facebook',    icon: 'facebook' },
       { k: 'telegram', l: 'Telegram',    icon: 'telegram' },
+      { k: 'facebook', l: 'Facebook',    icon: 'facebook' },
       { k: 'x',        l: 'X',           icon: 'xTwitter' },
-      { k: 'copy',     l: 'نسخ الرابط',  icon: 'link' },
       { k: 'download', l: 'تنزيل',       icon: 'download' },
     ].filter(x => (x.k !== 'native' || canNativeShare)
       // There is no file behind a profile, so "download" would be a button
@@ -7166,6 +7174,7 @@ function autoPlay(video) {
       // removed from the admin panel.
       const yes = await confirmDialog({
         title: 'إنهاء البث',
+        danger: true,
         message: 'سينتهي البث لجميع المشاهدين ولا يمكن استئنافه.',
         confirmLabel: 'إنهاء',
       });
@@ -8996,6 +9005,7 @@ function autoPlay(video) {
       body.appendChild(card({
         tone: 'warn',
         title: 'إيقاف الحساب مؤقتًا',
+        danger: true,
         lines: [
           'يختفي ملفك الشخصي وفيديوهاتك وتعليقاتك عن الجميع.',
           'لا يُحذف أي شيء، ويعود كل شيء كما كان.',
