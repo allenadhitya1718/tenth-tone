@@ -5440,7 +5440,16 @@ function autoPlay(video) {
           window.API.isFollowing(p.id).catch(() => false),
           window.API.hasRequestedFollow(p.id).catch(() => false),
         ]);
-        const followBtn = fresh.querySelector('.profile-actions button:first-child');
+        // _renderProfile already bound a click LISTENER to this button - the
+        // offline fallback that tracks window._followedUsers. Assigning
+        // .onclick below does not remove a listener, so both ran: one real tap
+        // sent follow_or_request twice, and an unfollow sent two DELETEs.
+        // Replacing the node with a clone drops every listener attached to the
+        // original, leaving exactly the handler bound underneath - the one that
+        // knows the real API state, the follower count and the requested case.
+        const staleBtn = fresh.querySelector('.profile-actions button:first-child');
+        const followBtn = staleBtn ? staleBtn.cloneNode(true) : null;
+        if (staleBtn && followBtn) staleBtn.parentNode.replaceChild(followBtn, staleBtn);
         if (followBtn) {
           const FOLLOW = 'متابعة', FOLLOWING = 'تتم المتابعة', REQUESTED = 'تم الطلب';
           let state = isFollowing ? FOLLOWING : (hasRequested ? REQUESTED : FOLLOW);
@@ -5456,7 +5465,13 @@ function autoPlay(video) {
           const paint = () => {
             followBtn.textContent = state;
             followBtn.classList.toggle('requested', state === REQUESTED);
-            followBtn.classList.toggle('following', state === FOLLOWING);
+            // btn-following, not following: the styled class is .btn-following
+            // (app.css:155). Nothing styles .btn.following, so after a reload a
+            // profile you follow rendered its Following button in the same
+            // solid blue as an un-followed Follow CTA - and an un-followed one
+            // came back as the transparent outline that means "following"
+            // everywhere else. The two states looked swapped.
+            followBtn.classList.toggle('btn-following', state === FOLLOWING);
             try { if (window.I18N) window.I18N.apply(followBtn); } catch (e) {}
           };
           paint();

@@ -954,10 +954,6 @@
     // Three are fragments, because the code concatenates a number into them.
     // apply() matches on substrings as well as whole strings, so a fragment
     // translates inside the assembled sentence.
-    'وصلت إلى حد الرفع اليومي (': 'You have reached the daily upload limit (',
-    '). حاول غدًا.': '). Try again tomorrow.',
-    'حجم الملف كبير جدًا (الحد الأقصى ': 'File is too large (maximum ',
-    ' ميجابايت)': ' MB)',
     'لا يمكن نشر هذا المحتوى': 'This content cannot be posted',
     'لا يمكن نشر هذا التعليق': 'This comment cannot be posted',
     'لا يمكن استخدام هذا العنوان': 'This title cannot be used',
@@ -971,8 +967,6 @@
     // number, which apply() leaves alone.
     'تعليق واحد': '1 comment',
     'تعليقان': '2 comments',
-    ' تعليقات': ' comments',
-    ' تعليقًا': ' comments',
     'كن أول من يعلق': 'Be the first to comment',
     'تعذر تحميل التعليقات': 'Could not load comments',
     'إعادة المحاولة': 'Try again',
@@ -981,8 +975,6 @@
     'تعذر حذف التعليق': 'Could not delete the comment',
     'التعليقات': 'Comments',
 
-    // Device labels are assembled in db.js as '<browser> على <os>'.
-    ' على ': ' on ',
 
     // aria-labels on the icon-only feed rail. i18n rewrites attributes too.
     'إعجاب': 'Like',
@@ -996,7 +988,26 @@
 
     // Hashtag results in Discover search.
     'الهاشتاقات': 'Hashtags',
-    ' فيديو': ' videos',
+
+    // Strings the English pass found still in Arabic.
+    'حرّك الخريطة أو اضغط عليها لاختيار مكان': 'Move the map or tap it to choose a place',
+    'إرسال موقعي الحالي': 'Send my current location',
+    'إرسال الموقع المحدد': 'Send selected location',
+    'ابحث عن مكان': 'Search for a place',
+    'موقعي الحالي': 'My current location',
+    'جاري تحديد موقعك...': 'Finding your location...',
+    'تعذر تحديد موقعك': 'Could not find your location',
+    'تعذر الوصول إلى موقعك — اختر مكانًا من الخريطة': 'Could not reach your location — choose a place on the map',
+    'إذن الموقع مرفوض — فعّله من إعدادات الجهاز': 'Location permission denied — enable it in your device settings',
+    'موقع مشارَك': 'Shared location',
+    'اسحب للإلغاء': 'Swipe to cancel',
+    'تم نسخ الرابط': 'Link copied',
+    'انضم إليّ على FLYP': 'Join me on FLYP',
+    'تعذر تشغيل الفلاش': 'Could not turn on the flash',
+    'تعذر إنهاء البث': 'Could not end the live',
+    'تعذر الطلب': 'Request failed',
+    'تم النشر': 'Posted',
+    'تتابعه': 'Following',
 
     // Leaving a private account costs a new request and an approval.
     'إلغاء المتابعة؟': 'Unfollow?',
@@ -1005,8 +1016,26 @@
     'تراجع': 'Cancel',
   };
 
+  // Later blocks FILL GAPS. They must never override a key the app itself has
+  // already defined.
+  //
+  // One flat dictionary serves both the consumer app and the admin dashboard,
+  // and the admin block is merged second - so wherever both used the same
+  // Arabic word, admin vocabulary silently replaced the app's. 'إلغاء الحظر'
+  // came out as "Unban" on the user's own Blocked list, 'العدد' as "Count" on a
+  // wallet that means Amount, and 'تجاهل' as "Dismiss" in a discard-changes
+  // dialog. Nothing announced any of it; the last assignment simply won.
+  //
+  // The app is what ships to users, so the app wins. An admin-only word that
+  // has no consumer counterpart still lands, because the key is absent.
+  function fill(extra) {
+    for (const k in extra) {
+      if (!Object.prototype.hasOwnProperty.call(DICT, k)) DICT[k] = extra[k];
+    }
+  }
+
   // ── Admin dashboard strings (shares DICT; merged here to keep the literal small) ──
-  Object.assign(DICT, {
+  fill({
     // Admin — remaining UI labels, table headers, statuses and confirmations
     '(بلا وصف)': '(no description)',
     '(مشرف)': '(admin)',
@@ -1387,7 +1416,7 @@
   });
 
   // ── User-generated dummy data strings (Names, Bios, Comments, etc.) ──
-  Object.assign(DICT, {
+  fill({
     'أحمد الدوسري': 'Ahmed Aldosari',
     'سارة الشمري': 'Sarah Alshammari',
     'محمد القحطاني': 'Mohammed Alqahtani',
@@ -1722,7 +1751,9 @@
     'إعجابات': 'Likes',
     'استكشف': 'Discover',
     'تعديل': 'Edit',
-    'عرض': 'Show',
+    // 'عرض' is defined earlier as 'View' and was redefined here as 'Show'. The
+    // later definition won, so the button that opens a profile from search read
+    // "Show". Removed rather than corrected, so there is exactly one definition.
     'عرض المزيد': 'see more',
     'مشاهدة المزيد': 'See more',
     'الكلمات المخفية': 'Hidden words',
@@ -1935,7 +1966,13 @@
     [/^علّق: "(.*)"$/, (m) => `commented: "${m[1]}"`],
     [/^رد على تعليقك: "(.*)"$/, (m) => `replied to your comment: "${m[1]}"`],
     [/^المدة (.*) · أعلى عدد مشاهدين (.*)$/, (m) => `Duration ${m[1]} · Peak viewers ${m[2]}`],
-    [/^انتهى بثك · (.*) · أعلى عدد مشاهدين (.*)$/, (m) => `Your live ended · ${m[1]} · ${m[2]} peak viewers`],
+    [/^انتهى بثك · (.*) · أعلى عدد مشاهدين (.*)$/, (m) => `Your live ended · ${m[1]} · ${m[2]} peak viewer${m[2] === '1' ? '' : 's'}`],
+    // Counts the DICT cannot hold, because the number is part of the string.
+    // translate() trims and looks the WHOLE string up, then tries these - there
+    // is no substring pass, so a partial key like ' تعليقات' never matches.
+    [/^بدأ بثًا مباشرًا: (.+)$/, (m) => `Started a live: ${m[1]}`],
+    [/^(\d+) تعليقات$/, (m) => `${m[1]} comments`],
+    [/^(\d+) تعليقًا$/, (m) => `${m[1]} comments`],
     [/^التخزين ممتلئ بنسبة (.*)% — سيتوقف الرفع عند بلوغ السقف$/, (m) => `Storage is ${m[1]}% full — uploads will stop at the cap`],
     [/^خطأ في التحميل: (.+)$/, (m) => `Load error: ${m[1]}`],
     [/^([\d.,KM]+) متابع$/, (m) => `${m[1]} follower${m[1] === '1' ? '' : 's'}`],

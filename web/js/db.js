@@ -2195,11 +2195,17 @@
       /Windows/.test(ua) ? 'Windows' :
       /Mac OS X/.test(ua) ? 'macOS' :
       /Linux/.test(ua) ? 'Linux' : 'Unknown';
-    // The source language here is Arabic, so the connector must be too - this
-    // string lands inside Arabic sentences ("تسجيل دخول جديد من Chrome on
-    // Android"). Brand names stay Latin, which is correct; only the joining
-    // word was wrong. i18n turns ' على ' back into ' on ' for English.
-    return { device: browser + ' على ' + os, platform: /Android|iPhone|iPad|iPod/.test(ua) ? 'mobile' : 'web' };
+    // No connector WORD, in either language. This value is written to the
+    // database, so whatever it says is frozen at signin time and no later
+    // translation pass can reach it - rows already stored keep whichever
+    // language was current when they were written, forever. An earlier attempt
+    // to fix "Chrome on Windows" appearing inside Arabic sentences swapped the
+    // word for 'على' and made the mirror-image bug in English, permanently.
+    //
+    // A separator has no language, reads correctly in both, and needs no
+    // dictionary entry. Rows written before this keep their old wording until
+    // those sessions expire.
+    return { device: browser + ' · ' + os, platform: /Android|iPhone|iPad|iPod/.test(ua) ? 'mobile' : 'web' };
   }
 
   API.recordSession = async () => {

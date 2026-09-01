@@ -101,11 +101,58 @@ window.H = (function () {
     } catch (e) { /* silence beats a broken action */ }
   }
 
+  // Drag a bottom sheet down to dismiss it. Sheets could only be closed by
+  // tapping the backdrop or hunting for a close button; every app in this
+  // category dismisses one with a downward swipe, and the grabber bar added in
+  // CSS is the affordance that says so.
+  //
+  // The scrollTop guard is the part that matters: a sheet is also a scrolling
+  // container, so dragging from anywhere but the top must scroll it, not close
+  // it. Only a drag that begins at the top becomes a dismiss.
+  function attachSheetDrag(sheet, close) {
+    let startY = 0, dy = 0, dragging = false;
+    const BASE = 'translateX(-50%)';
+    const start = e => {
+      if (sheet.scrollTop > 0) return;
+      const t = e.touches && e.touches[0]; if (!t) return;
+      startY = t.clientY; dy = 0; dragging = true;
+      sheet.style.transition = 'none';
+    };
+    const move = e => {
+      if (!dragging) return;
+      const t = e.touches && e.touches[0]; if (!t) return;
+      dy = t.clientY - startY;
+      // Upward does nothing: a sheet is already against the bottom edge.
+      if (dy <= 0) { dy = 0; sheet.style.transform = BASE; return; }
+      sheet.style.transform = BASE + ' translateY(' + dy + 'px)';
+      if (e.cancelable) e.preventDefault();
+    };
+    const end = () => {
+      if (!dragging) return;
+      dragging = false;
+      sheet.style.transition = 'transform .22s ease';
+      // Proportional, so a short sheet does not need the same throw as a tall
+      // one, and capped so a tall one is not a workout.
+      const limit = Math.min(120, sheet.getBoundingClientRect().height * 0.28);
+      if (dy > limit) {
+        sheet.style.transform = BASE + ' translateY(110%)';
+        setTimeout(close, 190);
+      } else {
+        sheet.style.transform = BASE;
+      }
+    };
+    sheet.addEventListener('touchstart', start, { passive: true });
+    sheet.addEventListener('touchmove', move, { passive: false });
+    sheet.addEventListener('touchend', end);
+    sheet.addEventListener('touchcancel', end);
+  }
+
   function modal(content) {
     const bd = el('div', { class: 'backdrop', onclick: close });
     function close() { bd.remove(); content.remove(); }
     document.body.appendChild(bd);
     document.body.appendChild(content);
+    if (content.classList && content.classList.contains('sheet')) attachSheetDrag(content, close);
     return close;
   }
 
