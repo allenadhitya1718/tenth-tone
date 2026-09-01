@@ -77,18 +77,56 @@ Deno.serve(async (req) => {
   // The channel name is the live_streams row id, so ownership is checkable.
   // An audience token is safe for any signed-in user; a publisher token is
   // not, because it would let someone broadcast into another person's stream.
+  // Two kinds of channel arrive here and they are not interchangeable:
+  //
+  //   live stream : channel IS the live_streams row id (a uuid); only the
+  //                 host may publish.
+  //   1:1 call    : channel is calls.channel, a 'call_<random>' string that is
+  //                 not a uuid and has no live_streams row. BOTH parties
+  //                 publish, so both need a publisher token.
+  //
+  // Checking live_streams first broke every call ever placed. Filtering a uuid
+  // column by 'call_x' does not return nothing - it raises Postgres 22P02 - and
+  // this code destructured only { data }, discarding the error, so `stream` came
+  // back null and both sides were refused with "you are not the host of this
+  // stream" before a microphone or camera was ever opened. The call screen,
+  // its timer and answered_at all worked, because signalling is pure Supabase
+  // and never needed the token - which is exactly why this survived testing.
   let role = RtcRole.SUBSCRIBER;
   if (wantsHost) {
-    const { data: stream } = await supabase
-      .from('live_streams')
-      .select('id, host_id, status')
-      .eq('id', channel)
+    // RLS on `calls` only returns rows where the requester is caller or callee,
+    // so finding a row is itself proof of participation.
+    const { data: call, error: callErr } = await supabase
+      .from('calls')
+      .select('id, caller_id, callee_id')
+      .eq('channel', channel)
+      .limit(1)
       .maybeSingle();
+    if (callErr) return json({ error: 'could not check the call' }, 500);
 
-    if (!stream || stream.host_id !== userId) {
-      return json({ error: 'you are not the host of this stream' }, 403);
+    if (call) {
+      if (call.caller_id !== userId && call.callee_id !== userId) {
+        return json({ error: 'you are not a party to this call' }, 403);
+      }
+      role = RtcRole.PUBLISHER;
+    } else {
+      // Not a call, so it must be a live stream. Guard the SHAPE before asking,
+      // or a non-uuid channel raises 22P02 instead of answering "no".
+      const isUuid =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(channel);
+      if (!isUuid) return json({ error: 'unknown channel' }, 403);
+
+      const { data: stream } = await supabase
+        .from('live_streams')
+        .select('id, host_id, status')
+        .eq('id', channel)
+        .maybeSingle();
+
+      if (!stream || stream.host_id !== userId) {
+        return json({ error: 'you are not the host of this stream' }, 403);
+      }
+      role = RtcRole.PUBLISHER;
     }
-    role = RtcRole.PUBLISHER;
   }
 
   const expireAt = Math.floor(Date.now() / 1000) + TTL_SECONDS;

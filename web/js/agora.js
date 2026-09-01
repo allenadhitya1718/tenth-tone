@@ -210,6 +210,35 @@
         onRemote && onRemote(state());
       });
 
+      // Catch-up sweep. 'user-published' could only be registered just now,
+      // because its handler needs remoteAudio/remoteVideo declared above - but
+      // we joined several hundred milliseconds ago, and opening the microphone
+      // and camera took most of that. Anything the other side published inside
+      // that window fired at no listener and is gone; the SDK does not replay
+      // it. startViewer already does this sweep, and a call needs it MORE,
+      // because here both sides publish: whoever answered first would be the
+      // one nobody could hear.
+      for (const user of client.remoteUsers) {
+        try {
+          if (user.hasAudio && !user.audioTrack) {
+            await client.subscribe(user, 'audio');
+            if (user.audioTrack) {
+              remoteAudio.add(user.audioTrack);
+              applySpeakerTo(user.audioTrack);
+              user.audioTrack.play();
+            }
+          }
+          if (user.hasVideo && !user.videoTrack) {
+            await client.subscribe(user, 'video');
+            if (user.videoTrack) {
+              remoteVideo.add(user.videoTrack);
+              if (remoteVideoEl) user.videoTrack.play(remoteVideoEl);
+            }
+          }
+        } catch (e) { onError && onError(e); }
+      }
+      if (client.remoteUsers.length) onRemote && onRemote(state());
+
       function state() {
         return { hasRemoteAudio: remoteAudio.size > 0, hasRemoteVideo: remoteVideo.size > 0 };
       }
