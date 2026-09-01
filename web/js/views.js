@@ -1251,7 +1251,13 @@
         video.dataset.src = videoSrc;
         // Its own still if it has one, otherwise a transparent pixel. Either
         // way, never the WebView's grey play-button placeholder.
-        video.poster = (still && (safeUrl(still) || still)) || BLANK_POSTER;
+        // Blank until the clip is actually near. Setting the real poster here
+        // made all 16 cards fetch their JPEG at once - measured at 900 KB-2.1 MB
+        // landing on the same 1.6 Mbps pipe the first video needs, which pushed
+        // the first painted frame from ~8.7s out to 14.6s on 3G. The src
+        // attach/detach machinery is already gated on nearIo; the poster just
+        // was not using it.
+        video.poster = BLANK_POSTER;
         // No autoplay ATTRIBUTE. It overrides preload entirely — the browser
         // fetches and plays an autoplay video whatever preload says — which is
         // why setting 'metadata' alone changed nothing. Playback is driven from
@@ -1299,6 +1305,11 @@
         // at most about three files are ever in flight instead of twenty.
         function attachSrc() {
           if (video.getAttribute('src')) return;
+          // db.js falls back to `poster_url || video_url`, so a video with no
+          // thumbnail puts its own MP4 in the poster slot. The grid path
+          // already guards this; the feed path did not, and downloaded a
+          // 1,024 KB .mp4 as an Image - the same URL fetched four times over.
+          if (still && !/\.mp4(\?|$)/i.test(still)) video.poster = (safeUrl(still) || still);
           video.setAttribute('src', video.dataset.src);
           // 'metadata', not 'auto'. Attaching happens a full screen before the
           // clip is visible, and 'auto' told the browser to pull the WHOLE
@@ -1721,10 +1732,15 @@
   // muted starts true because browsers block autoplay with sound. The first
 // tap flips it for the session.
 const PLAYBACK = { autoplay: true, dataSaver: false, muted: true };
-try {
-  // A returning visitor who turned sound off keeps it off.
-  if (localStorage.getItem('tt_muted') === '0') PLAYBACK.muted = false;
-} catch (e) {}
+// Deliberately NOT seeded from tt_muted, even though the stored preference is
+// read three lines up in spirit. Starting unmuted makes the browser refuse to
+// autoplay outright: measured on a cold start with tt_muted='0' the first clip
+// reported { muted:false, paused:true, currentTime:0, buffered:8.6s } - eight
+// seconds of video downloaded and sitting on a frozen first frame. Every user
+// who had ever tapped the sound button got that feed on every later launch.
+// armSoundOnFirstGesture() reads tt_muted itself and restores sound on the
+// first touch, so the preference is honoured a few hundred ms later instead of
+// costing the autoplay.
   window.PLAYBACK = PLAYBACK;
 
   async function refreshPlaybackPrefs() {

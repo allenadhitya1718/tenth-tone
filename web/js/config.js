@@ -136,7 +136,7 @@ window.TT_CONFIG = (function () {
   // Keep in step with versionName in android/app/build.gradle. On a device the
   // native shell overwrites it below with the REAL installed version, so a
   // stale constant here can only ever be wrong in the browser.
-  let appVersion = '1.0.6';
+  let appVersion = '1.0.7';
 
   try {
     const cap = window.Capacitor;

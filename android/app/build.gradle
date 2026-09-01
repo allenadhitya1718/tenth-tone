@@ -11,8 +11,8 @@ android {
         // the last one accepted. This sat at 1 through v1.0.0 AND v1.0.1, so the
         // store could only ever have taken the first of them; bump it every
         // release, not every version NAME.
-        versionCode 6
-        versionName "1.0.6"
+        versionCode 7
+        versionName "1.0.7"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
