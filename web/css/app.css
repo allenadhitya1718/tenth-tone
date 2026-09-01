@@ -3937,3 +3937,12 @@ body.dark .vn-wave-pv { --vn-dim: #3f3f47; }
    the composer's send was full-opacity blue over an empty field and swallowed
    the tap silently. */
 .comment-send-btn.is-disabled { opacity: .38; pointer-events: none; }
+
+/* Hashtag rows in search results. Sized to match .user-row's 44px avatar so
+   tags, accounts and sounds line up in one column. */
+.tag-avatar {
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--card-2, #23232b); color: var(--text, #fff);
+  font-size: 20px; font-weight: 800;
+}

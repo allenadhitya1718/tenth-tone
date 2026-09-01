@@ -912,12 +912,21 @@
   API.searchAll = async (query) => {
     const c = await client();
     const term = `%${query.replace(/[%_]/g, '\\$&')}%`;
-    const [profiles, videosRes, soundsRes] = await Promise.all([
+    // Hashtags are searched as first-class results. Discover advertises
+    // trending tags on its own front page, and typing one of them found the
+    // ACCOUNT with a similar name and never the tag - so '#city', with six
+    // videos behind it, was reachable by tapping a trending chip and by no
+    // other route. The leading '#' is stripped so both '#city' and 'city'
+    // work.
+    const tagTerm = `%${query.replace(/^#/, '').replace(/[%_]/g, '\$&')}%`;
+    const [profiles, videosRes, soundsRes, tagsRes] = await Promise.all([
       _searchPeople(query, 20),
       c.from('videos').select('id, description, thumbnail, video_url, likes_count, created_at, user:profiles!videos_user_id_fkey(id,name,handle,avatar_url)').ilike('description', term).eq('is_draft', false).limit(20),
       c.from('sounds').select('*').or(`title.ilike.${term},author_name.ilike.${term}`).limit(20),
+      c.from('hashtags').select('tag, usage_count').ilike('tag', tagTerm).order('usage_count', { ascending: false }).limit(12),
     ]);
     return {
+      hashtags: (tagsRes && tagsRes.data) || [],
       profiles: profiles || [],
       // Videos already obey blocking: can_see_posts_of (0049) refuses across
       // a block in either direction, and the videos policy goes through it.

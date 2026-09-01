@@ -2042,6 +2042,21 @@ function autoPlay(video) {
           }
         }
 
+        // Above videos: a tag is a narrower, more useful answer than the
+        // videos that happen to mention the word.
+        if (showVideos && res.hashtags && res.hashtags.length) {
+          resultsArea.appendChild(el('h3', { class: 'section-title' }, 'الهاشتاقات'));
+          res.hashtags.forEach(h => {
+            resultsArea.appendChild(el('div', { class: 'user-row', style: { cursor: 'pointer' }, onclick: () => go('/tag/' + encodeURIComponent(h.tag)) }, [
+              el('div', { class: 'tag-avatar' }, '#'),
+              el('div', { style: { flex: 1, minWidth: 0 } }, [
+                el('div', { class: 'name trending-text' }, '#' + h.tag),
+                el('div', { class: 'handle' }, fmt(h.usage_count || 0) + ' فيديو'),
+              ]),
+            ]));
+          });
+        }
+
         if (showVideos) {
           if (res.videos && res.videos.length) {
             resultsArea.appendChild(el('h3', { class: 'section-title' }, 'الفيديوهات'));
@@ -6220,11 +6235,14 @@ function autoPlay(video) {
       // coloured initial used everywhere else in the app.
       const av = avatar((n.actor && n.actor.avatar_url) || '', actorName, 46);
 
+      // A system notice is about YOU, and its actor is you, so prefixing the
+      // actor produced "<your name> انتهى بثك" - your own name as the subject of
+      // your own broadcast ending. The sentence is already complete without it.
+      const isSystem = n.type === 'system';
       const body = el('div', { class: 'notif-body' }, [
-        el('div', { class: 'notif-text' }, [
-          el('b', {}, actorName),
-          document.createTextNode(' ' + textFor(n)),
-        ]),
+        el('div', { class: 'notif-text' }, isSystem
+          ? [document.createTextNode(textFor(n))]
+          : [el('b', {}, actorName), document.createTextNode(' ' + textFor(n))]),
         el('div', { class: 'notif-time' }, ago(n.created_at)),
       ]);
 

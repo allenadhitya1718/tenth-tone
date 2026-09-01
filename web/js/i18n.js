@@ -993,6 +993,10 @@
     'لم يتم حفظ تغييراتك. سيتم فقدانها إذا خرجت الآن.': 'Your changes have not been saved. They will be lost if you leave now.',
     'تجاهل': 'Discard',
     'متابعة التعديل': 'Keep editing',
+
+    // Hashtag results in Discover search.
+    'الهاشتاقات': 'Hashtags',
+    ' فيديو': ' videos',
   };
 
   // ── Admin dashboard strings (shares DICT; merged here to keep the literal small) ──
