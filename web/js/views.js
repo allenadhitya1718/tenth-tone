@@ -5463,6 +5463,23 @@ function autoPlay(video) {
 
           followBtn.onclick = async () => {
             const prev = state, prevFollowers = followers;
+
+            // Confirm before unfollowing a PRIVATE account, and only then.
+            // Instagram confirms every unfollow, which is noise on a public
+            // account you can re-follow with one tap. TikTok confirms none,
+            // which is wrong here: leaving a private account means requesting
+            // again and waiting on someone else to approve it, so a mis-tap
+            // costs access you cannot get back yourself.
+            if (prev === FOLLOWING && p.is_private) {
+              const yes = await confirmDialog({
+                title: 'إلغاء المتابعة؟',
+                message: 'هذا حساب خاص. ستحتاج إلى إرسال طلب جديد والانتظار حتى تتم الموافقة عليه.',
+                confirmLabel: 'إلغاء المتابعة',
+                cancelLabel: 'تراجع',
+              });
+              if (!yes) return;
+            }
+
             followBtn.disabled = true;
             try {
               if (prev === FOLLOWING) {

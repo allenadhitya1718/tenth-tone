@@ -997,6 +997,12 @@
     // Hashtag results in Discover search.
     'الهاشتاقات': 'Hashtags',
     ' فيديو': ' videos',
+
+    // Leaving a private account costs a new request and an approval.
+    'إلغاء المتابعة؟': 'Unfollow?',
+    'هذا حساب خاص. ستحتاج إلى إرسال طلب جديد والانتظار حتى تتم الموافقة عليه.': 'This is a private account. You will need to send a new request and wait for it to be approved.',
+    'إلغاء المتابعة': 'Unfollow',
+    'تراجع': 'Cancel',
   };
 
   // ── Admin dashboard strings (shares DICT; merged here to keep the literal small) ──
