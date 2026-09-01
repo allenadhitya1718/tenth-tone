@@ -1,6 +1,6 @@
 {
   "name": "flyp",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "FLYP — social video app, iOS shell via Capacitor",
   "private": true,
   "scripts": {
