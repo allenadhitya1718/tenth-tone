@@ -463,7 +463,7 @@ input, textarea, [contenteditable="true"] {
   flex-direction: column;
   justify-content: center;
   align-items: flex-start;
-  text-align: left;
+  text-align: start;
   line-height: 1.2;
   overflow: hidden;
 }
@@ -683,7 +683,7 @@ body.dark .see-more-link { color: var(--primary-2); }
 .camera { background: #000; color: #fff; height: 100%; position: relative; }
 .camera-preview { position: absolute; inset: 0; background: #1a1a1a; display: flex; align-items: center; justify-content: center; color: #555; }
 .camera-top { position: absolute; top: calc(12px + var(--safe-top)); left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 14px; z-index: 4; }
-.camera-side { position: absolute; right: 14px; top: calc(60px + var(--safe-top)); display: flex; flex-direction: column; gap: 16px; align-items: center; z-index: 4; }
+.camera-side { position: absolute; inset-inline-end: 14px; top: calc(60px + var(--safe-top)); display: flex; flex-direction: column; gap: 16px; align-items: center; z-index: 4; }
 .camera-side-btn { color: #fff; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; background: transparent; border: 0; }
 .camera-bottom { position: absolute; bottom: calc(20px + var(--safe-bottom)); left: 0; right: 0; padding: 0 16px; z-index: 4; }
 .camera-durations { display: flex; gap: 18px; justify-content: center; margin-bottom: 14px; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 700; }

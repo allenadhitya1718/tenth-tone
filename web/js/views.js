@@ -2286,7 +2286,21 @@ function autoPlay(video) {
     window.addEventListener('hashchange', stopAll, { once: true });
 
     function pickMime() {
-      const candidates = ['video/mp4;codecs=h264,aac', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+      // Bare 'video/mp4' is deliberately NOT a candidate. When H.264 is
+      // unavailable Chrome accepts it and fills the mp4 container with VP9,
+      // producing a file named .mp4 that iOS cannot decode - and because the
+      // extension is derived from the container, nothing downstream notices.
+      // Every mp4 candidate here names its codec, so an mp4 we produce is
+      // always H.264. Failing that we fall to webm, which is at least
+      // honestly labelled.
+      const candidates = [
+        'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+        'video/mp4;codecs=h264,aac',
+        'video/mp4;codecs=avc1',
+        'video/webm;codecs=vp9,opus',
+        'video/webm;codecs=vp8,opus',
+        'video/webm',
+      ];
       for (const m of candidates) if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m;
       return '';
     }
