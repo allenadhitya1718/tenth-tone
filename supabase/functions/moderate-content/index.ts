@@ -142,13 +142,26 @@ const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 // first at one call per post, and flash-lite's is several times larger. It also
 // does not think by default, which matters for maxOutputTokens below.
 const PREFERRED_MODELS = [
-  'gemini-2.5-flash-lite',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
   'gemini-flash-lite-latest',
-  'gemini-2.0-flash-lite',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-3.5-flash',
   'gemini-flash-latest',
 ];
+
+// Models this key was OFFERED but cannot actually call. Listing is not
+// permission: gemini-2.5-flash-lite appears in ListModels for this key and
+// answers generateContent with
+//
+//   404 "This model ... is no longer available to new users. Please update
+//        your code to use models/gemini-3.5-flash-lite"
+//
+// So discovery alone was never going to be enough - it picked a name Google
+// had advertised and would not serve. A 404 now retires that name for the life
+// of the instance and the next preference is tried immediately, in the same
+// request, rather than failing open and waiting for a human to notice.
+const deadModels = new Set<string>();
 
 const MODELS_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const endpointFor = (m: string) =>
@@ -169,7 +182,8 @@ let discovery: {
 } = {};
 
 async function resolveModel(): Promise<string | null> {
-  if (resolvedModel) return resolvedModel;
+  if (resolvedModel && !deadModels.has(resolvedModel)) return resolvedModel;
+  resolvedModel = null;
   try {
     const res = await fetch(`${MODELS_URL}?pageSize=200`, {
       headers: { 'x-goog-api-key': GEMINI_API_KEY },
@@ -180,7 +194,7 @@ async function resolveModel(): Promise<string | null> {
       console.warn('[moderate-content] model list failed', res.status, discovery.detail);
       // Fall back to the first preference and let the call surface its own
       // error, rather than refusing to screen because discovery failed.
-      return PREFERRED_MODELS[0];
+      return PREFERRED_MODELS.find((m) => !deadModels.has(m)) ?? null;
     }
     const body = await res.json();
     const usable = new Set<string>(
@@ -192,7 +206,7 @@ async function resolveModel(): Promise<string | null> {
     discovery.listStatus = 200;
     discovery.offered = [...usable].slice(0, 25);
     for (const want of PREFERRED_MODELS) {
-      if (usable.has(want)) {
+      if (usable.has(want) && !deadModels.has(want)) {
         resolvedModel = want;
         discovery.picked = want;
         console.log('[moderate-content] using model', want);
@@ -206,7 +220,7 @@ async function resolveModel(): Promise<string | null> {
     discovery.listStatus = 'threw';
     discovery.detail = e instanceof Error ? e.message : String(e);
     console.warn('[moderate-content] model discovery threw:', discovery.detail);
-    return PREFERRED_MODELS[0];
+    return PREFERRED_MODELS.find((m) => !deadModels.has(m)) ?? null;
   }
 }
 
@@ -744,7 +758,7 @@ Deno.serve(async (req) => {
   // reasoning. One that does can, and returns nothing with finishReason
   // MAX_TOKENS - so give the non-lite fallbacks room rather than have them
   // fail silently.
-  const outputCap = model.includes('lite') ? 512 : 2048;
+  const outputCap = model.includes('lite') ? 1024 : 2048;
   try {
     const res = await fetch(endpointFor(model), {
       method: 'POST',
@@ -812,10 +826,14 @@ Deno.serve(async (req) => {
       if (res.status === 429) answer = { kind: 'fail', reason: 'rate_limited' };
       else if (/API[_ ]?key/i.test(detail)) answer = { kind: 'fail', reason: 'bad_key' };
       else answer = { kind: 'fail', reason: `http_${res.status}` };
-      // A model that resolved once and now 404s has been retired underneath us.
-      // Drop the cache so the next call re-resolves instead of repeating a name
-      // that no longer exists.
-      if (res.status === 404) resolvedModel = null;
+      // A model that resolved once and now 404s has been retired underneath us,
+      // or was never callable by this key in the first place. Retiring the NAME
+      // (not just the cache) is what matters: clearing the cache alone would
+      // re-resolve to the same dead name on the next request and 404 forever.
+      if (res.status === 404) {
+        deadModels.add(model);
+        resolvedModel = null;
+      }
       console.warn('[moderate-content] Gemini', res.status, detail);
     } else {
       answer = readAnswer(await res.json());
