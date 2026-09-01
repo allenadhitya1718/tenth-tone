@@ -171,7 +171,15 @@ Deno.serve(async (req) => {
     if (!rules) return json({ error: 'unknown_bucket' }, 400);
 
     const size = Number(body.size ?? 0);
-    const contentType = String(body.contentType ?? '');
+    // A MIME type's PARAMETERS are not part of the type. MediaRecorder hands
+    // back the codecs it actually chose, so a recorded clip arrives as
+    //   video/mp4;codecs=avc1.42001f,mp4a.40.2
+    // and an exact-match whitelist rejected it as bad_content_type - which
+    // failed EVERY publish from the in-app camera. Compare on the base type and
+    // store the base type; the codecs string is information for a player, not
+    // something to authorise on.
+    const rawContentType = String(body.contentType ?? '');
+    const contentType = rawContentType.split(';')[0].trim().toLowerCase();
     const ext = String(body.ext ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
     if (!Number.isFinite(size) || size <= 0) return json({ error: 'bad_size' }, 400);

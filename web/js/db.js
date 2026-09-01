@@ -308,7 +308,13 @@
     if (!(window.TT_CONFIG && window.TT_CONFIG.r2Uploads)) return null;
     if (!file || !file.size) return null;
 
-    const type = contentType || file.type || 'application/octet-stream';
+    // Base type only. MediaRecorder reports the codecs it chose, so a recorded
+    // clip's file.type is 'video/mp4;codecs=avc1.42001f,mp4a.40.2' - and the
+    // sign endpoint matches the whitelist exactly, so every camera publish came
+    // back bad_content_type. Fixed on the server too, which repairs installed
+    // builds; this keeps the signed type and the uploaded bytes agreeing.
+    const type = String(contentType || file.type || 'application/octet-stream')
+      .split(';')[0].trim().toLowerCase();
     const extension = (ext || (file.name || '').split('.').pop() || '').toLowerCase();
     if (!extension) return null;
 
