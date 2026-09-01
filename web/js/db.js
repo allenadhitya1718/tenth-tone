@@ -370,11 +370,27 @@
     //
     // Drafts are screened too. A draft becomes a post with one tap and the
     // check costs nothing, so skipping them would be a hole with a button on it.
+    // Started here, awaited just above the insert. It runs CONCURRENTLY with
+    // the upload instead of in front of it, which costs nothing in safety: the
+    // clip becomes visible at the videos insert, not at the upload, and that
+    // insert is still gated on the verdict. Nothing blocked is ever published.
+    //
+    // What it buys is the wait. An image scan is ~3-6s and the upload is
+    // 5.2-6.3s; run in sequence that is a ~10s publish, run together it stays
+    // at the upload's own time. The frames are read from the File in parallel
+    // with it being uploaded, which is safe - both are independent reads.
+    //
+    // The cost of a block moves rather than disappearing: the bytes are
+    // already in R2 by then, so a refused clip leaves an orphaned object that
+    // counts against the storage ceiling, and against the author's quota. Same
+    // leak already recorded for deletions in 0068, and blocks are rare.
+    //
+    // .catch here, not at the await: if the upload throws first nothing would
+    // consume this promise and the browser would log an unhandled rejection.
     let verdict = null;
-    if (window.Moderation) {
-      verdict = await window.Moderation.checkVideo(file, description);
-      if (verdict.blocked) throw new Error(verdict.message || 'لا يمكن نشر هذا المحتوى');
-    }
+    const screening = window.Moderation
+      ? window.Moderation.checkVideo(file, description).catch(() => null)
+      : null;
 
     let video_url = null;
     if (file) {
@@ -416,6 +432,13 @@
         const { data: pub } = c.storage.from('videos').getPublicUrl(path);
         video_url = pub.publicUrl;
       }
+    }
+
+    // The gate. Everything above this line is reversible - bytes with no row
+    // pointing at them - and nothing above it is visible to anyone.
+    if (screening) {
+      verdict = await screening;
+      if (verdict && verdict.blocked) throw new Error(verdict.message || 'لا يمكن نشر هذا المحتوى');
     }
 
     const { data, error } = await c.from('videos').insert({
