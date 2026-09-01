@@ -1,6 +1,6 @@
 /* === Mobile views === */
 (function () {
-  const { el, esc, safeUrl, fmt, go, back, toast, modal, ask, confirmDialog, richText, icons, svg, bottomNav, hideNav, topBar, avatar, emptyState, errorState, friendlyError } = window.H;
+  const { el, esc, safeUrl, fmt, go, back, toast, haptic, modal, ask, confirmDialog, richText, icons, svg, bottomNav, hideNav, topBar, avatar, emptyState, errorState, friendlyError } = window.H;
   const DB = window.DB;
   const V = window.Views = {};
 
@@ -841,9 +841,9 @@
       // whole strings, and 'متابعون' is also the profile's followers stat —
       // so this tab was rendering in English as "Followers", the opposite of
       // what it shows. One Arabic word, two meanings, one dictionary entry.
-      el('button', { class: 'feed-tab' + (tab === 'following' ? ' active' : ''), onclick: () => go('/home?tab=following') }, 'متابَعة'),
-      el('button', { class: 'feed-tab' + (tab === 'foryou' ? ' active' : ''), onclick: () => go('/home?tab=foryou') }, 'لك'),
-      el('button', { class: 'feed-tab', onclick: () => go('/live/host-list') }, 'مباشر'),
+      el('button', { class: 'feed-tab' + (tab === 'following' ? ' active' : ''), onclick: () => { haptic('light'); go('/home?tab=following'); } }, 'متابَعة'),
+      el('button', { class: 'feed-tab' + (tab === 'foryou' ? ' active' : ''), onclick: () => { haptic('light'); go('/home?tab=foryou'); } }, 'لك'),
+      el('button', { class: 'feed-tab', onclick: () => { haptic('light'); go('/live/host-list'); } }, 'مباشر'),
     ]);
 
     // ── Sound state, made visible ──
@@ -1485,6 +1485,7 @@
         const prev = followed;
         followed = next;
         window._followedUsers[v.user.id] = followed;
+        haptic(next ? 'medium' : 'light');
         applyFollowUI();
         if (window.API && typeof v.user.id === 'string' && v.user.id.length > 4) {
           try {
@@ -1552,6 +1553,9 @@
         const wasLiked = v.liked;
         v.liked = next;
         v.likes += v.liked ? 1 : -1;
+        // A like is the app's signature gesture and gets the firmer tap;
+        // taking one back is an undo, so it gets the quiet one.
+        haptic(v.liked ? 'medium' : 'light');
         likeBtn.classList.toggle('liked', v.liked);
         likeBtn.querySelector('.feed-action-count').textContent = fmt(v.likes);
         if (typeof v.id === 'string' && v.id.length > 10 && window.API) {
@@ -1587,6 +1591,7 @@
           saveBtn.querySelector('.feed-action-count').textContent = fmt(v.saves);
         };
         paintSave();
+        haptic('light');
         toast(v.saved ? 'تم الحفظ' : 'تم إلغاء الحفظ');
         if (typeof v.id === 'string' && v.id.length > 10 && window.API) {
           try {

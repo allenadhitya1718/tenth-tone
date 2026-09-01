@@ -68,6 +68,39 @@ window.H = (function () {
     }, 2200);
   }
 
+  // ── Haptics ──
+  // @capacitor/haptics has been a dependency since the first build and was
+  // never called once, so the plugin shipped inside the APK doing nothing.
+  // Instagram and TikTok both answer a like, a follow and a tab change with a
+  // short tap; without one, every control in this app feels identical to every
+  // other one.
+  //
+  // Three layers, because the app runs in three places: the Capacitor plugin on
+  // a device, navigator.vibrate in an Android browser, and nothing at all on
+  // desktop and iOS Safari - where silence is correct, not degraded.
+  //
+  // Never awaited and never allowed to throw. Feedback must not be able to fail
+  // the action it is decorating.
+  const VIBE = { light: 12, medium: 22, heavy: 34, success: [10, 40, 16], warning: [22, 60, 22] };
+  function haptic(style) {
+    style = style || 'light';
+    try {
+      const P = window.Capacitor && window.Capacitor.Plugins;
+      const HP = P && P.Haptics;
+      if (HP) {
+        if ((style === 'success' || style === 'warning') && HP.notification) {
+          HP.notification({ type: style.toUpperCase() });
+          return;
+        }
+        if (HP.impact) {
+          HP.impact({ style: style === 'heavy' ? 'HEAVY' : style === 'medium' ? 'MEDIUM' : 'LIGHT' });
+          return;
+        }
+      }
+      if (navigator.vibrate) navigator.vibrate(VIBE[style] || VIBE.light);
+    } catch (e) { /* silence beats a broken action */ }
+  }
+
   function modal(content) {
     const bd = el('div', { class: 'backdrop', onclick: close });
     function close() { bd.remove(); content.remove(); }
@@ -546,5 +579,5 @@ window.H = (function () {
     return generic;
   }
 
-  return { el, esc, safeUrl, fmt, go, back, toast, modal, ask, confirmDialog, richText, icons, svg, bottomNav, hideNav, topBar, avatar, emptyState, errorState, friendlyError };
+  return { el, esc, safeUrl, fmt, go, back, toast, haptic, modal, ask, confirmDialog, richText, icons, svg, bottomNav, hideNav, topBar, avatar, emptyState, errorState, friendlyError };
 })();
