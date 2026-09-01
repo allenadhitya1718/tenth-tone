@@ -4504,7 +4504,7 @@ function autoPlay(video) {
       el('span', {}, 'اسحب للإلغاء'),
     ]);
     const recAbort = el('button', { class: 'vn-btn vn-btn-abort', type: 'button', hidden: true, html: icons.x, title: 'إلغاء', 'aria-label': 'إلغاء التسجيل' });
-    const recStop  = el('button', { class: 'vn-btn vn-btn-stop', type: 'button', hidden: true, html: vnIco.stop, title: 'إيقاف', 'aria-label': 'إيقاف التسجيل' });
+    const recStop  = el('button', { class: 'vn-btn vn-btn-stop', type: 'button', hidden: true, html: vnIco.stop, title: 'إيقاف التسجيل', 'aria-label': 'إيقاف التسجيل' });
     const recBar   = el('div', { class: 'vn-bar', hidden: true }, [
       el('span', { class: 'vn-dot' }), recTime, recWave, recHint, recAbort, recStop,
     ]);
@@ -4517,7 +4517,7 @@ function autoPlay(video) {
 
     // ── playback preview (nothing is sent until send is tapped) ──
     const pvDel   = el('button', { class: 'vn-btn vn-btn-del', type: 'button', html: vnIco.trash, title: 'حذف', 'aria-label': 'حذف التسجيل' });
-    const pvPlay  = el('button', { class: 'vn-btn vn-btn-play', type: 'button', html: icons.play, title: 'تشغيل', 'aria-label': 'تشغيل المعاينة' });
+    const pvPlay  = el('button', { class: 'vn-btn vn-btn-play', type: 'button', html: icons.play, title: 'تشغيل المعاينة', 'aria-label': 'تشغيل المعاينة' });
     const pvWave  = el('canvas', { class: 'vn-wave vn-wave-pv', 'aria-hidden': 'true' });
     const pvTime  = el('span', { class: 'vn-time', dir: 'ltr' }, '0:00');
     const pvSend  = el('button', { class: 'vn-btn vn-btn-send', type: 'button', html: icons.send, title: 'إرسال', 'aria-label': 'إرسال الرسالة الصوتية' });
@@ -4691,7 +4691,7 @@ function autoPlay(video) {
         if (resetPos) { try { vnAudio.currentTime = 0; } catch (e) {} }
       }
       pvPlay.innerHTML = icons.play;
-      pvPlay.title = 'تشغيل';
+      pvPlay.title = 'تشغيل المعاينة';
       pvPlay.setAttribute('aria-label', 'تشغيل المعاينة');
     }
 
@@ -4882,7 +4882,7 @@ function autoPlay(video) {
         const p = vnAudio.play();
         const started = () => {
           pvPlay.innerHTML = vnIco.pause;
-          pvPlay.title = 'إيقاف مؤقت';
+          pvPlay.title = 'إيقاف المعاينة مؤقتًا';
           pvPlay.setAttribute('aria-label', 'إيقاف المعاينة مؤقتًا');
           if (!vnPlayRaf) vnPlayLoop();
         };
@@ -4894,7 +4894,15 @@ function autoPlay(video) {
     }
 
     async function vnSend() {
-      if (!vnBlob) return;
+      // A silent return here is how a Send button comes to do nothing at all:
+      // the preview stays on screen, no message appears, and nothing explains
+      // why. Observed in testing. If the recording is gone the honest move is
+      // to say so and clear the preview, not to sit there.
+      if (!vnBlob) {
+        vnReset();
+        toast('لا يوجد تسجيل لإرساله');
+        return;
+      }
       const blob = vnBlob;
       const mime = blob.type || 'audio/webm';
       const ext = mime.indexOf('mp4') >= 0 ? 'm4a' : mime.indexOf('ogg') >= 0 ? 'ogg' : 'webm';

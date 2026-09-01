@@ -742,6 +742,12 @@
     // these the profile showed "Videos / Saved / مسودات", one Arabic label
     // stranded among English ones.
     'مسودات': 'Drafts',
+    'لا يوجد تسجيل لإرساله': 'There is no recording to send',
+    // 'إيقاف' alone was being translated as 'Deactivate', so the voice-note
+    // pause button read "Deactivate" in English. The fuller phrases win.
+    'إيقاف المعاينة مؤقتًا': 'Pause preview',
+    'تشغيل المعاينة': 'Play preview',
+    'إيقاف التسجيل': 'Stop recording',
     'مسودة': 'Draft',
     'لا توجد مسودات': 'No drafts',
     'المقاطع التي تحفظها كمسودة تظهر هنا قبل نشرها': 'Clips you save as drafts appear here before you publish them',
