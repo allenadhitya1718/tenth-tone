@@ -6333,7 +6333,7 @@ function autoPlay(video) {
     function ago(iso) { if (!iso) return ''; const t = Date.now() - new Date(iso).getTime(); const m = Math.floor(t / 60000); if (m < 1) return 'الآن'; if (m < 60) return m + 'د'; const h = Math.floor(m / 60); if (h < 24) return h + 'س'; return Math.floor(h / 24) + 'ي'; }
 
     function renderComment(c) {
-      cl.appendChild(el('div', { class: 'comment-row' }, [
+      cl.appendChild(el('div', { class: 'comment-row', 'data-comment-id': c.id || '' }, [
         // Was a raw <img src="">, which renders as a broken-image icon for the
         // many users with no photo. avatar() falls back to a coloured initial.
         avatar((c.user && (c.user.avatar_url || c.user.avatar)) || '', (c.user && c.user.name) || '', 32),

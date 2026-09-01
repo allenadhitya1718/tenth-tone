@@ -1050,24 +1050,62 @@
     return rows;
   };
 
+  // A verdict that lands after the row is already in the database. Used by the
+  // comment paths, which insert first so the author is not left watching a
+  // frozen box for the length of a model call.
+  //
+  // Best-effort by design, in both halves. If the delete is refused the comment
+  // simply stands - the same fail-open promise moderation makes everywhere
+  // else, and far better than a half-removed comment. The DOM removal and the
+  // toast are what the author actually perceives, so they run whether or not
+  // the delete succeeded.
+  async function withdraw(c, table, id, selector, message) {
+    try {
+      await c.from(table).delete().eq('id', id);
+    } catch (e) {
+      console.warn('[Moderation] could not withdraw', table, id, e && e.message);
+    }
+    try {
+      if (selector) document.querySelectorAll(selector).forEach(n => n.remove());
+      if (window.H && window.H.toast) window.H.toast(message || 'لا يمكن نشر هذا التعليق');
+    } catch (e) { /* nothing left to do */ }
+  }
+
   API.postComment = async (videoId, text) => {
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
 
-    // Comments are the highest-volume public surface in the app and the one a
-    // stranger is most likely to be hurt by, so this is the check that earns
-    // its keep. Text only, one call, normally well under a second.
-    let verdict = null;
-    if (window.Moderation) {
-      verdict = await window.Moderation.checkText('comment', text);
-      if (verdict.blocked) throw new Error(verdict.message || 'لا يمكن نشر هذا التعليق');
-    }
+    // Comments are the highest-volume public surface in the app, so this is the
+    // check that earns its keep. It runs ALONGSIDE the insert rather than in
+    // front of it.
+    //
+    // It used to be awaited first, on the assumption - written into the comment
+    // that was here - that it ran "normally well under a second". Measured
+    // against Gemini it is 1.3-2.7s, so posting a comment froze the box for
+    // roughly two and a half seconds: the most-used action in the app, and the
+    // place the gap to Instagram shows most.
+    //
+    // The exposure that trades away is smaller than it looks. Screening first
+    // only kept a violating comment private until the insert finished; now it
+    // is visible from the insert until the verdict lands, on the order of a
+    // second. In exchange the author sees their comment at insert speed. A
+    // blocked comment is withdrawn, removed from the open sheet, and its author
+    // told - the same outcome, arriving a moment later.
+    const screening = window.Moderation
+      ? window.Moderation.checkText('comment', text).catch(() => null)
+      : null;
 
     const { data, error } = await c.from('comments').insert({ video_id: videoId, user_id: me, text }).select(`
       id, text, likes_count, created_at,
       user:profiles!comments_user_id_fkey ( id, name, handle, avatar_url )
     `).single();
     if (error) throw error;
-    if (verdict && data && data.id) window.Moderation.attach(verdict, 'comment', data.id);
+
+    // Deliberately not awaited: the caller gets its row now.
+    if (screening) screening.then(verdict => {
+      if (!verdict || !data || !data.id) return;
+      if (!verdict.blocked) { window.Moderation.attach(verdict, 'comment', data.id); return; }
+      withdraw(c, 'comments', data.id, '.comment-row[data-comment-id="' + data.id + '"]', verdict.message);
+    });
     return data;
   };
 
@@ -2473,16 +2511,24 @@
     // Screened and blockable, never queued: live chat is ephemeral and arrives
     // in bursts, and filing a report for every borderline line would bury the
     // reports that matter within minutes of the first busy stream.
-    if (window.Moderation) {
-      const verdict = await window.Moderation.checkText('live_comment', body);
-      if (verdict.blocked) throw new Error(verdict.message || 'لا يمكن نشر هذا التعليق');
-    }
+    // Alongside the insert, for the reason given at postComment - and more so
+    // here. A two-second pause between pressing send and seeing your own line
+    // appear is unusable in a live chat that is scrolling past.
+    const screening = window.Moderation
+      ? window.Moderation.checkText('live_comment', body).catch(() => null)
+      : null;
 
     const { data, error } = await c.from('live_comments')
       .insert({ live_stream_id: liveStreamId, user_id: me, text: body })
       .select('id, text, created_at')
       .single();
     if (error) throw error;
+
+    if (screening) screening.then(verdict => {
+      if (verdict && verdict.blocked && data && data.id) {
+        withdraw(c, 'live_comments', data.id, null, verdict.message);
+      }
+    });
     return data;
   };
 
