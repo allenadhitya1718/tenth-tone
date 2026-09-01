@@ -1079,7 +1079,38 @@
         });
       }
     } catch (e) { /* filters are best-effort - never hide the whole thread */ }
+
+    // Which of these you have liked. One query for the whole thread, keyed on
+    // the ids actually being rendered, rather than a request per row.
+    try {
+      const ids = rows.map(r => r.id).filter(Boolean);
+      if (ids.length) {
+        const { data: mine } = await c.from('comment_likes')
+          .select('comment_id').eq('user_id', me).in('comment_id', ids);
+        const liked = new Set((mine || []).map(r => r.comment_id));
+        rows = rows.map(r => Object.assign({}, r, { liked: liked.has(r.id) }));
+      }
+    } catch (e) { /* the thread still renders; hearts just start empty */ }
     return rows;
+  };
+
+  // ── Liking a comment ──
+  // comments.likes_count is maintained by a trigger (0072), so nothing here
+  // touches it; re-reading the row would race the trigger anyway. The screen
+  // paints optimistically and reverts on failure, the same as video likes.
+  API.likeComment = async (commentId) => {
+    const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
+    const { error } = await c.from('comment_likes').insert({ comment_id: commentId, user_id: me });
+    // Liking twice is not an error worth surfacing - the end state is what the
+    // person asked for either way.
+    if (error && error.code !== '23505') throw error;
+  };
+
+  API.unlikeComment = async (commentId) => {
+    const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
+    const { error } = await c.from('comment_likes')
+      .delete().eq('comment_id', commentId).eq('user_id', me);
+    if (error) throw error;
   };
 
   // A verdict that lands after the row is already in the database. Used by the

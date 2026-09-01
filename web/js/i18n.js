@@ -988,6 +988,7 @@
 
     // Hashtag results in Discover search.
     'الهاشتاقات': 'Hashtags',
+    'أعجبه تعليقك': 'liked your comment',
 
     // Bios of FLYP's own seeded catalog accounts (0040). App content, not
     // user content, so they translate like any other string.
@@ -1978,6 +1979,7 @@
     // Counts the DICT cannot hold, because the number is part of the string.
     // translate() trims and looks the WHOLE string up, then tries these - there
     // is no substring pass, so a partial key like ' تعليقات' never matches.
+    [/^أعجبه تعليقك: "(.*)"$/, (m) => `liked your comment: "${m[1]}"`],
     [/^بدأ بثًا مباشرًا: (.+)$/, (m) => `Started a live: ${m[1]}`],
     [/^(\d+) تعليقات$/, (m) => `${m[1]} comments`],
     [/^(\d+) تعليقًا$/, (m) => `${m[1]} comments`],

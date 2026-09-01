@@ -3978,3 +3978,17 @@ body.dark .vn-wave-pv { --vn-dim: #3f3f47; }
   margin: 8px auto 2px;
   background: currentColor; opacity: .2;
 }
+
+/* Comment likes. Trailing edge of the row, the way Instagram does it - small
+   and quiet, because it sits beside every comment and must not compete with
+   the text. */
+.comment-like-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; padding-top: 2px; }
+.comment-like {
+  background: transparent; border: 0; padding: 2px; cursor: pointer;
+  color: var(--muted); display: flex; align-items: center; justify-content: center;
+}
+.comment-like svg { width: 15px; height: 15px; }
+.comment-like.liked { color: #fe2c55; }
+.comment-like.liked svg { fill: #fe2c55; stroke: #fe2c55; }
+.comment-like:active { transform: scale(.88); }
+.comment-like-n { font-size: 11px; color: var(--muted); min-height: 13px; }

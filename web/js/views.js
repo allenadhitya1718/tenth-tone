@@ -6180,6 +6180,13 @@ function autoPlay(video) {
     }
 
     function textFor(n) {
+      // A comment like reuses type 'like' (0072) because the 0001 constraint
+      // already allows it; the payload is what distinguishes it. Without this
+      // it would report as a like on your video, which it is not.
+      if (n.type === 'like' && n.payload && n.payload.kind === 'comment_like')
+        return n.payload.excerpt
+          ? 'أعجبه تعليقك: "' + n.payload.excerpt + '"'
+          : 'أعجبه تعليقك';
       if (n.type === 'like') return 'أعجبه الفيديو الخاص بك';
       if (n.type === 'follow') return 'بدأ بمتابعتك';
       // A reply carries parent_id; the plain comment notification does not.
@@ -6233,6 +6240,9 @@ function autoPlay(video) {
     // open whatever is being talked about.
     function destinationFor(n) {
       const p = n.payload || {};
+      // A comment like belongs in the thread, not on the video - you are being
+      // told about something you WROTE, and the video alone does not show it.
+      if (n.type === 'like' && p.kind === 'comment_like' && p.video_id) return '/comments/' + p.video_id;
       if ((n.type === 'like' || n.type === 'mention') && p.video_id) return '/v/' + p.video_id;
       if (n.type === 'comment' && p.video_id) return '/comments/' + p.video_id;
       if (n.type === 'message' && p.chat_id) return '/chat/' + p.chat_id;
@@ -6457,6 +6467,35 @@ function autoPlay(video) {
         } }, 'حذف'));
       }
 
+      // The heart, at the trailing edge of the row, where Instagram puts it.
+      // comments.likes_count has existed since 0001 and nothing could ever
+      // raise it, so the control was removed rather than fixed; 0072 adds the
+      // table behind it. Optimistic, and reverts if the write is refused.
+      let liked = !!c.liked, likeN = Number(c.likes_count) || 0;
+      const likeCount = el('span', { class: 'comment-like-n' }, likeN ? fmt(likeN) : '');
+      const likeBtn = el('button', {
+        class: 'comment-like' + (liked ? ' liked' : ''), type: 'button',
+        'aria-label': 'إعجاب', 'aria-pressed': liked ? 'true' : 'false',
+        html: icons.heartOutline,
+      });
+      const paintLike = () => {
+        likeBtn.classList.toggle('liked', liked);
+        likeBtn.setAttribute('aria-pressed', liked ? 'true' : 'false');
+        likeCount.textContent = likeN ? fmt(likeN) : '';
+      };
+      likeBtn.onclick = async () => {
+        if (!c.id || !window.API || !window.API.likeComment) return;
+        const was = liked;
+        liked = !was; likeN = Math.max(0, likeN + (liked ? 1 : -1));
+        haptic(liked ? 'medium' : 'light');
+        paintLike();
+        try { was ? await window.API.unlikeComment(c.id) : await window.API.likeComment(c.id); }
+        catch (e) {
+          liked = was; likeN = Math.max(0, likeN + (was ? 1 : -1));
+          paintLike(); toast('تعذر التحديث');
+        }
+      };
+
       cl.appendChild(el('div', { class: 'comment-row', 'data-comment-id': c.id || '' }, [
         // Was a raw <img src="">, which renders as a broken-image icon for the
         // many users with no photo. avatar() falls back to a coloured initial.
@@ -6466,6 +6505,7 @@ function autoPlay(video) {
           el('div', { class: 'comment-text' }, richText(c.text)),
           el('div', { class: 'comment-meta' }, meta),
         ]),
+        el('div', { class: 'comment-like-wrap' }, [likeBtn, likeCount]),
       ]));
     }
 
