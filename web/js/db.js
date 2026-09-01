@@ -362,6 +362,55 @@
   };
 
   // ---------- Videos ----------
+  // Grabs a still for the feed/grid/share-card poster. V.publish never made
+  // one, so `thumbnail: thumbnail_url || video_url` wrote the MP4's own URL
+  // into the thumbnail column of every video ever published - which is why
+  // share cards render a blank cover and posters never load. The codebase
+  // already carries three workarounds for the symptom (a <video> swap in
+  // notifications, an endsWith('.mp4') guard on the grid) without fixing it.
+  //
+  // Drawn only after 'seeked': on loadedmetadata the dimensions are known but
+  // no frame has been decoded, so the canvas comes out empty. Every failure
+  // path resolves null and the caller falls back to video_url, because a
+  // missing poster must never hold up a publish.
+  function posterFromVideo(file) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const url = URL.createObjectURL(file);
+      const v = Object.assign(document.createElement('video'), {
+        src: url, muted: true, playsInline: true, preload: 'auto',
+      });
+      v.setAttribute('playsinline', '');
+      const cleanup = () => {
+        clearTimeout(timer);
+        try { URL.revokeObjectURL(url); } catch (e) {}
+        try { v.remove(); } catch (e) {}
+      };
+      const done = (val) => { if (!settled) { settled = true; cleanup(); resolve(val); } };
+      const timer = setTimeout(() => done(null), 8000);
+      v.onerror = () => done(null);
+      v.onloadedmetadata = () => {
+        // A little way in: frame 0 of a phone clip is often black or half-exposed.
+        const d = isFinite(v.duration) ? v.duration : 0;
+        v.currentTime = d > 0.2 ? Math.min(d * 0.1, 1.0) : 0;
+      };
+      v.onseeked = () => {
+        try {
+          const w = v.videoWidth, h = v.videoHeight;
+          if (!w || !h) return done(null);
+          const scale = Math.min(720 / w, 1280 / h, 1);
+          const c = Object.assign(document.createElement('canvas'), {
+            width: Math.max(2, Math.round(w * scale)),
+            height: Math.max(2, Math.round(h * scale)),
+          });
+          c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+          c.toBlob(b => done(b && b.size ? b : null), 'image/jpeg', 0.8);
+        } catch (e) { done(null); }
+      };
+      document.body.appendChild(v);
+    });
+  }
+
   API.publishVideo = async ({ file, thumbnail_url, description, music, sound_id = null, privacy = 'public', is_draft = false, allow_comments = true, allow_saving = true }) => {
     const c = await client();
     const userId = await uid();
@@ -440,6 +489,28 @@
       }
     }
 
+    // Poster, uploaded the same two ways the clip is. media-upload already
+    // allows jpg in the videos bucket.
+    let poster_url = thumbnail_url || null;
+    if (!poster_url && file && String(file.type || '').startsWith('video/')) {
+      try {
+        const blob = await posterFromVideo(file);
+        if (blob) {
+          const pf = new File([blob], 'poster.jpg', { type: 'image/jpeg' });
+          poster_url = await API.uploadMedia(pf, { bucket: 'videos', ext: 'jpg', contentType: 'image/jpeg' });
+          if (!poster_url) {
+            const ppath = `${userId}/${Date.now()}-poster.jpg`;
+            const { error: pErr } = await c.storage.from('videos')
+              .upload(ppath, pf, { cacheControl: '31536000', upsert: false, contentType: 'image/jpeg' });
+            if (!pErr) {
+              const { data: ppub } = c.storage.from('videos').getPublicUrl(ppath);
+              poster_url = (ppub && ppub.publicUrl) || null;
+            }
+          }
+        }
+      } catch (e) { console.warn('poster:', e && e.message); }
+    }
+
     // The gate. Everything above this line is reversible - bytes with no row
     // pointing at them - and nothing above it is visible to anyone.
     if (screening) {
@@ -449,7 +520,7 @@
 
     const { data, error } = await c.from('videos').insert({
       user_id: userId, description: description || '', music: music || null,
-      sound_id, video_url, thumbnail: thumbnail_url || video_url, privacy, is_draft,
+      sound_id, video_url, thumbnail: poster_url || video_url, privacy, is_draft,
       allow_comments, allow_saving,
     }).select().single();
     if (error) throw error;
@@ -466,7 +537,7 @@
         const snd = await API.createOriginalSound({
           videoId: data.id,
           title: 'صوت أصلي',
-          coverUrl: thumbnail_url || null,
+          coverUrl: poster_url || null,
           audioUrl: video_url || null,
         });
         if (snd && snd.id) {

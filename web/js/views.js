@@ -3055,9 +3055,13 @@ function autoPlay(video) {
         progressWrap.hidden = false;
         setProgress(0, 'جاري ضغط الفيديو...');
         try {
-          const result = await window.Compress.video(chosenFile, (ratio) => {
+          // Object, not a bare function: video(file, { onProgress }). Passed
+          // positionally, every `if (onProgress)` inside was a silent no-op and
+          // the bar sat at 0% for the whole compression. trim() next door was
+          // already called the right way, which is what hid it.
+          const result = await window.Compress.video(chosenFile, { onProgress: (ratio) => {
             setProgress(ratio * 0.85, 'جاري ضغط الفيديو... ' + Math.round(ratio * 85) + '%');
-          });
+          } });
           fileToUpload = result.file;
           if (!result.skipped) {
             const saved = Math.round((1 - result.compressedSize / result.originalSize) * 100);

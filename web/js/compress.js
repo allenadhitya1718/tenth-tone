@@ -335,6 +335,12 @@ window.Compress = (function () {
         video: { codec: 'avc', width: w, height: h },
         audio: { codec: 'aac', numberOfChannels: 2, sampleRate: 48000 },
         fastStart: 'in-memory',
+        // mp4-muxer defaults to 'strict', which THROWS unless the first video
+        // chunk lands at DTS exactly 0. Measured first DTS of 6.941s and
+        // 15.924s on real clips when the encoder was briefly saturated at
+        // startup. Belt and braces with the frame-0 guard above: that keeps the
+        // rebase sub-frame, so this can never introduce A/V desync.
+        firstTimestampBehavior: 'offset',
       });
 
       let encodeError = null;
@@ -402,7 +408,14 @@ window.Compress = (function () {
             timestamp: Math.max(0, Math.round(mediaTime * 1e6)),
             duration: FRAME_US,
           });
-          if (vEnc.encodeQueueSize <= 8) {
+          // The first frame must never be dropped. Dropping one mid-stream
+          // costs a frame; dropping the FIRST moves the track's first timestamp
+          // off zero, which the muxer refuses outright (see
+          // firstTimestampBehavior below) - and the whole WebCodecs path is
+          // then abandoned for a fallback that stretches the clip, which the
+          // drift guard also throws away, so the ORIGINAL uncompressed file is
+          // uploaded after 40-60s of apparent work.
+          if (vEnc.encodeQueueSize <= 8 || frameCount === 0) {
             vEnc.encode(frame, { keyFrame: frameCount % 60 === 0 });
             frameCount++;
           } else {

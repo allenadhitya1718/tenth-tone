@@ -218,13 +218,18 @@ Deno.serve(async (req) => {
     // the confirm step measures it. This is the bound on that gap: at most a
     // handful of unmeasured objects per person at any moment, rather than
     // thousands. A real upload needs two (the clip and its poster).
-    const { count: inflight } = await db
+    const { count: inflight, error: inflightErr } = await db
       .from('media_objects')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('status', 'pending')
       .gt('created_at', new Date(Date.now() - 15 * 60 * 1000).toISOString());
 
+    // A failed count must not read as "nothing in flight". Destructuring only
+    // `count` made this cap fail OPEN on any query error - and it is a
+    // count:'exact' head scan, so it is the query most likely to time out under
+    // exactly the load the cap exists for.
+    if (inflightErr) return json({ error: 'inflight_check_failed', detail: inflightErr.message }, 500);
     if ((inflight ?? 0) >= 4) {
       return json({ error: 'too_many_pending' }, 429);
     }
