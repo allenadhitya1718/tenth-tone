@@ -1166,7 +1166,18 @@
         if (focusId) {
           try { focused = await window.API.fetchVideo(focusId); } catch (e) { console.warn('deep-linked video fetch failed:', e); }
         }
-        const real = await window.API.fetchFeed({ tab });
+        // onFresh matters here. fetchFeed is stale-while-revalidate with a
+        // 30s TTL and feed: keys also persist to localStorage for 24h, so
+        // without this the cached list is painted and the background refresh
+        // is thrown away. Measured: mute someone, reload 10s later, they are
+        // still there - three of their videos - while the Muted screen
+        // promises they are gone. The inbox already does exactly this.
+        const real = await window.API.fetchFeed({ tab, onFresh: (rows) => {
+          if (!rows || !rows.length) return;
+          list = rows.map((r, i) => adapt(r, i));
+          scroll.innerHTML = '';
+          renderItems();
+        } });
         if (real && real.length) {
           let rows = real;
           if (focused) rows = [focused].concat(real.filter(r => r.id !== focused.id));
@@ -9528,6 +9539,9 @@ function autoPlay(video) {
       { icon: 'user', label: 'المتابعون الجدد', right: tg('notif_follows') },
       { icon: 'mail', label: 'الرسائل', right: tg('notif_messages') },
       { icon: 'video', label: 'البثوث المباشرة', right: tg('notif_live') },
+      // 0030 gates gift notifications on setting_bool(notif_gifts) and the
+      // client default includes it, but there was no way to turn it off.
+      { icon: 'sparkle', label: 'الهدايا', right: tg('notif_gifts') },
     ]));
 
     (async () => {
@@ -9584,7 +9598,14 @@ function autoPlay(video) {
         list.appendChild(el('div', { class: 'dev-row' + (isMe ? ' me' : '') }, [
           el('span', { class: 'dev-icon', html: icons[kind] || icons.settings }),
           el('div', { class: 'dev-meta' }, [
-            el('div', { class: 'dev-name' }, r.device || 'جهاز غير معروف'),
+            // Device strings are FROZEN at sign-in, so old rows keep whichever
+            // connector word was current when they were written - and an English
+            // reader sees "Chrome على Windows" sitting in an English list. New rows
+            // use a neutral separator; normalise the historic ones at display time,
+            // since no translation pass can reach a stored value.
+            el('div', { class: 'dev-name' },
+               String(r.device || 'جهاز غير معروف')
+                 .replace(/\s+على\s+/g, ' · ').replace(/\s+on\s+/g, ' · ')),
             // Two nodes, not one string: the dictionary matches whole text
             // nodes, so a concatenated label would never translate.
             el('div', { class: 'dev-sub' }, [

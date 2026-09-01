@@ -4052,3 +4052,28 @@ body.dark .vn-wave-pv { --vn-dim: #3f3f47; }
 .photo-view-name { color: #fff; font-weight: 700; font-size: 16px; }
 .profile-avatar.tappable { cursor: pointer; }
 .profile-avatar.tappable:active { transform: scale(.97); }
+
+/* ── No browser-painted tap wash, anywhere ──
+   Android's WebView paints a translucent block over whatever you touch and
+   fades it out. On the bottom nav that came out as a teal RECTANGLE around a
+   round icon - it ignores the element's shape entirely - which reads as a
+   rendering fault rather than feedback. It was already suppressed on call
+   buttons; every other control in the app still had it.
+   The app provides its own feedback: :active scale on the controls that have
+   it, the .active class on the nav, and haptics on a device. */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Removing the wash must not remove keyboard focus. :focus-visible only paints
+   for keyboard and assistive navigation, never for a finger or a mouse. */
+button:focus, a:focus, [role="button"]:focus, .bn-item:focus { outline: none; }
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible,
+.bn-item:focus-visible, [role="switch"]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Something has to answer the finger now that the wash is gone. A brief press
+   state on the nav, shaped like the icon rather than a box around it. */
+.bn-item { -webkit-tap-highlight-color: transparent; }
+.bn-item:active { opacity: .55; transition: opacity .08s ease; }

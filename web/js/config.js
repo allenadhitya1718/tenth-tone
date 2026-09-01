@@ -147,8 +147,14 @@ window.TT_CONFIG = (function () {
           window.TT_CONFIG.appVersion = info.version;
           // Repaint anything already showing the fallback.
           try {
+            // Keep the label, replace only the number. Writing the bare
+            // version here dropped the word "Version" - and its translation -
+            // the moment Capacitor resolved on a real device, which browser
+            // testing could never show.
+            var en = false;
+            try { en = localStorage.getItem('tt-lang') === 'en'; } catch (e) {}
             document.querySelectorAll('[data-app-version]').forEach(function (el) {
-              el.textContent = info.version;
+              el.textContent = (en ? 'Version ' : '\u0627\u0644\u0625\u0635\u062f\u0627\u0631 ') + info.version;
             });
           } catch (e) {}
         }

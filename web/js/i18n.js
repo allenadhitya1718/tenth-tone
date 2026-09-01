@@ -388,7 +388,6 @@
     'الرسائل': 'Messages',
     'المحتوى والعرض': 'Content & Display',
     'اللغة': 'Language',
-    'العربية': 'Arabic',
     'الوضع الداكن': 'Dark mode',
     'تشغيل تلقائي للفيديو': 'Autoplay videos',
     'حفظ بيانات الإنترنت': 'Data saver',
@@ -987,6 +986,7 @@
 
     // Hashtag results in Discover search.
     'الهاشتاقات': 'Hashtags',
+    'الهدايا': 'Gifts',
     'لا يستقبل هذا الشخص الرسائل': 'This person is not accepting messages',
 
     // Returned by the moderate-content Edge Function, not built in the app -
