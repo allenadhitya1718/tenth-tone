@@ -867,6 +867,13 @@
       class: 'feed-sound', type: 'button',
       onclick: (e) => {
         e.stopPropagation();          // the feed's own tap handler also toggles
+        // armSoundOnFirstGesture() listens on document in the CAPTURE phase, so
+        // on the first gesture it has already run setMuted(false) by the time
+        // this fires. Toggling here turned sound straight back off AND wrote
+        // tt_muted='1', which kills the automatic arming on every later launch.
+        // The clip-tap handler consumes the same flag; this one did not, so the
+        // bug survived on the very control added to advertise the fix.
+        if (window._ttSoundJustArmed) { window._ttSoundJustArmed = false; paintSound(); return; }
         setMuted(!PLAYBACK.muted);
         paintSound();
       },
@@ -882,7 +889,21 @@
     paintSound();
     // The first gesture unmutes without going through this button, so the icon
     // has to follow the state rather than own it.
-    document.addEventListener('pointerdown', () => setTimeout(paintSound, 60), { capture: true });
+    // Twice, and cleaned up. The arming handler flips the state synchronously,
+    // but the clip's own tap-to-toggle sits behind a 260ms double-tap timer -
+    // so a single repaint at 60ms always painted the state the tap was about to
+    // change, leaving the icon exactly one gesture behind from the second tap
+    // onward. Without the removal, every visit to /home also left another
+    // permanent document listener writing into a detached button.
+    const repaintSound = () => { setTimeout(paintSound, 60); setTimeout(paintSound, 340); };
+    document.addEventListener('pointerdown', repaintSound, { capture: true });
+    window.addEventListener('hashchange', () => {
+      document.removeEventListener('pointerdown', repaintSound, { capture: true });
+      // 5. The flag is set by ANY first gesture but consumed only by a tap on a
+      // clip, so entering the feed via the nav swallowed the first deliberate
+      // mute. Leaving the screen is a safe point to drop it.
+      window._ttSoundJustArmed = false;
+    }, { once: true });
     tabs.appendChild(soundBtn);
 
     root.appendChild(tabs);
@@ -2936,6 +2957,7 @@ function autoPlay(video) {
       descInput.setSelectionRange(pos, pos);
       descInput.dispatchEvent(new Event('input'));
     }
+    attachMentions(descInput);
     wrap.appendChild(el('div', { class: 'pub-quick' }, [
       el('button', { class: 'pub-chip', onclick: () => insertAtCaret('#') }, '# هاشتاج'),
       el('button', { class: 'pub-chip', onclick: () => insertAtCaret('@') }, '@ إشارة'),
@@ -4127,8 +4149,22 @@ function autoPlay(video) {
       const shareCard = (!m.attachment_url && (!m.type || m.type === 'text'))
         ? buildShareCard(m.text) : null;
       if (m.attachment_url && (m.type === 'image' || m.type === 'video')) {
-        const tag = m.type === 'image' ? Object.assign(document.createElement('img'), { src: m.attachment_url, style: 'max-width:220px;border-radius:8px' })
+        const tag = m.type === 'image' ? Object.assign(document.createElement('img'), { src: m.attachment_url, style: 'max-width:220px;border-radius:8px;cursor:pointer' })
                                        : Object.assign(document.createElement('video'), { src: m.attachment_url, controls: true, style: 'max-width:220px;border-radius:8px' });
+        // A thumbnail should open. For a video the inline controls own the tap,
+        // so it gets an explicit expand button rather than stealing play/pause.
+        if (m.type === 'image') {
+          tag.addEventListener('click', () => openChatMedia(m.attachment_url, 'image'));
+          tag.setAttribute('role', 'button');
+          tag.setAttribute('aria-label', '\u0641\u062a\u062d \u0627\u0644\u0635\u0648\u0631\u0629');
+        } else {
+          const expand = el('button', { class: 'msg-expand', type: 'button',
+                                        'aria-label': '\u0641\u062a\u062d \u0627\u0644\u0641\u064a\u062f\u064a\u0648',
+                                        title: '\u0641\u062a\u062d \u0627\u0644\u0641\u064a\u062f\u064a\u0648',
+                                        onclick: (e) => { e.stopPropagation(); openChatMedia(m.attachment_url, 'video'); } },
+                            '\u2921');
+          bubble.appendChild(expand);
+        }
         bubble.appendChild(tag);
       } else if (m.attachment_url && m.type === 'voice') {
         bubble.appendChild(Object.assign(document.createElement('audio'), { src: m.attachment_url, controls: true }));
@@ -5318,6 +5354,7 @@ function autoPlay(video) {
       // Removed — it fabricated messages the other user never wrote.
     }
 
+    attachMentions(inputField);
     inputField.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -6151,6 +6188,196 @@ function autoPlay(video) {
     box.addEventListener('click', () => close());
   }
 
+  // -- Opening a photo or video someone sent you --
+  // A chat attachment rendered as a 220px thumbnail and that was the end of
+  // it: tapping did nothing, there was no way to see it at any useful size,
+  // and no way to keep it. Receiving a picture you cannot look at properly or
+  // save is the kind of gap that makes a chat feel unfinished.
+  function openChatMedia(url, kind) {
+    if (!url) return;
+    const isVideo = kind === 'video';
+    const media = isVideo
+      ? Object.assign(document.createElement('video'),
+          { src: url, controls: true, autoplay: true, playsInline: true, className: 'mv-media' })
+      : Object.assign(document.createElement('img'), { src: url, alt: '', className: 'mv-media' });
+    if (isVideo) media.setAttribute('playsinline', '');
+
+    const toastOr = (fn, failMsg) => async () => {
+      try { await fn(); } catch (e) {
+        // AbortError is the person dismissing the share sheet, not a failure.
+        if (e && e.name === 'AbortError') return;
+        toast(failMsg);
+      }
+    };
+
+    // Share: prefer sending the actual file, so it arrives as a photo rather
+    // than as a link the other app has to fetch (and may not be allowed to).
+    const share = toastOr(async () => {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const name = 'flyp.' + (isVideo ? 'mp4' : 'jpg');
+      const file = new File([blob], name, { type: blob.type || (isVideo ? 'video/mp4' : 'image/jpeg') });
+      if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+        await navigator.share({ files: [file] });
+        return;
+      }
+      if (navigator.share) { await navigator.share({ url }); return; }
+      await navigator.clipboard.writeText(url);
+      toast('\u062a\u0645 \u0646\u0633\u062e \u0627\u0644\u0631\u0627\u0628\u0637');
+    }, '\u062a\u0639\u0630\u0631 \u0627\u0644\u0645\u0634\u0627\u0631\u0643\u0629');
+
+    // Save: an <a download> is inert inside an Android WebView, so the system
+    // share sheet is the honest route to the gallery there. The anchor is the
+    // fallback for a real browser, where it does work.
+    const save = toastOr(async () => {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const name = 'flyp-' + Date.now() + '.' + (isVideo ? 'mp4' : 'jpg');
+      const file = new File([blob], name, { type: blob.type || (isVideo ? 'video/mp4' : 'image/jpeg') });
+      const nativeShell = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+      if (nativeShell && navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+        await navigator.share({ files: [file] });
+        return;
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { try { URL.revokeObjectURL(a.href); a.remove(); } catch (e) {} }, 4000);
+      toast('\u062a\u0645 \u0627\u0644\u062d\u0641\u0638');
+    }, '\u062a\u0639\u0630\u0631 \u0627\u0644\u062d\u0641\u0638');
+
+    const bar = el('div', { class: 'mv-bar' }, [
+      el('button', { class: 'mv-btn', type: 'button', 'aria-label': '\u0645\u0634\u0627\u0631\u0643\u0629',
+                     onclick: (e) => { e.stopPropagation(); share(); } },
+         [el('span', { html: icons.share || '' }), el('small', {}, '\u0645\u0634\u0627\u0631\u0643\u0629')]),
+      el('button', { class: 'mv-btn', type: 'button', 'aria-label': '\u062d\u0641\u0638',
+                     onclick: (e) => { e.stopPropagation(); save(); } },
+         [el('span', { html: icons.download || '' }), el('small', {}, '\u062d\u0641\u0638')]),
+    ]);
+
+    const box = el('div', { class: 'media-view' }, [
+      el('button', { class: 'mv-close', type: 'button', 'aria-label': '\u0625\u063a\u0644\u0627\u0642',
+                     html: icons.x, onclick: () => close() }),
+      media,
+      bar,
+    ]);
+    const close = modal(box);
+    // Tapping the backdrop closes; tapping the media or the buttons does not.
+    box.addEventListener('click', (e) => { if (e.target === box) close(); });
+    media.addEventListener('click', (e) => e.stopPropagation());
+  }
+
+  // -- Typing @ should suggest people --
+  // API.searchHandles has existed since 0035 and had ZERO callers. The publish
+  // screen's "@" chip inserted a bare at-sign and left you to spell the handle
+  // from memory; get one character wrong and the mention silently matches
+  // nobody. Every comparable app completes it as you type.
+  //
+  // Attaches to any <input> or <textarea>. Returns a detach function.
+  function attachMentions(input) {
+    if (!input || input._mentionsOn) return () => {};
+    input._mentionsOn = true;
+
+    let box = null, items = [], active = -1, seq = 0;
+
+    function closeBox() {
+      if (box) { box.remove(); box = null; }
+      items = []; active = -1;
+    }
+
+    // The @token immediately before the caret, if there is one. Requires the @
+    // to start a word so an email address does not open the menu.
+    function tokenAtCaret() {
+      const pos = input.selectionStart == null ? input.value.length : input.selectionStart;
+      const upto = input.value.slice(0, pos);
+      const m = /(^|[\s\n])@([A-Za-z0-9_.]{1,30})$/.exec(upto);
+      if (!m) return null;
+      return { prefix: m[2], start: pos - m[2].length - 1, end: pos };
+    }
+
+    function choose(p) {
+      const t = tokenAtCaret();
+      if (!t) return closeBox();
+      const before = input.value.slice(0, t.start);
+      const after = input.value.slice(t.end);
+      const insert = '@' + p.handle + ' ';
+      input.value = before + insert + after;
+      const caret = before.length + insert.length;
+      try { input.setSelectionRange(caret, caret); } catch (e) {}
+      closeBox();
+      input.focus();
+      // Anything watching the field for a dirty/enabled state must see this.
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function paint() {
+      if (!items.length) return closeBox();
+      if (!box) {
+        box = el('div', { class: 'mention-menu' });
+        document.body.appendChild(box);
+      }
+      box.innerHTML = '';
+      items.forEach((p, i) => {
+        const row = el('div', { class: 'mention-row' + (i === active ? ' active' : '') }, [
+          avatar(p.avatar_url || '', p.name || p.handle || '', 30),
+          el('div', { class: 'mention-who' }, [
+            el('div', { class: 'mention-handle' }, '@' + (p.handle || '')),
+            el('div', { class: 'mention-name' }, p.name || ''),
+          ]),
+        ]);
+        // mousedown, not click: click fires after the field has already lost
+        // focus and closed the menu.
+        row.addEventListener('mousedown', (e) => { e.preventDefault(); choose(p); });
+        row.addEventListener('touchstart', (e) => { e.preventDefault(); choose(p); }, { passive: false });
+        box.appendChild(row);
+      });
+      // Sits directly above the field, which on a phone is just above the
+      // keyboard - the only place it can be seen while typing.
+      const r = input.getBoundingClientRect();
+      box.style.left = Math.round(r.left) + 'px';
+      box.style.width = Math.round(r.width) + 'px';
+      box.style.bottom = Math.round(innerHeight - r.top + 6) + 'px';
+    }
+
+    async function refresh() {
+      const t = tokenAtCaret();
+      if (!t || !t.prefix) return closeBox();
+      const mine = ++seq;
+      try {
+        const rows = await window.API.searchHandles(t.prefix, 6);
+        if (mine !== seq) return;            // a later keystroke already won
+        items = rows || [];
+        active = items.length ? 0 : -1;
+        paint();
+      } catch (e) { closeBox(); }
+    }
+
+    const onInput = () => refresh();
+    const onKey = (e) => {
+      if (!box || !items.length) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); active = (active + 1) % items.length; paint(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); active = (active - 1 + items.length) % items.length; paint(); }
+      else if (e.key === 'Enter' || e.key === 'Tab') {
+        if (active >= 0) { e.preventDefault(); e.stopPropagation(); choose(items[active]); }
+      } else if (e.key === 'Escape') { closeBox(); }
+    };
+    const onBlur = () => setTimeout(closeBox, 150);
+
+    input.addEventListener('input', onInput);
+    input.addEventListener('keydown', onKey, true);   // capture: beat the send-on-Enter handler
+    input.addEventListener('blur', onBlur);
+
+    return function detach() {
+      closeBox();
+      input._mentionsOn = false;
+      input.removeEventListener('input', onInput);
+      input.removeEventListener('keydown', onKey, true);
+      input.removeEventListener('blur', onBlur);
+    };
+  }
+
   V.editProfile = () => {
     hideNav();
     const u = DB.me;
@@ -6889,6 +7116,7 @@ function autoPlay(video) {
       sendCommentBtn.classList.toggle('is-disabled', empty);
     };
     cInput.addEventListener('input', paintSend);
+    attachMentions(cInput);
     paintSend();
 
     cInput.addEventListener('keydown', (e) => {
