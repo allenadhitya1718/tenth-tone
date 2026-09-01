@@ -2098,7 +2098,11 @@ function autoPlay(video) {
           if (res.videos && res.videos.length) {
             resultsArea.appendChild(el('h3', { class: 'section-title' }, 'الفيديوهات'));
             const grid = el('div', { class: 'video-grid' });
-            res.videos.forEach((v, i) => grid.appendChild(createVideoCard(v, i, () => go('/home'))));
+            // Open THAT video, not the top of the feed. Tapping a clip on someone's
+            // profile dropped you into an unrelated For You feed - the video you
+            // asked for was simply not what opened. The same handler on the
+            // hashtag, sound and saved grids already routed to /v/<id>.
+            res.videos.forEach((v, i) => grid.appendChild(createVideoCard(v, i, () => go(isRealId(v.id) ? '/v/' + v.id : '/home'))));
             resultsArea.appendChild(grid);
           }
         }
@@ -4512,7 +4516,17 @@ function autoPlay(video) {
       };
       const tempNode = appendMessage(temp); msgs.scrollTop = msgs.scrollHeight;
       if (window.API && typeof id === 'string' && id.length >= 30) {
-        try { await window.API.sendMessage({ chatId: id, text: temp.text, type, file: f }); }
+        try {
+          const saved = await window.API.sendMessage({ chatId: id, text: temp.text, type, file: f });
+        // Claim the id, exactly as the text path does. appendMessage dedupes on
+        // m.id and an optimistic bubble has none, so without this the realtime
+        // echo of the saved row drew a SECOND copy - the sender saw their own
+        // attachment twice until they left the chat and came back.
+        if (saved && saved.id) {
+          renderedIds.add(saved.id);
+          if (tempNode) tempNode.dataset.msgId = saved.id;
+        }
+        }
         catch (e) { undoOptimistic(tempNode); toast(sendFailMessage(e)); }
       }
     }
@@ -4530,7 +4544,17 @@ function autoPlay(video) {
       const tempNode = appendMessage({ from_user_id: myUserId || 'me', text: link, created_at: new Date().toISOString(), type: 'location' });
       msgs.scrollTop = msgs.scrollHeight;
       if (window.API && typeof id === 'string' && id.length >= 30) {
-        try { await window.API.sendMessage({ chatId: id, text: link, type: 'location' }); }
+        try {
+          const saved = await window.API.sendMessage({ chatId: id, text: link, type: 'location' });
+        // Claim the id, exactly as the text path does. appendMessage dedupes on
+        // m.id and an optimistic bubble has none, so without this the realtime
+        // echo of the saved row drew a SECOND copy - the sender saw their own
+        // attachment twice until they left the chat and came back.
+        if (saved && saved.id) {
+          renderedIds.add(saved.id);
+          if (tempNode) tempNode.dataset.msgId = saved.id;
+        }
+        }
         catch (e) { undoOptimistic(tempNode); toast(sendFailMessage(e)); }
       }
     }
@@ -4561,7 +4585,17 @@ function autoPlay(video) {
       const tempMsg = { from_user_id: myUserId || 'me', text: '', created_at: new Date().toISOString(), type: 'video', attachment_url: URL.createObjectURL(f) };
       const tempNode = appendMessage(tempMsg); msgs.scrollTop = msgs.scrollHeight;
       if (window.API && typeof id === 'string' && id.length >= 30) {
-        try { await window.API.sendMessage({ chatId: id, text: '', type: 'video', file: f }); }
+        try {
+          const saved = await window.API.sendMessage({ chatId: id, text: '', type: 'video', file: f });
+        // Claim the id, exactly as the text path does. appendMessage dedupes on
+        // m.id and an optimistic bubble has none, so without this the realtime
+        // echo of the saved row drew a SECOND copy - the sender saw their own
+        // attachment twice until they left the chat and came back.
+        if (saved && saved.id) {
+          renderedIds.add(saved.id);
+          if (tempNode) tempNode.dataset.msgId = saved.id;
+        }
+        }
         catch (e) { undoOptimistic(tempNode); toast(sendFailMessage(e)); }
       }
       videoInput.value = '';
@@ -5071,7 +5105,17 @@ function autoPlay(video) {
       msgs.scrollTop = msgs.scrollHeight;
       vnReset();                        // frees the preview URL, not localUrl
       if (window.API && isRealId(id)) {
-        try { await window.API.sendMessage({ chatId: id, text: '', type: 'voice', file }); }
+        try {
+          const saved = await window.API.sendMessage({ chatId: id, text: '', type: 'voice', file });
+        // Claim the id, exactly as the text path does. appendMessage dedupes on
+        // m.id and an optimistic bubble has none, so without this the realtime
+        // echo of the saved row drew a SECOND copy - the sender saw their own
+        // attachment twice until they left the chat and came back.
+        if (saved && saved.id) {
+          renderedIds.add(saved.id);
+          if (tempNode) tempNode.dataset.msgId = saved.id;
+        }
+        }
         catch (e) { undoOptimistic(tempNode); toast(sendFailMessage(e)); }
       }
     }
@@ -5507,7 +5551,11 @@ function autoPlay(video) {
           const grid = fresh.querySelector('.video-grid');
           if (grid) {
             grid.innerHTML = '';
-            videos.forEach((v, i) => grid.appendChild(createVideoCard(v, i, () => go('/home'))));
+            // Open THAT video, not the top of the feed. Tapping a clip on someone's
+            // profile dropped you into an unrelated For You feed - the video you
+            // asked for was simply not what opened. The same handler on the
+            // hashtag, sound and saved grids already routed to /v/<id>.
+            videos.forEach((v, i) => grid.appendChild(createVideoCard(v, i, () => go(isRealId(v.id) ? '/v/' + v.id : '/home'))));
           }
         }
         root.replaceWith(fresh);
@@ -5665,7 +5713,11 @@ function autoPlay(video) {
           // than blanking the grid.
           if (!videos.length) return;
           grid.innerHTML = '';
-          videos.forEach((v, i) => grid.appendChild(createVideoCard(v, i, () => go('/home'))));
+          // Open THAT video, not the top of the feed. Tapping a clip on someone's
+          // profile dropped you into an unrelated For You feed - the video you
+          // asked for was simply not what opened. The same handler on the
+          // hashtag, sound and saved grids already routed to /v/<id>.
+          videos.forEach((v, i) => grid.appendChild(createVideoCard(v, i, () => go(isRealId(v.id) ? '/v/' + v.id : '/home'))));
         }
         paintGrid(isFollowing);
         // Same as the own-profile path: derived from the list already loaded.
@@ -10738,6 +10790,12 @@ function autoPlay(video) {
               // the avatar rather than covering it with a black rectangle.
               remoteVideo.hidden = !(st && st.hasRemoteVideo);
               if (!remoteVideo.hidden) videoStage.hidden = false;
+              // Once their picture is on screen, the identity block has done
+              // its job and must get out of the way. It was staying put - the
+              // avatar disc, the name, the timer and the "VIDEO CALL" label all
+              // sat on top of the other person's face for the whole call. Every
+              // video calling app collapses this the moment video arrives.
+              root.classList.toggle('has-remote-video', !remoteVideo.hidden);
             }
             paintMedia();
           },
@@ -10918,19 +10976,57 @@ function autoPlay(video) {
       }, 35000);
     }
 
-    async function boot() {
-      if (!window.API || !window.SB) return;
+    // ── Receiving a call has to be reliable, not merely wired up ──
+    //
+    // This was a one-shot boot() at DOMContentLoaded that returned for good if
+    // getUser() came back null - and at that moment the Supabase session is
+    // often still being restored, so it frequently did. Adding retries then
+    // introduced a race of its own: several timers passed the guard during the
+    // same await and opened three duplicate channels.
+    //
+    // Measured across runs with two accounts, the failure moved around: once
+    // the callback fired and no card appeared, once the subscription was not
+    // attached until AFTER the call had been placed, so the realtime INSERT
+    // arrived at nobody. Both end the same way - the phone never rings.
+    //
+    // So: claim the flag synchronously (no await before it), subscribe FIRST
+    // because that needs no user object of our own, and keep a slow poll as the
+    // safety net. Realtime is a delivery optimisation here, not the source of
+    // truth - a ringing row in the database is.
+    let armed = false;
+    let poll = null;
+
+    async function checkPending() {
+      if (overlay) return;                       // already ringing
       try {
-        const u = await window.SB.getUser();
-        if (!u) return;
         const pending = await window.API.fetchIncomingCall();
         if (pending) show(pending);
-        window.API.subscribeToIncomingCalls(row => show(row));
-      } catch (e) { /* calls are optional - never block the app */ }
+      } catch (e) { /* offline or signed out - the next tick tries again */ }
+    }
+
+    function boot() {
+      if (armed) return;                         // set BEFORE any await
+      if (!window.API || !window.SB) return;
+      armed = true;
+
+      // Needs no user of its own - subscribeToIncomingCalls resolves the id
+      // internally - so it can go on immediately rather than after getUser().
+      try { window.API.subscribeToIncomingCalls(function (row) { show(row); }); }
+      catch (e) { armed = false; return; }       // let a later attempt retry
+
+      checkPending();                            // anything ringing right now
+      // Cheap, and it closes every gap above: a dropped socket, a call placed
+      // in the second before we subscribed, a session that arrived late.
+      if (!poll) poll = setInterval(checkPending, 10000);
     }
 
     if (document.readyState !== 'loading') boot();
     else document.addEventListener('DOMContentLoaded', boot);
+    try { window.SB.onAuthChange(function () { boot(); checkPending(); }); } catch (e) {}
+    [300, 1000, 2500, 6000].forEach(function (ms) { setTimeout(boot, ms); });
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) { boot(); checkPending(); }
+    });
   })();
 
   // Map view ID alias

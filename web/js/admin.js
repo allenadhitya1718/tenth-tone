@@ -615,7 +615,7 @@
           };
           tb.appendChild(tr);
         });
-      } catch (e) { tb.innerHTML = '<tr><td colspan="5" class="table-empty">' + e.message + '</td></tr>'; }
+      } catch (e) { tb.innerHTML = '<tr><td colspan="5" class="table-empty">' + esc(e.message) + '</td></tr>'; }
     }
     let t; searchIn.addEventListener('input', () => { clearTimeout(t); t = setTimeout(load, 250); });
     statusSel.addEventListener('change', load);
@@ -830,7 +830,7 @@
           };
           tb.appendChild(tr);
         });
-      } catch (e) { tb.innerHTML = '<tr><td colspan="7" class="table-empty">' + e.message + '</td></tr>'; }
+      } catch (e) { tb.innerHTML = '<tr><td colspan="7" class="table-empty">' + esc(e.message) + '</td></tr>'; }
     }
     let t; searchIn.addEventListener('input', () => { clearTimeout(t); t = setTimeout(load, 250); });
     load();
@@ -945,12 +945,22 @@
         const typeMap = { video: 'فيديو', comment: 'تعليق', user: 'حساب', live_stream: 'بث' };
         reports.forEach(r => {
           const tr = el('tr');
+          // esc() on every field. reports.reason is free text written by any
+          // user, has no CHECK constraint and no trigger that inspects it, and
+          // an attacker can POST straight to /rest/v1/reports without touching
+          // the UI. This template interpolated it raw into innerHTML - in the
+          // admin origin, which is same-origin with the user app and loads
+          // db.js, so the payload could read the admin's session out of
+          // localStorage and call every admin RPC as them. There is no CSP on
+          // either host to fall back on. Proved by rendering a hostile row.
+          // Every other row template in this file already escapes; this was
+          // the one that did not.
           tr.innerHTML = `
-            <td><strong>${typeMap[r.target_type] || r.target_type}</strong></td>
-            <td><code style="font-size:11px">${(r.target_id || '').slice(0, 8)}</code></td>
-            <td>${(r.reporter && r.reporter.name) || '-'}</td>
-            <td>${r.reason}</td>
-            <td>${new Date(r.created_at).toLocaleString(admLocale())}</td>
+            <td><strong>${esc(typeMap[r.target_type] || r.target_type || '')}</strong></td>
+            <td><code style="font-size:11px">${esc((r.target_id || '').slice(0, 8))}</code></td>
+            <td>${esc((r.reporter && r.reporter.name) || '-')}</td>
+            <td>${esc(r.reason || '')}</td>
+            <td>${esc(new Date(r.created_at).toLocaleString(admLocale()))}</td>
             <td><div class="row-actions">
               <button class="btn-sm btn-danger" data-act="resolve">حسم بإجراء</button>
               <button class="btn-sm btn-secondary" data-act="dismiss">رفض</button>
@@ -967,7 +977,7 @@
           };
           tb.appendChild(tr);
         });
-      } catch (e) { tb.innerHTML = '<tr><td colspan="6" class="table-empty">' + e.message + '</td></tr>'; }
+      } catch (e) { tb.innerHTML = '<tr><td colspan="6" class="table-empty">' + esc(e.message) + '</td></tr>'; }
     }
     load();
     return page;
@@ -1010,7 +1020,7 @@
           ]));
           grid.appendChild(card);
         });
-      } catch (e) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">' + e.message + '</div>'; }
+      } catch (e) { grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">' + esc(e.message) + '</div>'; }
     })();
     return page;
   }
@@ -1054,7 +1064,7 @@
           tr.appendChild(el('td', {}, new Date(L.created_at).toLocaleString(admLocale())));
           tb.appendChild(tr);
         });
-      } catch (e) { tb.innerHTML = '<tr><td colspan="4" class="table-empty">' + e.message + '</td></tr>'; }
+      } catch (e) { tb.innerHTML = '<tr><td colspan="4" class="table-empty">' + esc(e.message) + '</td></tr>'; }
     })();
     return page;
   }
@@ -1721,7 +1731,7 @@
       if (path !== '/login-admin') loadQueueCounts();
     } catch (e) {
       console.error(e);
-      root.innerHTML = '<div style="padding:40px">خطأ: ' + e.message + '</div>';
+      root.innerHTML = '<div style="padding:40px">خطأ: ' + esc(e.message) + '</div>';
     }
   }
 

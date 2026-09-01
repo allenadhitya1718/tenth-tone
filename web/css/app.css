@@ -3992,3 +3992,27 @@ body.dark .vn-wave-pv { --vn-dim: #3f3f47; }
 .comment-like.liked svg { fill: #fe2c55; stroke: #fe2c55; }
 .comment-like:active { transform: scale(.88); }
 .comment-like-n { font-size: 11px; color: var(--muted); min-height: 13px; }
+
+/* ── A video call should show the other person, not a card over them ──
+   The avatar, name, timer and "VIDEO CALL" label are what you look at while
+   it rings. Once their camera arrives they are in the way: they sat centred
+   on the far side's face for the entire call. Collapse to a small caption at
+   the top, the way every phone does it. */
+.call-screen.has-remote-video .call-avatar,
+.call-screen.has-remote-video .call-kind,
+.call-screen.has-remote-video .call-media-note { display: none; }
+
+.call-screen.has-remote-video .call-body {
+  position: absolute; top: calc(12px + var(--safe-top)); left: 0; right: 0;
+  bottom: auto; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  pointer-events: none;               /* never swallow a tap meant for the video */
+  background: linear-gradient(180deg, rgba(0,0,0,.45) 0%, transparent 100%);
+  padding-bottom: 18px;
+}
+.call-screen.has-remote-video .call-name {
+  font-size: 15px; font-weight: 700; text-shadow: 0 1px 4px rgba(0,0,0,.6);
+}
+.call-screen.has-remote-video .call-status {
+  font-size: 12.5px; opacity: .85; text-shadow: 0 1px 4px rgba(0,0,0,.6);
+}
