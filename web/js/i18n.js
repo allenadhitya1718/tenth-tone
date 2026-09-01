@@ -944,6 +944,28 @@
     'هدية مرسلة': 'Gift sent',
     'هدية مستلمة': 'Gift received',
     'لا توجد عمليات': 'No transactions',
+
+    // ── Failure messages from the data layer ──
+    // These are thrown by db.js and supabase.js rather than rendered from a
+    // view, so they never went through a screen that had been translated. An
+    // English user hit a daily upload limit and got a sentence in Arabic - at
+    // the one moment the wording actually has to be understood.
+    //
+    // Three are fragments, because the code concatenates a number into them.
+    // apply() matches on substrings as well as whole strings, so a fragment
+    // translates inside the assembled sentence.
+    'وصلت إلى حد الرفع اليومي (': 'You have reached the daily upload limit (',
+    '). حاول غدًا.': '). Try again tomorrow.',
+    'حجم الملف كبير جدًا (الحد الأقصى ': 'File is too large (maximum ',
+    ' ميجابايت)': ' MB)',
+    'لا يمكن نشر هذا المحتوى': 'This content cannot be posted',
+    'لا يمكن نشر هذا التعليق': 'This comment cannot be posted',
+    'لا يمكن استخدام هذا العنوان': 'This title cannot be used',
+    'لا يمكن استخدام هذه الصورة': 'This image cannot be used',
+    'لا يمكن حفظ هذه المعلومات': 'This information cannot be saved',
+    'التعليق طويل جدًا': 'Comment is too long',
+    'تعذر نشر المسودة': 'Could not publish the draft',
+    'الاسم مطلوب': 'Name is required',
   };
 
   // ── Admin dashboard strings (shares DICT; merged here to keep the literal small) ──
