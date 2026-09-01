@@ -3867,3 +3867,18 @@ body.dark .vn-wave-pv { --vn-dim: #3f3f47; }
   font-size: 11px; font-weight: 800; padding: 5px 11px; border-radius: 999px;
 }
 .draft-publish:active { transform: scale(.94); }
+
+/* Sound state in the feed. Sits at the trailing edge of the tab row, where
+   Instagram and TikTok both put it, and is deliberately quiet — it is a
+   status indicator first and a control second. */
+.feed-sound {
+  position: absolute; inset-inline-end: 12px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%; cursor: pointer; padding: 0;
+  background: rgba(0,0,0,.32); color: #fff; backdrop-filter: blur(8px);
+}
+.feed-sound svg { width: 17px; height: 17px; }
+.feed-sound:active { transform: translateY(-50%) scale(.9); }
+/* Muted is the state worth noticing, so it is the one that gets emphasis. */
+.feed-sound:not(.on) { background: rgba(0,0,0,.55); }
+.feed-tabs { position: relative; }

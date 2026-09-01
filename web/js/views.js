@@ -845,6 +845,37 @@
       el('button', { class: 'feed-tab' + (tab === 'foryou' ? ' active' : ''), onclick: () => go('/home?tab=foryou') }, 'لك'),
       el('button', { class: 'feed-tab', onclick: () => go('/live/host-list') }, 'مباشر'),
     ]);
+
+    // ── Sound state, made visible ──
+    // The feed starts muted because browsers refuse to autoplay with sound,
+    // and armSoundOnFirstGesture() turns it on at the first tap. All of that
+    // worked; none of it was visible. Watching a silent clip, there was no way
+    // to tell whether the VIDEO has no audio or the APP is muted — and most of
+    // the seeded demo clips are stock footage with no audio at all, so the
+    // honest answer was usually "neither is broken". Reported as "audio is not
+    // playing", which is exactly what it looks like.
+    const soundBtn = el('button', {
+      class: 'feed-sound', type: 'button',
+      onclick: (e) => {
+        e.stopPropagation();          // the feed's own tap handler also toggles
+        setMuted(!PLAYBACK.muted);
+        paintSound();
+      },
+    });
+    function paintSound() {
+      const on = !PLAYBACK.muted;
+      soundBtn.innerHTML = on ? (icons.speaker || '') : (icons.speakerOff || '');
+      soundBtn.classList.toggle('on', on);
+      soundBtn.title = on ? 'كتم الصوت' : 'تشغيل الصوت';
+      soundBtn.setAttribute('aria-label', soundBtn.title);
+      try { if (window.I18N) window.I18N.apply(soundBtn); } catch (e) {}
+    }
+    paintSound();
+    // The first gesture unmutes without going through this button, so the icon
+    // has to follow the state rather than own it.
+    document.addEventListener('pointerdown', () => setTimeout(paintSound, 60), { capture: true });
+    tabs.appendChild(soundBtn);
+
     root.appendChild(tabs);
 
     const scroll = el('div', { class: 'feed-scroll' });

@@ -742,6 +742,10 @@
     // these the profile showed "Videos / Saved / مسودات", one Arabic label
     // stranded among English ones.
     'مسودات': 'Drafts',
+    // Whole phrases, or the dictionary substitutes the first word and leaves
+    // the rest: 'كتم الصوت' was rendering as "Mute الصوت".
+    'كتم الصوت': 'Mute',
+    'تشغيل الصوت': 'Unmute',
     'لا يوجد تسجيل لإرساله': 'There is no recording to send',
     // 'إيقاف' alone was being translated as 'Deactivate', so the voice-note
     // pause button read "Deactivate" in English. The fuller phrases win.
