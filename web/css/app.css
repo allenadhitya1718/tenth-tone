@@ -350,7 +350,7 @@ input, textarea, [contenteditable="true"] {
   .tap-heart { animation-duration: 1ms; }
 }
 .feed-actions {
-  position: absolute; right: 8px; bottom: calc(80px + var(--safe-bottom)); z-index: 4;
+  position: absolute; inset-inline-end: 8px; bottom: calc(80px + var(--safe-bottom)); z-index: 4;
   display: flex; flex-direction: column; align-items: center;
   /* Fixed spacing pushed the avatar off the top of short viewports, so the
      gap scales with viewport height and clamps on small and large screens. */
@@ -396,9 +396,9 @@ input, textarea, [contenteditable="true"] {
 }
 
 .feed-info {
-  position: absolute; left: 16px; bottom: calc(63.5px + var(--safe-bottom)); z-index: 4;
+  position: absolute; inset-inline-start: 16px; bottom: calc(63.5px + var(--safe-bottom)); z-index: 4;
   color: #fff; max-width: calc(100% - 90px);
-  text-align: left;
+  text-align: start;
 }
 /* Inline follow button beside the handle (replaced the old "HOT" badge). */
 .inline-follow {
