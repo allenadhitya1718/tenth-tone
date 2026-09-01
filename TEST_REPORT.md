@@ -192,25 +192,33 @@ pipeline overnight.
 
 ## Still open
 
-**Finding #14 — blocking does not hide the profile row.** `0054`'s policy is
-written correctly and the `blocks` row is correct, so something else is
-permitting the read. Postgres OR-s permissive policies together, so one extra
-policy defeats it — the same failure mode as the admin storage policies found
-earlier today. Run this:
+**Finding #14 — RESOLVED by 0070, verified with two accounts.**
 
-```sql
-select polname, pg_get_expr(polqual, polrelid) as using_expr
-  from pg_policy
- where polrelid = 'public.profiles'::regclass
-   and polcmd in ('r', '*')
- order by polname;
-```
+Blocking never hid a profile. The cause was not the policy: `0054`'s rule is
+correct, the deployed definition matched the file, and there was only ever one
+SELECT policy. All three were checked and all three were fine.
 
-Expect exactly one (`profiles read public`). If more appear, the extra one is
-the cause — paste me the result and I'll write the fix.
+The failure was one level down. That policy asks whether a row exists in
+`blocks` — and `blocks` carries its own RLS from `0004`, where only the
+BLOCKER may read their own block rows. So the subquery ran as the blocked
+user, the database hid the evidence from them, `NOT EXISTS` came back true,
+and the profile was returned. **The policy was guarding against exactly the
+person who could not see the row it depended on.**
 
-Impact is limited: a blocked user cannot search, message, or see videos. They
-could read a name and bio by navigating directly.
+`0070` moves the check into a SECURITY DEFINER helper, which runs as its owner
+and is not subject to the caller's RLS. Deliberately one-directional:
+`is_blocked_between()` already exists and is definer, but checks both ways —
+using it would have hidden each user from the other and turned the Blocked
+Users screen into a list of empty rows nobody could unblock, which is the
+exact mistake `0054` left itself a note about.
+
+Verified end to end: before the block B could read A; after it the row came
+back null; A's Blocked Users list still showed B by name; after unblocking, B
+could read A again.
+
+Worth remembering the shape — a policy correct in isolation and wrong in
+composition. Reading either policy finds nothing. Only running it as the
+blocked user does.
 
 **Not implemented, not broken:** there is no way to edit a posted video's
 caption, and no typing indicator or read receipts. Neither is a bug; both are
