@@ -6337,6 +6337,14 @@ function autoPlay(video) {
       // Last resort. An empty string leaves a row that says nothing happened,
       // which is worse than a vague sentence — the person cannot even tell
       // there is something they are failing to read.
+      // The admin broadcast composer writes { title, body }, not { text }, so
+      // every announcement ever sent rendered as the fallback below while the
+      // composer's own preview showed both lines correctly.
+      if (n.type === 'system' && n.payload && (n.payload.title || n.payload.body)) {
+        const t = String(n.payload.title || '').trim();
+        const bd = String(n.payload.body || '').trim();
+        return t && bd ? (t + ' — ' + bd) : (t || bd);
+      }
       return (n.payload && n.payload.text) || 'تحديث جديد';
     }
 
@@ -7683,6 +7691,17 @@ function autoPlay(video) {
 
     // Ghost-mode state (Snap-style: hide my pin from everyone)
     let ghostMode = false;
+    // Opening the map is NOT consent. V.map never read the stored preference,
+    // so it wrote every fix with sharing_enabled: true and kept pushing while
+    // the screen was open - turning sharing ON for someone who had it off, and
+    // flipping the settings toggle behind their back. The in-app privacy screen
+    // says "we do not read your location at all unless you switch location
+    // sharing on yourself", so this was the app contradicting its own promise.
+    let sharingAllowed = false;
+    const sharingReady = (async () => {
+      try { sharingAllowed = !!(await window.API.fetchMyLocationSettings()).sharing_enabled; }
+      catch (e) { sharingAllowed = false; }
+    })();
 
     // Top controls overlay — back, ghost toggle, settings
     const ghostBtn = el('button', { class: 'icon-btn', style: { background: '#fff' }, title: 'الوضع الخفي' }, '👻');
@@ -7693,7 +7712,8 @@ function autoPlay(video) {
       toast(ghostMode ? 'الوضع الخفي مُفعَّل — موقعك مخفي' : 'الوضع الخفي مُعطَّل');
       try {
         if (window.API && lastFix) {
-          await window.API.upsertLocation({ lat: lastFix.lat, lng: lastFix.lng, accuracy: lastFix.accuracy, sharing_enabled: !ghostMode });
+          await sharingReady;
+          if (sharingAllowed) await window.API.upsertLocation({ lat: lastFix.lat, lng: lastFix.lng, accuracy: lastFix.accuracy, sharing_enabled: !ghostMode });
         }
       } catch (e) {}
       // Show/hide my own pin locally too
@@ -7901,7 +7921,8 @@ function autoPlay(video) {
           if (!ghostMode) myMarker.addTo(map);
           myMarker.bindPopup('<div style="text-align:center;font-family:Cairo,sans-serif" dir="rtl"><strong>أنت هنا</strong></div>');
           try {
-            if (window.API) await window.API.upsertLocation({ lat: lastFix.lat, lng: lastFix.lng, accuracy: lastFix.accuracy, sharing_enabled: !ghostMode });
+            await sharingReady;
+            if (window.API && sharingAllowed) await window.API.upsertLocation({ lat: lastFix.lat, lng: lastFix.lng, accuracy: lastFix.accuracy, sharing_enabled: !ghostMode });
           } catch (e) {}
         }, () => {
           // Permission denied or error — keep Riyadh center
@@ -7910,7 +7931,7 @@ function autoPlay(video) {
         // Watch position and push updates
         const watchId = navigator.geolocation.watchPosition(async pos => {
           lastFix = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy };
-          try { if (window.API) await window.API.upsertLocation({ lat: lastFix.lat, lng: lastFix.lng, accuracy: lastFix.accuracy, sharing_enabled: !ghostMode }); } catch (e) {}
+          try { await sharingReady; if (window.API && sharingAllowed) await window.API.upsertLocation({ lat: lastFix.lat, lng: lastFix.lng, accuracy: lastFix.accuracy, sharing_enabled: !ghostMode }); } catch (e) {}
           if (myMarker) myMarker.setLatLng([lastFix.lat, lastFix.lng]);
         }, () => {}, { maximumAge: 30000 });
         window.addEventListener('hashchange', () => { try { navigator.geolocation.clearWatch(watchId); } catch (e) {} }, { once: true });
@@ -8004,7 +8025,11 @@ function autoPlay(video) {
 
         // Demo pins so the map is explorable with no real location data.
         // `DB.users` is empty outside demo mode, so this never fires there.
-        if (friends.length === 0 && tracked.length === 0 && DB && DB.users && DB.users.length >= 6) {
+        // DEMO, not just "are there demo rows loaded". data.js is on every
+        // page, so DB.users.length >= 6 is ALWAYS true and every real user with
+        // nobody sharing saw six invented people with real-looking avatars,
+        // Riyadh coordinates and "3 minutes ago" - with dead profile links.
+        if (DEMO && friends.length === 0 && tracked.length === 0 && DB && DB.users && DB.users.length >= 6) {
           const mockLocations = [
             { user_id: 'u1', name: 'سارة أحمد', handle: 'sarah_art', avatar: DB.users[0].avatar, lat: 24.7136, lng: 46.6753, accuracy: 12, updated_at: new Date(Date.now() - 3 * 60000).toISOString() },
             { user_id: 'u2', name: 'عمر خالد', handle: 'omar_dev', avatar: DB.users[1].avatar, lat: 24.7240, lng: 46.6850, accuracy: 15, updated_at: new Date(Date.now() - 8 * 60000).toISOString() },

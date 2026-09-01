@@ -1920,7 +1920,12 @@
   // 'live' is included: someone you follow starting a broadcast is exactly
   // the kind of one-off event this feed is for. 'message' stays out — a DM
   // already announces itself in the inbox.
-  const ACTIVITY_TYPES = ['like', 'comment', 'follow', 'mention', 'system', 'live'];
+  // 'follow_request' belongs here. textFor and destinationFor both handle it,
+  // and 0053 added it to the type constraint specifically so the row could
+  // exist - but it was never added to this filter, so every follow request was
+  // written, never fetched and never counted. A private account's only route to
+  // a pending request was four levels deep in Settings.
+  const ACTIVITY_TYPES = ['like', 'comment', 'follow', 'mention', 'system', 'live', 'follow_request'];
 
   API.fetchNotifications = async () => {
     const c = await client(); const me = await uid(); if (!me) return [];
@@ -2359,7 +2364,11 @@
     if (!me) return { sharing_enabled: false, visibility: 'friends' };
     const { data, error } = await c.from('user_locations')
       .select('sharing_enabled, visibility').eq('user_id', me).maybeSingle();
-    if (error || !data) return { sharing_enabled: false, visibility: 'friends' };
+    // A failed read is not consent withdrawn. Collapsing the two meant a
+    // transient error silently revoked sharing - and, with the map fix above,
+    // would silently disable it for someone who had turned it on.
+    if (error) throw error;
+    if (!data) return { sharing_enabled: false, visibility: 'friends' };
     return { sharing_enabled: !!data.sharing_enabled, visibility: data.visibility || 'friends' };
   };
 
