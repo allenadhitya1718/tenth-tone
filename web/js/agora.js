@@ -13,6 +13,35 @@
   // is a 32-bit unsigned int, so use the range.
   function newUid() { return Math.floor(Math.random() * 2147483646) + 1; }
 
+  // ── Real earpiece / loudspeaker routing ──
+  // A WebView cannot do this: routing belongs to the OS. The call screen was
+  // faking it by dropping the remote track's volume to 40% while the button
+  // said "earpiece", so both settings came out of the loudspeaker - which is
+  // exactly what testers reported. AudioRoutePlugin (Android, registered in
+  // MainActivity) calls AudioManager.setSpeakerphoneOn, with
+  // MODE_IN_COMMUNICATION, which is the part that makes the earpiece reachable
+  // at all.
+  //
+  // Returns whether the OS actually honoured it: a connected headset or
+  // Bluetooth device can refuse the switch, and the UI should show the truth
+  // rather than what was asked for. Resolves null off-device, where the volume
+  // fallback below is all there is.
+  async function routeAudio(on) {
+    try {
+      const p = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AudioRoute;
+      if (!p || !p.setSpeaker) return null;
+      const r = await p.setSpeaker({ on: !!on });
+      return r && typeof r.speakerOn === 'boolean' ? r.speakerOn : null;
+    } catch (e) { return null; }
+  }
+
+  async function releaseAudioRoute() {
+    try {
+      const p = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AudioRoute;
+      if (p && p.reset) await p.reset();
+    } catch (e) { /* leaving the mode set is not worth failing a hang-up over */ }
+  }
+
   let sdkPromise = null;
   function loadSdk() {
     if (sdkPromise) return sdkPromise;
@@ -195,7 +224,7 @@
     // to flip a CSS class and call it muted, so "muted" was a claim the UI
     // made rather than a fact about the microphone, and the two could
     // disagree with nothing to catch it.
-    async startCall({ channel, uid, withVideo, localVideoEl, remoteVideoEl, onRemote, onError }) {
+    async startCall({ channel, uid, withVideo, localVideoEl, remoteVideoEl, onRemote, onError, onRouteChange }) {
       if (!AGORA_APP_ID) throw new Error('AGORA_APP_ID not configured');
       const AgoraRTC = await loadSdk();
       AgoraRTC.setLogLevel(2);
@@ -239,15 +268,18 @@
       // of an audio publish alone would black out the avatar screen for a video
       // call in which the other side has their camera off.
       const remoteVideo = new Set();
+      // Starts on the LOUDSPEAKER deliberately: this is a social app opened in
+      // the hand, not a phone raised to the ear, and a call that starts silent-
+      // seeming because it is on the earpiece reads as broken.
       let speakerOn = true;
+      routeAudio(true);
 
       function applySpeakerTo(track) {
-        // Web has no earpiece/loudspeaker switch: routing is decided by the
-        // OS, and changing it needs a native audio plugin this app does not
-        // ship. What IS controllable is the playback level, which is the
-        // audible part of the difference. setVolume is synchronous and
-        // cannot report failure, so the caller verifies by re-reading below.
-        try { track.setVolume(speakerOn ? 100 : 40); return true; }
+        // Volume is the FALLBACK now, not the mechanism. On a device
+        // routeAudio() moves the audio to the earpiece properly; in a browser
+        // there is no routing to be had, so a level difference is still better
+        // than a button that does nothing at all.
+        try { track.setVolume(speakerOn ? 100 : 55); return true; }
         catch (e) { onError && onError(e); return false; }
       }
 
@@ -337,6 +369,17 @@
           // Report the truth: if every track refused, the setting did not
           // take and the caller must not draw it as though it had.
           if (remoteAudio.size && !applied) speakerOn = before;
+          // The real routing. Async, so the caller gets the volume answer
+          // immediately and the OS answer corrects it a moment later - the
+          // device is the authority, not us, because a headset or Bluetooth
+          // connection can refuse the switch.
+          routeAudio(speakerOn).then(actual => {
+            if (typeof actual === 'boolean' && actual !== speakerOn) {
+              speakerOn = actual;
+              remoteAudio.forEach(t => applySpeakerTo(t));
+              onRouteChange && onRouteChange(actual);
+            }
+          });
           return speakerOn;
         },
 
@@ -346,6 +389,10 @@
           if (cam) { try { cam.close(); } catch (e) {} }
           remoteAudio.clear();
           remoteVideo.clear();
+          // Put the device's audio mode back. Leaving it in
+          // MODE_IN_COMMUNICATION makes every later sound on the phone behave
+          // as though a call were still running.
+          await releaseAudioRoute();
           await client.leave().catch(() => {});
         },
       };

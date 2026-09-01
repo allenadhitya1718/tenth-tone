@@ -10783,6 +10783,10 @@ function autoPlay(video) {
           // Fires when the other side publishes or stops publishing. The
           // speaker button is dead until there is remote audio to route, so
           // it has to be repainted when that arrives rather than only on tap.
+          // The device is the authority on routing: a connected headset or
+          // Bluetooth speaker can refuse the switch, and the button must then
+          // show what actually happened rather than what was asked for.
+          onRouteChange: () => { paintMedia(); },
           onRemote: (st) => {
             if (isVideo) {
               // Only show the far-side surface once they are actually sending
