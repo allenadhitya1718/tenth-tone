@@ -3458,11 +3458,38 @@ function autoPlay(video) {
     return root;
   };
 
+  // ── Map tiles ──
+  // Esri World Street Map rather than OpenStreetMap's own raster tiles.
+  //
+  // Checked rather than assumed: the same Riyadh tile (z12/2579/1757) was
+  // pulled from three providers and looked at.
+  //
+  //   OSM    labels in Arabic ONLY - right for the primary audience, and an
+  //          unreadable map for anyone reading the app in English.
+  //   CARTO  Latin only, and the tile now arrives watermarked
+  //          "API KEY REQUIRED", so it is no longer keyless.
+  //   Esri   BOTH, stacked - 'الملك عبد الله' above 'Al Malik Abdullah'.
+  //
+  // Esri is the only one of the three that serves both languages at once, and
+  // it needs no key. It asks for attribution in return, which is given below.
+  //
+  // Note the axis order: Esri is /{z}/{y}/{x}, OSM is /{z}/{x}/{y}. Swapping
+  // provider without swapping that gives a map of the wrong part of the world.
+  //
+  // Both constants in one place so the whole app moves together - there were
+  // three separate copies of the OSM URL before this.
+  const MAP_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
+  const MAP_ATTRIB = '© Esri · OpenStreetMap';
+  function mapTileSrc(z, x, y) {
+    return MAP_TILE_URL.replace('{z}', z).replace('{y}', y).replace('{x}', x);
+  }
+
   // ===== Location sharing (picker + map preview) =====
-  // Deliberately key-free. Tiles come from the same public OpenStreetMap
-  // endpoint the /map screen already uses, and the only geocoder is
-  // Nominatim (OSM's own, free). No paid provider is configured anywhere in
-  // this repo and none is introduced here.
+  // Deliberately key-free. Tiles come from the same endpoint the /map screen
+  // uses (see MAP_TILE_URL above - Esri's, since it is the only one of the
+  // three tested that labels in Arabic AND Latin), and the only geocoder is
+  // Nominatim, OpenStreetMap's own and free. No API key and no paid provider
+  // is configured anywhere in this repo and none is introduced here.
 
   // The wire format is unchanged: a location message is still a plain Google
   // Maps link in `text` with type 'location'. That means messages already in
@@ -3522,7 +3549,7 @@ function autoPlay(video) {
       for (let tx = Math.floor(left / 256); tx <= Math.floor((left + w - 1) / 256); tx++) {
         const wrapped = ((tx % n) + n) % n; // the world repeats east-west
         const img = el('img', {
-          src: 'https://tile.openstreetmap.org/' + zoom + '/' + wrapped + '/' + ty + '.png',
+          src: mapTileSrc(zoom, wrapped, ty),
           alt: '', loading: 'lazy', decoding: 'async',
           style: {
             position: 'absolute', width: '256px', height: '256px',
@@ -3536,7 +3563,7 @@ function autoPlay(video) {
       }
     }
     box.appendChild(el('span', { class: 'msg-map-pin', html: icons.mapPin }));
-    box.appendChild(el('span', { class: 'msg-map-credit' }, '© OpenStreetMap'));
+    box.appendChild(el('span', { class: 'msg-map-credit' }, MAP_ATTRIB));
     return box;
   }
 
@@ -3798,8 +3825,8 @@ function autoPlay(video) {
       if (closed) return;
       // Same tiles and default centre (Riyadh) as the /map screen.
       map = window.L.map(mapEl, { zoomControl: false, attributionControl: true }).setView([24.7136, 46.6753], 12);
-      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19, attribution: '© OpenStreetMap',
+      window.L.tileLayer(MAP_TILE_URL, {
+        maxZoom: 19, attribution: MAP_ATTRIB,
       }).addTo(map);
       map.attributionControl.setPosition('bottomright');
       map.invalidateSize();
@@ -7743,9 +7770,9 @@ function autoPlay(video) {
       await waitForSize(mapEl);
       // Default center: Riyadh
       map = window.L.map(mapEl, { zoomControl: false, attributionControl: true }).setView([24.7136, 46.6753], 11);
-      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      window.L.tileLayer(MAP_TILE_URL, {
         maxZoom: 19,
-        attribution: '© OpenStreetMap',
+        attribution: MAP_ATTRIB,
       }).addTo(map);
       // No zoom buttons: they sat behind the bottom sheet, and a phone map is
       // pinched, not clicked. Double-tap and pinch both still work.
