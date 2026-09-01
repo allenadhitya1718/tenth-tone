@@ -134,6 +134,24 @@ when the camera opens, so it loads while the person is still filming.
 
 ---
 
+### Second pass — the areas missed on the first sweep
+
+| Feature | Result |
+|---|---|
+| **Drafts** | ❌→✅ **fixed.** "Save as draft" wrote the row correctly and nothing could ever read it back — no list, no route, no function. The button accepted your work and made it permanently invisible. Drafts tab added, with a Publish action |
+| **Profile editing** | ❌→✅ **fixed.** The write succeeded; the read cache was never told, so the app kept showing the old bio and it looked like saving had failed |
+| Sounds — list, detail, favourite/unfavourite | ✅ |
+| Hashtags — trending and per-tag videos | ✅ `city` returns 6 |
+| Notifications screen | ✅ 9 rows render |
+| Share sheet | ✅ 8 targets, copy-link present |
+| Deep links (`/v/:id`) | ✅ resolve correctly |
+| **Friends map** | ✅ A shares → B sees them → A stops → B stops seeing them. The privacy-critical direction works |
+| Location sharing settings | ✅ persist and read back |
+| English translations for new strings | ✅ 17 added — the profile had read "Videos / Saved / مسودات" |
+
+**Not tested:** signup and onboarding. Creating an account means entering a
+password, which I do not do — that one needs you.
+
 ## Still open
 
 **Finding #14 — blocking does not hide the profile row.** `0054`'s policy is
