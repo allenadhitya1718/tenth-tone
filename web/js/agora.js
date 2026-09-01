@@ -135,23 +135,44 @@
       await client.setClientRole('audience', { level: 1 });
       const userId = uid || newUid();
       const token = await fetchToken(channel, userId, 'audience');
+
+      // Registered BEFORE join, not after. Agora emits 'user-published' for a
+      // host who is ALREADY broadcasting as part of joining the channel - so
+      // with the handler attached afterwards that event fired at nobody, and it
+      // is never replayed. The sweep below was meant to cover exactly this, but
+      // it ran the instant join() resolved, when client.remoteUsers is still
+      // empty, so it swept nothing.
+      //
+      // Measured before this change: the viewer reached CONNECTED and could see
+      // the host in remoteUsers with hasAudio true and hasVideo true, while
+      // audioTrack and videoTrack were both undefined - subscribed to neither.
+      // Every viewer got a black, silent screen for the whole broadcast.
+      const subscribeTo = async (user, mediaType) => {
+        try {
+          await client.subscribe(user, mediaType);
+          if (mediaType === 'video' && user.videoTrack && videoEl) user.videoTrack.play(videoEl);
+          if (mediaType === 'audio' && user.audioTrack) user.audioTrack.play();
+          onPlayers && onPlayers(client.remoteUsers);
+        } catch (e) { /* the other stream type may still arrive */ }
+      };
+
+      client.on('user-published', (user, mediaType) => { subscribeTo(user, mediaType); });
+      client.on('user-unpublished', () => { onPlayers && onPlayers(client.remoteUsers); });
+
       await client.join(AGORA_APP_ID, channel, token, userId);
 
-      client.on('user-published', async (user, mediaType) => {
-        await client.subscribe(user, mediaType);
-        if (mediaType === 'video' && user.videoTrack && videoEl) user.videoTrack.play(videoEl);
-        if (mediaType === 'audio' && user.audioTrack) user.audioTrack.play();
-        onPlayers && onPlayers(client.remoteUsers);
-      });
-      client.on('user-unpublished', (user) => {
-        onPlayers && onPlayers(client.remoteUsers);
-      });
-
-      // If the host already published before we joined, manually grab their tracks
-      for (const user of client.remoteUsers) {
-        if (user.hasVideo) await client.subscribe(user, 'video').then(() => user.videoTrack && videoEl && user.videoTrack.play(videoEl)).catch(() => {});
-        if (user.hasAudio) await client.subscribe(user, 'audio').then(() => user.audioTrack && user.audioTrack.play()).catch(() => {});
-      }
+      // Belt and braces for anything that still landed inside the join. Retried
+      // rather than run once, because remoteUsers populates slightly after the
+      // join resolves - a single pass is a race with the SDK's own bookkeeping.
+      const sweep = async () => {
+        for (const user of client.remoteUsers) {
+          if (user.hasVideo && !user.videoTrack) await subscribeTo(user, 'video');
+          if (user.hasAudio && !user.audioTrack) await subscribeTo(user, 'audio');
+        }
+      };
+      await sweep();
+      setTimeout(sweep, 600);
+      setTimeout(sweep, 2000);
 
       return {
         client, userId,
