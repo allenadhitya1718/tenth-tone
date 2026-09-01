@@ -989,6 +989,14 @@
     // Hashtag results in Discover search.
     'الهاشتاقات': 'Hashtags',
 
+    // Bios of FLYP's own seeded catalog accounts (0040). App content, not
+    // user content, so they translate like any other string.
+    'مقاطع سفر ومناظر من حول العالم': 'Travel clips and views from around the world',
+    'أكل الشارع والمطبخ، دقيقة واحدة في كل مرة': 'Street food and cooking, one minute at a time',
+    'المدينة بعد الغروب': 'The city after sunset',
+    'رياضة وحركة ولياقة': 'Sport, movement and fitness',
+    'مقاطع هادئة تريح البال': 'Calm clips to put your mind at ease',
+
     // Strings the English pass found still in Arabic.
     'حرّك الخريطة أو اضغط عليها لاختيار مكان': 'Move the map or tap it to choose a place',
     'إرسال موقعي الحالي': 'Send my current location',

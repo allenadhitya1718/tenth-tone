@@ -1631,7 +1631,11 @@ body.dark .error-box {
 /* === Toast === */
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%);
-  bottom: calc(var(--bn-h) + 24px + var(--safe-bottom));
+  /* Clears the feed's own controls. At +24px this landed squarely on the
+     inline Follow pill beside the caption - a transient banner covering a
+     live control. The caption block ends 63.5px above the nav, so the toast
+     now sits above that rather than inside it. */
+  bottom: calc(var(--bn-h) + 78px + var(--safe-bottom));
   background: rgba(20,20,28,0.95);
   color: #fff;
   padding: 10px 18px;
