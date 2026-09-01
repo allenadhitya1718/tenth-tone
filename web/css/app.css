@@ -3883,3 +3883,52 @@ body.dark .vn-wave-pv { --vn-dim: #3f3f47; }
 /* Muted is the state worth noticing, so it is the one that gets emphasis. */
 .feed-sound:not(.on) { background: rgba(0,0,0,.55); }
 
+/* Delete on your own comment. Sits beside "رد" in the meta row rather than
+   behind a long-press, because a long-press with no visual hint is a control
+   most people never discover - and this one had no entry point at all. */
+.comment-del { color: #ff6b6b; margin-inline-start: 14px; cursor: pointer; }
+.comment-del:active { opacity: .6; }
+
+/* Empty and error states inside the comments sheet. Every other empty surface
+   in the app had one; this sheet showed a full-height black void. */
+.comments-placeholder { padding: 26px 16px 34px; }
+
+/* ── Latin identifiers inside RTL text ──
+   '@handle' and '#tag' put their sigil on the wrong side in an RTL paragraph.
+   '@' and '#' are bidi-neutral, so they inherit the paragraph direction and
+   land after the Latin run instead of before it: '#city' rendered as 'city#'
+   and '@user_x' as 'user_x@'. Proof it was position and not data - '#1' in the
+   same Discover row rendered correctly, because digits are neutral too and the
+   run reorders as a unit.
+
+   unicode-bidi: plaintext rather than direction: ltr, because these hold user
+   content of unknown script: each item takes its direction from its own first
+   strong character, so '#city' reads left-to-right and '#مدينة' still reads
+   right-to-left. Hard-coding ltr would fix Latin tags and break Arabic ones.
+
+   .creator-name is in here for a second reason: ellipsis truncates at the end
+   of the LINE direction, so a Latin name in an RTL box lost its BEGINNING -
+   'Rhithish Hari' displayed as '...ithish Hari'. Giving the element the
+   direction of its own content moves the ellipsis back to the end. */
+.profile-header h1,
+.trending-text,
+.handle,
+.creator-name,
+.comment-name,
+.feed-info .username { unicode-bidi: plaintext; }
+
+/* The prefix and the field are separate elements, so RTL ordered the row
+   visually as "value @". The pair always reads @ then handle regardless of UI
+   language, so the wrapper - and only the wrapper - is pinned to ltr. */
+.ep-input-wrap { direction: ltr; }
+.ep-input-wrap > input { text-align: left; }
+
+/* "عرض المزيد" / "عرض أقل" were breaking across two lines, landing the two
+   words on opposite sides of the screen. */
+.see-more-btn, .see-less-btn { white-space: nowrap; }
+
+/* .sheet is overflow-y:auto, which makes overflow-x compute to auto too, and
+   .divider's margin: 6px -4px 14px is 8px wider than the sheet - so every
+   action sheet drew a horizontal scrollbar along its bottom edge. The divider
+   bleed is deliberate; the scrollbar was not. */
+.sheet { overflow-x: hidden; }

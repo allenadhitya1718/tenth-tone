@@ -966,6 +966,23 @@
     'التعليق طويل جدًا': 'Comment is too long',
     'تعذر نشر المسودة': 'Could not publish the draft',
     'الاسم مطلوب': 'Name is required',
+
+    // Arabic counts in five forms; English in two. The fragments carry the
+    // number, which apply() leaves alone.
+    'تعليق واحد': '1 comment',
+    'تعليقان': '2 comments',
+    ' تعليقات': ' comments',
+    ' تعليقًا': ' comments',
+    'كن أول من يعلق': 'Be the first to comment',
+    'تعذر تحميل التعليقات': 'Could not load comments',
+    'إعادة المحاولة': 'Try again',
+    'حذف التعليق': 'Delete comment',
+    'سيتم حذف هذا التعليق نهائيًا.': 'This comment will be permanently deleted.',
+    'تعذر حذف التعليق': 'Could not delete the comment',
+    'التعليقات': 'Comments',
+
+    // Device labels are assembled in db.js as '<browser> على <os>'.
+    ' على ': ' on ',
   };
 
   // ── Admin dashboard strings (shares DICT; merged here to keep the literal small) ──

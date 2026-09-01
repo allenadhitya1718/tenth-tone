@@ -1426,7 +1426,7 @@
       if (hashtagText) {
         const seeMoreBtn = el('span', { class: 'see-more-btn', style: { fontWeight: '700', cursor: 'pointer', opacity: '0.75', marginInlineStart: '4px', fontSize: '13px' } }, 'عرض المزيد');
         const seeLessBtn = el('span', { class: 'see-less-btn', style: { display: 'none', fontWeight: '700', cursor: 'pointer', opacity: '0.75', marginInlineStart: '4px', fontSize: '13px' } }, 'عرض أقل');
-        const hashtagSpan = el('span', { class: 'desc-hashtags', style: { display: 'none', color: '#5cf', marginInlineStart: '4px' } }, hashtagText);
+        const hashtagSpan = el('span', { class: 'desc-hashtags', style: { display: 'none', color: '#5cf', marginInlineStart: '4px', marginInlineEnd: '4px' } }, hashtagText);
         descEl = el('p', { class: 'desc', style: { margin: '4px 0', fontSize: '14px', lineHeight: '1.4' } }, [
           el('span', { class: 'desc-text' }, richText(plainText)),
           seeMoreBtn,
@@ -1955,7 +1955,7 @@ function autoPlay(video) {
             onclick: () => go('/profile/' + u.id)
           }, [
             avatar(u.avatar, displayName(u), 62),
-            el('div', { class: 'creator-name' }, displayName(u)),
+            el('div', { class: 'creator-name', title: displayName(u) }, displayName(u)),
             el('div', { class: 'creator-meta' }, fmt(u.followers) + ' متابع')
           ]);
           const paintCreators = list => { creatorsRow.innerHTML = ''; list.forEach(u => creatorsRow.appendChild(creatorItem(u))); };
@@ -6337,7 +6337,56 @@ function autoPlay(video) {
 
     function ago(iso) { if (!iso) return ''; const t = Date.now() - new Date(iso).getTime(); const m = Math.floor(t / 60000); if (m < 1) return 'الآن'; if (m < 60) return m + 'د'; const h = Math.floor(m / 60); if (h < 24) return h + 'س'; return Math.floor(h / 24) + 'ي'; }
 
+    // Arabic counts in five forms, not two. "2 تعليق" is the kind of mistake a
+    // reader notices immediately in their own language, and it was on the
+    // most-read counter in the app.
+    function commentCount(n) {
+      if (!n) return 'لا توجد تعليقات';
+      if (n === 1) return 'تعليق واحد';
+      if (n === 2) return 'تعليقان';
+      if (n <= 10) return n + ' تعليقات';
+      return n + ' تعليقًا';
+    }
+
     function renderComment(c) {
+      const meta = [el('span', {}, ago(c.created_at) || c.time || ''),
+        // 'رد' had no handler, and the heart beside it had none either —
+        // there is no comment_likes table, so comments.likes_count is 0 on
+        // every row and nothing can ever raise it. The heart and the count
+        // are gone; Reply now prefills the composer with a mention, which
+        // posts as a real comment that links back to them.
+        el('a', { onclick: () => replyToComment(c) }, 'رد')];
+
+      // Deleting your own comment. The API has existed since the row did and
+      // had no caller at all - messages and videos both got a delete and
+      // comments were missed, so the only way to take back something you said
+      // in public was to ask an administrator. Offered on your own only,
+      // because the policy refuses anything else and a wider button would just
+      // fail.
+      const mine = c.user && myFeedUserId && c.user.id === myFeedUserId;
+      if (mine && c.id && window.API && window.API.deleteComment) {
+        meta.push(el('a', { class: 'comment-del', onclick: async () => {
+          const yes = await confirmDialog({
+            title: 'حذف التعليق',
+            message: 'سيتم حذف هذا التعليق نهائيًا.',
+            confirmLabel: 'حذف',
+          });
+          if (!yes) return;
+          const row = cl.querySelector('.comment-row[data-comment-id="' + c.id + '"]');
+          const parent = row && row.parentNode, next = row && row.nextSibling;
+          if (row) row.remove();
+          paintCount();
+          try { await window.API.deleteComment(c.id); }
+          catch (e) {
+            // Put it back rather than leave the screen lying about what is
+            // stored.
+            if (parent) parent.insertBefore(row, next);
+            paintCount();
+            toast('تعذر حذف التعليق');
+          }
+        } }, 'حذف'));
+      }
+
       cl.appendChild(el('div', { class: 'comment-row', 'data-comment-id': c.id || '' }, [
         // Was a raw <img src="">, which renders as a broken-image icon for the
         // many users with no photo. avatar() falls back to a coloured initial.
@@ -6345,17 +6394,24 @@ function autoPlay(video) {
         el('div', { class: 'comment-body' }, [
           el('div', { class: 'comment-name' }, (c.user && c.user.name) || ''),
           el('div', { class: 'comment-text' }, richText(c.text)),
-          el('div', { class: 'comment-meta' }, [
-            el('span', {}, ago(c.created_at) || c.time || ''),
-            // 'رد' had no handler, and the heart beside it had none either —
-            // there is no comment_likes table, so comments.likes_count is 0 on
-            // every row and nothing can ever raise it. The heart and the count
-            // are gone; Reply now prefills the composer with a mention, which
-            // posts as a real comment that links back to them.
-            el('a', { onclick: () => replyToComment(c) }, 'رد'),
-          ]),
+          el('div', { class: 'comment-meta' }, meta),
         ]),
       ]));
+    }
+
+    // One place that decides what the header says and whether the empty state
+    // is showing, so a delete, a post and a load cannot disagree about it.
+    function paintCount() {
+      const n = cl.querySelectorAll('.comment-row').length;
+      counter.textContent = commentCount(n);
+      const ph = cl.querySelector('.comments-placeholder');
+      if (ph) ph.remove();
+      if (!n) {
+        const box = el('div', { class: 'comments-placeholder' }, [
+          emptyState({ icon: 'comment', title: 'لا توجد تعليقات', sub: 'كن أول من يعلق' }),
+        ]);
+        cl.appendChild(box);
+      }
     }
 
     // Threaded replies would need comments.parent_id carried through the query
@@ -6373,18 +6429,33 @@ function autoPlay(video) {
 
     // Default: load from mock
     let comments = (typeof id === 'string' && id.length < 30) ? DB.comments(id) : [];
-    counter.textContent = comments.length + ' تعليق';
     comments.forEach(renderComment);
+    const isRemote = window.API && typeof id === 'string' && id.length >= 30;
+    // Until the real list arrives the header used to read "0 تعليق" over an
+    // empty black panel - measured saying zero for ~800ms on a video with two
+    // comments. Saying nothing is honest; saying zero is not.
+    if (isRemote) counter.textContent = '...';
+    else paintCount();
 
     // Load real if uuid
     (async () => {
+      if (!isRemote) return;
       try {
-        if (!window.API || typeof id !== 'string' || id.length < 30) return;
         const list = await window.API.fetchComments(id);
         cl.innerHTML = '';
         list.forEach(renderComment);
-        counter.textContent = list.length + ' تعليق';
-      } catch (e) {}
+        paintCount();
+      } catch (e) {
+        // Was `catch (e) {}`, which made a failed load indistinguishable from
+        // a video nobody had commented on - permanently, and with no way to
+        // retry.
+        cl.innerHTML = '';
+        counter.textContent = 'التعليقات';
+        cl.appendChild(el('div', { class: 'comments-placeholder' }, [
+          emptyState({ icon: 'alert', isError: true, title: 'تعذر تحميل التعليقات',
+                       actionLabel: 'إعادة المحاولة', onAction: () => go('/comments/' + id) }),
+        ]));
+      }
     })();
 
     const cInput = el('input', { placeholder: 'أضف تعليقًا...' });
@@ -6395,7 +6466,7 @@ function autoPlay(video) {
         try {
           const c = await window.API.postComment(id, text);
           renderComment(c);
-          counter.textContent = (parseInt(counter.textContent) + 1) + ' تعليق';
+          paintCount();
         } catch (e) { toast('تعذر النشر'); }
       } else {
         renderComment({ user: { name: DB.me.name, avatar: DB.me.avatar }, text, created_at: new Date().toISOString(), likes: 0 });

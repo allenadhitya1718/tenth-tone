@@ -2186,7 +2186,11 @@
       /Windows/.test(ua) ? 'Windows' :
       /Mac OS X/.test(ua) ? 'macOS' :
       /Linux/.test(ua) ? 'Linux' : 'Unknown';
-    return { device: browser + ' on ' + os, platform: /Android|iPhone|iPad|iPod/.test(ua) ? 'mobile' : 'web' };
+    // The source language here is Arabic, so the connector must be too - this
+    // string lands inside Arabic sentences ("تسجيل دخول جديد من Chrome on
+    // Android"). Brand names stay Latin, which is correct; only the joining
+    // word was wrong. i18n turns ' على ' back into ' on ' for English.
+    return { device: browser + ' على ' + os, platform: /Android|iPhone|iPad|iPod/.test(ua) ? 'mobile' : 'web' };
   }
 
   API.recordSession = async () => {
