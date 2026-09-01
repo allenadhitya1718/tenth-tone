@@ -120,18 +120,78 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 
-// Pinned to a stable model rather than the gemini-flash-lite-latest alias.
-// `-latest` is hot-swapped by Google with no notice, and a silent model change
-// underneath a set of hand-tuned thresholds would retune them for us. A pinned
-// model can eventually be retired instead — but retirement is a 404, which
-// lands in the log as reason `http_404` and in the dashboard as
-// scans_unavailable_24h. A visible failure beats an invisible drift.
+// ── Which model ──
+// This was pinned to a single name, on the reasoning that `-latest` aliases get
+// hot-swapped by Google and a silent model change under hand-tuned thresholds
+// would retune them for us. The reasoning was right; the consequence was not
+// thought through. `gemini-2.5-flash-lite` stopped resolving for this key,
+// every call 404'd, the function fell open exactly as designed — and so a death
+// threat and an explicit slur were both returned as `allow`, for days, with
+// nothing on screen to say screening had stopped.
 //
-// flash-lite rather than flash because the daily request cap is what runs out
-// first here, and flash-lite's is several times larger. One call per post.
-const MODEL = 'gemini-2.5-flash-lite';
-const ENDPOINT =
-  `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+// A visible failure only beats invisible drift if somebody is looking at the
+// place it is visible.
+//
+// So: an ordered preference list, resolved ONCE against Google's own model
+// list and cached. Still bounded - it can only ever pick a name written here,
+// so it cannot silently wander onto a model with different calibration - but a
+// single name being retired no longer takes screening down with it. The
+// resolved name is logged, so which model answered is always recoverable.
+//
+// Order is deliberate. flash-lite first: the daily REQUEST cap is what runs out
+// first at one call per post, and flash-lite's is several times larger. It also
+// does not think by default, which matters for maxOutputTokens below.
+const PREFERRED_MODELS = [
+  'gemini-2.5-flash-lite',
+  'gemini-flash-lite-latest',
+  'gemini-2.0-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-flash-latest',
+];
+
+const MODELS_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+const endpointFor = (m: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
+
+// Warm invocations reuse this; a cold start pays one extra request, once.
+let resolvedModel: string | null = null;
+
+async function resolveModel(): Promise<string | null> {
+  if (resolvedModel) return resolvedModel;
+  try {
+    const res = await fetch(`${MODELS_URL}?pageSize=200`, {
+      headers: { 'x-goog-api-key': GEMINI_API_KEY },
+    });
+    if (!res.ok) {
+      console.warn('[moderate-content] model list failed', res.status);
+      // Fall back to the first preference and let the call surface its own
+      // error, rather than refusing to screen because discovery failed.
+      return PREFERRED_MODELS[0];
+    }
+    const body = await res.json();
+    const usable = new Set<string>(
+      (body.models ?? [])
+        .filter((m: { supportedGenerationMethods?: string[] }) =>
+          (m.supportedGenerationMethods ?? []).includes('generateContent'))
+        .map((m: { name: string }) => String(m.name).replace(/^models\//, '')),
+    );
+    for (const want of PREFERRED_MODELS) {
+      if (usable.has(want)) {
+        resolvedModel = want;
+        console.log('[moderate-content] using model', want);
+        return want;
+      }
+    }
+    console.warn('[moderate-content] none of the preferred models are available;',
+                 'the key offers:', [...usable].slice(0, 12).join(', '));
+    return null;
+  } catch (e) {
+    console.warn('[moderate-content] model discovery threw:',
+                 e instanceof Error ? e.message : e);
+    return PREFERRED_MODELS[0];
+  }
+}
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -653,8 +713,22 @@ Deno.serve(async (req) => {
   const timeout = setTimeout(() => controller.abort(), images.length ? 20_000 : 8_000);
 
   let answer: Answer = { kind: 'fail', reason: 'unknown' };
+  const model = await resolveModel();
+  if (!model) {
+    clearTimeout(timeout);
+    const eventId = await log('unavailable');
+    return json({
+      decision: 'allow', eventId, attach: surface.queue && !!eventId,
+      target: surface.target, degraded: true, reason: 'no_model',
+    });
+  }
+  // A model that does not think by default cannot spend the output budget
+  // reasoning. One that does can, and returns nothing with finishReason
+  // MAX_TOKENS - so give the non-lite fallbacks room rather than have them
+  // fail silently.
+  const outputCap = model.includes('lite') ? 512 : 2048;
   try {
-    const res = await fetch(ENDPOINT, {
+    const res = await fetch(endpointFor(model), {
       method: 'POST',
       headers: {
         // The header form, not ?key= in the URL. A key in a query string ends
@@ -697,7 +771,7 @@ Deno.serve(async (req) => {
           // everything is allowed through until someone notices. Switching to a
           // thinking model means turning thinking off in generationConfig, or
           // raising this a great deal.
-          maxOutputTokens: 512,
+          maxOutputTokens: outputCap,
         },
       }),
       signal: controller.signal,
@@ -716,6 +790,10 @@ Deno.serve(async (req) => {
       if (res.status === 429) answer = { kind: 'fail', reason: 'rate_limited' };
       else if (/API[_ ]?key/i.test(detail)) answer = { kind: 'fail', reason: 'bad_key' };
       else answer = { kind: 'fail', reason: `http_${res.status}` };
+      // A model that resolved once and now 404s has been retired underneath us.
+      // Drop the cache so the next call re-resolves instead of repeating a name
+      // that no longer exists.
+      if (res.status === 404) resolvedModel = null;
       console.warn('[moderate-content] Gemini', res.status, detail);
     } else {
       answer = readAnswer(await res.json());
