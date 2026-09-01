@@ -1353,6 +1353,30 @@
           // reads as instant at this delay.
           tapTimer = setTimeout(() => {
             tapTimer = null;
+            // The FIRST tap anywhere is what browsers require before audio may
+            // play, and armSoundOnFirstGesture() consumes it to turn sound on.
+            // Without this guard that same tap then arrived here 260ms later,
+            // read "sound is on" and turned it straight back off - so the first
+            // tap unmuted and re-muted in one gesture and the feed stayed
+            // silent. That is the whole of "there is no sound".
+            // One-shot, not a time window. The FIRST tap anywhere is what
+            // browsers require before audio may play, and
+            // armSoundOnFirstGesture() consumes it to turn sound on. Without
+            // this the same tap arrived here and turned it straight back off,
+            // so the first tap unmuted and re-muted in one gesture and the feed
+            // stayed silent - the whole of "there is no sound".
+            //
+            // A flag rather than a deadline because the delay between the two
+            // is not fixed: measured at 1.3s on a cold feed, where the tap
+            // handler waits 260ms for a possible double tap and the rest is the
+            // page still settling. Any window short enough to be safe was too
+            // short to work.
+            if (window._ttSoundJustArmed) {
+              window._ttSoundJustArmed = false;
+              playOnlyVisible();
+              playBadge.style.display = 'none';
+              return;
+            }
             // Tapping a clip turns sound on or off for the whole session.
             // It deliberately does not pause: on a scrolling feed a stray tap
             // that freezes the video reads as the app breaking.
@@ -1730,6 +1754,9 @@ function armSoundOnFirstGesture() {
   try { pref = localStorage.getItem('tt_muted'); } catch (e) {}
   if (pref === '1') return;
   var go = function () {
+    // Consumed by the feed's tap-to-toggle, so the gesture that turned sound
+    // ON does not also get read as a request to turn it off.
+    window._ttSoundJustArmed = true;
     setMuted(false);
     // Only the clip actually on screen may play. Calling play() on every
     // video left the off-screen ones running: the observer that pauses them
@@ -4465,10 +4492,10 @@ function autoPlay(video) {
         type,
         attachment_url: isMedia || type === 'file' ? URL.createObjectURL(f) : null,
       };
-      appendMessage(temp); msgs.scrollTop = msgs.scrollHeight;
+      const tempNode = appendMessage(temp); msgs.scrollTop = msgs.scrollHeight;
       if (window.API && typeof id === 'string' && id.length >= 30) {
         try { await window.API.sendMessage({ chatId: id, text: temp.text, type, file: f }); }
-        catch (e) { toast('تعذر إرسال المرفق'); }
+        catch (e) { undoOptimistic(tempNode); toast(sendFailMessage(e)); }
       }
     }
 
@@ -4482,11 +4509,11 @@ function autoPlay(video) {
     async function sendLocation(p) {
       if (!p) return;
       const link = locationLink(p.lat, p.lng, p.label);
-      appendMessage({ from_user_id: myUserId || 'me', text: link, created_at: new Date().toISOString(), type: 'location' });
+      const tempNode = appendMessage({ from_user_id: myUserId || 'me', text: link, created_at: new Date().toISOString(), type: 'location' });
       msgs.scrollTop = msgs.scrollHeight;
       if (window.API && typeof id === 'string' && id.length >= 30) {
         try { await window.API.sendMessage({ chatId: id, text: link, type: 'location' }); }
-        catch (e) { toast('تعذر إرسال الموقع'); }
+        catch (e) { undoOptimistic(tempNode); toast(sendFailMessage(e)); }
       }
     }
 
@@ -4514,10 +4541,10 @@ function autoPlay(video) {
     videoInput.addEventListener('change', async () => {
       const f = videoInput.files[0]; if (!f) return;
       const tempMsg = { from_user_id: myUserId || 'me', text: '', created_at: new Date().toISOString(), type: 'video', attachment_url: URL.createObjectURL(f) };
-      appendMessage(tempMsg); msgs.scrollTop = msgs.scrollHeight;
+      const tempNode = appendMessage(tempMsg); msgs.scrollTop = msgs.scrollHeight;
       if (window.API && typeof id === 'string' && id.length >= 30) {
         try { await window.API.sendMessage({ chatId: id, text: '', type: 'video', file: f }); }
-        catch (e) { toast('تعذر إرسال المقطع'); }
+        catch (e) { undoOptimistic(tempNode); toast(sendFailMessage(e)); }
       }
       videoInput.value = '';
     });
@@ -5019,7 +5046,7 @@ function autoPlay(video) {
       try { file = new File([blob], fname, { type: mime }); }
       catch (e) { file = blob; try { file.name = fname; } catch (e2) {} }
       const localUrl = URL.createObjectURL(blob);
-      appendMessage({
+      const tempNode = appendMessage({
         from_user_id: myUserId || 'me', text: '', created_at: new Date().toISOString(),
         type: 'voice', attachment_url: localUrl,
       });
@@ -5027,7 +5054,7 @@ function autoPlay(video) {
       vnReset();                        // frees the preview URL, not localUrl
       if (window.API && isRealId(id)) {
         try { await window.API.sendMessage({ chatId: id, text: '', type: 'voice', file }); }
-        catch (e) { toast((e && e.message) || 'تعذر إرسال الرسالة الصوتية'); }
+        catch (e) { undoOptimistic(tempNode); toast(sendFailMessage(e)); }
       }
     }
 
@@ -5132,6 +5159,25 @@ function autoPlay(video) {
     // Cleanup walkie channel when leaving chat
     window.addEventListener('hashchange', () => { if (walkie) try { walkie.close(); } catch (e) {} }, { once: true });
 
+    // A refused send must not leave a bubble behind: the message does not
+    // exist, and pretending otherwise is what made ONE database refusal look
+    // like three separate bugs - "it says failed but it sent", and then "the
+    // messages are gone" on the next open, because the next fetch simply did
+    // not include a row that had never been written.
+    function undoOptimistic(node) {
+      if (node && node.parentNode) node.remove();
+    }
+    // 0069 made the messages INSERT policy consult the RECIPIENT'S "who can
+    // message me" setting, so a refusal here is usually a real answer rather
+    // than a fault, and deserves to be named instead of called a failure.
+    function sendFailMessage(e) {
+      const raw = String((e && e.message) || '');
+      if ((e && e.code === '42501') || /row-level security|violates row level/i.test(raw)) {
+        return 'لا يستقبل هذا الشخص الرسائل';
+      }
+      return friendlyError(e, 'تعذر الإرسال');
+    }
+
     async function handleSend() {
       const text = inputField.value.trim();
       const file = fileInput.files[0];
@@ -5187,7 +5233,11 @@ function autoPlay(video) {
         catch (e) {
           const i = pendingSends.indexOf(tracked);
           if (i !== -1) pendingSends.splice(i, 1);
-          toast('تعذر الإرسال');
+          // Nothing was written, so take the bubble back and hand the text to
+          // the composer rather than losing what was typed.
+          undoOptimistic(tempNode);
+          if (!inputField.value) inputField.value = text;
+          toast(sendFailMessage(e));
         }
       }
       // NOTE: there used to be a fake auto-reply here that invented a
@@ -7015,6 +7065,11 @@ function autoPlay(video) {
       startBtn.classList.add('busy');
       const goLabel = startBtn.lastChild;
       goLabel.textContent = 'جاري البدء...';
+      // Held outside the try so the catch can close a stream that was created
+      // before the media failed. Otherwise a refused camera leaves a row in the
+      // browse grid marked 'live' with nothing behind it, until
+      // close_stale_live_streams sweeps it half an hour later.
+      let createdLiveId = null;
       try {
         // The cover has to be grabbed BEFORE the camera is released — once
         // stopPreview() runs the element has no frame left to draw from. A
@@ -7023,7 +7078,7 @@ function autoPlay(video) {
         let camCover = null;
         if (mode === 'camera' && window.API && window.API.uploadLiveThumbnail) {
           try {
-            const blob = await grabFrame(previewVideo);
+            const blob = await grabFrame(selfView);
             if (blob) camCover = await window.API.uploadLiveThumbnail(blob);
           } catch (e) { /* a cover is a nicety — never block going live for it */ }
         }
@@ -7048,11 +7103,18 @@ function autoPlay(video) {
         // was chosen. The old comment here said the RLS filter was still "a
         // 1-line policy update" away — the policy had in fact existed since
         // 0004, and the only missing piece was sending the column.
+        createdLiveId = live.id;
         window._ttLiveMeta = { id: live.id, mode, bg: selectedBg.url, privacy };
-        if (mode === 'camera' && window.Agora && window.Agora.isConfigured()) {
+        if (window.Agora && window.Agora.isConfigured()) {
+          // Background mode is still a broadcast - this screen calls it "audio
+          // with a background, no camera needed". It used to skip startHost
+          // entirely, and startHost is the only thing that publishes anything,
+          // so it sent no audio and no video: viewers joined an empty channel
+          // and watched a still image in silence for the whole stream.
           agoraSession = await window.Agora.startHost({
             channel: live.id,
             videoEl: previewVideo,
+            withVideo: mode === 'camera',
             onError: (e) => toast(friendlyError(e)),
           });
           window._ttAgoraHostSession = agoraSession;
@@ -7065,6 +7127,7 @@ function autoPlay(video) {
         startBtn.classList.remove('busy');
         goLabel.textContent = 'بدء البث';
         if (agoraSession) try { await agoraSession.stop(); } catch (_) {}
+        if (createdLiveId && window.API) try { await window.API.endLive(createdLiveId); } catch (_) {}
         startPreview();   // put the preview back so it can be tried again
       }
     };
@@ -7372,8 +7435,10 @@ function autoPlay(video) {
           } catch (e) { followBtn.dataset.following = '0'; }
           // Counted as present, and counted out again on the way off the screen.
           const n = await window.API.joinLiveStream(liveId);
-          if (n) setViewers(n);
-          joined = true;
+          // Only count out again if we were actually counted in. joinLiveStream
+          // swallows its error and returns 0, so an unconditional `joined`
+          // fires a decrement that no increment ever matched.
+          if (n) { setViewers(n); joined = true; }
         }
         try { if (window.I18N) window.I18N.apply(ov); } catch (e) {}
 

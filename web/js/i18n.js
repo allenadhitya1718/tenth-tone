@@ -987,6 +987,7 @@
 
     // Hashtag results in Discover search.
     'الهاشتاقات': 'Hashtags',
+    'لا يستقبل هذا الشخص الرسائل': 'This person is not accepting messages',
 
     // Returned by the moderate-content Edge Function, not built in the app -
     // which is exactly why they were missed. A blocked English user was being

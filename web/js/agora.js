@@ -6,6 +6,13 @@
   // will then show a clear "configure Agora" message instead of crashing.
   const AGORA_APP_ID = window.AGORA_APP_ID || '';
 
+  // Agora ejects the earlier client when two join one channel with the same
+  // uid. The old range was 0-99999, which collides about 5% of the time at a
+  // hundred concurrent viewers and 63% at five hundred - and a viewer who
+  // happens to draw the HOST's number ends the broadcast for everyone. A uid
+  // is a 32-bit unsigned int, so use the range.
+  function newUid() { return Math.floor(Math.random() * 2147483646) + 1; }
+
   let sdkPromise = null;
   function loadSdk() {
     if (sdkPromise) return sdkPromise;
@@ -46,7 +53,7 @@
     fetchToken,
 
     // ─── HOST: publish your camera+mic to a channel ───
-    async startHost({ channel, uid, videoEl, onError }) {
+    async startHost({ channel, uid, videoEl, withVideo = true, onError }) {
       if (!AGORA_APP_ID) throw new Error('AGORA_APP_ID not configured');
       const AgoraRTC = await loadSdk();
       AgoraRTC.setLogLevel(2);
@@ -54,32 +61,66 @@
       await client.setClientRole('host');
       // The uid is decided before the token is signed, because a token is
       // bound to one uid and Agora rejects any mismatch.
-      const userId = uid || Math.floor(Math.random() * 100000);
+      const userId = uid || newUid();
       const token = await fetchToken(channel, userId, 'host');
       await client.join(AGORA_APP_ID, channel, token, userId);
 
-      // Create + publish local tracks
-      const [mic, cam] = await AgoraRTC.createMicrophoneAndCameraTracks(
-        { encoderConfig: 'music_standard' },
-        { encoderConfig: '480p_1', facingMode: 'user' }
-      );
-      cam.play(videoEl);
-      await client.publish([mic, cam]);
-
-      // Subscribe to remote users (viewers won't normally publish, but if a co-host joins)
+      // Registered BEFORE the devices are opened. Opening them shows a
+      // permission prompt that can sit there as long as the person takes to
+      // answer, and anything published inside that window fires at no listener
+      // and is gone - the SDK does not replay it.
       client.on('user-published', async (user, mediaType) => {
         try { await client.subscribe(user, mediaType); } catch (e) { onError && onError(e); }
       });
 
+      // We are already in the channel by this point, so a refused device has to
+      // leave it again. The caller only ever receives the session object this
+      // function returns, and on a throw it is not returning one - the client
+      // would stay joined and billing with nothing to stop it with. This is the
+      // failure startCall was fixed for; startHost still had it.
+      let mic = null, cam = null;
+      try {
+        mic = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig: 'music_standard' });
+        // A background-only broadcast is audio over a still image, so it wants
+        // the microphone and no camera at all. And when a camera IS wanted, a
+        // refused one should still leave an audio broadcast rather than none:
+        // createMicrophoneAndCameraTracks was all-or-nothing, so one covered
+        // lens killed the entire stream.
+        if (withVideo) {
+          try {
+            cam = await AgoraRTC.createCameraVideoTrack({ encoderConfig: '480p_1', facingMode: 'user' });
+            if (videoEl) cam.play(videoEl);
+          } catch (e) { onError && onError(e); cam = null; }
+        }
+        await client.publish(cam ? [mic, cam] : [mic]);
+      } catch (e) {
+        if (cam) { try { cam.close(); } catch (e2) {} }
+        if (mic) { try { mic.close(); } catch (e2) {} }
+        await client.leave().catch(() => {});
+        throw e;
+      }
+
       return {
         client, mic, cam, userId,
+        hasCamera: () => !!cam,
         switchCamera: async () => {
-          const facing = cam._mediaStreamTrack.getSettings().facingMode === 'user' ? 'environment' : 'user';
-          await cam.setDevice({ facingMode: facing }).catch(() => {});
+          // setDevice takes a deviceId, not a constraints object - the old call
+          // passed { facingMode } and failed into an empty .catch(), so the
+          // button reported success and did nothing.
+          if (!cam) return false;
+          const want = cam._mediaStreamTrack.getSettings().facingMode === 'user' ? 'environment' : 'user';
+          try {
+            const cams = await AgoraRTC.getCameras();
+            const next = cams.find(d => (d.label || '').toLowerCase().includes(want === 'user' ? 'front' : 'back'));
+            if (!next) return false;
+            await cam.setDevice(next.deviceId);
+            return true;
+          } catch (e) { onError && onError(e); return false; }
         },
         stop: async () => {
-          try { await client.unpublish([mic, cam]); } catch (e) {}
-          mic.close(); cam.close();
+          try { await client.unpublish(cam ? [mic, cam] : [mic]); } catch (e) {}
+          if (mic) { try { mic.close(); } catch (e) {} }
+          if (cam) { try { cam.close(); } catch (e) {} }
           await client.leave().catch(() => {});
         },
       };
@@ -92,7 +133,7 @@
       AgoraRTC.setLogLevel(2);
       const client = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
       await client.setClientRole('audience', { level: 1 });
-      const userId = uid || Math.floor(Math.random() * 100000);
+      const userId = uid || newUid();
       const token = await fetchToken(channel, userId, 'audience');
       await client.join(AGORA_APP_ID, channel, token, userId);
 
@@ -138,7 +179,7 @@
       const AgoraRTC = await loadSdk();
       AgoraRTC.setLogLevel(2);
       const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-      const userId = uid || Math.floor(Math.random() * 100000);
+      const userId = uid || newUid();
       // 'host' is the publishing role in both modes, and a call needs it on
       // BOTH sides — an 'audience' token cannot publish, so whoever got one
       // would join the channel able to hear and unable to be heard.
