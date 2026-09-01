@@ -3932,3 +3932,8 @@ body.dark .vn-wave-pv { --vn-dim: #3f3f47; }
    action sheet drew a horizontal scrollbar along its bottom edge. The divider
    bleed is deliberate; the scrollbar was not. */
 .sheet { overflow-x: hidden; }
+
+/* An enabled-looking button that does nothing is worse than a disabled one:
+   the composer's send was full-opacity blue over an empty field and swallowed
+   the tap silently. */
+.comment-send-btn.is-disabled { opacity: .38; pointer-events: none; }

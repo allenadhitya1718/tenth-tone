@@ -983,6 +983,16 @@
 
     // Device labels are assembled in db.js as '<browser> على <os>'.
     ' على ': ' on ',
+
+    // aria-labels on the icon-only feed rail. i18n rewrites attributes too.
+    'إعجاب': 'Like',
+    'خيارات': 'Options',
+
+    // Discarding unsaved profile edits.
+    'تجاهل التعديلات؟': 'Discard changes?',
+    'لم يتم حفظ تغييراتك. سيتم فقدانها إذا خرجت الآن.': 'Your changes have not been saved. They will be lost if you leave now.',
+    'تجاهل': 'Discard',
+    'متابعة التعديل': 'Keep editing',
   };
 
   // ── Admin dashboard strings (shares DICT; merged here to keep the literal small) ──

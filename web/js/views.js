@@ -1564,7 +1564,7 @@
         }
       }
 
-      const likeBtn = el('button', { class: 'feed-action' + (v.liked ? ' liked' : ''), onclick: () => applyLike(!v.liked) }, [
+      const likeBtn = el('button', { class: 'feed-action' + (v.liked ? ' liked' : ''), 'aria-label': 'إعجاب', onclick: () => applyLike(!v.liked) }, [
         el('span', { class: 'feed-action-icon no-bg', html: icons.feedHeart }),
         el('span', { class: 'feed-action-count' }, fmt(v.likes)),
       ]);
@@ -1572,7 +1572,7 @@
       // Hands the double-tap handler its way in (set on the item above).
       item._likeFromGesture = () => applyLike(true);
 
-      const commentBtn = el('button', { class: 'feed-action', onclick: () => go('/comments/' + v.id) }, [
+      const commentBtn = el('button', { class: 'feed-action', 'aria-label': 'التعليقات', onclick: () => go('/comments/' + v.id) }, [
         el('span', { class: 'feed-action-icon no-bg', html: icons.feedComment }),
         el('span', { class: 'feed-action-count' }, fmt(v.comments)),
       ]);
@@ -1582,7 +1582,7 @@
       // the icon never showed a saved state, and a failed save was swallowed
       // so the toast still claimed success. Now it behaves like the like
       // button — count, filled state, and a revert when the write fails.
-      const saveBtn = el('button', { class: 'feed-action' + (v.saved ? ' saved' : ''), onclick: async () => {
+      const saveBtn = el('button', { class: 'feed-action' + (v.saved ? ' saved' : ''), 'aria-label': 'حفظ', onclick: async () => {
         const wasSaved = v.saved;
         v.saved = !wasSaved;
         v.saves = Math.max(0, (Number(v.saves) || 0) + (v.saved ? 1 : -1));
@@ -1607,7 +1607,7 @@
         el('span', { class: 'feed-action-icon no-bg', html: icons.feedBookmark }),
         el('span', { class: 'feed-action-count' }, fmt(v.saves)),
       ]);
-      const shareBtn = el('button', { class: 'feed-action', onclick: () => go('/share/' + v.id) }, [
+      const shareBtn = el('button', { class: 'feed-action', 'aria-label': 'مشاركة', onclick: () => go('/share/' + v.id) }, [
         el('span', { class: 'feed-action-icon no-bg', html: icons.feedSend }),
         el('span', { class: 'feed-action-count' }, fmt(v.shares)),
       ]);
@@ -1615,7 +1615,7 @@
       actions.appendChild(saveBtn);
 
       // Options sheet — "Not interested" / "More like this" / "Report"
-      const moreBtn = el('button', { class: 'feed-action', onclick: (e) => { e.stopPropagation(); openVideoOptionsSheet(v, item); } }, [
+      const moreBtn = el('button', { class: 'feed-action', 'aria-label': 'خيارات', onclick: (e) => { e.stopPropagation(); openVideoOptionsSheet(v, item); } }, [
         el('span', { class: 'feed-action-icon no-bg', html: icons.feedMore }),
       ]);
       actions.appendChild(moreBtn);
@@ -2887,8 +2887,11 @@ function autoPlay(video) {
     }
     const chev = () => el('span', { class: 'pr-chev', html: icons.chevL });
     const makeToggleEl = (on) => {
-      const t = el('div', { class: 'toggle' + (on ? ' on' : '') });
-      t.onclick = () => t.classList.toggle('on');
+      const t = el('div', { class: 'toggle' + (on ? ' on' : ''),
+                            role: 'switch', tabindex: '0', 'aria-checked': on ? 'true' : 'false' });
+      const flip = () => { t.classList.toggle('on'); t.setAttribute('aria-checked', t.classList.contains('on') ? 'true' : 'false'); };
+      t.onclick = flip;
+      t.onkeydown = e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(); } };
       return t;
     };
 
@@ -5822,7 +5825,20 @@ function autoPlay(video) {
     // anything past the fold was unreachable.
     const root = el('section', { class: 'edit-profile-screen' });
     const saveAction = el('button', { class: 'ep-done', disabled: true }, 'حفظ');
-    root.appendChild(topBar({ title: 'تعديل البروفايل', right: saveAction }));
+    // saveAction is enabled exactly when the form differs from its baseline, so
+    // it doubles as the dirty flag. Leaving with unsaved edits used to discard
+    // them silently - no prompt, no toast, the work simply gone. Instagram asks.
+    const guardedBack = async () => {
+      if (saveAction.disabled) return back();
+      const leave = await confirmDialog({
+        title: 'تجاهل التعديلات؟',
+        message: 'لم يتم حفظ تغييراتك. سيتم فقدانها إذا خرجت الآن.',
+        confirmLabel: 'تجاهل',
+        cancelLabel: 'متابعة التعديل',
+      });
+      if (leave) back();
+    };
+    root.appendChild(topBar({ title: 'تعديل البروفايل', right: saveAction, onBack: guardedBack }));
     const wrap = el('div', { class: 'edit-profile' });
     const fileInput = el('input', { type: 'file', accept: 'image/*', style: { display: 'none' } });
     let avatarFile = null;
@@ -6462,6 +6478,7 @@ function autoPlay(video) {
     const sendCommentBtn = el('button', { class: 'comment-send-btn', type: 'button', html: icons.send, onclick: async () => {
       const text = cInput.value.trim(); if (!text) return;
       cInput.value = '';
+      paintSend();
       if (window.API && typeof id === 'string' && id.length >= 30) {
         try {
           const c = await window.API.postComment(id, text);
@@ -6472,6 +6489,17 @@ function autoPlay(video) {
         renderComment({ user: { name: DB.me.name, avatar: DB.me.avatar }, text, created_at: new Date().toISOString(), likes: 0 });
       }
     } });
+    // The send button was full-opacity blue with an empty field, and tapping it
+    // did nothing and said nothing. Disabling it is the honest state, and it
+    // also removes the silent no-op.
+    const paintSend = () => {
+      const empty = !cInput.value.trim();
+      sendCommentBtn.disabled = empty;
+      sendCommentBtn.classList.toggle('is-disabled', empty);
+    };
+    cInput.addEventListener('input', paintSend);
+    paintSend();
+
     cInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -7971,13 +7999,22 @@ function autoPlay(video) {
       root.appendChild(s);
     }
     function makeToggle(initialOn, onChange) {
-      const t = el('div', { class: 'toggle' + (initialOn ? ' on' : ''), onclick: async e => {
-        e.stopPropagation();
+      const flip = async e => {
+        if (e) e.stopPropagation();
         t.classList.toggle('on');
         const on = t.classList.contains('on');
+        t.setAttribute('aria-checked', on ? 'true' : 'false');
         try { await onChange(on); }
-        catch (err) { t.classList.toggle('on'); toast(friendlyError(err, 'تعذر التحديث')); }
-      } });
+        catch (err) {
+          t.classList.toggle('on');
+          t.setAttribute('aria-checked', t.classList.contains('on') ? 'true' : 'false');
+          toast(friendlyError(err, 'تعذر التحديث'));
+        }
+      };
+      const t = el('div', { class: 'toggle' + (initialOn ? ' on' : ''),
+                            role: 'switch', tabindex: '0', 'aria-checked': initialOn ? 'true' : 'false',
+                            onclick: flip,
+                            onkeydown: e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flip(e); } } });
       return t;
     }
 
@@ -9055,10 +9092,11 @@ function autoPlay(video) {
 
     const store = {};
     function tg(key) {
-      const t = el('div', { class: 'toggle on', onclick: async (e) => {
+      const t = el('div', { class: 'toggle on', role: 'switch', tabindex: '0', 'aria-checked': 'true', onclick: async (e) => {
         e.stopPropagation();
         t.classList.toggle('on');
         const on = t.classList.contains('on');
+        t.setAttribute('aria-checked', on ? 'true' : 'false');
         try { await window.API.updateUserSettings({ [key]: on }); }
         catch (err) { t.classList.toggle('on'); toast(friendlyError(err, 'تعذر التحديث')); }
       } });
