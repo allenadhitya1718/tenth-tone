@@ -110,11 +110,22 @@ window.TT_CONFIG = (function () {
   //
   // Overridable per session for testing, without a rebuild:
   //   ?mod=1  → force on       ?mod=0  → force off
-  // TURNED OFF 2026-08-31: the provider was returning rate_limited on every
-  // call, so each message paid the full round trip and got nothing back.
-  // A check that always fails is pure latency. Turn back on once the Gemini
-  // swap is deployed and a test call returns allow rather than unavailable.
-  let aiModeration = false;
+  // BACK ON 2026-09-01. It was turned off on 08-31 because the provider failed
+  // every call, and a check that always fails is pure latency.
+  //
+  // What changed is that the latency is no longer paid on the paths people
+  // feel. Comments, live comments and video publish now screen ALONGSIDE the
+  // write instead of in front of it, so a failing scan costs nothing there -
+  // measured at 183ms to post a comment with this on. Only avatars, profile
+  // text and live titles still wait, because for those the write IS the
+  // publication and there is no later gate to hold them at.
+  //
+  // Deliberately on even though moderate-content is mid-fix. The flag is baked
+  // into the build; the function is not. Shipping it on means the server-side
+  // fix reaches everyone already running this APK without another release,
+  // and until then screening fails OPEN, which is exactly what shipping it off
+  // would have done anyway.
+  let aiModeration = true;
 
   try {
     const q = new URLSearchParams(location.search);

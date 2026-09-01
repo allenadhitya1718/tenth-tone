@@ -59,7 +59,7 @@
   <div class="wrap">
     <h1 data-ar="سياسة الخصوصية" data-en="Privacy Policy">سياسة الخصوصية</h1>
     <p class="lede" data-ar="ما الذي نجمعه، ولماذا، وكم نحتفظ به، وما الذي يمكنك فعله حياله." data-en="What we collect, why, how long we keep it, and what you can do about it.">ما الذي نجمعه، ولماذا، وكم نحتفظ به، وما الذي يمكنك فعله حياله.</p>
-    <p class="updated" data-ar="آخر تحديث: 31 أغسطس 2026" data-en="Last updated: 31 August 2026">آخر تحديث: 31 أغسطس 2026</p>
+    <p class="updated" data-ar="آخر تحديث: 1 سبتمبر 2026" data-en="Last updated: 1 September 2026">آخر تحديث: 1 سبتمبر 2026</p>
   </div>
 </section>
 
@@ -112,7 +112,7 @@
       <h3>بيانات تشاركها باختيارك</h3>
       <ul>
         <li><strong>الموقع:</strong> لا يُجمع إلا عند تفعيل مشاركة الموقع يدويًا، ويقتصر على من أتمّ الثامنة عشرة. تنتهي المشاركة تلقائيًا بعد ثماني ساعات.</li>
-        <li><strong>جهات الاتصال أو معرض الصور:</strong> يُقرأ فقط عند فتحك للكاميرا أو المعرض لاختيار مقطع، ولا نرفع شيئًا دون اختيارك له.</li>
+        <li><strong>الكاميرا ومعرض الصور:</strong> يُقرأ فقط عند فتحك للكاميرا أو المعرض لاختيار مقطع، ولا نرفع شيئًا دون اختيارك له. ولا نطّلع على جهات اتصالك إطلاقًا.</li>
       </ul>
 
       <h2 id="ar-use">لماذا نستخدمها</h2>
@@ -126,11 +126,12 @@
           <tr><td>إيصال الإشعارات والرسائل</td><td>بيانات الحساب، محتوى الرسالة</td></tr>
           <tr><td>حماية المنصة ومراجعة البلاغات</td><td>المحتوى المبلّغ عنه، بيانات الجهاز، سجلات الدخول</td></tr>
           <tr><td>الالتزام بالقانون والرد على الطلبات الرسمية</td><td>ما يطلبه القانون تحديدًا لا أكثر</td></tr>
-          <tr><td>تحسين التطبيق وإصلاح الأعطال</td><td>تقارير الأعطال وإحصاءات مجمّعة</td></tr>
+          <tr><td>تحسين التطبيق وإصلاح الأعطال</td><td>سجلات الأخطاء على خوادمنا، وأرقام مجمّعة غير مرتبطة بك</td></tr>
         </tbody>
       </table>
       </div>
-      <p>لا نبيع بياناتك الشخصية، ولا نشاركها مع وسطاء بيانات.</p>
+      <p>وقد يُفحص المحتوى المنشور على FLYP وفق <a href="guidelines.html">إرشادات المجتمع</a>، من قِبل فريقنا ومن قِبل أدوات آلية. راجع قائمة المزوّدين أدناه.</p>
+      <p>لا نبيع بياناتك الشخصية، ولا نشاركها مع وسطاء بيانات، ولا نستخدم أي خدمات إعلانات أو تحليلات من أطراف أخرى.</p>
 
       <h2 id="ar-basis">الأساس القانوني</h2>
 
@@ -160,7 +161,9 @@
         <li><strong>Cloudflare R2:</strong> تخزين المقاطع التي ترفعها وصور الغلاف الخاصة بها، وإيصالها إلى المشاهدين. ترفع هذه الملفات إليها من جهازك مباشرة، أمّا ما رُفع قبل انتقال التخزين إليها فلا يزال محفوظًا لدى Supabase.</li>
         <li><strong>Cloudflare Turnstile:</strong> التحقق من أنك شخص لا برنامج آلي، عند إنشاء الحساب وتسجيل الدخول وإعادة تعيين كلمة المرور. يفحص إشارات من متصفّحك وعنوان IP الخاص بك، ولا يطّلع على محتوى حسابك.</li>
         <li><strong>Agora:</strong> البث المباشر والمكالمات الصوتية والمرئية. يمر الصوت والصورة عبر شبكتها لحظيًا ليصلا إلى الطرف الآخر، ولا نسجّلهما ولا يُخزّنان عندها.</li>
-        <li><strong>OpenStreetMap:</strong> صور الخريطة في ميزة مشاركة الموقع. عند فتح الخريطة يصل إلى خوادمها عنوان IP الخاص بك والجزء المعروض من الخريطة فقط، ولا تصل إليها إحداثياتك المحفوظة ولا أي بيانات عن حسابك.</li>
+        <li><strong>Esri:</strong> صور الخريطة في ميزة مشاركة الموقع. عند فتح الخريطة يصل إلى خوادمها عنوان IP الخاص بك والجزء المعروض من الخريطة، ولا يصلها شيء عن حسابك.</li>
+        <li><strong>OpenStreetMap (Nominatim):</strong> تحويل نقطة على الخريطة إلى اسم مكان، والبحث عن مكان بالاسم. عند استخدام أيٍّ منهما تُرسل إلى خوادمها إحداثيات النقطة المعروضة، أو الكلمات التي كتبتها، مع عنوان IP الخاص بك. ولا تصلها بيانات حسابك، ولا يُرسل شيء إطلاقًا ما لم تفتح الخريطة أو منتقي المكان.</li>
+        <li><strong>Google (Gemini):</strong> الفحص الآلي للمحتوى. قد تُمرَّر المقاطع والأوصاف والتعليقات إلى خدمة Gemini من Google لفحصها وفق إرشادات المجتمع. لا يُرسل إليها إلا المحتوى محل الفحص، دون اسمك أو بريدك أو بيانات حسابك. والفحص الآلي يساند مراجعة فريقنا ولا يحل محلها، ويمكننا إيقافه.</li>
       </ul>
       <p>كل جهة من هذه الجهات تعالج البيانات نيابة عنّا وبموجب شروطها التعاقدية، وليس لها أن تستخدمها لأغراضها هي. وقد تكون خوادمها خارج المملكة، فراجع <a href="#ar-transfer">نقل البيانات خارج بلدك</a>. وإن أضفنا مزوّدًا جديدًا فسنذكره هنا قبل أن تمر بياناتك عبره.</p>
 
@@ -227,7 +230,12 @@
 
       <h2 id="ar-transfer">نقل البيانات خارج بلدك</h2>
 
-      <p>تُخزَّن بياناتك على خوادم قد تكون خارج بلد إقامتك. عند نقل بيانات من المنطقة الأوروبية أو من دول تفرض قيودًا مماثلة، نعتمد على البنود التعاقدية القياسية أو ما يعادلها من ضمانات معتمدة.</p>
+      <p>تُخزَّن بياناتك على خوادم تقع خارج بلد إقامتك.</p>
+      <ul>
+        <li>حسابك ومنشوراتك وتعليقاتك ورسائلك وملفاتك محفوظة لدى <strong>Supabase</strong> في منطقة مومباي، في <strong>الهند</strong>.</li>
+        <li>تُوصَّل المقاطع وصور الغلاف عبر شبكة <strong>Cloudflare</strong> العالمية، ويمر البث المباشر والمكالمات عبر شبكة <strong>Agora</strong> العالمية، فتسلك أقرب الخوادم في حينه.</li>
+      </ul>
+      <p>وعند نقل بيانات من المنطقة الأوروبية أو من دول تفرض قيودًا مماثلة، نعتمد على البنود التعاقدية القياسية أو ما يعادلها من ضمانات معتمدة.</p>
 
       <h2 id="ar-changes">تغييرات على هذه السياسة</h2>
 
@@ -292,7 +300,7 @@
       <h3>Things you share by choice</h3>
       <ul>
         <li><strong>Location:</strong> only collected when you switch location sharing on yourself, and only available to people over eighteen. Sharing expires automatically after eight hours.</li>
-        <li><strong>Camera and photo library:</strong> read only when you open the camera or the picker to choose a clip. Nothing is uploaded unless you select it.</li>
+        <li><strong>Camera and photo library:</strong> read only when you open the camera or the picker to choose a clip. Nothing is uploaded unless you select it. We never read your contacts.</li>
       </ul>
 
       <h2 id="en-use">Why we use it</h2>
@@ -306,11 +314,12 @@
           <tr><td>Delivering notifications and messages</td><td>Account details, message content</td></tr>
           <tr><td>Protecting the platform and reviewing reports</td><td>Reported content, device data, sign in logs</td></tr>
           <tr><td>Meeting legal obligations and answering official requests</td><td>Only what the law specifically requires</td></tr>
-          <tr><td>Improving the app and fixing crashes</td><td>Crash reports and aggregate statistics</td></tr>
+          <tr><td>Improving the app and fixing faults</td><td>Error logs from our own servers, and totals that are not tied to you</td></tr>
         </tbody>
       </table>
       </div>
-      <p>We do not sell your personal data, and we do not share it with data brokers.</p>
+      <p>Content posted on FLYP may also be checked against our <a href="guidelines.html">community guidelines</a>, by our team and by automated tools. See the list of providers below.</p>
+      <p>We do not sell your personal data, we do not share it with data brokers, and we use no third party advertising or analytics services.</p>
 
       <h2 id="en-basis">Legal basis</h2>
 
@@ -340,7 +349,9 @@
         <li><strong>Cloudflare R2:</strong> storing the clips you upload and their cover images, and delivering them to viewers. Those files upload to it straight from your device. Anything uploaded before storage moved there is still held at Supabase.</li>
         <li><strong>Cloudflare Turnstile:</strong> checking that you are a person and not a script, when you create an account, sign in, or reset your password. It reads signals from your browser and your IP address, and sees nothing inside your account.</li>
         <li><strong>Agora:</strong> live streaming and voice and video calls. Audio and video travel through its network in real time to reach the other side. We do not record them and it does not store them.</li>
-        <li><strong>OpenStreetMap:</strong> the map imagery in the location sharing feature. When you open the map, its servers receive your IP address and the part of the map on screen, and nothing else. Your saved coordinates and your account details are never sent to them.</li>
+        <li><strong>Esri:</strong> the map imagery in the location sharing feature. When you open the map, its servers receive your IP address and which part of the map is on screen. Nothing about your account is sent to them.</li>
+        <li><strong>OpenStreetMap (Nominatim):</strong> turning a point on the map into a place name, and searching for a place by name. When you use either, the coordinates of the point being looked at, or the words you typed, are sent to its servers together with your IP address. Your account details are never sent, and nothing is sent at all unless you open the map or the place picker.</li>
+        <li><strong>Google (Gemini):</strong> automated checks on content. Clips, captions and comments may be passed to Google's Gemini service to be checked against our guidelines. Only the content being checked is sent, never your name, email or account details. Automated checking supports review by our team rather than replacing it, and we can switch it off.</li>
       </ul>
       <p>Each of these processes data on our behalf under its contract terms and may not use it for its own purposes. Their servers may sit outside the Kingdom, so see <a href="#en-transfer">Sending data outside your country</a>. If we add a new provider we will name it here before your data starts passing through it.</p>
 
@@ -407,7 +418,12 @@
 
       <h2 id="en-transfer">Sending data outside your country</h2>
 
-      <p>Your data is stored on servers that may sit outside your country of residence. Where data moves out of the European Economic Area or a country with comparable restrictions, we rely on Standard Contractual Clauses or an equivalent approved safeguard.</p>
+      <p>Your data is stored on servers that sit outside your country of residence.</p>
+      <ul>
+        <li>Your account, your posts and comments, your messages and your files are held by <strong>Supabase</strong> in its Mumbai region, in <strong>India</strong>.</li>
+        <li>Clips and cover images are delivered from <strong>Cloudflare's</strong> global network, and live streams and calls travel over <strong>Agora's</strong> global network, so they pass through whichever servers are nearest at the time.</li>
+      </ul>
+      <p>Where data moves out of the European Economic Area or a country with comparable restrictions, we rely on Standard Contractual Clauses or an equivalent approved safeguard.</p>
 
       <h2 id="en-changes">Changes to this policy</h2>
 
