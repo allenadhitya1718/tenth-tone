@@ -57,7 +57,24 @@ window.TT_CONFIG = (function () {
   //      put the secret key in the Supabase dashboard.
   //   3. Rebuild and distribute the APK.
   //   4. Only once people are on that build, enable it in the dashboard.
-  const captchaSiteKey = '0x4AAAAAAEiD4fQMLJ_1A_JQ';
+  // Turnstile is OFF for launch. The layer is inert whenever this string is
+  // empty: Captcha.enabled() returns false, no script is fetched, no widget is
+  // created, and captchaOpt() sends nothing.
+  //
+  // It was providing no protection anyway - the Supabase Attack Protection
+  // toggle is off, so no token was ever being verified server-side. What it
+  // DID do was lock every iOS tester out of the app on 2026-09-02, because
+  // Turnstile cannot verify on a custom scheme, and it was a standing risk
+  // with an App Store reviewer signing in from a data centre, which is exactly
+  // the traffic a bot check flags.
+  //
+  // To switch it back on: restore the key below, ship a build, get EVERY
+  // client onto it, and only then flip the Supabase toggle. The toggle makes
+  // tokens mandatory server-side instantly for every client at once, and a
+  // client that cannot produce one cannot sign in, sign up, OR reset a
+  // password - so there is no self-service way back.
+  //   const captchaSiteKey = '0x4AAAAAAEiD4fQMLJ_1A_JQ';
+  const captchaSiteKey = '';
 
   // ── CLOUDFLARE R2 UPLOADS ──
   // false → videos and live covers upload to Supabase Storage, exactly as they
@@ -136,7 +153,7 @@ window.TT_CONFIG = (function () {
   // Keep in step with versionName in android/app/build.gradle. On a device the
   // native shell overwrites it below with the REAL installed version, so a
   // stale constant here can only ever be wrong in the browser.
-  let appVersion = '1.2.7';
+  let appVersion = '1.2.8';
 
   try {
     const cap = window.Capacitor;
