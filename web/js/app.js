@@ -27,7 +27,9 @@
     { p: /^\/discover$/, v: () => Views.discover() },
     { p: /^\/create$/, v: () => Views.create() },
     { p: /^\/camera$/, v: q => Views.camera({ q }) },
-    { p: /^\/upload$/, v: () => Views.editVideo() },
+    // pick: true - "Upload" must open the picker, never replay the draft
+    // that is still sitting in _ttPendingClip.
+    { p: /^\/upload$/, v: () => Views.editVideo({ pick: true }) },
     { p: /^\/edit-video$/, v: () => Views.editVideo() },
     { p: /^\/publish$/, v: () => Views.publish() },
     { p: /^\/inbox$/, v: () => Views.inbox() },
@@ -103,13 +105,62 @@
   let sessionChecked = false;
   let session = null;
 
+  // ── The session check must never be able to hold the first paint ──
+  //
+  // supabase-js refreshes an expired access token inside getSession(), and
+  // that refresh has no timeout of its own. With a stale token and a network
+  // that stalls - which is every user who leaves the app open long enough for
+  // the token to age - the promise simply never settles. render() awaited it
+  // BEFORE touching #app, so the app drew absolutely nothing: no spinner, no
+  // error, no bounce to sign-in. A permanently blank screen.
+  //
+  // So race it. Whichever answer arrives first decides this paint. The real
+  // answer is still awaited in the background and, if it turns out to be a
+  // valid session, the screen is re-rendered with it - a merely slow network
+  // still ends up signed in, which is why the timeout does not simply
+  // overwrite the session with null and forget about it.
+  const SESSION_TIMEOUT_MS = 4000;
+  let sessionProbe = null;
+
+  function sessionWithinTimeout() {
+    if (sessionProbe) return sessionProbe;
+    let timedOut = false;
+    const real = (async () => {
+      try { return await window.SB.getSession(); } catch (e) { return null; }
+    })();
+    real.then(s => {
+      session = s;
+      sessionChecked = true;    // only the REAL answer is ever remembered
+      if (timedOut && s) onLateSession();
+    }, () => { sessionChecked = true; });
+    sessionProbe = Promise.race([
+      real,
+      new Promise(res => setTimeout(() => { timedOut = true; res(null); }, SESSION_TIMEOUT_MS)),
+    ]);
+    return sessionProbe;
+  }
+
+  // The session turned up after we had already painted as signed-out.
+  function onLateSession() {
+    const { path } = parseHash();
+    const onAuthScreen = ['/', '/login', '/welcome', '/onboarding'].indexOf(path) > -1;
+    // Someone already typing their credentials must not be yanked away
+    // mid-word, even though they are in fact signed in.
+    const typing = [].slice.call(document.querySelectorAll('#app input, #app textarea'))
+      .some(function (i) { return i.value; });
+    if (onAuthScreen && !typing) { location.hash = '#/home'; return; }
+    render();
+  }
+
   async function render() {
     const { path, q } = parseHash();
 
     // Auth guard: gate non-public paths until we know whether the user is signed in
     if (!sessionChecked) {
-      try { session = await window.SB.getSession(); } catch (e) { session = null; }
-      sessionChecked = true;
+      const s = await sessionWithinTimeout();
+      // Guard again: the real answer may have landed while we awaited, and it
+      // outranks the timeout's null.
+      if (!sessionChecked) session = s;
     }
 
     applyTheme(!!session);
@@ -194,6 +245,31 @@
       }
     });
   }
+
+  // Last line of defence. Nothing above should be able to leave #app empty
+  // any more, but "blank screen with no way out" is the one failure a user
+  // cannot report and cannot escape, so it gets an explicit backstop rather
+  // than trust. Only ever fires when the app really has drawn nothing.
+  setTimeout(function () {
+    if (app.children.length) return;
+    app.innerHTML = '';
+    const box = document.createElement('div');
+    box.style.cssText = 'padding:32px 24px;text-align:center;font-family:Tajawal,Cairo,sans-serif';
+    box.setAttribute('dir', 'rtl');
+    const msg = document.createElement('p');
+    msg.textContent = 'تعذر بدء التطبيق. تحقق من اتصالك وحاول مرة أخرى.';
+    msg.style.cssText = 'margin:0 0 18px;font-size:15px';
+    const btn = document.createElement('button');
+    btn.textContent = 'إعادة المحاولة';
+    btn.style.cssText = 'padding:12px 26px;border:0;border-radius:999px;background:#1e56d6;color:#fff;font-size:15px;font-weight:700';
+    btn.onclick = function () { location.reload(); };
+    const alt = document.createElement('button');
+    alt.textContent = 'تسجيل الدخول';
+    alt.style.cssText = 'display:block;margin:14px auto 0;padding:10px 22px;border:0;background:none;color:#1e56d6;font-size:14px;font-weight:600';
+    alt.onclick = function () { location.hash = '#/login'; render(); };
+    box.appendChild(msg); box.appendChild(btn); box.appendChild(alt);
+    app.appendChild(box);
+  }, 9000);
 
   window.addEventListener('hashchange', render);
   // Language switch re-renders the current view from its Arabic source

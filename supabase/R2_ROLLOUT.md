@@ -295,6 +295,84 @@ a free one:
 
 ---
 
+## Step 11 — media privacy (found during App Store prep)
+
+Three findings, verified against the live project rather than read off the
+schema. Two are fixed; the third needs infrastructure that does not exist yet.
+
+### Fixed: a private video's URL was published to an anon-readable table
+
+`publishVideo` created an "original sound" for every post, and
+`createOriginalSound` copies the **video's own URL** into `sounds.audio_url` —
+there is no separate audio file, the browser plays the mp4's audio track.
+`sounds` was `for select to authenticated, anon using (true)` since 0008.
+
+So a clip marked `private` had `videos` RLS hiding its row and the sound row
+handing the media URL back to any stranger with the public anon key — and the
+bucket serves that URL with no authentication at all. One HTTP request, no
+account. Closed in `db.js` (no sound row for a non-public post) and in
+`migrations/0079` (RLS: a sound is exactly as visible as the video it came
+from). Run 0079.
+
+### Fixed: the object key carried the uploader's auth UUID
+
+Keys were `videos/<auth uid>/<timestamp>-<uuid>.mp4`, and the key *is* the URL.
+`media-upload` now mints 16 random bytes and nothing else. Nothing parsed keys
+— `user_uploads_today()` sums by `media_objects.user_id`, `media-reconcile`
+matches whole keys against the ledger — so this changes no behaviour.
+
+Existing objects keep their old keys and keep working. To rekey them:
+`python tools/rekey_media_r2.py --env r2-migrate.env` (dry run), `--copy`, run
+the emitted `r2_rekey_urls.sql`, watch a video, then `--delete-old`. Server-side
+copy, so no egress. Both copies count toward the ceiling until you finish.
+
+### Fixed: the public buckets could be listed anonymously
+
+`avatars public read` / `videos public read` are unconditional `select`
+policies, and storage's LIST endpoint is a select. Listing `avatars` with the
+anon key returned every user's auth UUID as a folder name. `migrations/0080`
+scopes those policies to the owner. Reads are unaffected: a public bucket is
+served through `/object/public/`, which does not evaluate policies, and the app
+only ever reads through `getPublicUrl()`.
+
+### Not fixed: anyone holding a media URL can still fetch it
+
+This is the honest state of things. `videos.privacy` is enforced by Postgres;
+the object store has never heard of it. A URL that leaks — through a share, a
+former follower, a CDN log, a device cache — works for ever.
+
+**Signed URLs are not the answer here, and it is worth writing down why:**
+
+- The whole R2 design rests on `cache-control: …immutable` at Cloudflare's
+  edge, which is what makes egress free and the bucket's region irrelevant. A
+  presigned URL is unique per request, so it is a cache MISS every time —
+  every view becomes an origin fetch.
+- Worse, presigning does not work on the public base at all. `r2.dev` and a
+  custom domain are the *public* endpoint; SigV4 GETs go to
+  `<account>.r2.cloudflarestorage.com`, which is not the cached path. Signing
+  means abandoning the CDN, not merely warming it less.
+- The feed cache persists fully-formed URLs to `localStorage` for 24 hours and
+  renders from them on cold start (`tt-cache-v2`). Any signature short enough
+  to be meaningful is dead before that cache is; any signature long enough to
+  survive it is a permanent bearer token, which is what we already have.
+- `sounds.audio_url` and `messages.attachment_url` store URLs in columns for
+  ever. Chat already demonstrates the failure mode — see the 7-day note above.
+- Signing costs a round trip on the hot path: measured sign latency in this
+  project is 1.3–3.0s.
+
+Seeking, for the record, is *not* a reason — R2 presigned GETs honour `Range`
+fine. The reasons above are enough on their own.
+
+**What actually fixes it**, when there is time: a Cloudflare Worker on a custom
+domain in front of the bucket. Public objects pass straight through and stay
+edge-cached exactly as now; a non-public one is served only after the Worker
+validates a Supabase JWT and checks the viewer against `videos.privacy`. It
+needs `flyp-sa.com`'s DNS on Cloudflare first (step 2), so it cannot ship
+today. Until then, treat rekeying as the revocation mechanism: it is the only
+way to make an already-leaked URL stop working.
+
+---
+
 ## Free-tier note
 
 Supabase Free gives ~5 GB egress/month across everything. A feed load is

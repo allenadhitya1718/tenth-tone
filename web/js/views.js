@@ -843,6 +843,43 @@
     return root;
   };
 
+  // Reporting lives at module scope, not inside V.home.
+  //
+  // It used to be defined inside the feed and published as
+  // window._openReportSheet, so a cold start straight onto a profile
+  // (/u/<handle>, /profile/<id>, any deep link, a TestFlight tester opening
+  // a shared link) never ran V.home, the global was undefined, and the
+  // Report button on that profile did nothing at all. That is the exact
+  // path an app-store reviewer takes, and a dead Report control on
+  // user-generated content is an App Review 1.2 rejection.
+
+  // Report sheet — pick a reason, submits to the `reports` table (auto-hides
+  // the content once it crosses the report threshold — see 0012_moderation.sql).
+  function openReportSheet(targetType, targetId) {
+    const reasons = [
+      'محتوى غير لائق', 'خطاب كراهية أو تنمر', 'عنف أو محتوى صادم',
+      'انتحال شخصية', 'محتوى مضلل', 'بريد عشوائي', 'أخرى',
+    ];
+    const sheet = el('div', { class: 'sheet', style: { padding: '16px 0' } });
+    sheet.appendChild(el('h3', { style: { margin: '0 16px 8px', textAlign: 'center' } }, 'لماذا تبلغ عن هذا؟'));
+    reasons.forEach(reason => {
+      sheet.appendChild(el('div', {
+        class: 'user-row',
+        style: { cursor: 'pointer', padding: '13px 20px' },
+        onclick: async () => {
+          close();
+          try {
+            await window.API.report({ targetType, targetId, reason });
+            toast('تم استلام بلاغك، شكرًا لك');
+          } catch (e) {
+            toast(friendlyError(e, 'تعذر إرسال البلاغ'));
+          }
+        },
+      }, [el('span', { style: { fontSize: '14.5px' } }, reason)]));
+    });
+    const close = modal(sheet);
+  }
+
   // ===== Home Feed =====
   V.home = (params) => {
     bottomNav('home');
@@ -1100,34 +1137,6 @@
 
       const close = modal(sheet);
     }
-
-    // Report sheet — pick a reason, submits to the `reports` table (auto-hides
-    // the content once it crosses the report threshold — see 0012_moderation.sql).
-    function openReportSheet(targetType, targetId) {
-      const reasons = [
-        'محتوى غير لائق', 'خطاب كراهية أو تنمر', 'عنف أو محتوى صادم',
-        'انتحال شخصية', 'محتوى مضلل', 'بريد عشوائي', 'أخرى',
-      ];
-      const sheet = el('div', { class: 'sheet', style: { padding: '16px 0' } });
-      sheet.appendChild(el('h3', { style: { margin: '0 16px 8px', textAlign: 'center' } }, 'لماذا تبلغ عن هذا؟'));
-      reasons.forEach(reason => {
-        sheet.appendChild(el('div', {
-          class: 'user-row',
-          style: { cursor: 'pointer', padding: '13px 20px' },
-          onclick: async () => {
-            close();
-            try {
-              await window.API.report({ targetType, targetId, reason });
-              toast('تم استلام بلاغك، شكرًا لك');
-            } catch (e) {
-              toast(friendlyError(e, 'تعذر إرسال البلاغ'));
-            }
-          },
-        }, [el('span', { style: { fontSize: '14.5px' } }, reason)]));
-      });
-      const close = modal(sheet);
-    }
-    window._openReportSheet = openReportSheet; // exposed for use from the profile screen
 
     // Adapt a database row to the shape the feed renderer expects.
     // A real row's own counts are always used verbatim — including zero.
@@ -2680,11 +2689,22 @@ function autoPlay(video) {
   // Replaced a mock screen whose "preview" was the literal text "🎬 Video
   // preview" and whose seven tools (Sound, Filters, Effects, Text, Stickers,
   // Speed, Cover) had no click handlers at all.
-  V.editVideo = () => {
+  // Two routes land here and they mean opposite things:
+  //   /edit-video  - review the clip that was just recorded (in _ttPendingClip)
+  //   /upload      - the user pressed "Upload": choose a NEW file
+  // Both called Views.editVideo() with no argument, so Upload picked up
+  // whatever draft was still parked in the global and replayed the previous
+  // video instead of opening the picker. opts.pick says which one this is.
+  V.editVideo = (opts) => {
     hideNav();
     const root = el('section', { class: 'review-screen' });
 
-    let file = window._ttPendingClip || null;
+    const wantPick = !!(opts && opts.pick);
+    // Choosing a new file discards the old draft outright - otherwise an
+    // abandoned recording sits in the global and resurfaces over the next
+    // selection.
+    if (wantPick) window._ttPendingClip = null;
+    let file = wantPick ? null : (window._ttPendingClip || null);
     let duration = 0;
     let trimStart = 0;
     let trimEnd = 0;
@@ -2700,7 +2720,9 @@ function autoPlay(video) {
     const nextBtn = el('button', { class: 'review-next', disabled: true }, 'التالي');
 
     root.appendChild(el('header', { class: 'top-bar dark' }, [
-      el('button', { class: 'icon-btn dark', html: icons.x, onclick: () => { cleanup(); go('/create'); } }),
+      // Closing the review screen throws the clip away. Leaving it in the
+      // global is what let a discarded draft come back later.
+      el('button', { class: 'icon-btn dark', html: icons.x, onclick: () => { cleanup(); window._ttPendingClip = null; go('/create'); } }),
       el('h1', { class: 'title' }, 'مراجعة'),
       nextBtn,
     ]));
@@ -2777,11 +2799,16 @@ function autoPlay(video) {
 
     if (file) loadFile(file);
     else {
-      // Reached via "Upload" with nothing recorded - ask for a file.
+      // Reached via "Upload" - ask for a file.
       nextBtn.disabled = true;
+      picker.value = '';
       picker.click();
     }
-    picker.addEventListener('change', () => { loadFile(picker.files[0]); });
+    picker.addEventListener('change', () => {
+      const picked = picker.files[0];
+      picker.value = '';   // so re-picking the same file fires change again
+      loadFile(picked);
+    });
 
     // ── Playback constrained to the trimmed range ──
     let playing = false;
@@ -2944,6 +2971,9 @@ function autoPlay(video) {
       }
 
       chosenFile = file;
+      // Same reset the chat attachment inputs do: without it, picking the very
+      // same file again is not a change event and the tile never updates.
+      fileInput.value = '';
       showPreview(file);
     }
 
@@ -3576,8 +3606,42 @@ function autoPlay(video) {
   //
   // Both constants in one place so the whole app moves together - there were
   // three separate copies of the OSM URL before this.
-  const MAP_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}';
+  //
+  // ?blankTile=false is the fix for "Map data not yet available". Esri's cache
+  // stops at level 19, and outside built-up areas it stops shallower still.
+  // Asked for a tile it does not hold, the service answers 200 OK with a
+  // PICTURE of the words "Map data not yet available" - so the map filled up
+  // with error text that Leaflet had no way to recognise as a failure. This is
+  // ArcGIS's own switch for that: the same request 404s instead, Leaflet sees
+  // a missing tile, and the space is left empty. Checked against the live
+  // service - a tile that does exist comes back byte-identical either way.
+  const MAP_TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}?blankTile=false';
   const MAP_ATTRIB = '© Esri · OpenStreetMap';
+  // The deepest level Esri actually caches (measured against the live service:
+  // 19 is the last real level everywhere tested, 20 and beyond is the
+  // placeholder). maxNativeZoom and maxZoom are different options and both
+  // matter: maxZoom is how far the user may pinch, maxNativeZoom is how deep
+  // Leaflet is allowed to ASK. Without the second one every pinch past the
+  // cache requested tiles that do not exist instead of scaling up the deepest
+  // one that does.
+  const MAP_MAX_NATIVE_ZOOM = 19;
+  const MAP_MAX_ZOOM = 21;
+  // Esri's own colour for land it has nothing to draw on, so a tile that is
+  // genuinely missing reads as empty ground rather than a hole.
+  const MAP_LAND = '#f3f0cf';
+  // 1x1 transparent GIF: a 404 tile shows nothing instead of the browser's
+  // broken-image glyph.
+  const MAP_BLANK_TILE = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+  // One options object so both maps (the /map screen and the chat location
+  // picker) cannot drift apart again.
+  function mapTileOpts() {
+    return {
+      maxZoom: MAP_MAX_ZOOM,
+      maxNativeZoom: MAP_MAX_NATIVE_ZOOM,
+      errorTileUrl: MAP_BLANK_TILE,
+      attribution: MAP_ATTRIB,
+    };
+  }
   function mapTileSrc(z, x, y) {
     return MAP_TILE_URL.replace('{z}', z).replace('{y}', y).replace('{x}', x);
   }
@@ -3725,7 +3789,7 @@ function autoPlay(video) {
     let moveTimer = null, moveSeq = 0, searchSeq = 0;
     let skipNextReverse = false, closed = false;
 
-    const mapEl = el('div', { class: 'lp-map' });
+    const mapEl = el('div', { class: 'lp-map', style: { background: MAP_LAND } });
     const pin = el('div', { class: 'lp-pin', html: icons.mapPin });
     const hint = el('div', { class: 'lp-hint' }, 'حرّك الخريطة أو اضغط عليها لاختيار مكان');
     const locateBtn = el('button', { class: 'lp-locate', title: 'موقعي الحالي', html: CROSSHAIR });
@@ -3922,10 +3986,8 @@ function autoPlay(video) {
       await waitForMapSize(mapEl);
       if (closed) return;
       // Same tiles and default centre (Riyadh) as the /map screen.
-      map = window.L.map(mapEl, { zoomControl: false, attributionControl: true }).setView([24.7136, 46.6753], 12);
-      window.L.tileLayer(MAP_TILE_URL, {
-        maxZoom: 19, attribution: MAP_ATTRIB,
-      }).addTo(map);
+      map = window.L.map(mapEl, { zoomControl: false, attributionControl: true, maxZoom: MAP_MAX_ZOOM }).setView([24.7136, 46.6753], 12);
+      window.L.tileLayer(MAP_TILE_URL, mapTileOpts()).addTo(map);
       map.attributionControl.setPosition('bottomright');
       map.invalidateSize();
       requestAnimationFrame(() => { if (map) map.invalidateSize(); });
@@ -5879,7 +5941,7 @@ function autoPlay(video) {
     }, true);
     const reportRow = row(icons.flag, 'الإبلاغ عن المستخدم', () => {
       close();
-      if (window._openReportSheet) window._openReportSheet('user', u.id);
+      openReportSheet('user', u.id);
     }, true);
     sheet.appendChild(blockRow);
     sheet.appendChild(reportRow);
@@ -8198,7 +8260,7 @@ function autoPlay(video) {
     const focusUserId = (params && params.q && params.q.user) || null; // /#/map?user=<id>
     const root = el('section', { class: 'map-screen', style: { position: 'relative', height: '100%' } });
     // Real Leaflet map container
-    const mapEl = el('div', { id: 'leaflet-map', style: { position: 'absolute', inset: 0, zIndex: 0 } });
+    const mapEl = el('div', { id: 'leaflet-map', style: { position: 'absolute', inset: 0, zIndex: 0, background: MAP_LAND } });
     root.appendChild(mapEl);
 
     // Ghost-mode state (Snap-style: hide my pin from everyone)
@@ -8393,11 +8455,11 @@ function autoPlay(video) {
       if (!ensureLeaflet()) { setTimeout(initMap, 200); return; }
       await waitForSize(mapEl);
       // Default center: Riyadh
-      map = window.L.map(mapEl, { zoomControl: false, attributionControl: true }).setView([24.7136, 46.6753], 11);
-      window.L.tileLayer(MAP_TILE_URL, {
-        maxZoom: 19,
-        attribution: MAP_ATTRIB,
-      }).addTo(map);
+      // maxZoom on the map as well as on the layer - Leaflet derives the map's
+      // limit from its layers only when the map has none of its own, and the
+      // two silently disagreeing is how this class of bug starts.
+      map = window.L.map(mapEl, { zoomControl: false, attributionControl: true, maxZoom: MAP_MAX_ZOOM }).setView([24.7136, 46.6753], 11);
+      window.L.tileLayer(MAP_TILE_URL, mapTileOpts()).addTo(map);
       // No zoom buttons: they sat behind the bottom sheet, and a phone map is
       // pinched, not clicked. Double-tap and pinch both still work.
       map.attributionControl.setPosition('bottomright');

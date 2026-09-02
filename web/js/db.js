@@ -532,7 +532,25 @@
     // Every public post gets an original sound others can reuse - the loop
     // that makes a short-video app work. Skipped when the user picked an
     // existing sound, and for drafts.
-    if (!sound_id && !is_draft && data && data.id) {
+    //
+    // ── And skipped for anything that is not public. ──
+    // This line is a privacy fix, not a feature decision.
+    //
+    // `sounds` is readable by everyone, signed in or not (0008: `for select to
+    // authenticated, anon using (true)`), and createOriginalSound copies the
+    // VIDEO'S OWN URL into sounds.audio_url — there is no separate audio file,
+    // the browser just plays the mp4's audio track. So publishing a private
+    // clip also published its media URL to a table anyone could read with the
+    // public anon key, and the media itself is served from a public bucket
+    // with no auth. `videos` RLS hid the row; the sound row handed the file
+    // straight back. That was the whole privacy hole, reachable by a stranger
+    // with no account and one HTTP request.
+    //
+    // Nothing is lost: a sound exists so OTHER people can make videos with it,
+    // and nobody can reach a private or followers-only clip to reuse it
+    // anyway. 0079 adds the same rule in RLS, because a client-side check is
+    // not a control - this one just stops writing the row in the first place.
+    if (!sound_id && !is_draft && privacy === 'public' && data && data.id) {
       try {
         const snd = await API.createOriginalSound({
           videoId: data.id,

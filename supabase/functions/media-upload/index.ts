@@ -205,12 +205,34 @@ Deno.serve(async (req) => {
       return json({ error: 'file_too_large', max_bytes: maxBytes }, 413);
     }
 
-    // ── The key is chosen HERE, never by the client ──
+    // ── The key is chosen HERE, never by the client, and it says NOTHING ──
+    //
     // A client-supplied key is an overwrite primitive: pass someone else's
-    // path and you replace their video. The user id keeps the folder-per-owner
-    // shape the Supabase policies used, and the random suffix makes the key
-    // unguessable and impossible to collide with.
-    const key = `${bucket}/${user.id}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+    // path and you replace their video. So the server picks it. That much was
+    // always true. What changed is WHAT it picks.
+    //
+    // It used to be `videos/<auth uid>/<timestamp>-<uuid>.mp4`, mirroring the
+    // folder-per-owner shape the Supabase storage policies needed. On R2 there
+    // are no policies, so that shape bought nothing — and it cost something.
+    // The bucket is served from a public base, so the key IS the URL, and a
+    // URL travels much further than the database row it came from: into share
+    // sheets, into other people's chat apps, into CDN and referer logs, into
+    // whatever a phone's WebView caches. Every one of those places was being
+    // handed a stable identifier that groups all of one person's media, plus
+    // the exact minute each file was made.
+    //
+    // Now it is 16 random bytes and nothing else. No owner, no clock, no
+    // ordering. Ownership lives in media_objects.user_id, which is where every
+    // consumer already looks: user_uploads_today() sums by user_id, and
+    // media-reconcile matches whole keys against the ledger. Neither has ever
+    // parsed a key, so neither notices this.
+    //
+    // The two-character shard is only there to keep a bucket listing navigable
+    // by hand; it is the first byte of the same random value and carries no
+    // information about who uploaded.
+    const rand = crypto.getRandomValues(new Uint8Array(16));
+    const oid = Array.from(rand, (b) => b.toString(16).padStart(2, '0')).join('');
+    const key = `${bucket}/${oid.slice(0, 2)}/${oid}.${ext}`;
 
     // ── Cap how many uploads one person can have in flight ──
     // A pending row counts toward usage at its DECLARED size, so a caller who
