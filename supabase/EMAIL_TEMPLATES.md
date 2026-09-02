@@ -1,136 +1,121 @@
-# Supabase email templates — FLYP
+# Supabase auth emails — FLYP
 
-Paste these into **Supabase → Authentication → Email Templates**.
+The HTML lives in `supabase/email_templates/`. **These files are only a copy.**
+Supabase does not read them. Nothing you change here reaches a single person
+until you paste it into the dashboard by hand — which is exactly why the rename
+from Tenth Tone was missed: the repo was updated, the dashboard never was.
 
-Both are bilingual, Arabic first with English underneath, because Supabase
-templates cannot know which language the person picked in the app.
-
-Both use `{{ .Token }}` — the six digit code. The default Supabase templates
-use `{{ .ConfirmationURL }}`, a magic link, which the app's OTP screen cannot
-accept. If you leave the default, signup breaks.
-
-Styles are inline and there are no external images or fonts, because email
-clients strip stylesheets and block remote assets.
+There are six templates and every one of them has to be pasted separately.
 
 ---
 
-## 1. Confirm signup
+## Before you start — two things that are not templates
 
-**Subject:** `رمز تفعيل حسابك في FLYP / Your FLYP code`
+These live in different screens, and both still carry the old name. Changing
+only the templates leaves "Tenth Tone" in people's inboxes.
 
-```html
-<div style="margin:0;padding:24px;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Tahoma,Arial,sans-serif">
-  <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px">
+**1. The sender name.** This is what shows in the From line, and most people
+read that before they read anything else.
 
-    <div style="font-size:20px;font-weight:700;color:#6c2bd9;margin-bottom:28px">FLYP</div>
+> Project Settings → Authentication → SMTP Settings → **Sender name**
 
-    <div dir="rtl" style="text-align:right">
-      <div style="font-size:19px;font-weight:700;color:#16161c;margin-bottom:8px">رمز تفعيل حسابك</div>
-      <div style="font-size:15px;color:#5a5a66;line-height:1.7">
-        أدخل هذا الرمز في التطبيق لإكمال إنشاء حسابك.
-      </div>
-    </div>
+Set it to `FLYP`. Check **Sender email** too — if it is on a `tenthtone`
+domain, every email is arriving from the old brand no matter what the body
+says. (If SMTP is not configured at all you are on Supabase's built-in sender,
+which is capped at a few emails per hour and is not good enough for launch —
+see the note at the bottom.)
 
-    <div style="margin:26px 0;padding:20px;background:#f1ebff;border-radius:12px;text-align:center">
-      <div style="font-size:34px;font-weight:700;letter-spacing:10px;color:#3d1580;font-family:monospace">{{ .Token }}</div>
-    </div>
+**2. The Site URL.** Used to build links inside emails.
 
-    <div dir="rtl" style="text-align:right;font-size:13.5px;color:#8a8a95;line-height:1.7">
-      الرمز صالح لمدة ساعة واحدة. إذا لم تطلب هذا الرمز فتجاهل هذه الرسالة، ولن يُنشأ أي حساب.
-    </div>
+> Authentication → URL Configuration → **Site URL**
 
-    <div style="height:1px;background:#e8e6ef;margin:26px 0"></div>
-
-    <div dir="ltr" style="text-align:left">
-      <div style="font-size:16px;font-weight:700;color:#16161c;margin-bottom:6px">Your verification code</div>
-      <div style="font-size:14px;color:#5a5a66;line-height:1.7">
-        Enter the code above in the app to finish creating your account.
-        It is valid for one hour. If you did not ask for it, ignore this email
-        and no account will be created.
-      </div>
-    </div>
-
-    <div style="margin-top:26px;font-size:12px;color:#a5a4b0">FLYP</div>
-  </div>
-</div>
-```
+It should be your real domain. If it still points at a `tenthtone` host or a
+stale Netlify preview, links in emails go somewhere wrong.
 
 ---
 
-## 2. Reset password
+## The templates
 
-**Subject:** `رمز إعادة تعيين كلمة المرور / Your password reset code`
+> Authentication → **Emails** (older projects call it Email Templates)
 
-```html
-<div style="margin:0;padding:24px;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Tahoma,Arial,sans-serif">
-  <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px">
+For each one: pick the tab, clear the **Subject heading** box and paste the new
+subject, then clear the **Message body** box entirely and paste the whole file.
+Save before moving to the next tab — switching tabs does not save.
 
-    <div style="font-size:20px;font-weight:700;color:#6c2bd9;margin-bottom:28px">FLYP</div>
+| Tab in the dashboard | File to paste |
+|---|---|
+| Confirm signup | `email_templates/confirm_signup.html` |
+| Invite user | `email_templates/invite.html` |
+| Magic Link | `email_templates/magic_link.html` |
+| Change Email Address | `email_templates/change_email.html` |
+| Reset Password | `email_templates/reset_password.html` |
+| Reauthentication | `email_templates/reauthentication.html` |
 
-    <div dir="rtl" style="text-align:right">
-      <div style="font-size:19px;font-weight:700;color:#16161c;margin-bottom:8px">إعادة تعيين كلمة المرور</div>
-      <div style="font-size:15px;color:#5a5a66;line-height:1.7">
-        أدخل هذا الرمز في التطبيق لتعيين كلمة مرور جديدة.
-      </div>
-    </div>
-
-    <div style="margin:26px 0;padding:20px;background:#f1ebff;border-radius:12px;text-align:center">
-      <div style="font-size:34px;font-weight:700;letter-spacing:10px;color:#3d1580;font-family:monospace">{{ .Token }}</div>
-    </div>
-
-    <div dir="rtl" style="text-align:right;font-size:13.5px;color:#8a8a95;line-height:1.7">
-      الرمز صالح لمدة ساعة واحدة. إذا لم تطلب إعادة التعيين فتجاهل هذه الرسالة، ولن تتغير كلمة مرورك.
-    </div>
-
-    <div style="height:1px;background:#e8e6ef;margin:26px 0"></div>
-
-    <div dir="ltr" style="text-align:left">
-      <div style="font-size:16px;font-weight:700;color:#16161c;margin-bottom:6px">Password reset code</div>
-      <div style="font-size:14px;color:#5a5a66;line-height:1.7">
-        Enter the code above in the app to set a new password.
-        It is valid for one hour. If you did not request this, ignore this
-        email and your password will not change.
-      </div>
-    </div>
-
-    <div style="margin-top:26px;font-size:12px;color:#a5a4b0">FLYP</div>
-  </div>
-</div>
-```
+Subject lines are in `email_templates/SUBJECTS.md`.
 
 ---
 
-## 3. Change email address
+## Why the body must be replaced, not edited
 
-Used when someone changes their email in Settings. Same rule applies.
+**The app cannot accept a magic link.** Supabase's stock templates send
+`{{ .ConfirmationURL }}`. FLYP's auth screens ask for a six digit code, so
+every template here uses `{{ .Token }}` instead. If any tab is left on the
+Supabase default, that flow breaks completely — people get a link, the app
+asks for a code, and there is no way through.
 
-**Subject:** `رمز تأكيد البريد الجديد / Confirm your new email`
+The one exception is **Invite user**, which is genuinely a link, and is the
+only template here that still uses `{{ .ConfirmationURL }}`.
 
-Use the **Confirm signup** template above, changing only the Arabic heading to
-`تأكيد بريدك الإلكتروني الجديد` and the English one to `Confirm your new email`.
+**Styles are inline and there are no images or web fonts.** Email clients strip
+`<style>` blocks and block remote assets by default. A template that looks
+right in a browser preview can arrive as unstyled text.
+
+**Arabic first, English underneath.** Supabase has no idea which language
+someone picked in the app, so both are always sent.
 
 ---
 
-## Settings that must match
+## The colour was wrong too
 
-In **Authentication → Providers → Email**:
+The two templates that existed used `#6c2bd9` — Tenth Tone's purple. The app's
+primary colour is `#1e56d6`, blue. So even after the word "Tenth Tone" was
+removed from the body, the emails were still arriving in the old brand's
+colour. Every template now takes its palette from `web/css/app.css`.
 
-- **Confirm email: ON.** Without it Supabase creates the account instantly and
-  never sends a code, so the OTP screen never appears.
-- **OTP length: 6.** The app's OTP screen has exactly six boxes. An eight digit
-  code silently fails every time, which already caught us once.
-- **OTP expiry: 3600** seconds, matching the one hour stated in the emails above.
+If you ever change the app's primary colour, update
+`scratchpad/gen_emails.py` and regenerate, rather than editing six files by
+hand — that drift is how this happened the first time.
 
-In **Project Settings → Authentication → SMTP Settings**:
+---
 
-| Field | Value |
-| --- | --- |
-| Host | `smtp.resend.com` |
-| Port | `465` |
-| Username | `resend` |
-| Password | the Resend API key |
-| Sender email | `no-reply@flyp-sa.com` |
-| Sender name | `FLYP` |
+## Testing without locking anyone out
 
-The sender domain must be the one verified in Resend, or every message is
-rejected.
+Send yourself one of each, in a **normal browser or on a phone** — not in any
+automated or embedded browser. The signup and reset forms load a Cloudflare
+Turnstile challenge, and that has crashed tooling on this machine before.
+
+Check, in an actual inbox:
+
+- the From name reads **FLYP**, not Tenth Tone
+- the subject is the bilingual one, not Supabase's English default
+- the six digit code renders large and spaced, and is **not** a link
+- Arabic reads right to left and is not reversed or mojibake
+- it does not land in spam (check this on Gmail specifically)
+- it looks right in Gmail on a phone, which is where most people will read it
+
+Do **not** test by signing up with an address you intend to use for real. A
+half-completed signup leaves a user row behind and that address cannot be
+reused cleanly.
+
+---
+
+## One more thing before launch
+
+Supabase's built-in email sender is rate limited to a handful of messages per
+hour and is not intended for production. If you launch on it, a burst of
+signups means most people simply never receive their code and cannot get in —
+and it looks like the app is broken, not the email.
+
+Configure real SMTP (Resend, SendGrid, Amazon SES or similar) under
+Project Settings → Authentication → SMTP Settings, and set SPF, DKIM and DMARC
+records on the sending domain or the mail goes to spam.
