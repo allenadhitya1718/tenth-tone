@@ -384,7 +384,12 @@
       el('h1', {}, 'مرحبًا بعودتك'),
       el('p', {}, 'سجّل دخولك للمتابعة'),
     ]));
-    const idIn = el('input', { class: 'input', placeholder: 'البريد الإلكتروني أو رقم الهاتف' });
+    // Said "email or phone number" while the only credential the app has
+    // ever accepted is an email - Supabase auth is configured for email and
+    // password, and there is no OTP-by-SMS path anywhere. Offering a phone
+    // number sent people off to type one and be told it was wrong.
+    const idIn = el('input', { class: 'input', type: 'email', autocomplete: 'email',
+                               placeholder: 'البريد الإلكتروني' });
     const passIn = el('input', { class: 'input input-with-toggle', type: 'password', placeholder: 'كلمة المرور' });
     const togglePass = el('button', { class: 'password-toggle-btn', type: 'button', html: icons.eyeOff, onclick: () => {
       showPass = !showPass;
@@ -6281,6 +6286,32 @@ function autoPlay(video) {
       const name = 'flyp-' + Date.now() + '.' + (isVideo ? 'mp4' : 'jpg');
       const file = new File([blob], name, { type: blob.type || (isVideo ? 'video/mp4' : 'image/jpeg') });
       const nativeShell = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+
+      // The share sheet is NOT a save. It offers "send this to another app",
+      // which is why testers pressed Save, saw a success toast, and found
+      // nothing in their gallery. MediaSave writes into MediaStore properly.
+      // Android 10+ only: below that the same write needs a runtime storage
+      // permission, and the plugin rejects with UNSUPPORTED so we fall through.
+      const mediaSave = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.MediaSave;
+      if (nativeShell && mediaSave && mediaSave.saveToGallery) {
+        try {
+          const b64 = await new Promise((res, rej) => {
+            const fr = new FileReader();
+            fr.onload = () => res(String(fr.result));
+            fr.onerror = () => rej(fr.error || new Error('read failed'));
+            fr.readAsDataURL(blob);
+          });
+          await mediaSave.saveToGallery({
+            data: b64, name,
+            mime: blob.type || (isVideo ? 'video/mp4' : 'image/jpeg'),
+          });
+          toast('\u062a\u0645 \u0627\u0644\u062d\u0641\u0638 \u0641\u064a \u0627\u0644\u0645\u0639\u0631\u0636');
+          return;
+        } catch (e) { /* old Android or MediaStore refused - share sheet below */ }
+      }
+
+      // iOS reaches here, and its share sheet does carry a real "Save Image" /
+      // "Save Video" action, so this is a genuine save on that platform.
       if (nativeShell && navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
         await navigator.share({ files: [file] });
         return;
@@ -7414,14 +7445,30 @@ function autoPlay(video) {
       selfView.srcObject = null;
     }
 
+    // The button sat at full strength from the moment the screen opened,
+    // including while the camera was still being granted and opened - so it
+    // looked equally ready before and after, and pressing it early caught no
+    // cover frame. Queried from the document rather than closed over, because
+    // startBtn is declared below this function and would still be in its
+    // temporal dead zone on the first call.
+    function setStartReady(ok) {
+      const b = document.querySelector('.live-setup .live-go-btn');
+      if (!b) return;
+      b.disabled = !ok;
+      b.classList.toggle('ready', !!ok);
+    }
+
     async function startPreview() {
-      if (mode !== 'camera') { stopPreview(); selfView.hidden = true; return; }
+      // Background mode needs no camera, so it is ready immediately.
+      if (mode !== 'camera') { stopPreview(); selfView.hidden = true; setStartReady(true); return; }
+      setStartReady(false);
       selfView.hidden = false;
       stopPreview();
       try {
         previewStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
         selfView.srcObject = previewStream;
         camWarn.hidden = true;
+        setStartReady(true);
       } catch (e) {
         // A refusal here is not fatal: background mode still broadcasts audio.
         selfView.hidden = true;
@@ -7429,6 +7476,10 @@ function autoPlay(video) {
         camWarn.textContent = (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError'))
           ? 'إذن الكاميرا مرفوض — فعّله من إعدادات جهازك أو ابدأ بثًا بخلفية'
           : 'تعذر فتح الكاميرا — يمكنك البث بخلفية بدلًا من ذلك';
+        // Still enabled: a refused camera is not fatal, audio-only broadcast
+        // works and camWarn above says exactly that. Leaving the button dull
+        // here would read as "you cannot stream at all", which is untrue.
+        setStartReady(true);
       }
     }
     window.addEventListener('hashchange', stopPreview, { once: true });
@@ -7540,7 +7591,9 @@ function autoPlay(video) {
       helpMsg,
       camWarn,
     ]));
-    const startBtn = el('button', { class: 'live-go-btn' }, [
+    // Starts inactive. startPreview() brightens it the moment the camera is
+    // live, which is the feedback that was missing.
+    const startBtn = el('button', { class: 'live-go-btn', disabled: true }, [
       el('span', { class: 'live-go-dot' }),
       el('span', {}, 'بدء البث'),
     ]);
@@ -9351,8 +9404,8 @@ function autoPlay(video) {
         {
           h: { ar: 'ما الذي نجمعه', en: 'What we collect' },
           p: {
-            ar: 'بيانات الحساب: الاسم، اسم المستخدم، البريد الإلكتروني أو رقم الهاتف، وصورة الملف الشخصي إن أضفتها. المحتوى: الفيديوهات والتعليقات والرسائل التي ترسلها. بيانات الاستخدام: ما تشاهده ومدة المشاهدة، لترتيب الموجز. بيانات الجهاز: نوع الجهاز والمتصفح، لتشخيص الأعطال.',
-            en: 'Account details: your name, username, email or phone number, and profile photo if you add one. Content: the videos, comments, and messages you send. Usage: what you watch and for how long, which is how the feed is ordered. Device: your device and browser type, used to diagnose faults.',
+            ar: 'بيانات الحساب: الاسم، اسم المستخدم، البريد الإلكتروني، وصورة الملف الشخصي إن أضفتها. المحتوى: الفيديوهات والتعليقات والرسائل التي ترسلها. بيانات الاستخدام: ما تشاهده ومدة المشاهدة، لترتيب الموجز. بيانات الجهاز: نوع الجهاز والمتصفح، لتشخيص الأعطال.',
+            en: 'Account details: your name, username, email address, and profile photo if you add one. Content: the videos, comments, and messages you send. Usage: what you watch and for how long, which is how the feed is ordered. Device: your device and browser type, used to diagnose faults.',
           },
         },
         {

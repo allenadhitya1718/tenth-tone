@@ -1336,10 +1336,18 @@ body.dark .see-more-link { color: var(--primary-2); }
   font-size: 16px; font-weight: 800;
   display: inline-flex; align-items: center; justify-content: center; gap: 9px;
   box-shadow: 0 8px 26px rgba(225, 29, 72, .42);
-  transition: transform .15s ease, opacity .15s ease;
+  transition: transform .15s ease, opacity .22s ease, filter .22s ease, box-shadow .22s ease;
 }
-.live-go-btn:active { transform: scale(.98); }
-.live-go-btn:disabled { opacity: .65; cursor: default; }
+.live-go-btn:active:not(:disabled) { transform: scale(.98); }
+/* opacity .65 alone was too subtle to read as a state - against a bright
+   camera preview the two looked the same. Draining the colour as well makes
+   the change unmistakable, and the transition lets it visibly light up. */
+.live-go-btn:disabled {
+  opacity: .45; cursor: default;
+  filter: grayscale(.85);
+  box-shadow: none;
+}
+.live-go-btn.ready { opacity: 1; filter: none; }
 .live-go-dot {
   width: 9px; height: 9px; border-radius: 50%; background: #fff;
   animation: liveDot 1.4s ease-in-out infinite;
