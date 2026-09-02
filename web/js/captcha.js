@@ -88,7 +88,10 @@ window.Captcha = (function () {
     // to render an interactive challenge into on the occasions it asks for
     // one. Zero height keeps it out of the way until that happens.
     container.id = 'tt-captcha';
-    container.setAttribute('style', 'position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:9998');
+    // Styling lives in app.css so it can respond to the theme and the safe
+    // area. The element must stay in the layout rather than display:none -
+    // Turnstile needs a real box to draw an interactive challenge into on the
+    // occasions it asks for one - but it collapses to nothing until then.
     document.body.appendChild(container);
 
     widgetId = turnstile.render(container, {

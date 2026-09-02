@@ -4170,3 +4170,35 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible,
   font-size: 12px; color: var(--muted);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+
+
+/* Cloudflare Turnstile.
+   Almost always invisible: the widget runs with appearance:interaction-only,
+   so it draws nothing unless this particular visitor has to solve something.
+   When it DOES draw, it used to appear as a bare grey slab pinned flush to
+   the bottom edge, under the home indicator and touching both sides, which
+   read as a broken element rather than part of the app.
+   :empty keeps it truly zero-sized the rest of the time - a fixed element
+   with padding still eats taps along the bottom edge otherwise. */
+#tt-captcha {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(16px + var(--safe-bottom, 0px));
+  z-index: 9998;
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .28);
+  max-width: calc(100vw - 32px);
+}
+#tt-captcha:empty {
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  pointer-events: none;
+}
