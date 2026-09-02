@@ -33,7 +33,12 @@ jobs:
     runs-on: macos-14
     timeout-minutes: 60
     env:
-      BUNDLE_ID: com.flyp.app
+      # iOS ONLY. Android stays com.flyp.app - testers have that installed and
+      # changing an applicationId makes it a different app to Play and to
+      # every phone it is already on. The two platforms do not have to match,
+      # and PRODUCT_BUNDLE_IDENTIFIER below overrides whatever `cap add ios`
+      # generated from capacitor.config.json.
+      BUNDLE_ID: com.flyp.social
       APP_NAME: 'FLYP'
       TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       DO_UPLOAD: ${{ github.event.inputs.upload == 'true' || startsWith(github.ref, 'refs/tags/v') }}
