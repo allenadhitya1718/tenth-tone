@@ -63,8 +63,10 @@
 //     worst achievable outcome is a wrong score rather than a wrong response
 //     shape — but this cannot be fully closed, and it is the honest price.
 //   * Google's UNPAID tier says API input may be used to improve their products
-//     and may be read by human reviewers. This function screens private direct
-//     messages and people's photographs. See the privacy note under Secrets.
+//     and may be read by human reviewers. That is why private surfaces are no
+//     longer sent at all — see PRIVATE_KINDS below. What still goes is public:
+//     video captions and sampled frames, comments, live titles and covers,
+//     profile text and avatars. See the privacy note under Secrets.
 //
 // ── Fail OPEN ──
 // No key, a timeout, a 429, a 500, a malformed answer: the content is ALLOWED
@@ -88,11 +90,15 @@
 //                    nothing uses is a key nobody rotates.
 //
 // PRIVACY: the free tier is free because Google may train on what it is sent.
-// If FLYP ever screens content it has promised to keep private — and direct
-// messages arguably already are that — the answer is to enable billing on the
-// Google Cloud project, which moves the same API key onto paid terms where
-// Google states prompts are not used to improve their products. Nothing in this
-// file changes; only the terms do.
+// Direct messages and private group names/photos are therefore NOT screened:
+// web/js/db.js does not call this for them, and PRIVATE_KINDS below refuses
+// them again here so that an older build still on someone's phone cannot leak
+// one. Public content is unaffected and is still screened on every write.
+//
+// The other way to have had both is billing on the Google Cloud project, which
+// moves the same API key onto paid terms where Google states prompts are not
+// used to improve their products. If that ever happens, deleting PRIVATE_KINDS
+// and restoring the two call sites in db.js is the whole change.
 //
 // SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are injected by
 // the platform. The service role is needed for moderation_log_event(), which is
@@ -309,16 +315,34 @@ const BLOCK_DEFAULT: Record<string, number> = {
 // a human. The whole point of having a middle band.
 const REVIEW_DEFAULT = 0.40;
 
-// ── Which surfaces feed the review queue ──
-// Every kind is screened and every kind can be BLOCKED. `queue` decides only
-// whether a borderline item also becomes a row in public.reports.
+// ── Never screened at all ──
+// These two carry private correspondence, and the unpaid Gemini tier's terms
+// let Google use what it is sent to improve their products and let human
+// reviewers read it. Screening a public post on those terms is unremarkable;
+// screening a private conversation on them is not, and the app implies
+// otherwise. Billing is the fix that would let both be screened, and it is not
+// available, so these are simply not sent.
 //
-// The three false ones are not oversights:
-//   message      — a private conversation between two people. Screened, and a
-//                  severe message is still refused, but a borderline one must
-//                  not be placed in front of an administrator. Blocking is a
-//                  safety measure; queueing would be surveillance.
-//   group        — same reasoning, for a private group's name and photo.
+//   message — a direct or group conversation between people who chose to talk.
+//   group   — a private group's name and photo.
+//
+// This is the SECOND line of defence. The first is that web/js/db.js does not
+// call this function for either one: content that never leaves the phone cannot
+// be mishandled by a server. This set exists because a build already installed
+// on a tester's phone still contains the old call and will keep posting DMs
+// here until it is replaced.
+//
+// Handled before the body becomes a prompt, and deliberately NOT logged:
+// moderation_events.outcome only accepts allow/review/block/unavailable (0066),
+// and filing these as 'unavailable' would inflate scans_unavailable_24h, which
+// is the one number that is supposed to mean screening has stopped working.
+const PRIVATE_KINDS = new Set(['message', 'group']);
+
+// ── Which surfaces feed the review queue ──
+// Every kind reaching this point is screened and can be BLOCKED. `queue`
+// decides only whether a borderline item also becomes a row in public.reports.
+//
+// The false one is not an oversight:
 //   live_comment — ephemeral and high volume. Queueing borderline live chat
 //                  would bury the queue in minutes and drown the reports that
 //                  matter. Severe ones are still blocked as they are typed.
@@ -333,8 +357,6 @@ const SURFACE: Record<string, { queue: boolean; target: string | null }> = {
   live_cover:   { queue: true,  target: 'live_stream' },
   profile:      { queue: true,  target: 'user' },
   avatar:       { queue: true,  target: 'user' },
-  message:      { queue: false, target: null },
-  group:        { queue: false, target: null },
   live_comment: { queue: false, target: null },
 };
 
@@ -675,9 +697,21 @@ Deno.serve(async (req) => {
   }
 
   const kind = String(body.kind ?? '');
+
+  // ── Private content stops here ──
+  // Before body.text is read, before an image is decoded, before a prompt
+  // exists. See PRIVATE_KINDS above. The shape matches an ordinary allow, so an
+  // old build that still calls this for a DM proceeds exactly as it does today
+  // and nothing on screen changes — the message simply is not sent to Google.
+  if (PRIVATE_KINDS.has(kind)) {
+    return json({ decision: 'allow', eventId: null, attach: false, skipped: 'private' });
+  }
+
   // An unknown kind is screened as a public surface but never queued. Failing
   // towards "check it, do not file it" keeps a typo in the app from either
-  // skipping the scan or spamming the queue.
+  // skipping the scan or spamming the queue. Note this is why PRIVATE_KINDS is
+  // an explicit deny list and not just an absence from SURFACE: a kind that is
+  // merely missing here gets screened, not skipped.
   const surface = SURFACE[kind] ?? { queue: false, target: null };
 
   const text = String(body.text ?? '').slice(0, MAX_TEXT_CHARS).trim();

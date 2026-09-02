@@ -41,8 +41,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode 16
-        run: sudo xcode-select -s /Applications/Xcode_16.1.app
+      # GitHub rotates Xcode versions off the macOS images without warning, and
+      # a hard-pinned path fails the whole run about 25 seconds in - which is
+      # what every iOS run did before this. Take the newest that is actually
+      # installed, and print the list so a future failure says why.
+      - name: Select the newest installed Xcode
+        run: |
+          echo "Xcodes present on this runner:"
+          ls -d /Applications/Xcode*.app 2>/dev/null || echo "  (none found)"
+          XC=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XC" ]; then echo "No Xcode on the runner"; exit 1; fi
+          echo "Selecting $XC"
+          sudo xcode-select -s "$XC"
+          xcodebuild -version
 
       - name: Set up Node 20
         uses: actions/setup-node@v4

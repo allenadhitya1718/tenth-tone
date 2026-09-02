@@ -855,21 +855,60 @@
 
   // Report sheet — pick a reason, submits to the `reports` table (auto-hides
   // the content once it crosses the report threshold — see 0012_moderation.sql).
-  function openReportSheet(targetType, targetId) {
+  // reports.target_type is constrained BY THE DATABASE (0001_init.sql) to
+  // exactly these four values. There is no 'message' and no 'live_comment', so
+  // a direct message and a line of live chat are filed against their AUTHOR —
+  // target_type 'user' — with the surface they appeared on carried in the
+  // reason text, which is a free-text column. That is the honest mapping until
+  // a migration widens the check constraint; an administrator can act on it
+  // either way, whereas an insert with an invented type is simply rejected.
+  const REPORT_TYPES = ['video', 'comment', 'user', 'live_stream'];
+
+  // Report sheet — pick a reason, submits to the `reports` table (auto-hides
+  // the content once it crosses the report threshold — see 0012_moderation.sql).
+  //
+  //   opts.context  short Arabic label for WHERE this was reported from. It is
+  //                 shown under the heading and appended to the stored reason,
+  //                 so a report filed against a person still records that it
+  //                 came from a private message or from live chat. It is a
+  //                 fixed phrase so the dictionary in i18n.js can translate it.
+  //   opts.detail   extra free text stored with the reason and NOT shown — a
+  //                 quoted snippet of what was reported. Kept out of the UI
+  //                 because it is user content and would not translate.
+  //   opts.heading  overrides the sheet title.
+  function openReportSheet(targetType, targetId, opts) {
+    const o = opts || {};
+    // Not a guard that hides the control — a dead Report button is the thing
+    // this whole file keeps getting wrong. It is a loud warning for whoever
+    // adds the next surface with a type the database will refuse.
+    if (REPORT_TYPES.indexOf(targetType) === -1) {
+      console.warn('openReportSheet: reports.target_type does not accept', targetType);
+    }
     const reasons = [
       'محتوى غير لائق', 'خطاب كراهية أو تنمر', 'عنف أو محتوى صادم',
       'انتحال شخصية', 'محتوى مضلل', 'بريد عشوائي', 'أخرى',
     ];
-    const sheet = el('div', { class: 'sheet', style: { padding: '16px 0' } });
-    sheet.appendChild(el('h3', { style: { margin: '0 16px 8px', textAlign: 'center' } }, 'لماذا تبلغ عن هذا؟'));
+    const sheet = el('div', { class: 'sheet js-report-sheet', style: { padding: '16px 0' } });
+    sheet.appendChild(el('h3', { style: { margin: '0 16px 8px', textAlign: 'center' } }, o.heading || 'لماذا تبلغ عن هذا؟'));
+    if (o.context) {
+      sheet.appendChild(el('p', {
+        class: 'report-context',
+        style: { margin: '0 16px 10px', textAlign: 'center', fontSize: '12px', opacity: '0.6' },
+      }, o.context));
+    }
     reasons.forEach(reason => {
       sheet.appendChild(el('div', {
-        class: 'user-row',
+        class: 'user-row js-report-reason',
         style: { cursor: 'pointer', padding: '13px 20px' },
         onclick: async () => {
           close();
           try {
-            await window.API.report({ targetType, targetId, reason });
+            await window.API.report({
+              targetType, targetId,
+              reason: reason
+                + (o.context ? (' — ' + o.context) : '')
+                + (o.detail ? (': ' + String(o.detail).slice(0, 120)) : ''),
+            });
             toast('تم استلام بلاغك، شكرًا لك');
           } catch (e) {
             toast(friendlyError(e, 'تعذر إرسال البلاغ'));
@@ -878,6 +917,91 @@
       }, [el('span', { style: { fontSize: '14.5px' } }, reason)]));
     });
     const close = modal(sheet);
+  }
+
+  // One row of an options sheet. Lifted out of openUserOptionsSheet's local
+  // copy so the four new sheets below cannot drift away from the one on a
+  // profile, which is the sheet users already know.
+  function optionRow(icon, label, onclick, danger) {
+    return el('div', {
+      class: 'user-row',
+      style: {
+        cursor: 'pointer', padding: '14px 20px', display: 'flex',
+        alignItems: 'center', gap: '14px', color: danger ? 'var(--danger)' : '',
+      },
+      onclick,
+    }, [
+      icon ? el('span', { style: { width: '22px', height: '22px', display: 'flex' }, html: icon })
+           : el('span', { style: { width: '22px' } }),
+      el('span', { style: { fontSize: '15px', fontWeight: 600 } }, label),
+    ]);
+  }
+
+  // Report / block sheet for one piece of user-generated content that is not a
+  // whole profile: a comment, a direct message, a live stream, a line of live
+  // chat, a viewer in someone's stream.
+  //
+  // App Review 1.2 asks for two things wherever user content appears — a way
+  // to report the content AND a way to block the person behind it. FLYP had
+  // both on feed videos and on profiles and NEITHER inside a comment thread, a
+  // conversation or a live stream, which are the three places a reviewer opens
+  // first. Everything here routes into openReportSheet and API.blockUser, so
+  // there is exactly one reporting UI and one block call in the app.
+  //
+  //   cfg.heading      sheet title
+  //   cfg.reportType   a value reports.target_type accepts
+  //   cfg.reportId     the row it points at
+  //   cfg.reportLabel  wording of the report row
+  //   cfg.context      the surface, recorded in the reason (see openReportSheet)
+  //   cfg.user         { id, name } of the person, for Mute / Block
+  //   cfg.muteLabel    overrides the mute row's wording
+  //   cfg.onMuteChange called with true/false after a successful mute toggle
+  //   cfg.onBlocked    called after a successful block
+  //   cfg.extraRows    [{ icon, label, onClick, danger }] placed above Report
+  function openContentOptionsSheet(cfg) {
+    const c = cfg || {};
+    const person = (c.user && c.user.id) ? c.user : null;
+    const who = (person && (person.name || person.handle)) || 'المستخدم';
+    const sheet = el('div', { class: 'sheet js-content-options', style: { padding: '8px 0' } });
+    if (c.heading) {
+      sheet.appendChild(el('h3', {
+        style: { margin: '8px 16px 2px', textAlign: 'center', fontSize: '13px', fontWeight: 700, opacity: '0.6' },
+      }, c.heading));
+    }
+    (c.extraRows || []).forEach(r => {
+      sheet.appendChild(optionRow(r.icon, r.label, () => { close(); r.onClick(); }, r.danger));
+    });
+    if (c.reportType && c.reportId) {
+      sheet.appendChild(optionRow(icons.flag, c.reportLabel || 'الإبلاغ عن هذا المحتوى', () => {
+        close();
+        openReportSheet(c.reportType, c.reportId, { context: c.context, detail: c.detail });
+      }, true));
+    }
+    if (person) {
+      sheet.appendChild(optionRow(icons.eyeOff, c.muteLabel || ('كتم ' + who), async () => {
+        close();
+        if (!window.API || !window.API.muteUser) return;
+        try {
+          const already = await window.API.isMuted(person.id);
+          if (already) { await window.API.unmuteUser(person.id); toast('تم إلغاء الكتم'); if (c.onMuteChange) c.onMuteChange(false); }
+          else { await window.API.muteUser(person.id); toast('تم الكتم'); if (c.onMuteChange) c.onMuteChange(true); }
+        } catch (e) { toast(friendlyError(e, 'تعذر التحديث')); }
+      }));
+      sheet.appendChild(optionRow(icons.lock, 'حظر ' + who, async () => {
+        close();
+        if (!window.API || !window.API.blockUser) return;
+        try {
+          await window.API.blockUser(person.id);
+          toast('تم حظر المستخدم');
+          if (c.onBlocked) c.onBlocked();
+        } catch (e) { toast(friendlyError(e, 'تعذر الحظر')); }
+      }, true));
+    }
+    sheet.appendChild(el('div', { class: 'divider' }));
+    sheet.appendChild(optionRow(null, 'إلغاء', () => close()));
+    const close = modal(sheet);
+    try { if (window.I18N) window.I18N.apply(sheet); } catch (e) {}
+    return close;
   }
 
   // ===== Home Feed =====
@@ -4053,12 +4177,66 @@ function autoPlay(video) {
     const audioCallBtn = el('button', { class: 'icon-btn', title: 'مكالمة صوتية', hidden: true, html: icons.phone, onclick: () => startCallFromChat('audio') });
     const videoCallBtn = el('button', { class: 'icon-btn', title: 'مكالمة فيديو', hidden: true, html: icons.video, onclick: () => startCallFromChat('video') });
 
+    // ── Report / block from inside a conversation ──
+    // App Review 1.2. A reviewer who opened a DM found nothing here at all:
+    // no report, no block, no way to act on whatever had been sent to them.
+    // Hidden only until we know who is on the other end, because before that
+    // the sheet has nobody to act on.
+    const chatMoreBtn = el('button', {
+      class: 'icon-btn js-chat-more', hidden: true,
+      title: 'خيارات المحادثة', 'aria-label': 'خيارات المحادثة',
+      html: icons.moreV,
+      onclick: () => openChatOptions(),
+    });
+
     root.appendChild(el('header', { class: 'chat-header' }, [
       el('button', { class: 'icon-btn back-btn', html: icons.chevL, onclick: () => go('/inbox') }),
       headerIdentity,
       audioCallBtn,
       videoCallBtn,
+      chatMoreBtn,
     ]));
+
+    function paintChatOptions() {
+      const others = (chatInfo && chatInfo.others) || [];
+      chatMoreBtn.hidden = !others.length;
+    }
+
+    // reports.target_type has no 'message' and no 'chat' value (0001), so a
+    // conversation is reported against the PERSON on the other end and the
+    // reason records that it came from a private message. A group has more
+    // than one other person, so the sheet asks which one first rather than
+    // guessing — the alternative is a Report button that reports the wrong
+    // member, which is worse than none.
+    function openChatOptions() {
+      const others = (chatInfo && chatInfo.others) || [];
+      if (!others.length) { toast('تعذر تحميل بيانات المحادثة'); return; }
+      if (others.length === 1) { openPersonInChat(others[0]); return; }
+      const sheet = el('div', { class: 'sheet js-chat-options', style: { padding: '8px 0' } });
+      sheet.appendChild(el('h3', {
+        style: { margin: '8px 16px 2px', textAlign: 'center', fontSize: '13px', fontWeight: 700, opacity: '0.6' },
+      }, 'الإبلاغ عن عضو أو حظره'));
+      others.forEach(p => sheet.appendChild(
+        optionRow(icons.flag, displayName(p), () => { close(); openPersonInChat(p); })));
+      sheet.appendChild(el('div', { class: 'divider' }));
+      sheet.appendChild(optionRow(null, 'إلغاء', () => close()));
+      const close = modal(sheet);
+      try { if (window.I18N) window.I18N.apply(sheet); } catch (e) {}
+    }
+
+    function openPersonInChat(p) {
+      if (!p || !p.id) { toast('تعذر تحميل بيانات المحادثة'); return; }
+      openContentOptionsSheet({
+        heading: 'المحادثة',
+        reportType: 'user', reportId: p.id,
+        reportLabel: 'الإبلاغ عن هذه المحادثة',
+        context: 'رسالة خاصة',
+        user: p,
+        // Blocking severs the thread in both directions (0049), so staying on
+        // a conversation that no longer exists would be the screen lying.
+        onBlocked: () => go('/inbox'),
+      });
+    }
 
     // These two were decoration - no handler at all. They now place a real
     // call: a row is written, the other person's device rings, and this side
@@ -4382,7 +4560,20 @@ function autoPlay(video) {
       const QUICK = ['❤️', '😂', '😮', '😢', '🙏', '👍'];
       function openReactionBar() {
         if (!m.id) return; // an optimistic bubble has no id to react to yet
-        const bar = el('div', { class: 'reaction-bar' });
+        // 'sheet' as well as 'reaction-bar', and it is not cosmetic.
+        //
+        // modal() drops a .backdrop (position:fixed, z-index:99) on the body
+        // and then the content. .reaction-bar has no positioning and no
+        // z-index of its own, so it landed in normal flow at z-index auto —
+        // UNDER the backdrop. document.elementFromPoint over every button in
+        // it returned .backdrop, which means the whole bar has been dead since
+        // it was added: not one of the six reactions, and not Delete message,
+        // could ever be tapped. It looked alive because it is drawn (dimmed)
+        // exactly where you expect it.
+        //
+        // .sheet is what every other menu in the app uses — fixed to the
+        // bottom, z-index 100, dark-mode aware, drag-to-dismiss via modal().
+        const bar = el('div', { class: 'sheet reaction-bar' });
         QUICK.forEach(e => bar.appendChild(el('button', {
           class: 'reaction-pick' + (myReaction === e ? ' on' : ''), type: 'button',
           onclick: () => { close(); react(e); },
@@ -4415,6 +4606,30 @@ function autoPlay(video) {
               }
             },
           }, '🗑'));
+        }
+
+        // Reporting the message itself. reports.target_type has no 'message',
+        // so this is filed against the SENDER with 'private message' recorded
+        // in the reason — see openReportSheet. Offered only on someone else's
+        // message, because reporting your own is not a thing.
+        if (!mine && m.from_user_id) {
+          bar.appendChild(el('button', {
+            class: 'reaction-pick msg-report js-msg-report', type: 'button',
+            title: 'الإبلاغ عن الرسالة', 'aria-label': 'الإبلاغ عن الرسالة',
+            onclick: () => {
+              close();
+              const from = ((chatInfo && chatInfo.others) || []).find(o => o.id === m.from_user_id)
+                        || { id: m.from_user_id, name: (chatInfo && chatInfo.title) || '' };
+              openContentOptionsSheet({
+                heading: 'الرسالة',
+                reportType: 'user', reportId: m.from_user_id,
+                reportLabel: 'الإبلاغ عن هذه الرسالة',
+                context: 'رسالة خاصة',
+                user: from,
+                onBlocked: () => go('/inbox'),
+              });
+            },
+          }, '🚩'));
         }
 
         const close = modal(bar);
@@ -4491,6 +4706,65 @@ function autoPlay(video) {
         });
       }
 
+      // ── App Review 1.2: a direct message needs a report path ──
+      // This was the last of the four surfaces with no way to report anything.
+      // A reviewer opens a conversation early, and finding nothing there is a
+      // rejection on its own.
+      //
+      // reports.target_type accepts only video / comment / user / live_stream
+      // (0001_init.sql:276), so a message is filed against its SENDER with the
+      // text quoted in the reason. That is also the more useful record: one
+      // abusive message is rarely the whole story, and moderation acts on
+      // people rather than on lines of text.
+      //
+      // Long press, because a chat bubble has no room for a menu button and
+      // long-press is what people already try. contextmenu covers a desktop
+      // right-click and the physical keyboard menu key. Incoming messages
+      // only - reporting yourself is noise.
+      if (!mine && m.from_user_id) {
+        const senderId = m.from_user_id;
+        // chatInfo.others is the other side of the conversation; in a group it
+        // holds everyone, so match on id rather than assuming index 0.
+        const known = (chatInfo && chatInfo.others || []).filter(u => u && u.id === senderId)[0];
+        const sender = known || { id: senderId, name: (chatInfo && chatInfo.title) || '' };
+
+        // What the report should quote. An attachment has no text, so name the
+        // kind instead of filing an empty reason.
+        const quoted = (m.text && m.text.trim())
+          ? m.text.trim().slice(0, 140)
+          : (m.type === 'image' ? '[' + 'صورة' + ']'
+            : m.type === 'video' ? '[' + 'فيديو' + ']'
+            : m.type === 'voice' ? '[' + 'رسالة صوتية' + ']'
+            : '[' + 'مرفق' + ']');
+
+        const openMsgOptions = () => {
+          haptic('light');
+          openContentOptionsSheet({
+            heading: 'خيارات الرسالة',
+            reportType: 'user',
+            reportId: senderId,
+            reportLabel: 'الإبلاغ عن هذه الرسالة',
+            context: 'رسالة خاصة',
+            detail: quoted,
+            user: sender,
+            // Reply stays reachable from the same sheet, so the long press is
+            // not a worse version of the button beside the bubble.
+            extraRows: [{ icon: icons.arrowL, label: 'رد', onClick: () => setReplyTo(m) }],
+            // Blocking from inside a conversation should not leave you sitting
+            // in it. The inbox is the honest place to land.
+            onBlocked: () => go('/inbox'),
+          });
+        };
+
+        let pressT = null;
+        bubble.addEventListener('touchstart', () => {
+          pressT = setTimeout(() => { pressT = null; openMsgOptions(); }, 450);
+        }, { passive: true });
+        ['touchend', 'touchmove', 'touchcancel'].forEach(ev =>
+          bubble.addEventListener(ev, () => { if (pressT) { clearTimeout(pressT); pressT = null; } }, { passive: true }));
+        bubble.addEventListener('contextmenu', (e) => { e.preventDefault(); openMsgOptions(); });
+      }
+
       msgs.appendChild(bubble);
       return bubble; // the sender tracks this node until its echo arrives
     }
@@ -4515,6 +4789,11 @@ function autoPlay(video) {
       // There is no presence system, so "online now" was mock data claiming
       // something the app cannot know. Left blank until real presence exists.
       headerStatus.textContent = '';
+      // A demo thread has an other person too, and every moderation control in
+      // this screen keys off chatInfo — without this they stayed hidden on any
+      // thread the backend had not answered for.
+      if (!chatInfo) chatInfo = { type: 'dm', title: mockChat.user.name, photo: mockChat.user.avatar, others: [mockChat.user] };
+      paintChatOptions();
       mockChat.messages.forEach(m => appendMessage({ from_user_id: m.from === 'me' ? 'me' : 'them', text: m.text, created_at: new Date().toISOString() }));
     }
 
@@ -4531,6 +4810,7 @@ function autoPlay(video) {
         try {
           const info = await window.API.fetchChatInfo(id);
           chatInfo = info;
+          paintChatOptions();
           // Only show it as tappable once we know it leads somewhere.
           if (info && info.type !== 'group' && info.others && info.others[0]) {
             headerIdentity.classList.add('tappable');
@@ -7090,6 +7370,16 @@ function autoPlay(video) {
       return n + ' تعليقًا';
     }
 
+    // Used after a mute or a block: take everything by that person off the
+    // thread at once. Without it the sheet closes and their comments are still
+    // sitting there, which looks like the action failed.
+    function dropCommentsBy(userId) {
+      if (!userId) return;
+      const rows = cl.querySelectorAll('.comment-row[data-author-id="' + userId + '"]');
+      rows.forEach(r => r.remove());
+      paintCount();
+    }
+
     function renderComment(c) {
       const meta = [el('span', {}, ago(c.created_at) || c.time || ''),
         // 'رد' had no handler, and the heart beside it had none either —
@@ -7098,6 +7388,29 @@ function autoPlay(video) {
         // are gone; Reply now prefills the composer with a mention, which
         // posts as a real comment that links back to them.
         el('a', { onclick: () => replyToComment(c) }, 'رد')];
+
+      // Everyone else's comment gets the report/mute/block sheet. Not your own
+      // - reporting yourself is noise, and delete already sits on that row.
+      if (c.user && c.user.id && c.user.id !== myFeedUserId) {
+        meta.push(el('a', {
+          class: 'comment-more',
+          'aria-label': 'خيارات',
+          onclick: () => openContentOptionsSheet({
+            heading: 'تعليق',
+            reportType: 'comment',
+            reportId: c.id,
+            reportLabel: 'الإبلاغ عن التعليق',
+            context: 'تعليق',
+            detail: (c.text || '').slice(0, 140),
+            user: c.user,
+            // Muting or blocking from here should take the comment off the
+            // screen immediately; leaving it visible reads as "nothing
+            // happened" and people press the button again.
+            onMuteChange: (muted) => { if (muted) dropCommentsBy(c.user.id); },
+            onBlocked: () => dropCommentsBy(c.user.id),
+          }),
+        }, '⋯'));
+      }
 
       // Deleting your own comment. The API has existed since the row did and
       // had no caller at all - messages and videos both got a delete and
@@ -7159,7 +7472,51 @@ function autoPlay(video) {
         }
       };
 
-      cl.appendChild(el('div', { class: 'comment-row', 'data-comment-id': c.id || '' }, [
+      // ── Report the comment, block whoever wrote it ──
+      // App Review 1.2 wants both, on every surface that carries
+      // user-generated content. A comment row had neither: Reply, Like, and
+      // Delete on your own. A reviewer who opened a thread — which is the
+      // first thing they do — found nothing to act on what was written there.
+      //
+      // Offered as a visible "..." AND as a long press. The button is the
+      // discoverable route (and the only one with a mouse); the long press is
+      // the gesture people already use on a comment everywhere else.
+      const author = (c.user && c.user.id) ? c.user : null;
+      const canModerate = !!(author && !mine && c.id);
+      function openCommentOptions() {
+        if (!canModerate) return;
+        haptic('light');
+        openContentOptionsSheet({
+          heading: 'التعليق',
+          reportType: 'comment', reportId: c.id,
+          reportLabel: 'الإبلاغ عن التعليق',
+          context: 'تعليق على فيديو',
+          user: author,
+          onBlocked: () => {
+            // A blocked person's comments are hidden from you by the database
+            // from that moment on, so leaving them on screen would be this
+            // list lying about what just happened.
+            cl.querySelectorAll('.comment-row[data-author-id="' + author.id + '"]')
+              .forEach(n => n.remove());
+            paintCount();
+          },
+        });
+      }
+      // .comment-like carries the sizing this needs (15px svg, muted colour,
+      // transparent background) — reused rather than adding a rule to a
+      // stylesheet this file does not own.
+      const moreBtn = canModerate ? el('button', {
+        class: 'comment-like comment-more', type: 'button',
+        title: 'خيارات التعليق', 'aria-label': 'خيارات التعليق',
+        html: icons.moreH,
+        onclick: (e) => { e.stopPropagation(); openCommentOptions(); },
+      }) : null;
+
+      const row = el('div', {
+        class: 'comment-row',
+        'data-comment-id': c.id || '',
+        'data-author-id': (author && author.id) || '',
+      }, [
         // Was a raw <img src="">, which renders as a broken-image icon for the
         // many users with no photo. avatar() falls back to a coloured initial.
         avatar((c.user && (c.user.avatar_url || c.user.avatar)) || '', (c.user && c.user.name) || '', 32),
@@ -7168,8 +7525,16 @@ function autoPlay(video) {
           el('div', { class: 'comment-text' }, richText(c.text)),
           el('div', { class: 'comment-meta' }, meta),
         ]),
-        el('div', { class: 'comment-like-wrap' }, [likeBtn, likeCount]),
-      ]));
+        el('div', { class: 'comment-like-wrap' }, [moreBtn, likeBtn, likeCount].filter(Boolean)),
+      ]);
+      if (canModerate) {
+        let pressT = null;
+        row.addEventListener('touchstart', () => { pressT = setTimeout(openCommentOptions, 450); }, { passive: true });
+        ['touchend', 'touchmove', 'touchcancel'].forEach(ev =>
+          row.addEventListener(ev, () => { if (pressT) { clearTimeout(pressT); pressT = null; } }, { passive: true }));
+        row.addEventListener('contextmenu', (e) => { e.preventDefault(); openCommentOptions(); });
+      }
+      cl.appendChild(row);
     }
 
     // One place that decides what the header says and whether the empty state
@@ -7928,6 +8293,190 @@ function autoPlay(video) {
       go('/home');
     } }, 'إنهاء');
 
+    // ── App Review 1.2 on a live stream ──
+    // A reviewer who tapped into a broadcast found a Follow button, a heart
+    // and a Share, and nothing whatsoever to report the stream, the host, or
+    // anyone in the chat. Reporting a live stream is the one case the database
+    // has always had a target_type for ('live_stream', 0001) and no screen
+    // ever used it.
+    const liveMoreBtn = el('button', {
+      class: 'icon-btn live-more js-live-more', hidden: true,
+      title: 'خيارات البث', 'aria-label': 'خيارات البث',
+      style: { color: '#fff' },
+      html: icons.moreV,
+      onclick: () => openLiveOptions(),
+    });
+
+    // Host only. The host's controls belong where the audience is listed.
+    const viewerListBtn = el('button', {
+      class: 'icon-btn live-viewers-btn js-live-viewers', hidden: true,
+      title: 'المشاهدون', 'aria-label': 'قائمة المشاهدين',
+      style: { color: '#fff' },
+      html: icons.users,
+      onclick: () => openViewerList(),
+    });
+
+    // Which of the two the person gets is decided by who they are, and that is
+    // only known once getUser answers — so both start hidden and this paints
+    // them. Called on the demo path too, or a stream with no backend behind it
+    // showed neither control.
+    function paintRole() {
+      const mine = iAmHost();
+      viewerListBtn.hidden = !mine;
+      liveMoreBtn.hidden = mine;
+    }
+
+    function openLiveOptions() {
+      openContentOptionsSheet({
+        heading: 'البث المباشر',
+        reportType: 'live_stream', reportId: liveId,
+        reportLabel: 'الإبلاغ عن هذا البث',
+        context: 'بث مباشر',
+        user: (live.host && live.host.id) ? live.host : null,
+        extraRows: (live.host && live.host.id) ? [{
+          icon: icons.flag, danger: true, label: 'الإبلاغ عن المضيف',
+          onClick: () => openReportSheet('user', live.host.id, { context: 'مضيف بث مباشر' }),
+        }] : [],
+        onBlocked: () => go('/live/host-list'),
+      });
+    }
+
+    // People whose chat this viewer has chosen not to see. Held here as well
+    // as in muted_users because the realtime feed keeps arriving and the rows
+    // have to be dropped as they come.
+    const mutedInChat = new Set();
+
+    // Report / block the author of one line of live chat.
+    //
+    // reports.target_type has no 'live_comment', so — as with a direct message
+    // — it is filed against the author and the reason says it came from live
+    // chat. Blocking is the part that actually silences them: policy
+    // "live comments insert own" (0077) refuses a comment from anyone the HOST
+    // has blocked, so when the host does this the person can no longer type in
+    // the stream at all. For a viewer it hides them locally.
+    function openLiveCommentOptions(person, text) {
+      if (!person || !person.id) return;
+      haptic('light');
+      openContentOptionsSheet({
+        heading: 'تعليق في البث المباشر',
+        reportType: 'user', reportId: person.id,
+        reportLabel: 'الإبلاغ عن هذا التعليق',
+        context: 'تعليق في بث مباشر',
+        detail: text,
+        user: person,
+        muteLabel: 'إخفاء تعليقات ' + (person.name || 'هذا المستخدم'),
+        onMuteChange: (muted) => { if (muted) hideChatFrom(person.id); else mutedInChat.delete(person.id); },
+        onBlocked: () => hideChatFrom(person.id),
+      });
+    }
+
+    function hideChatFrom(userId) {
+      if (!userId) return;
+      mutedInChat.add(userId);
+      cmts.querySelectorAll('.live-cmt[data-user-id="' + userId + '"]').forEach(n => n.remove());
+    }
+
+    // ── Host controls ──
+    // live_viewers (0048) is readable by any signed-in user for exactly this
+    // reason — its own migration says "readable so a host could list who is
+    // watching" — and nothing ever listed them. There is no API.fetchLiveViewers
+    // in db.js, so it is read through the shared client here, the same way
+    // V.notifications reads video thumbnails.
+    //
+    // What each control really does, stated plainly, because a host control
+    // that overstates itself is worse than no control at all:
+    //   · إخفاء التعليقات — drops that person's chat from this screen and mutes
+    //     them account-wide. A local decision; they are not told.
+    //   · حظر — a real block. From that moment the database refuses their
+    //     comments on this host's streams (0077), so it silences them for
+    //     EVERYONE, not just for the host. It does not eject them from
+    //     watching a public stream: nothing on the server can do that yet.
+    //   · الإبلاغ — files a report against them for a moderator.
+    async function openViewerList() {
+      const sheet = el('div', {
+        class: 'sheet js-live-viewers-sheet',
+        style: { padding: '8px 0', maxHeight: '72vh', overflowY: 'auto' },
+      });
+      sheet.appendChild(el('h3', {
+        style: { margin: '8px 16px 2px', textAlign: 'center', fontSize: '13px', fontWeight: 700, opacity: '0.6' },
+      }, 'المشاهدون'));
+      const listBox = el('div', { class: 'js-viewer-rows' }, [
+        el('p', { style: { padding: '14px 20px', fontSize: '13px', opacity: '0.6' } }, 'جاري التحميل...'),
+      ]);
+      sheet.appendChild(listBox);
+      sheet.appendChild(el('div', { class: 'divider' }));
+      sheet.appendChild(optionRow(null, 'إغلاق', () => close()));
+      const close = modal(sheet);
+      try { if (window.I18N) window.I18N.apply(sheet); } catch (e) {}
+
+      let people = [];
+      try {
+        if (!window.SB || !window.SB.client || !isRealId(liveId)) throw new Error('no backend');
+        const cli = await window.SB.client();
+        const { data: rows, error } = await cli.from('live_viewers')
+          .select('user_id').eq('live_id', liveId).limit(200);
+        if (error) throw error;
+        // Two queries rather than an embedded join: the embed depends on the
+        // foreign-key name PostgREST happens to expose, and a wrong guess
+        // there fails the whole screen instead of one column.
+        const ids = (rows || []).map(r => r.user_id).filter(x => x && x !== myId);
+        if (ids.length) {
+          const { data: profs, error: e2 } = await cli.from('profiles')
+            .select('id, name, handle, avatar_url').in('id', ids);
+          if (e2) throw e2;
+          people = profs || [];
+        }
+      } catch (e) {
+        listBox.innerHTML = '';
+        listBox.appendChild(el('p', {
+          style: { padding: '14px 20px', fontSize: '13px', opacity: '0.6' },
+        }, 'تعذر تحميل قائمة المشاهدين'));
+        try { if (window.I18N) window.I18N.apply(listBox); } catch (e2) {}
+        return;
+      }
+
+      listBox.innerHTML = '';
+      if (!people.length) {
+        listBox.appendChild(el('p', {
+          style: { padding: '14px 20px', fontSize: '13px', opacity: '0.6' },
+        }, 'لا يوجد مشاهدون الآن'));
+        try { if (window.I18N) window.I18N.apply(listBox); } catch (e2) {}
+        return;
+      }
+      people.forEach(p => {
+        const person = { id: p.id, name: p.name, handle: p.handle, avatar: p.avatar_url };
+        listBox.appendChild(el('div', {
+          class: 'user-row js-viewer-row', 'data-user-id': p.id,
+          style: { cursor: 'pointer' },
+          onclick: () => { close(); openViewerControls(person); },
+        }, [
+          avatar(p.avatar_url || '', p.name || '', 40),
+          el('div', { style: { flex: '1', minWidth: '0' } }, [
+            el('div', { class: 'name' }, p.name || 'مستخدم'),
+            el('div', { class: 'handle' }, p.handle ? ('@' + String(p.handle).replace('@', '')) : ''),
+          ]),
+          el('span', { style: { width: '22px', height: '22px', display: 'flex', opacity: '0.5' }, html: icons.moreV }),
+        ]));
+      });
+      try { if (window.I18N) window.I18N.apply(listBox); } catch (e2) {}
+    }
+
+    function openViewerControls(person) {
+      openContentOptionsSheet({
+        heading: person.name || 'مشاهد',
+        reportType: 'user', reportId: person.id,
+        reportLabel: 'الإبلاغ عن هذا المشاهد',
+        context: 'مشاهد في بثي المباشر',
+        user: person,
+        muteLabel: 'إخفاء تعليقات ' + (person.name || 'هذا المستخدم'),
+        onMuteChange: (muted) => { if (muted) hideChatFrom(person.id); else mutedInChat.delete(person.id); },
+        // The block is what the database enforces: 0077 stops a blocked person
+        // commenting on this host's stream. Their existing lines are cleared
+        // from the screen here.
+        onBlocked: () => { hideChatFrom(person.id); toast('لن يستطيع التعليق في بثك'); },
+      });
+    }
+
     ov.appendChild(el('div', { class: 'live-top' }, [
       el('div', { class: 'live-host-info', onclick: () => { if (live.host && live.host.id) go('/profile/' + live.host.id); } }, [
         el('div', { class: 'avatar' }, [hostAvatarImg]),
@@ -7939,6 +8488,8 @@ function autoPlay(video) {
         viewersEl,
         elapsedEl,
         endLiveBtn,
+        viewerListBtn,
+        liveMoreBtn,
         el('button', { class: 'icon-btn live-close', html: icons.x, onclick: () => go('/home') }),
       ]),
     ]));
@@ -7978,9 +8529,14 @@ function autoPlay(video) {
 
     // ─── Load the real stream ───
     (async () => {
+      // Moved ahead of the demo early-return. It used to be read only on the
+      // real-stream path, so on a demo or backend-less stream iAmHost() was
+      // permanently false and the host's own controls could never appear.
+      try { const u0 = await window.SB.getUser(); myId = u0 && u0.id; } catch (e) {}
       if (!window.API || !isRealId(liveId)) {
         // Demo stream (or no backend): treat the sample data as loaded so the
         liveLoaded = !!(live.host && live.host.id);
+        paintRole();
         return;
       }
       try {
@@ -8021,6 +8577,7 @@ function autoPlay(video) {
         if (row.status !== 'live') { showEnded(); return; }
 
         try { const u = await window.SB.getUser(); myId = u && u.id; } catch (e) {}
+        paintRole();
 
         if (iAmHost()) {
           // Host: no Follow button for yourself, and a deliberate way to stop.
@@ -8058,16 +8615,42 @@ function autoPlay(video) {
     const cmts = el('div', { class: 'live-comments' });
     ov.appendChild(cmts);
 
-    function addComment(name, text) {
+    // Takes the AUTHOR, not just their name. It used to take a bare string, so
+    // by the time a line was on screen the app no longer knew who had written
+    // it — which is why there was no way to report or block anyone in live
+    // chat: the id had been thrown away one function earlier.
+    function addComment(person, text) {
+      const who = (person && typeof person === 'object') ? person : { name: person || '' };
+      const name = who.name || 'مستخدم';
+      if (who.id && mutedInChat.has(who.id)) return;
       // No colon after the name, and no bubble around the row. Instagram runs
       // the handle and the message together on one line over the video, which
       // reads as commentary on what you are watching rather than as a chat
       // window sitting on top of it. Legibility comes from a text shadow in
       // the CSS instead of from a filled background.
       const row = el('div', { class: 'live-cmt' }, [
-        el('span', { class: 'u' }, name || 'مستخدم'),
+        el('span', { class: 'u' }, name),
         document.createTextNode(' ' + text),
       ]);
+      if (who.id) {
+        row.dataset.userId = who.id;
+        row.setAttribute('role', 'button');
+        row.setAttribute('tabindex', '0');
+        row.setAttribute('aria-label', 'خيارات التعليق');
+        row.setAttribute('title', 'خيارات التعليق');
+        row.style.cursor = 'pointer';
+        // A tap, because there is no room for a menu button on a line of text
+        // over a video — and a long press as well, for anyone who reaches for
+        // that first. Both land on the same sheet.
+        row.addEventListener('click', () => openLiveCommentOptions(who, text));
+        let pressT = null;
+        row.addEventListener('touchstart', () => {
+          pressT = setTimeout(() => { pressT = null; openLiveCommentOptions(who, text); }, 450);
+        }, { passive: true });
+        ['touchend', 'touchmove', 'touchcancel'].forEach(ev =>
+          row.addEventListener(ev, () => { if (pressT) { clearTimeout(pressT); pressT = null; } }, { passive: true }));
+        row.addEventListener('contextmenu', (ev) => { ev.preventDefault(); openLiveCommentOptions(who, text); });
+      }
       cmts.appendChild(row);
       // Keep the newest visible and cap the DOM so long streams don't grow forever
       while (cmts.children.length > 60) cmts.removeChild(cmts.firstChild);
@@ -8079,14 +8662,14 @@ function autoPlay(video) {
       if (!window.API || !isRealId(liveId)) return;
       try {
         const existing = await window.API.fetchLiveComments(liveId);
-        existing.forEach(c => addComment(c.user && c.user.name, c.text));
+        existing.forEach(c => addComment(c.user || null, c.text));
       } catch (e) { console.warn('live comments load failed:', e); }
       try {
         unsubComments = await window.API.subscribeToLiveComments(liveId, async (row) => {
           // Realtime payload has user_id but not the joined profile
-          let name = 'مستخدم';
-          try { const p = await window.API.fetchProfile(row.user_id); if (p) name = p.name; } catch (e) {}
-          addComment(name, row.text);
+          let who = { id: row.user_id, name: 'مستخدم' };
+          try { const p = await window.API.fetchProfile(row.user_id); if (p) who = { id: row.user_id, name: p.name, handle: p.handle, avatar: p.avatar_url }; } catch (e) {}
+          addComment(who, row.text);
         });
       } catch (e) { console.warn('live comments subscribe failed:', e); }
     })();
@@ -8118,7 +8701,7 @@ function autoPlay(video) {
       if (!text) return;
       cmtInput.value = '';
       if (!window.API || !isRealId(liveId)) {
-        addComment('أنت', text); // demo stream — local echo only
+        addComment({ id: myId, name: 'أنت' }, text); // demo stream — local echo only
         return;
       }
       try {
@@ -9409,7 +9992,7 @@ function autoPlay(video) {
   // dictionary: that matches whole text nodes, and a paragraph of legal prose
   // is not a UI label. Wording this consequential should be authored, not
   // string-substituted.
-  const LEGAL_UPDATED = '2026-08-29';
+  const LEGAL_UPDATED = '2026-09-02';
 
   const LEGAL_DOCS = {
     terms: {
@@ -9485,10 +10068,17 @@ function autoPlay(video) {
           },
         },
         {
+          h: { ar: 'الفحص التلقائي للمحتوى', en: 'Automated content screening' },
+          p: {
+            ar: 'يُفحص المحتوى الذي تنشره للعامة تلقائيًا للكشف عن المواد غير الآمنة: الفيديوهات وأوصافها، والتعليقات، وعناوين البث المباشر وصوره ودردشته. يُرسَل هذا المحتوى إلى خدمة فحص تابعة لطرف ثالث لهذا الغرض وحده. لا تُرسَل رسائلك الخاصة إلى هذه الخدمة. يجري جزء من الفحص على جهازك قبل الرفع ولا يغادره. الفحص التلقائي ليس قرارًا نهائيًا: يمكنك الإبلاغ عن المحتوى المخالف، ويراجع البلاغات أشخاص.',
+            en: 'Content you post publicly is screened automatically for unsafe material: videos and their captions, comments, and live stream titles, cover images and live chat. That content is sent to a third-party screening service for that purpose only. Your private messages are not sent to that service. Part of the check runs on your own device before upload and never leaves it. Automated screening is not the last word: you can report content, and reports are reviewed by people.',
+          },
+        },
+        {
           h: { ar: 'من نستعين بهم', en: 'Who we work with' },
           p: {
-            ar: 'نستخدم مزوّدي خدمة لتشغيل التطبيق: استضافة قواعد البيانات والملفات، وإرسال البريد، والبث المباشر. يصل هؤلاء إلى البيانات اللازمة لأداء عملهم فقط.',
-            en: 'We use service providers to run the app: database and file hosting, email delivery, and live streaming. They can access only the data needed to do that job.',
+            ar: 'نستخدم مزوّدي خدمة لتشغيل التطبيق: استضافة قواعد البيانات والملفات، وإرسال البريد، والبث المباشر، وفحص المحتوى المنشور للعامة. يصل هؤلاء إلى البيانات اللازمة لأداء عملهم فقط.',
+            en: 'We use service providers to run the app: database and file hosting, email delivery, live streaming, and screening publicly posted content. They can access only the data needed to do that job.',
           },
         },
         {

@@ -361,6 +361,43 @@
     return (done && done.publicUrl) || sig.publicUrl;
   };
 
+  // Give the bytes back when the last thing pointing at them is deleted.
+  //
+  // Deleting the row used to be the whole story. The object stayed in R2 and
+  // stayed publicly fetchable for ever, because the bucket is served from a
+  // public base with no authentication of any kind - so a person who deleted a
+  // post was told it was gone while the file kept working for anyone who had
+  // ever seen the URL. That is a deletion claim the app could not honour.
+  //
+  // The decision about whether an object may actually go is NOT made here. The
+  // Edge Function re-derives ownership and checks every column in the app that
+  // can hold a media URL, and refuses on any doubt. All this does is name the
+  // URLs a delete just orphaned; being wrong about that changes nothing,
+  // because a URL something still uses comes back refused.
+  //
+  // Two rules about WHEN, and both matter:
+  //
+  //   AFTER the row delete, never before. The reference check counts the video
+  //   itself, so cleaning up first would find the post still pointing at its
+  //   own file and refuse every single time.
+  //
+  //   Never awaited, never throws. The post IS deleted the moment the row
+  //   goes; whether the bytes were collected is a separate question with its
+  //   own fallback (media-reconcile, hourly), and a failed cleanup must never
+  //   turn a delete that worked into an error on screen.
+  function releaseMedia(urls) {
+    const list = (Array.isArray(urls) ? urls : [urls]).filter(Boolean);
+    for (const url of list) {
+      // The server decides what is and is not an R2 object: a Supabase-era URL
+      // answers `skipped`, not an error. So nothing here has to know which
+      // storage backend a given post happened to be published to, which is
+      // just as well - posts from both eras are live at the same time.
+      r2Call({ action: 'delete', url }).catch((e) => {
+        console.warn('media cleanup:', (e && e.message) || e);
+      });
+    }
+  }
+
   // ---------- Videos ----------
   // Grabs a still for the feed/grid/share-card poster. V.publish never made
   // one, so `thumbnail: thumbnail_url || video_url` wrote the MP4's own URL
@@ -1657,12 +1694,10 @@
   API.createGroup = async ({ name, memberIds, photoFile }) => {
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
 
-    // Name and photo together in one call, before the photo is uploaded. Not
-    // queued for review - a private group is private - but a refusal still
-    // stands, and it stands before any bytes reach the bucket.
     // NOT SCREENED, for the same reason as direct messages: a private group's
     // name and photo are private content, and the unpaid Gemini tier trains on
-    // what it is sent. See the note in sendMessage.
+    // what it is sent. See the note in sendMessage. moderate-content refuses
+    // kind 'group' outright as well.
 
     let photo_url = null;
     if (photoFile) {
@@ -1764,24 +1799,25 @@
   API.sendMessage = async ({ chatId, text, type = 'text', file, replyToId = null }) => {
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
 
-    // ── A private conversation: screened, never queued ──
-    // A severe message is still refused - "it was a DM" has never been a
-    // defence for a threat. But nothing borderline is put in front of an
-    // administrator and no verdict is attached; see the SURFACE table in
-    // supabase/functions/moderate-content/index.ts. Blocking is safety,
-    // queueing a private chat would be surveillance.
+    // ── A private conversation: NOT screened ──
+    // Nothing in this function calls Moderation, and that is the whole point.
+    // The provider is Gemini on its UNPAID tier, whose terms say Google may use
+    // submitted content to improve their products and that "human reviewers may
+    // read, annotate, and process" it. Sending people's private conversations
+    // through that is a worse trade than the abuse it would catch — especially
+    // when blocking and reporting already cover DMs, and Apple's Guideline 1.2
+    // is about content users ENCOUNTER, not private correspondence between two
+    // people who chose to talk.
     //
-    // The attachment is deliberately NOT scanned, only the text. Two people
-    // privately exchanging photos is outside what this layer is for, and
-    // reporting plus blocking remain the answer there.
-    // NOT SCREENED, deliberately. Direct messages are private, and the
-    // moderation provider is Gemini on its UNPAID tier, whose terms say
-    // Google may use submitted content to improve their products and that
-    // "human reviewers may read, annotate, and process" it. Sending people's
-    // private conversations through that is a worse trade than the abuse it
-    // would catch — especially when blocking and reporting already cover DMs,
-    // and Apple's Guideline 1.2 is about content users ENCOUNTER, not private
-    // correspondence between two people who chose to talk.
+    // Removed at the CALL SITE on purpose. A `private: true` flag in the body
+    // would still put the message on the wire to a server that has to be
+    // trusted to drop it; not calling is the only version of this that cannot
+    // regress silently. moderate-content ALSO refuses kind 'message' before it
+    // builds a prompt — see PRIVATE_KINDS in its index.ts — which is what covers
+    // a build already on a tester's phone that still sends one.
+    //
+    // Public surfaces are untouched and still screened: video captions and
+    // frames, comments, live titles and covers, profile text and avatars.
     //
     // It also removes a ~400ms wait from every single message, which testers
     // reported as chat being slow.
@@ -3201,24 +3237,62 @@
   // Deleting your own post. Needs 0068 applied; before that the delete
   // removes nothing and this reports it honestly rather than claiming success.
   //
-  // Does NOT remove the file from R2 — see the note in 0068. The row goes, the
-  // bytes stay, and that is the deliberate trade for now.
+  // The file goes too, which it did not use to. 0068 deliberately left the
+  // bytes in R2 and recorded why: a delete path that could remove the wrong
+  // file is worse than paying for orphans. That is still true, and it is the
+  // Edge Function's problem rather than this one's - it refuses unless the
+  // object is yours and nothing anywhere still references it. What changed is
+  // the other side of the trade: those orphans are not just bytes on a bill,
+  // they are world-readable copies of something a person asked to delete.
   API.deleteVideo = async (videoId) => {
     const c = await client();
+
+    // Read the URLs while the row that holds them still exists. Nothing else
+    // in the app records which objects belonged to which post, so there is no
+    // second chance at this - but a failure here costs only the cleanup, never
+    // the delete, so it stays inside its own try.
+    let media = [];
+    try {
+      const { data: v } = await c.from('videos')
+        .select('video_url, thumbnail').eq('id', videoId).maybeSingle();
+      if (v) media = [v.video_url, v.thumbnail];
+    } catch (e) {}
+
     // .select() so a policy-blocked delete is distinguishable from a real one:
     // deleting a row you may not delete removes nothing and raises nothing.
     const { data, error } = await c.from('videos').delete().eq('id', videoId).select('id');
     if (error) throw error;
     if (!data || !data.length) throw new Error('لا يمكنك حذف هذا المقطع');
+
+    // Only past the two guards above, and only ever on a delete that really
+    // happened. A refused delete leaves the post standing, and its file with it.
+    releaseMedia(media);
+
     invalidate('feed:');
     invalidate('uservideos:');
     return true;
   };
 
+  // Same shape as deleteVideo, and the same order for the same reasons: read
+  // the URLs while the row exists, release the bytes only once it does not.
+  //
+  // The object belongs to the person who posted it, not to the admin running
+  // this, so the Edge Function's ownership check passes here on `is_admin()`
+  // rather than on a matching user_id. It reads that flag as the CALLER, so
+  // this cannot be used to delete somebody's media by claiming to be staff.
   API.adminDeleteVideo = async (videoId) => {
     const c = await client();
+
+    let media = [];
+    try {
+      const { data: v } = await c.from('videos')
+        .select('video_url, thumbnail').eq('id', videoId).maybeSingle();
+      if (v) media = [v.video_url, v.thumbnail];
+    } catch (e) {}
+
     const { error } = await c.from('videos').delete().eq('id', videoId);
     if (error) throw error;
+    releaseMedia(media);
     await c.from('admin_logs').insert({ admin_id: await uid(), action: 'delete_video', target_type: 'video', target_id: videoId });
   };
 

@@ -283,8 +283,38 @@ warns at 5.6 GB (70%), 6.8 GB (85%) and 7.6 GB (95%).
 Not blockers, but they cost money on a metered store in a way they did not on
 a free one:
 
-- **`adminDeleteVideo` deletes the database row and leaves the file.** Orphaned
-  bytes you pay to keep.
+- ~~**`adminDeleteVideo` deletes the database row and leaves the file.**~~
+  **Closed by `migrations/0081` + the `delete` action in `media-upload`.**
+  Reclassified on the way: this was filed here as a cost problem, and it is a
+  bigger privacy one. Step 11 below establishes that the bucket serves anything
+  to anyone holding the URL, so an object left behind after its post is deleted
+  is not an orphaned byte on a bill — it is a file the person was told they
+  deleted, still world-readable for ever. An app store listing that claims
+  deletion cannot stand on that.
+
+  `deleteVideo` and `adminDeleteVideo` now call the Edge Function after the row
+  delete succeeds, unawaited. It refuses unless the object is the caller's (or
+  the caller is an admin) *and* no row in `videos.video_url`,
+  `videos.thumbnail`, `sounds.audio_url`, `sounds.cover_url` or
+  `live_streams.thumbnail` still references it — 0068's objection was that a
+  delete path could remove the wrong file, so that check is the feature and a
+  check that merely *errors* counts as a reference. Ledger rows go to status
+  `deleted`, which drops them out of `storage_used_bytes()` while
+  `user_uploads_today()` keeps counting them, so delete-and-reupload is not a
+  way around the daily ceiling.
+
+  The non-obvious half is in 0081 rather than the function: an original sound
+  carries the video's own URL in `audio_url` (see step 11), and
+  `origin_video_id` is `on delete set null`, so a deleted post left a sound row
+  still pointing at its file. The reference check would have found it, refused,
+  and collected nothing for any public post ever. 0081 scrubs those URLs on a
+  `before delete` trigger and backfills the rows earlier deletes left behind.
+
+  Still not collected: media orphaned by a `sounds` or `live_streams` row being
+  deleted directly, and anything already orphaned by a video delete that
+  happened before this shipped. Both need a sweeper that acts on the same
+  five-column check — see the note in step 3 of `media-reconcile`, which
+  deliberately looks without touching.
 - **A phone that uploads and then dies before confirming** leaves a real object
   behind a `pending` row. Needs an hourly reconcile job: list R2, compare with
   the ledger, delete what nobody claims. `expire_pending_media()` is the

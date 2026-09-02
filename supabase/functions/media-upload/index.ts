@@ -28,6 +28,11 @@
 //   3. confirm  — this function asks R2 how big the object ACTUALLY is and
 //                 writes that number to the ledger.
 //
+//   4. delete   — remove an object whose last reference is gone. Refuses
+//                 unless the caller owns it (or is an admin) AND nothing in
+//                 the app still points at its URL. See the action itself for
+//                 why that check is the entire feature.
+//
 // Step 3 is what makes the accounting honest. The size that ends up in
 // media_objects comes from R2, not from the app, so a client that lies about
 // its file size cannot corrupt the quota. It can sneak exactly one oversized
@@ -124,6 +129,29 @@ const r2 = new AwsClient({
 
 const objectUrl = (key: string) =>
   `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}/${key}`;
+
+// Every column in the app that can hold an R2 media URL. The delete action
+// refuses to remove an object while any of them still points at it, so this
+// list being COMPLETE is the whole safety property — a column missing from
+// here is a way to delete a file something is still serving.
+//
+// Derived by following the only three uploadMedia() call sites in db.js, all
+// of which pass bucket 'videos': the clip and its poster (videos.video_url,
+// videos.thumbnail), the "original sound" publishVideo mints from them
+// (sounds.audio_url, sounds.cover_url — there is no separate audio file, the
+// sound row carries the video's own URL, see 0079), and the live cover
+// (live_streams.thumbnail).
+//
+// Avatars, group photos and chat attachments are NOT here because they are
+// still Supabase Storage, not R2. Add to this list before pointing any of them
+// at uploadMedia().
+const REFERENCED_BY: { table: string; column: string }[] = [
+  { table: 'videos',       column: 'video_url' },
+  { table: 'videos',       column: 'thumbnail' },
+  { table: 'sounds',       column: 'audio_url' },
+  { table: 'sounds',       column: 'cover_url' },
+  { table: 'live_streams', column: 'thumbnail' },
+];
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -397,6 +425,178 @@ Deno.serve(async (req) => {
     if (updErr) return json({ error: 'ledger_update_failed', detail: updErr.message }, 500);
 
     return json({ ok: true, size: actual, publicUrl: `${R2_PUBLIC_BASE}/${row.key}` });
+  }
+
+  // =========================================================
+  // delete — remove an object whose last reference is gone
+  //
+  // 0068 declined to build this, and the reason it gave is still the design
+  // constraint rather than an objection that has been overruled:
+  //
+  //   "Storing a few orphaned megabytes is the right trade against a delete
+  //    path that could remove the wrong file."
+  //
+  // What changed is not the trade, it is what sat on the other side of it.
+  // R2 is served from a public base with no authentication (R2_ROLLOUT step
+  // 11), so an object left behind after its post is deleted is not merely a
+  // few megabytes on a bill — it is a file the person was told they deleted,
+  // still fetchable for ever by anyone who ever held the URL.
+  //
+  // So the bytes go, and every way this could remove the WRONG file refuses
+  // first. Doubt always resolves to "leave it alone":
+  //
+  //   * no ledger row                → skipped, not deleted
+  //   * not yours and not an admin   → 403
+  //   * anything still references it → 409
+  //   * a reference check that ERRORED counts as a reference → 500
+  //
+  // Note what is not trusted: the caller says which object, and nothing else.
+  // Ownership and every reference are re-derived here against the database. A
+  // client claiming "nothing points at this any more" is never asked.
+  // =========================================================
+  if (action === 'delete') {
+    // Three ways to name the object, because the callers differ. The app holds
+    // URLs and never sees a key; an operator has a key; anything holding a
+    // ledger row has an id.
+    const id = String(body.id ?? '').trim();
+    const url = String(body.url ?? '').trim();
+    let key = String(body.key ?? '').trim();
+
+    if (url) {
+      // A URL not served from our bucket is not ours to delete, and saying so
+      // is not an error. Posts published before the R2 switch still carry
+      // Supabase Storage URLs, and the app calls this on every delete without
+      // knowing which era a post came from. Failing loudly would turn an
+      // ordinary delete into a stream of errors about nothing.
+      const prefix = `${R2_PUBLIC_BASE}/`;
+      if (!url.startsWith(prefix)) return json({ ok: true, skipped: 'not_r2_media' });
+      // Sliced, not decoded. The public URL is built by plain concatenation in
+      // the sign step (`${R2_PUBLIC_BASE}/${key}`) with no escaping applied,
+      // so the tail IS the key byte for byte. Running decodeURIComponent over
+      // it would corrupt any key holding a literal '%' and throw outright on a
+      // malformed escape — undoing an encoding that was never performed.
+      key = url.slice(prefix.length);
+    }
+
+    if (!id && !key) return json({ error: 'bad_request' }, 400);
+
+    const lookup = db.from('media_objects').select('id, bucket, key, user_id, status');
+    const { data: row, error: rowErr } = await (id ? lookup.eq('id', id) : lookup.eq('key', key))
+      .maybeSingle();
+    if (rowErr) return json({ error: 'ledger_read_failed', detail: rowErr.message }, 500);
+
+    // No ledger row means nothing here knows what this object is or who owns
+    // it — so there is no ownership check to pass, and this is not the place
+    // to guess. Unledgered objects belong to media-reconcile, which handles
+    // them deliberately and behind a two-hour grace period.
+    if (!row) return json({ ok: true, skipped: 'no_ledger_row' });
+
+    // ── Whose is it ──
+    // An admin may delete anyone's media — that is what adminDeleteVideo is —
+    // but the flag is read through `asUser`, the CALLER's own token, so saying
+    // you are one is not enough. Read via `db` it would be worthless: the
+    // service role can see every profile, including a flag that is not the
+    // caller's.
+    //
+    // The profiles column rather than the is_admin() RPC. Both are correct;
+    // this one is the path API.isAdmin() in db.js already uses on every admin
+    // screen, so it is known to be exposed and known to work here. 0074 revoked
+    // SELECT on this column from `anon` only, and an anonymous caller was
+    // turned away with a 401 long before this line.
+    if (row.user_id !== user.id) {
+      const { data: me, error: adminErr } = await asUser
+        .from('profiles').select('is_admin').eq('id', user.id).maybeSingle();
+      if (adminErr) return json({ error: 'admin_check_failed', detail: adminErr.message }, 500);
+      if (!me || me.is_admin !== true) return json({ error: 'forbidden' }, 403);
+    }
+
+    // Idempotent for the same reason confirm is: a phone retrying after a
+    // dropped response gets the same answer instead of a 502 from deleting one
+    // object twice. 'rejected' is already-gone as well — confirm measured it,
+    // refused it and removed the bytes at the time.
+    if (row.status === 'deleted' || row.status === 'rejected') {
+      return json({ ok: true, already: true });
+    }
+
+    // ── Nothing may still point at it ──
+    // This check IS the feature; the delete below it is three lines.
+    //
+    // Run through `db`, the service-role client, on purpose. RLS would hide
+    // other people's rows from the caller, and a reference check that cannot
+    // SEE a reference reports "unreferenced" and deletes a file somebody else
+    // is still serving. This is the one place where seeing everything is the
+    // safe choice rather than the dangerous one.
+    //
+    // Matched on the KEY as a suffix rather than on the whole public URL.
+    // R2_PUBLIC_BASE is a deployment setting: moving from the r2.dev URL to
+    // cdn.flyp-sa.com (rollout step 2) changes what a freshly built URL looks
+    // like, while every URL already sitting in these columns keeps the old
+    // base. An exact-URL comparison would then match nothing, report every
+    // object unreferenced, and delete live media — precisely the failure 0068
+    // refused to risk. A key is 16 random bytes and unique, so a suffix match
+    // is exact in practice and survives the base changing underneath it.
+    //
+    // LIKE wildcards inside a key cannot make this less safe: '%' and '_' can
+    // only match MORE rows, and a spurious match refuses a delete. No pattern
+    // turns a real reference into a miss.
+    const checks = await Promise.all(REFERENCED_BY.map(async (ref) => {
+      const { count, error } = await db
+        .from(ref.table)
+        .select('id', { count: 'exact', head: true })
+        .like(ref.column, `%${row.key}`);
+      return { ref, count: count ?? 0, error };
+    }));
+
+    // An unanswered question is not a "no". If any of the five could not be
+    // asked, the object keeps its bytes and somebody gets to look at why.
+    const unchecked = checks.filter((c) => c.error);
+    if (unchecked.length) {
+      return json({
+        error: 'reference_check_failed',
+        detail: unchecked
+          .map((c) => `${c.ref.table}.${c.ref.column}: ${c.error!.message}`)
+          .join('; '),
+      }, 500);
+    }
+
+    const held = checks.filter((c) => c.count > 0);
+    if (held.length) {
+      // Expected rather than exceptional: the caller deleted a row and asked
+      // for cleanup, and something else legitimately still uses the file. The
+      // usual cause of a SURPRISING one is a video deleted on a database
+      // without 0081, whose original sound row still carries the URL.
+      return json({
+        error: 'still_referenced',
+        by: held.map((c) => `${c.ref.table}.${c.ref.column}`),
+      }, 409);
+    }
+
+    // ── The bytes ──
+    const res = await r2.fetch(objectUrl(row.key), { method: 'DELETE' });
+    // S3 DELETE is idempotent and answers 204 whether or not the object was
+    // there, so a 404 means something got there first. Both are "gone".
+    if (!res.ok && res.status !== 404) {
+      // The ledger is deliberately left alone. The row stays 'stored', the
+      // bytes stay counted against the ceiling, and the object stays in
+      // reconcile's stored_rows — all of which remain true. Marking it deleted
+      // here would hide real, billed bytes from the only thing counting them.
+      return json({ error: 'r2_delete_failed', status: res.status }, 502);
+    }
+
+    const { error: updErr } = await db
+      .from('media_objects')
+      .update({ status: 'deleted', deleted_at: new Date().toISOString() })
+      .eq('id', row.id);
+    if (updErr) {
+      // The bytes are already gone, so the delete did not fail — the
+      // bookkeeping did. The row still reads 'stored' for an object that is
+      // not there, which over-states usage slightly and shows up in
+      // reconcile's stored_rows. Reported rather than retried, and wrong in
+      // the safe direction: it over-counts storage, never under-counts.
+      return json({ ok: true, deleted: true, ledger_warning: updErr.message });
+    }
+
+    return json({ ok: true, deleted: true, key: row.key });
   }
 
   return json({ error: 'unknown_action' }, 400);

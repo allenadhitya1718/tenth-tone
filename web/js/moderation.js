@@ -18,6 +18,16 @@
  * harm, hate, threats, illegal activity, and every one of those in TEXT too,
  * which the on-device model cannot see at all.
  *
+ * ── What is NOT sent ──
+ * Direct messages and private group names/photos. The provider is Gemini on its
+ * unpaid tier, whose terms let Google use submitted content to improve their
+ * products and let human reviewers read it — fine for a public post, not for a
+ * private conversation. db.js simply does not call this for them; PRIVATE_KINDS
+ * below is a backstop against a call site being re-added by mistake, and
+ * moderate-content refuses the same two kinds server-side for builds already on
+ * phones. If billing is ever enabled on the Google Cloud project, all three can
+ * come out together.
+ *
  * ── Everything here fails open ──
  * A thrown error, a timeout, an undeployed function, a signed-out session:
  * blocked is false and the write proceeds. That is a deliberate promise, not
@@ -60,6 +70,12 @@ window.Moderation = (function () {
 
   const PASS = { blocked: false, message: null, eventId: null, attach: false, target: null };
 
+  // Private surfaces. Nothing in the app asks about these any more — this is
+  // here so that a future call site added without reading the note above cannot
+  // put a private conversation on the wire. Loud rather than silent: the whole
+  // point is that somebody notices.
+  const PRIVATE_KINDS = ['message', 'group'];
+
   function enabled() {
     if (window.TT_CONFIG && window.TT_CONFIG.aiModeration === false) return false;
     return Date.now() >= mutedUntil;
@@ -77,6 +93,10 @@ window.Moderation = (function () {
   // ── Ask the server ──
   async function ask({ kind, text, images }) {
     if (!enabled()) return PASS;
+    if (PRIVATE_KINDS.indexOf(kind) !== -1) {
+      console.warn('[Moderation] refusing to send private content (' + kind + ') — not screened by design');
+      return PASS;
+    }
     if (!text && (!images || !images.length)) return PASS;
 
     try {
@@ -234,7 +254,8 @@ window.Moderation = (function () {
   // the failure mode of THIS module is "everything is allowed", which is the
   // hardest kind of bug to notice.
 
-  // Text only — comments, captions, bios, titles, messages.
+  // Text only — comments, captions, bios and titles. NOT direct messages or
+  // private group names; see the note at the top of this file.
   async function checkText(kind, text) {
     const body = String(text || '').trim();
     if (!body) return PASS;

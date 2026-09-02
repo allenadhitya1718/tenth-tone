@@ -830,6 +830,56 @@
     'تم حظر المستخدم': 'User blocked',
     'تعذر الحظر': 'Could not block user',
 
+    // ── Report & block on every content surface (App Review 1.2) ──
+    // Reporting used to exist on feed videos and profiles only. These are the
+    // sheets for a comment, a direct message, a live stream, a line of live
+    // chat, and a host acting on a viewer. They all lead into the report
+    // reasons above, so the reasons are not repeated here.
+    'الإبلاغ عن هذا المحتوى': 'Report this content',
+    'حظر المستخدم': 'Block user',
+    'كتم المستخدم': 'Mute user',
+    'إخفاء تعليقات هذا المستخدم': "Hide this person's comments",
+
+    // Where a report came from. Shown under the sheet heading and stored with
+    // the reason, which is how a report filed against a PERSON still records
+    // that it was about a private message or a line of live chat — the reports
+    // table has no target type for either.
+    'تعليق على فيديو': 'Comment on a video',
+    'رسالة خاصة': 'Private message',
+    'تعليق في بث مباشر': 'Live chat comment',
+    'مضيف بث مباشر': 'Live stream host',
+    'مشاهد في بثي المباشر': 'Viewer in my live stream',
+
+    // Comments
+    'خيارات التعليق': 'Comment options',
+    'الإبلاغ عن التعليق': 'Report comment',
+
+    // Direct messages
+    'خيارات المحادثة': 'Conversation options',
+    'المحادثة': 'Conversation',
+    'الإبلاغ عن عضو أو حظره': 'Report or block a member',
+    'الإبلاغ عن هذه المحادثة': 'Report this conversation',
+    'الإبلاغ عن هذه الرسالة': 'Report this message',
+    'الإبلاغ عن الرسالة': 'Report message',
+    'تعذر تحميل بيانات المحادثة': 'Could not load this conversation',
+
+    // Live stream — viewer side
+    'خيارات البث': 'Live stream options',
+    'الإبلاغ عن هذا البث': 'Report this live stream',
+    'الإبلاغ عن المضيف': 'Report the host',
+    'تعليق في البث المباشر': 'Live chat comment',
+    'الإبلاغ عن هذا التعليق': 'Report this comment',
+
+    // Live stream — host controls over the viewer list
+    'المشاهدون': 'Viewers',
+    'قائمة المشاهدين': 'Viewer list',
+    'مشاهد': 'Viewer',
+    'الإبلاغ عن هذا المشاهد': 'Report this viewer',
+    'تعذر تحميل قائمة المشاهدين': 'Could not load the viewer list',
+    'لا يوجد مشاهدون الآن': 'Nobody is watching right now',
+    'لن يستطيع التعليق في بثك': 'They can no longer comment in your stream',
+    'إغلاق': 'Close',
+
     // Upload validation / compression
     'لم يتم اختيار ملف': 'No file selected',
     'تعذر قراءة الفيديو': 'Could not read video',

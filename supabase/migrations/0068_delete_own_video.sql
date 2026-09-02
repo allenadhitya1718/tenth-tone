@@ -34,6 +34,18 @@ create policy "videos delete own" on public.videos
 --
 -- Storing a few orphaned megabytes is the right trade against a delete path
 -- that could remove the wrong file.
+--
+-- ── SUPERSEDED by 0081 (comment only; nothing below changed) ──
+-- The reasoning above still stands and 0081 does not overrule it — it answers
+-- it. What that paragraph weighed was cost, and the real cost is privacy: the
+-- bucket is served from a public base with no authentication, so an object
+-- left here is a file its owner was told they deleted and which anyone holding
+-- the URL can still fetch. 0081 plus the `delete` action in the media-upload
+-- Edge Function remove the bytes only after proving the object is the
+-- caller's and that nothing in any of the five columns able to hold a media
+-- URL still points at it. "Could remove the wrong file" remains the thing
+-- being defended against; it is now defended against explicitly rather than by
+-- declining to build the path.
 
 
 -- ── Verify ──
