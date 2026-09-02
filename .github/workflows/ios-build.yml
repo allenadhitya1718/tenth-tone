@@ -108,6 +108,13 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" "ios/App/App/Info.plist"
           echo "Build number: $BUILD_NUM"
 
+      # CODE_SIGN_IDENTITY is set explicitly because `cap add ios` generates a
+      # project pinned to a DEVELOPMENT signing identity, and -configuration
+      # Release does not override that. So Xcode went looking for an "iOS App
+      # Development" provisioning profile in order to make an App Store
+      # archive, found none, and additionally tried to revoke a Development
+      # certificate whose private key does not exist on a fresh runner.
+      # Asking for Distribution up front avoids both failures.
       - name: Build archive (signed for App Store)
         if: env.DO_UPLOAD == 'true'
         working-directory: ios/App
@@ -129,6 +136,7 @@ jobs:
             DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
             PRODUCT_BUNDLE_IDENTIFIER=${{ env.BUNDLE_ID }} \
             CODE_SIGN_STYLE=Automatic \
+            "CODE_SIGN_IDENTITY=Apple Distribution" \
             archive | tee /tmp/xcodebuild.log
 
       - name: Export IPA
