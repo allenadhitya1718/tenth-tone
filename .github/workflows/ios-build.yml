@@ -86,6 +86,38 @@ jobs:
       # capacitor.config.json, which is com.flyp.app because ANDROID uses that
       # and must keep it. So rewrite it here, in the App project only - the
       # Pods live in a separate Pods.xcodeproj and are never touched.
+      # `cap add ios` regenerates the whole Xcode project on every run, icons
+      # included, so the app shipped with Capacitor's placeholder icon while
+      # Android had the real one. Apple rejects placeholder icons, and the
+      # difference is visible on the store listing either way.
+      #
+      # Android's icons live in android/app/src/main/res and are committed, so
+      # they survive. iOS has nothing to survive into - the project did not
+      # exist a minute earlier - so the asset catalogue is copied in here.
+      #
+      # Verified rather than assumed: Contents.json lists 18 entries and every
+      # filename it names must exist, or Xcode silently ships a partial set and
+      # the icon is missing at some sizes only.
+      - name: Install the app icons
+        run: |
+          SRC=resources/ios/AppIcon.appiconset
+          DEST=ios/App/App/Assets.xcassets/AppIcon.appiconset
+          if [ ! -d "$SRC" ]; then
+            echo "::error::$SRC is missing - the build would ship Capacitor's placeholder icon"
+            exit 1
+          fi
+          rm -rf "$DEST"
+          mkdir -p "$(dirname "$DEST")"
+          cp -R "$SRC" "$DEST"
+          echo "Installed $(ls "$DEST" | wc -l | tr -d ' ') files:"
+          ls "$DEST"
+          # The 1024 marketing icon is the one App Store Connect displays and
+          # the one Apple rejects hardest if it is wrong or has transparency.
+          if [ ! -f "$DEST/AppIcon-1024.png" ]; then
+            echo "::error::AppIcon-1024.png missing from the icon set"
+            exit 1
+          fi
+
       - name: Set the iOS bundle identifier on the App target
         run: |
           PBX=ios/App/App.xcodeproj/project.pbxproj
