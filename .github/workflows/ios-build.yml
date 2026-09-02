@@ -189,6 +189,17 @@ jobs:
           echo "Identities now available to codesign:"
           security find-identity -v -p codesigning "$KEYCHAIN"
 
+      # Without this every single upload sits at "Missing Compliance" in
+      # App Store Connect until somebody answers the encryption question by
+      # hand, and the build cannot be attached to a version until they do.
+      # FLYP only talks HTTPS to Supabase, Agora and Cloudflare and implements
+      # no cryptography of its own, which is the standard exemption - so the
+      # answer is the same on every build and belongs in the plist.
+      - name: Declare export compliance (HTTPS only)
+        run: |
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false"             "ios/App/App/Info.plist" 2>/dev/null             || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false"             "ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Print :ITSAppUsesNonExemptEncryption" "ios/App/App/Info.plist"
+
       - name: Auto-increment build number
         if: env.DO_UPLOAD == 'true'
         run: |
