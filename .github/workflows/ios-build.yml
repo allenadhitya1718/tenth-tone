@@ -108,13 +108,15 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" "ios/App/App/Info.plist"
           echo "Build number: $BUILD_NUM"
 
-      # CODE_SIGN_IDENTITY is set explicitly because `cap add ios` generates a
-      # project pinned to a DEVELOPMENT signing identity, and -configuration
-      # Release does not override that. So Xcode went looking for an "iOS App
-      # Development" provisioning profile in order to make an App Store
-      # archive, found none, and additionally tried to revoke a Development
-      # certificate whose private key does not exist on a fresh runner.
-      # Asking for Distribution up front avoids both failures.
+      # Do NOT pin CODE_SIGN_IDENTITY here. With CODE_SIGN_STYLE=Automatic,
+      # Xcode refuses a manually specified identity ("conflicting provisioning
+      # settings"), and because command-line build settings apply to EVERY
+      # target it breaks all ten Pods as well, not just App.
+      #
+      # The archive being development-signed is normal and fine: the export
+      # step below re-signs it for distribution using method=app-store. What
+      # actually has to exist is the App ID and a certificate Xcode is allowed
+      # to create - see the note on the export step.
       - name: Build archive (signed for App Store)
         if: env.DO_UPLOAD == 'true'
         working-directory: ios/App
