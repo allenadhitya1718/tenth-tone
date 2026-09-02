@@ -5,7 +5,7 @@
   "bundledWebRuntime": false,
   "server": {
     "androidScheme": "https",
-    "iosScheme": "flyp",
+    "iosScheme": "https",
     "cleartext": false
   },
   "ios": {

@@ -41,7 +41,24 @@
   // somebody destructures `const { signIn } = window.SB`.
   async function captchaOpt() {
     if (!window.Captcha || !window.Captcha.enabled()) return undefined;
-    return { captchaToken: await window.Captcha.token() };
+    try {
+      return { captchaToken: await window.Captcha.token() };
+    } catch (e) {
+      // Send the request without a token rather than refusing to send it.
+      //
+      // On 2026-09-02 every iOS tester was locked out by this: the widget
+      // could not verify on flyp://localhost, token() rejected, and the sign
+      // in never reached Supabase - even though the dashboard toggle was off
+      // and the attempt would have succeeded. A client-side check failed
+      // closed against a server that was not asking for anything.
+      //
+      // This cannot weaken enforcement. If the toggle is ON, Supabase refuses
+      // the tokenless attempt itself; that decision belongs on the server,
+      // which is the only side that cannot be bypassed anyway.
+      console.warn('[auth] captcha unavailable, continuing without a token:',
+        e && e.message ? e.message : e);
+      return undefined;
+    }
   }
 
   const SB = {
