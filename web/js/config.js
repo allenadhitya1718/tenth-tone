@@ -68,7 +68,10 @@ window.TT_CONFIG = (function () {
   // with an App Store reviewer signing in from a data centre, which is exactly
   // the traffic a bot check flags.
   //
-  // To switch it back on: restore the key below, ship a build, get EVERY
+  // captcha.js, its script tags and its styles were deleted with it; the
+  // whole layer is recoverable from git history at tag v1.2.8.
+  //
+  // To switch it back on: restore that file and this key, ship a build, get EVERY
   // client onto it, and only then flip the Supabase toggle. The toggle makes
   // tokens mandatory server-side instantly for every client at once, and a
   // client that cannot produce one cannot sign in, sign up, OR reset a
@@ -153,7 +156,7 @@ window.TT_CONFIG = (function () {
   // Keep in step with versionName in android/app/build.gradle. On a device the
   // native shell overwrites it below with the REAL installed version, so a
   // stale constant here can only ever be wrong in the browser.
-  let appVersion = '1.2.8';
+  let appVersion = '1.2.9';
 
   try {
     const cap = window.Capacitor;

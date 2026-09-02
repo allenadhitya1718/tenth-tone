@@ -31,35 +31,6 @@
   })();
 
   // === Public API ===
-  // Supabase enforces CAPTCHA on sign-up, sign-in and password recovery once
-  // it is switched on in the dashboard. Returns undefined while it is off, and
-  // spreading undefined adds no key — so `{ ...(await captchaOpt()) }` leaves
-  // the options object exactly as it was in that case.
-  //
-  // Deliberately a closure function rather than a method on SB: the call sites
-  // would otherwise depend on `this`, which silently becomes undefined the day
-  // somebody destructures `const { signIn } = window.SB`.
-  async function captchaOpt() {
-    if (!window.Captcha || !window.Captcha.enabled()) return undefined;
-    try {
-      return { captchaToken: await window.Captcha.token() };
-    } catch (e) {
-      // Send the request without a token rather than refusing to send it.
-      //
-      // On 2026-09-02 every iOS tester was locked out by this: the widget
-      // could not verify on flyp://localhost, token() rejected, and the sign
-      // in never reached Supabase - even though the dashboard toggle was off
-      // and the attempt would have succeeded. A client-side check failed
-      // closed against a server that was not asking for anything.
-      //
-      // This cannot weaken enforcement. If the toggle is ON, Supabase refuses
-      // the tokenless attempt itself; that decision belongs on the server,
-      // which is the only side that cannot be bypassed anyway.
-      console.warn('[auth] captcha unavailable, continuing without a token:',
-        e && e.message ? e.message : e);
-      return undefined;
-    }
-  }
 
   const SB = {
     ready,
@@ -79,7 +50,7 @@
       const cleanHandle = String(handle || '').trim().toLowerCase();
       const meta = { name: cleanName };
       if (/^[a-z0-9._]{3,30}$/.test(cleanHandle)) meta.handle = cleanHandle;
-      const opts = { password, options: { data: meta, ...(await captchaOpt()) } };
+      const opts = { password, options: { data: meta } };
       if (email) opts.email = email; else if (phone) opts.phone = phone;
       const { data, error } = await c.auth.signUp(opts);
       if (error) throw error;
@@ -88,7 +59,7 @@
 
     async signIn({ email, phone, password }) {
       const c = await ready; if (!c) throw new Error('SDK not loaded');
-      const params = { password, options: { ...(await captchaOpt()) } };
+      const params = { password };
       if (email) params.email = email; else if (phone) params.phone = phone;
       const { data, error } = await c.auth.signInWithPassword(params);
       if (error) throw error;
@@ -107,7 +78,7 @@
     // screen verifies against.
     async resendSignup(email) {
       const c = await ready; if (!c) throw new Error('SDK not loaded');
-      const { data, error } = await c.auth.resend({ type: 'signup', email, options: { ...(await captchaOpt()) } });
+      const { data, error } = await c.auth.resend({ type: 'signup', email });
       if (error) throw error;
       return data;
     },
@@ -134,7 +105,7 @@
       // No redirect: recovery is by six digit code, verified with
       // verifyRecoveryCode. A redirect would only make sense for a link,
       // and the app has no screen that consumes one.
-      const { error } = await c.auth.resetPasswordForEmail(email, { ...(await captchaOpt()) });
+      const { error } = await c.auth.resetPasswordForEmail(email);
       if (error) throw error;
     },
 
@@ -156,7 +127,7 @@
       // protection is switched on in the dashboard Supabase rejects it without a
       // token, and both change-password and change-email break with an error that
       // looks nothing like the real cause. Same shape as signIn above.
-      const { error } = await probe.auth.signInWithPassword({ email, password: currentPassword, options: { ...(await captchaOpt()) } });
+      const { error } = await probe.auth.signInWithPassword({ email, password: currentPassword });
       try { await probe.auth.signOut({ scope: 'local' }); } catch (e) {}
       if (!error) return true;
       // Anything other than a plain rejection is worth surfacing as itself
