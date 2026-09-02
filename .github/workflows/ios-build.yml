@@ -198,7 +198,6 @@ jobs:
             DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
             PRODUCT_BUNDLE_IDENTIFIER=${{ env.BUNDLE_ID }} \
             CODE_SIGN_STYLE=Automatic \
-            "CODE_SIGN_IDENTITY=Apple Distribution" \
             archive | tee /tmp/xcodebuild.log
 
       - name: Export IPA
