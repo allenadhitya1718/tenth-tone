@@ -5248,7 +5248,13 @@ function autoPlay(video) {
     }
 
     function vnPickMime() {
-      const cands = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/ogg'];
+      // audio/mp4 FIRST. This list used to start with webm;codecs=opus, so
+      // Android recorded WebM - which iOS cannot play at all, in Safari or in
+      // a WKWebView. Every voice note from an Android phone showed as "Error"
+      // on an iPhone. AAC in mp4 plays on both, and iOS could only ever record
+      // mp4, so its notes always worked everywhere; Android's choice was the
+      // one breaking cross-platform playback.
+      const cands = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg'];
       for (const m of cands) {
         try { if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m; }
         catch (e) {}
