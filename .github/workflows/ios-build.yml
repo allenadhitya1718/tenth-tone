@@ -112,6 +112,11 @@ jobs:
         if: env.DO_UPLOAD == 'true'
         working-directory: ios/App
         run: |
+          # Without this the pipe to `tee` below reports TEE's exit code, so a
+          # failed xcodebuild shows as a green step and the failure surfaces
+          # later as "archive not found" - which is what happened, and it sent
+          # us looking at the wrong step twice.
+          set -o pipefail
           xcodebuild -workspace App.xcworkspace \
             -scheme App \
             -configuration Release \
@@ -154,6 +159,11 @@ jobs:
         if: env.DO_UPLOAD != 'true'
         working-directory: ios/App
         run: |
+          # Without this the pipe to `tee` below reports TEE's exit code, so a
+          # failed xcodebuild shows as a green step and the failure surfaces
+          # later as "archive not found" - which is what happened, and it sent
+          # us looking at the wrong step twice.
+          set -o pipefail
           xcodebuild -workspace App.xcworkspace \
             -scheme App \
             -configuration Debug \
