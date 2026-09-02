@@ -111,12 +111,28 @@ jobs:
           cp -R "$SRC" "$DEST"
           echo "Installed $(ls "$DEST" | wc -l | tr -d ' ') files:"
           ls "$DEST"
-          # The 1024 marketing icon is the one App Store Connect displays and
-          # the one Apple rejects hardest if it is wrong or has transparency.
-          if [ ! -f "$DEST/AppIcon-1024.png" ]; then
-            echo "::error::AppIcon-1024.png missing from the icon set"
+          # Every filename Contents.json names must actually exist, or Xcode
+          # ships a partial set and the icon is missing at some sizes only.
+          # Checked against the catalogue rather than against a guessed name:
+          # hard-coding AppIcon-1024.png failed a build, because the 1024px
+          # marketing icon is conventionally AppIcon-512@2x.png - 512pt at @2x.
+          MISSING=0
+          for f in $(sed -n 's/.*"filename"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$DEST/Contents.json"); do
+            if [ ! -f "$DEST/$f" ]; then
+              echo "::error::Contents.json references $f but it is not in the icon set"
+              MISSING=1
+            fi
+          done
+          if [ "$MISSING" -ne 0 ]; then exit 1; fi
+          # The marketing icon is what App Store Connect displays and what
+          # Apple rejects hardest. It is 1024x1024 however it is named.
+          BIG=$(find "$DEST" -name '*.png' -exec sh -c 'sips -g pixelWidth "$1" 2>/dev/null | grep -q "pixelWidth: 1024" && echo "$1"' _ {} \; | head -1)
+          if [ -z "$BIG" ]; then
+            echo "::error::No 1024x1024 marketing icon found in the icon set"
             exit 1
           fi
+          echo "marketing icon: $BIG"
+          echo "all $(ls "$DEST"/*.png | wc -l | tr -d ' ') icon files present"
 
       - name: Set the iOS bundle identifier on the App target
         run: |
