@@ -4439,7 +4439,10 @@ function autoPlay(video) {
         bubble.appendChild(Object.assign(document.createElement('audio'), { src: m.attachment_url, controls: true }));
       } else if (m.type === 'file' && m.attachment_url) {
         bubble.appendChild(el('a', {
-          class: 'msg-file', href: m.attachment_url, target: '_blank', rel: 'noopener',
+          // safeUrl, because attachment_url is attacker-supplied: it is
+          // whatever the sender wrote into the messages row, and a
+          // javascript: href executes on tap. `download` does not stop it.
+          class: 'msg-file', href: safeUrl(m.attachment_url) || '#', target: '_blank', rel: 'noopener',
           download: m.text || '',
         }, [
           el('span', { class: 'mf-icon', html: icons.paperclip }),
@@ -6279,7 +6282,13 @@ function autoPlay(video) {
       el('p', { class: 'profile-bio' }, u.bio),
       // Link in bio - creators expect somewhere to point people.
       u.link ? el('a', {
-        class: 'profile-link', href: /^https?:\/\//i.test(u.link) ? u.link : 'https://' + u.link,
+        // The old prefix defeated javascript: by accident, but '//evil.com'
+        // collapsed to https:////evil.com and navigated off-site. Strip any
+        // leading slashes before prefixing, and run it through safeUrl.
+        class: 'profile-link',
+        href: safeUrl(u.link)
+          || safeUrl('https://' + String(u.link || '').replace(/^\/+/, ''))
+          || '#',
         target: '_blank', rel: 'noopener noreferrer',
       }, [el('span', { class: 'pl-icon', html: icons.link }), el('span', {}, String(u.link).replace(/^https?:\/\//i, ''))]) : null,
       isMe

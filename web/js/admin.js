@@ -1262,7 +1262,7 @@
           <td>${userCell(r.profiles)}</td>
           <td><span class="muted">${new Date(r.requested_at).toLocaleString(admLocale())}</span></td>
           <td><span class="badge s-${r.status}">${ST[r.status] || r.status}</span></td>
-          <td>${r.file_url ? '<a href="' + esc(r.file_url) + '" target="_blank" rel="noopener">تنزيل</a>' : '<span class="muted">—</span>'}</td>
+          <td>${safeUrl(r.file_url) ? '<a href="' + esc(safeUrl(r.file_url)) + '" target="_blank" rel="noopener">تنزيل</a>' : '<span class="muted">—</span>'}</td>
           <td><div class="row-actions">
             ${r.status === 'pending' ? '<button class="btn-sm btn-primary" data-act="ready">إرفاق الملف</button><button class="btn-sm btn-secondary" data-act="fail">تعذّر</button>' : ''}
           </div></td>`;
