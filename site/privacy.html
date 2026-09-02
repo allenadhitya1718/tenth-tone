@@ -59,7 +59,7 @@
   <div class="wrap">
     <h1 data-ar="سياسة الخصوصية" data-en="Privacy Policy">سياسة الخصوصية</h1>
     <p class="lede" data-ar="ما الذي نجمعه، ولماذا، وكم نحتفظ به، وما الذي يمكنك فعله حياله." data-en="What we collect, why, how long we keep it, and what you can do about it.">ما الذي نجمعه، ولماذا، وكم نحتفظ به، وما الذي يمكنك فعله حياله.</p>
-    <p class="updated" data-ar="آخر تحديث: 1 سبتمبر 2026" data-en="Last updated: 1 September 2026">آخر تحديث: 1 سبتمبر 2026</p>
+    <p class="updated" data-ar="آخر تحديث: 2 سبتمبر 2026" data-en="Last updated: 2 September 2026">آخر تحديث: 2 سبتمبر 2026</p>
   </div>
 </section>
 
@@ -131,7 +131,7 @@
         </tbody>
       </table>
       </div>
-      <p>وقد يُفحص المحتوى المنشور على FLYP وفق <a href="guidelines.html">إرشادات المجتمع</a>، من قِبل فريقنا ومن قِبل أدوات آلية. راجع قائمة المزوّدين أدناه.</p>
+      <p>ويُفحص المحتوى المنشور علنًا على FLYP وفق <a href="guidelines.html">إرشادات المجتمع</a>، من قِبل فريقنا ومن قِبل أدوات آلية. الرسائل الخاصة مستثناة من الفحص الآلي — راجع <a href="#ar-screening">الفحص الآلي للمحتوى</a>.</p>
       <p>لا نبيع بياناتك الشخصية، ولا نشاركها مع وسطاء بيانات، ولا نستخدم أي خدمات إعلانات أو تحليلات من أطراف أخرى.</p>
 
       <h2 id="ar-basis">الأساس القانوني</h2>
@@ -164,9 +164,37 @@
         <li><strong>Agora:</strong> البث المباشر والمكالمات الصوتية والمرئية. يمر الصوت والصورة عبر شبكتها لحظيًا ليصلا إلى الطرف الآخر، ولا نسجّلهما ولا يُخزّنان عندها.</li>
         <li><strong>Esri:</strong> صور الخريطة في ميزة مشاركة الموقع. عند فتح الخريطة يصل إلى خوادمها عنوان IP الخاص بك والجزء المعروض من الخريطة، ولا يصلها شيء عن حسابك.</li>
         <li><strong>OpenStreetMap (Nominatim):</strong> تحويل نقطة على الخريطة إلى اسم مكان، والبحث عن مكان بالاسم. عند استخدام أيٍّ منهما تُرسل إلى خوادمها إحداثيات النقطة المعروضة، أو الكلمات التي كتبتها، مع عنوان IP الخاص بك. ولا تصلها بيانات حسابك، ولا يُرسل شيء إطلاقًا ما لم تفتح الخريطة أو منتقي المكان.</li>
-        <li><strong>Google (Gemini):</strong> الفحص الآلي للمحتوى. قد تُمرَّر المقاطع والأوصاف والتعليقات إلى خدمة Gemini من Google لفحصها وفق إرشادات المجتمع. لا يُرسل إليها إلا المحتوى محل الفحص، دون اسمك أو بريدك أو بيانات حسابك. والفحص الآلي يساند مراجعة فريقنا ولا يحل محلها، ويمكننا إيقافه.</li>
+        <li><strong>Google (Gemini):</strong> الفحص الآلي للمحتوى المنشور علنًا. تُمرَّر المقاطع والأوصاف والتعليقات وما يشبهها إلى خدمة Gemini من Google لفحصها وفق إرشادات المجتمع. لا يُرسل إليها إلا المحتوى محل الفحص، دون اسمك أو بريدك أو بيانات حسابك. <strong>ولا تُرسل إليها الرسائل الخاصة ولا أسماء المجموعات الخاصة ولا صورها.</strong> التفصيل في <a href="#ar-screening">الفحص الآلي للمحتوى</a>.</li>
       </ul>
       <p>كل جهة من هذه الجهات تعالج البيانات نيابة عنّا وبموجب شروطها التعاقدية، وليس لها أن تستخدمها لأغراضها هي. وقد تكون خوادمها خارج المملكة، فراجع <a href="#ar-transfer">نقل البيانات خارج بلدك</a>. وإن أضفنا مزوّدًا جديدًا فسنذكره هنا قبل أن تمر بياناتك عبره.</p>
+
+      <h2 id="ar-screening">الفحص الآلي للمحتوى</h2>
+
+      <p>FLYP تطبيق يَنشر فيه المستخدمون محتواهم، ونحن ملتزمون بألّا يكون مكانًا للمحتوى المسيء. لذلك يُفحص ما يُنشر علنًا آليًا قبل كتابته، إضافةً إلى مراجعة فريقنا وإلى بلاغاتكم. نذكر ذلك هنا بوضوح لأنه يعني أن محتوًى تنشره يمر بخدمة تابعة لطرف آخر.</p>
+
+      <h3>ما يُفحص</h3>
+      <p>يُرسَل ما يلي إلى خدمة <strong>Gemini</strong> من Google ليُقارَن بـ<a href="guidelines.html">إرشادات المجتمع</a>:</p>
+      <ul>
+        <li>المقاطع التي ترفعها — تُلتقط منها ثلاث لقطات ثابتة مصغّرة، لا الملف كاملًا — ووصفُ المقطع.</li>
+        <li>التعليقات على المقاطع، وتعليقات البث المباشر.</li>
+        <li>عناوين البث المباشر وصور أغلفته.</li>
+        <li>اسم العرض والنبذة والصورة الشخصية.</li>
+      </ul>
+
+      <h3>ما لا يُفحص</h3>
+      <div class="note"><strong>الرسائل الخاصة لا تُفحص آليًا ولا تُرسل إلى Gemini ولا إلى أي خدمة خارجية أخرى.</strong> وكذلك أسماء المجموعات الخاصة وصورها. هذا قرار مقصود ومفروض في موضعين مستقلين: في التطبيق على جهازك، وعلى خادمنا الذي يرفض هذين النوعين حتى لو طُلب منه فحصهما. والمكالمات الصوتية والمرئية والبث نفسه لا يمر شيء منها بالفحص أصلًا، فهو يسري لحظيًا ولا يُسجَّل.</div>
+      <p>ويبقى بإمكانك الإبلاغ عن رسالة خاصة أو عن مرسِلها من داخل المحادثة، فيصل ما أبلغت عنه إلى فريقنا لمراجعته بشريًا.</p>
+
+      <h3>ماذا يُرسل بالضبط</h3>
+      <ul>
+        <li>يُرسل المحتوى وحده. لا اسمك، ولا بريدك، ولا معرّفك، ولا أي شيء يربط ما فُحص بحسابك.</li>
+        <li>الصور واللقطات تُصغَّر على جهازك قبل إرسالها.</li>
+        <li>نحتفظ نحن بنتيجة الفحص — التصنيف والدرجة — مرتبطةً بالمحتوى، لنعرف لماذا رُفض شيء ولنتمكن من مراجعة القرار.</li>
+      </ul>
+
+      <h3>ما يترتب على النتيجة</h3>
+      <p>إن جاء التصنيف واضحًا في مخالفة الإرشادات، يُرفض المحتوى في حينه ولا يُنشر، وتُعرض عليك رسالة تشرح السبب. وإن كان بين بين، يُنشر ويُدرَج للمراجعة البشرية. والفحص الآلي ليس معصومًا: يساند المراجعة البشرية ولا يحل محلها، والقرار النهائي — بما فيه الاعتراض على قرار — يتخذه شخص. وإن تعطّل الفحص، يُنشر المحتوى وتُسجَّل الفجوة عندنا. ويمكننا إيقاف هذه الطبقة كليًا متى شئنا.</p>
+      <p>وشرح كيفية الإبلاغ والحظر، والمدد التي نلتزم بها في المراجعة، في <a href="guidelines.html#ar-enforce">إرشادات المجتمع</a>.</p>
 
       <h2 id="ar-location">الموقع بالتفصيل</h2>
 
@@ -320,7 +348,7 @@
         </tbody>
       </table>
       </div>
-      <p>Content posted on FLYP may also be checked against our <a href="guidelines.html">community guidelines</a>, by our team and by automated tools. See the list of providers below.</p>
+      <p>Content posted publicly on FLYP is checked against our <a href="guidelines.html">community guidelines</a>, both by our team and by automated tools. Direct messages are excluded from automated screening — see <a href="#en-screening">Automated content screening</a>.</p>
       <p>We do not sell your personal data, we do not share it with data brokers, and we use no third party advertising or analytics services.</p>
 
       <h2 id="en-basis">Legal basis</h2>
@@ -353,9 +381,37 @@
         <li><strong>Agora:</strong> live streaming and voice and video calls. Audio and video travel through its network in real time to reach the other side. We do not record them and it does not store them.</li>
         <li><strong>Esri:</strong> the map imagery in the location sharing feature. When you open the map, its servers receive your IP address and which part of the map is on screen. Nothing about your account is sent to them.</li>
         <li><strong>OpenStreetMap (Nominatim):</strong> turning a point on the map into a place name, and searching for a place by name. When you use either, the coordinates of the point being looked at, or the words you typed, are sent to its servers together with your IP address. Your account details are never sent, and nothing is sent at all unless you open the map or the place picker.</li>
-        <li><strong>Google (Gemini):</strong> automated checks on content. Clips, captions and comments may be passed to Google's Gemini service to be checked against our guidelines. Only the content being checked is sent, never your name, email or account details. Automated checking supports review by our team rather than replacing it, and we can switch it off.</li>
+        <li><strong>Google (Gemini):</strong> automated screening of publicly posted content. Clips, captions, comments and similar are passed to Google's Gemini service to be checked against our guidelines. Only the content being checked is sent, never your name, email or account details. <strong>Direct messages are not sent to it, and neither are private group names or photos.</strong> The detail is under <a href="#en-screening">Automated content screening</a>.</li>
       </ul>
       <p>Each of these processes data on our behalf under its contract terms and may not use it for its own purposes. Their servers may sit outside the Kingdom, so see <a href="#en-transfer">Sending data outside your country</a>. If we add a new provider we will name it here before your data starts passing through it.</p>
+
+      <h2 id="en-screening">Automated content screening</h2>
+
+      <p>FLYP is an app where people post their own content, and we are committed to it not becoming a place for abusive material. So anything posted publicly is screened automatically before it is written, alongside review by our team and the reports you send us. We set this out plainly here because it means content you post passes through a third party service.</p>
+
+      <h3>What is screened</h3>
+      <p>The following is sent to Google's <strong>Gemini</strong> service to be checked against our <a href="guidelines.html">community guidelines</a>:</p>
+      <ul>
+        <li>Clips you upload — three small still frames sampled from the video, not the file itself — and the caption you write with them.</li>
+        <li>Comments on clips, and live chat messages.</li>
+        <li>Live stream titles and cover images.</li>
+        <li>Your display name, bio, and profile photo.</li>
+      </ul>
+
+      <h3>What is not screened</h3>
+      <div class="note"><strong>Direct messages are not screened automatically. They are not sent to Gemini, or to any other outside service.</strong> Neither are private group names or photos. That is a deliberate decision, enforced in two independent places: in the app on your device, and on our own server, which refuses those two kinds even if it is asked to check them. Voice and video calls and the live broadcast itself never pass through screening at all — they travel in real time and are not recorded.</div>
+      <p>You can still report a private message, or the person who sent it, from inside the conversation. What you report reaches our team and is reviewed by a person.</p>
+
+      <h3>What exactly is sent</h3>
+      <ul>
+        <li>The content alone. Not your name, your email, your handle, or anything else tying what was checked to your account.</li>
+        <li>Images and video frames are shrunk on your device before they are sent.</li>
+        <li>We keep the result of the check — the category and the score — attached to the content, so we know why something was refused and can review the decision.</li>
+      </ul>
+
+      <h3>What follows from the result</h3>
+      <p>If the result clearly breaks the guidelines, the content is refused there and then, never published, and you are shown a message explaining why. If it is borderline, it is published and queued for a person to look at. Automated screening is not infallible: it supports human review rather than replacing it, and the final decision — including any appeal against one — is made by a person. If screening fails, the content is published and the gap is recorded on our side. We can switch this layer off entirely at any time.</p>
+      <p>How to report and how to block, and the timeframes we commit to for review, are set out in the <a href="guidelines.html#en-enforce">community guidelines</a>.</p>
 
       <h2 id="en-location">Location in detail</h2>
 

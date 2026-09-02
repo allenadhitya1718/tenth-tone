@@ -91,8 +91,6 @@
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
 
-    <!-- Android 13+ requires this to be requested before notifications show -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- A device without a camera can still use the rest of the app, so this
          must not become an install-time filter on the Play Store. -->

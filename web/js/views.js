@@ -10620,8 +10620,14 @@ function autoPlay(video) {
         request: () => navigator.mediaDevices.getUserMedia({ audio: true }) },
       { key: 'geolocation', icon: 'map', label: 'الموقع', why: 'لمشاركة موقعك مع أصدقائك',
         request: () => new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej)) },
-      { key: 'notifications', icon: 'bell', label: 'الإشعارات', why: 'لتنبيهك بالرسائل والتفاعلات',
-        request: () => Notification.requestPermission() },
+      // No notifications row. It called Notification.requestPermission(), the
+      // WEB api, which inside a Capacitor WebView never reaches the operating
+      // system - so the switch asked for a permission it could not obtain and
+      // then reported a state it could not read. There is no push in this app
+      // to permit: @capacitor/push-notifications was compiled in and never
+      // called from a single line of JavaScript. Removed along with the
+      // plugin. In-app notifications are unaffected - those are database rows
+      // and the toggles for them live on the notification settings screen.
     ];
 
     const box = el('div', { class: 'settings-section' });
@@ -10654,12 +10660,6 @@ function autoPlay(video) {
     async function check(entry) {
       const { pm } = entry;
       try {
-        if (pm.key === 'notifications') {
-          if (typeof Notification === 'undefined') { paint(entry, 'denied'); return; }
-          const v = Notification.permission;
-          paint(entry, v === 'default' ? 'prompt' : v);
-          return;
-        }
         if (navigator.permissions && navigator.permissions.query) {
           const st = await navigator.permissions.query({ name: pm.key });
           paint(entry, st.state);
