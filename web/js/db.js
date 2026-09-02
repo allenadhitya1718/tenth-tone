@@ -429,7 +429,23 @@
       v.onloadedmetadata = () => {
         // A little way in: frame 0 of a phone clip is often black or half-exposed.
         const d = isFinite(v.duration) ? v.duration : 0;
-        v.currentTime = d > 0.2 ? Math.min(d * 0.1, 1.0) : 0;
+        const target = d > 0.2 ? Math.min(d * 0.1, 1.0) : 0;
+        // iOS will not decode a frame for a video that has never played, so
+        // seeking alone gave an empty canvas and every clip uploaded from an
+        // iPhone ended up with a blank tile. Playing muted and inline for a
+        // moment forces the decode; then seek, capture, and stop.
+        //
+        // play() is allowed here because the element is muted and playsInline.
+        // If it is refused anyway the catch falls through to a plain seek,
+        // which is exactly the old behaviour - so this cannot be worse than
+        // what it replaces.
+        const seek = () => { try { v.currentTime = target; } catch (e) { done(null); } };
+        const p = v.play();
+        if (p && typeof p.then === 'function') {
+          p.then(() => { try { v.pause(); } catch (e) {} seek(); }).catch(seek);
+        } else {
+          seek();
+        }
       };
       v.onseeked = () => {
         try {

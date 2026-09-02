@@ -4217,3 +4217,40 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible,
   font-size: 12px; color: var(--muted);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+
+
+/* The feed's empty state sits inside .feed-scroll, and .feed-tabs is absolutely
+   positioned over the top of that same box - so "You're not following anyone
+   yet" rendered UNDERNEATH the tab row, with its icon behind "For You". The
+   scroller cannot simply be padded, because that would push every video down
+   too; only the empty state needs to clear the tabs.
+   Centred in what is left of the screen rather than pinned to the top, which
+   is where an empty state belongs on a full-screen feed. */
+.feed-scroll .empty-state {
+  min-height: 100%;
+  box-sizing: border-box;
+  padding-top: calc(96px + var(--safe-top));
+  padding-bottom: calc(var(--bn-h) + var(--safe-bottom) + 24px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+
+/* Double tap to like did nothing on iPhone. Safari reserves a fast double tap
+   for zoom-to-fit, holds the second tap back while it decides, and frequently
+   never delivers it as a click at all - so the pair was seen as one tap and
+   only toggled the sound.
+   touch-action: manipulation tells the browser this element has no
+   double-tap-zoom gesture, which both removes the ~300ms click delay and lets
+   the second tap through. Applied to the whole feed rather than the item
+   alone, so the action rail and the caption behave the same way.
+   Scrolling is untouched: `manipulation` still permits panning and pinch. */
+.feed-scroll,
+.feed-item,
+.feed-actions,
+.feed-info {
+  touch-action: manipulation;
+}

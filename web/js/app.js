@@ -38,7 +38,12 @@
     { p: /^\/profile$/, v: () => Views.profile() },
     { p: /^\/profile\/edit$/, v: () => Views.editProfile() },
     { p: /^\/profile\/(.+)$/, v: (q, m) => Views.userProfile({ id: m[1] }) },
-    { p: /^\/list\/(followers|following)$/, v: (q, m) => Views.userList({ id: m[1] }) },
+    // The id is optional: /list/followers is still your own list, and
+    // /list/followers/<uuid> is that person's. Without the second half the
+    // route had no notion of a subject, so tapping a follower count on
+    // someone else's profile opened YOUR list under THEIR number.
+    { p: /^\/list\/(followers|following)(?:\/([0-9a-f-]{36}))?$/i,
+      v: (q, m) => Views.userList({ id: m[1], user: m[2] || null }) },
     { p: /^\/notifications$/, v: () => Views.notifications() },
     { p: /^\/comments\/(.+)$/, v: (q, m) => Views.comments({ id: m[1] }) },
     // kind distinguishes sharing a profile from sharing a video; both use the

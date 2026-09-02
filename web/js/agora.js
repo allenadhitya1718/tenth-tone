@@ -42,6 +42,38 @@
     } catch (e) { /* leaving the mode set is not worth failing a hang-up over */ }
   }
 
+  // ── One live call per client ──────────────────────────────────────────
+  //
+  // The call screen is the real guard; this is the net under it. A call
+  // session is the only thing in this app holding an open microphone and a
+  // billed channel, and losing one is silent: it goes on publishing with
+  // nothing left holding a handle to stop it, and the next call the person
+  // places is their second live one. A tester hit exactly that.
+  //
+  // Claiming a slot EVICTS, it never refuses. A refusal here could only ever
+  // strand somebody who is not really in a call, and a stale slot must never
+  // be able to block the next real one. The slot is taken before the first
+  // await because a join takes seconds - token, channel, microphone prompt -
+  // and two can overlap; `cancelled` is how a join that was superseded
+  // mid-flight tears itself down on arrival instead of quietly becoming a
+  // second publisher.
+  let callSlot = null;
+
+  function takeCallSlot() {
+    const prev = callSlot;
+    const slot = { cancelled: false, stop: null };
+    callSlot = slot;
+    if (prev) {
+      prev.cancelled = true;               // for a join still in flight
+      const stop = prev.stop;              // for one that already finished
+      prev.stop = null;
+      if (stop) Promise.resolve().then(stop).catch(() => {});
+    }
+    return slot;
+  }
+
+  function releaseCallSlot(slot) { if (callSlot === slot) callSlot = null; }
+
   let sdkPromise = null;
   function loadSdk() {
     if (sdkPromise) return sdkPromise;
@@ -226,6 +258,9 @@
     // disagree with nothing to catch it.
     async startCall({ channel, uid, withVideo, localVideoEl, remoteVideoEl, onRemote, onError, onRouteChange }) {
       if (!AGORA_APP_ID) throw new Error('AGORA_APP_ID not configured');
+      // Before the first await, so two overlapping joins cannot each believe
+      // they are the only one.
+      const slot = takeCallSlot();
       const AgoraRTC = await loadSdk();
       AgoraRTC.setLogLevel(2);
       const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
@@ -256,6 +291,7 @@
         if (cam) { try { cam.close(); } catch (e2) {} }
         if (mic) { try { mic.close(); } catch (e2) {} }
         await client.leave().catch(() => {});
+        releaseCallSlot(slot);
         throw e;
       }
 
@@ -337,7 +373,7 @@
         return { hasRemoteAudio: remoteAudio.size > 0, hasRemoteVideo: remoteVideo.size > 0 };
       }
 
-      return {
+      const session = {
         client, mic, userId,
 
         // setMuted keeps the track published and sends silence, rather than
@@ -384,6 +420,9 @@
         },
 
         stop: async () => {
+          // Freed first, so a stop that stalls on any step below still leaves
+          // the next call able to start.
+          releaseCallSlot(slot);
           try { await client.unpublish(cam ? [mic, cam] : [mic]); } catch (e) {}
           if (mic) { try { mic.close(); } catch (e) {} }
           if (cam) { try { cam.close(); } catch (e) {} }
@@ -396,6 +435,18 @@
           await client.leave().catch(() => {});
         },
       };
+
+      // Only now is there something that can be stopped from outside.
+      slot.stop = session.stop;
+
+      // Superseded while we were joining: the screen that asked for this call
+      // is already gone, or another call has begun. Hand nothing back - and
+      // above all leave nothing running.
+      if (slot.cancelled) {
+        try { await session.stop(); } catch (e) {}
+        throw new Error('call superseded');
+      }
+      return session;
     },
   };
 

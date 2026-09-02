@@ -4242,6 +4242,10 @@ function autoPlay(video) {
     // call: a row is written, the other person's device rings, and this side
     // waits on the call screen.
     async function startCallFromChat(kind) {
+      // You cannot place a call from inside one. Nothing stopped this before:
+      // the new call joined a second Agora channel with a second microphone,
+      // and the call already running was left with no screen to end it from.
+      if (CallGuard.busyWith()) { toast('أنت في مكالمة بالفعل'); return; }
       try {
         const info = chatInfo || (await window.API.fetchChatInfo(id));
         const other = info && info.others && info.others[0];
@@ -4960,6 +4964,18 @@ function autoPlay(video) {
 
     cameraInput.addEventListener('change', () => { sendPickedFile(cameraInput.files[0], 'image'); cameraInput.value = ''; });
     galleryInput.addEventListener('change', () => { sendPickedFile(galleryInput.files[0], 'image'); galleryInput.value = ''; });
+    // The picture button in the composer opens fileInput, which accepts
+    // image/* AND video/*. It was mounted and clickable but had NO change
+    // handler at all, so the picker opened, you chose a photo, and
+    // nothing happened - while the paperclip's three inputs each had one.
+    // The type is taken from the file rather than assumed, because this
+    // is the one input that accepts both.
+    fileInput.addEventListener('change', () => {
+      const f = fileInput.files[0];
+      fileInput.value = '';   // so re-picking the same file fires again
+      if (!f) return;
+      sendPickedFile(f, (f.type || '').indexOf('video') === 0 ? 'video' : 'image');
+    });
 
 
     // Attach > Location used to fire the current GPS fix straight into the
@@ -6253,6 +6269,11 @@ function autoPlay(video) {
   }
 
   function _renderProfile(u, isMe) {
+    // Your own lists use the plain path; someone else's carries their id.
+    // isRealId guards shapeProfile's id:'me' placeholder, which would
+    // otherwise build /list/followers/me and match no route at all.
+    const listPath = (kind) =>
+      '/list/' + kind + ((isMe || !isRealId(u.id)) ? '' : '/' + u.id);
     const root = el('section', { class: 'profile-screen' });
     root.appendChild(el('div', { class: 'profile-header' }, [
       isMe ? el('button', { class: 'icon-btn', html: icons.menu, onclick: () => go('/settings') }) : el('button', { class: 'icon-btn back-btn', html: icons.chevL, onclick: () => back() }),
@@ -6281,8 +6302,11 @@ function autoPlay(video) {
       // toast. How much someone has posted is the useful third figure, and it
       // is what every comparable app puts here.
       el('div', { class: 'profile-stats' }, [
-        el('div', { class: 'profile-stat', onclick: () => go('/list/following') }, [el('div', { class: 'n' }, fmt(u.following || 0)), el('div', { class: 'l' }, 'متابَعين')]),
-        el('div', { class: 'profile-stat', onclick: () => go('/list/followers') }, [el('div', { class: 'n' }, fmt(u.followers || 0)), el('div', { class: 'l' }, 'متابعون')]),
+        // Your own list keeps the plain path; someone else's carries their
+        // id. isRealId guards against shapeProfile's id:'me', which would
+        // otherwise produce /list/followers/me and match no route at all.
+        el('div', { class: 'profile-stat', onclick: () => go(listPath('following')) }, [el('div', { class: 'n' }, fmt(u.following || 0)), el('div', { class: 'l' }, 'متابَعين')]),
+        el('div', { class: 'profile-stat', onclick: () => go(listPath('followers')) }, [el('div', { class: 'n' }, fmt(u.followers || 0)), el('div', { class: 'l' }, 'متابعون')]),
         el('div', { class: 'profile-stat js-videos-stat' }, [el('div', { class: 'n' }, fmt(u.videos_count || 0)), el('div', { class: 'l' }, 'فيديوهات')]),
       ]),
       el('p', { class: 'profile-bio' }, u.bio),
@@ -7095,8 +7119,17 @@ function autoPlay(video) {
     (async () => {
       try {
         if (!window.API) return;
-        const me = await window.SB.getUser(); if (!me) return;
-        const users = which === 'followers' ? await window.API.fetchFollowers(me.id) : await window.API.fetchFollowing(me.id);
+        // params.user is the person whose list this is, from
+        // /list/<kind>/<uuid>. Absent means your own, which is what
+        // every existing link produces. Before this, the subject was
+        // ignored entirely and this always fetched for the signed-in
+        // user - so another person's followers screen showed YOURS.
+        let subject = params && params.user;
+        if (!subject) {
+          const me = await window.SB.getUser(); if (!me) return;
+          subject = me.id;
+        }
+        const users = which === 'followers' ? await window.API.fetchFollowers(subject) : await window.API.fetchFollowing(subject);
         render(users);
       } catch (e) { console.warn('userList:', e); }
     })();
@@ -7403,29 +7436,6 @@ function autoPlay(video) {
         // are gone; Reply now prefills the composer with a mention, which
         // posts as a real comment that links back to them.
         el('a', { onclick: () => replyToComment(c) }, 'رد')];
-
-      // Everyone else's comment gets the report/mute/block sheet. Not your own
-      // - reporting yourself is noise, and delete already sits on that row.
-      if (c.user && c.user.id && c.user.id !== myFeedUserId) {
-        meta.push(el('a', {
-          class: 'comment-more',
-          'aria-label': 'خيارات',
-          onclick: () => openContentOptionsSheet({
-            heading: 'تعليق',
-            reportType: 'comment',
-            reportId: c.id,
-            reportLabel: 'الإبلاغ عن التعليق',
-            context: 'تعليق',
-            detail: (c.text || '').slice(0, 140),
-            user: c.user,
-            // Muting or blocking from here should take the comment off the
-            // screen immediately; leaving it visible reads as "nothing
-            // happened" and people press the button again.
-            onMuteChange: (muted) => { if (muted) dropCommentsBy(c.user.id); },
-            onBlocked: () => dropCommentsBy(c.user.id),
-          }),
-        }, '⋯'));
-      }
 
       // Deleting your own comment. The API has existed since the row did and
       // had no caller at all - messages and videos both got a delete and
@@ -7896,7 +7906,9 @@ function autoPlay(video) {
     function setStartReady(ok) {
       const b = document.querySelector('.live-setup .live-go-btn');
       if (!b) return;
-      b.disabled = !ok;
+      // Only ever enables. The single route back from disabled was a camera
+      // event that does not arrive on iOS.
+      if (ok) b.disabled = false;
       b.classList.toggle('ready', !!ok);
     }
 
@@ -8035,7 +8047,13 @@ function autoPlay(video) {
     ]));
     // Starts inactive. startPreview() brightens it the moment the camera is
     // live, which is the feedback that was missing.
-    const startBtn = el('button', { class: 'live-go-btn', disabled: true }, [
+    // Enabled from the start. It was previously disabled until the camera
+    // preview came up, which on iOS never happens - the preview stays black,
+    // setStartReady(true) never fires, and the button sits permanently dull
+    // and unpressable. A camera problem must not become a button problem.
+    // It still dims while starting, via .busy, which is set and cleared in
+    // one handler and so cannot get stuck.
+    const startBtn = el('button', { class: 'live-go-btn ready' }, [
       el('span', { class: 'live-go-dot' }),
       el('span', {}, 'بدء البث'),
     ]);
@@ -8701,6 +8719,13 @@ function autoPlay(video) {
         transform: 'translateY(0) scale(1)', filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.6))',
       } });
       floatLayer.appendChild(h);
+      // Force a reflow before changing the transform. A single rAF after
+      // appendChild lets the browser batch the insert and the style change
+      // into ONE style recalculation, so the transition has no previous value
+      // to animate from - the emoji jumps straight to opacity 0 and nothing is
+      // ever visible. Reading offsetHeight commits the initial state first,
+      // which is what gives the transition something to move away from.
+      void h.offsetHeight;
       requestAnimationFrame(() => {
         h.style.transform = `translateY(-${300 + Math.random() * 200}px) translateX(${(Math.random() - 0.5) * 80}px) scale(${0.8 + Math.random() * 0.6})`;
         h.style.opacity = '0';
@@ -11733,6 +11758,46 @@ function autoPlay(video) {
     return card;
   }
 
+  // ── One call at a time ────────────────────────────────────────────────
+  //
+  // A tester was in two calls at once. Three separate holes allowed it:
+  //
+  //   * the incoming-call card was still armed during a call, so a second
+  //     call rang on top of the first and answering it opened a second call
+  //     screen while the first was still connected;
+  //   * the chat header would happily place a new call from inside one;
+  //   * and the call screen's teardown did not mark itself ended, so a join
+  //     still in flight when you left completed afterwards and published a
+  //     microphone that no live code held a handle to.
+  //
+  // One holder at a time. Claiming EVICTS the previous holder rather than
+  // refusing it, because by the time a new call screen is built the router
+  // has already thrown the old screen's DOM away - refusing there would leave
+  // the new screen permanently unable to start. Refusing belongs one level
+  // up, in the two places a person can ask for a second call.
+  //
+  // Release is by token identity and never a blind clear. The router builds
+  // the NEXT screen before the old screen's hashchange teardown runs, so a
+  // blind clear would have the dead screen release the live screen's claim -
+  // and a guard that leaks in that direction locks the user out of calling
+  // until they restart the app, which is worse than the bug being fixed.
+  const CallGuard = (function () {
+    let holder = null;
+    return {
+      claim(id, onEvict) {
+        const prev = holder;
+        holder = null;                 // cleared first: the evicted holder's
+        if (prev && prev.onEvict) {    // own release() must then find nothing
+          try { prev.onEvict(); } catch (e) { console.warn('call evict:', e); }
+        }
+        holder = { id: id, onEvict: onEvict };
+        return holder;
+      },
+      release(token) { if (holder && holder === token) holder = null; },
+      busyWith() { return holder ? holder.id : null; },
+    };
+  })();
+
   V.call = (params) => {
     hideNav();
     const callId = params.id;
@@ -11751,11 +11816,53 @@ function autoPlay(video) {
 
     let call = null, me = null, unsub = null, timer = null, startedAt = null, ringTimeout = null;
     let ended = false;
+    // The calls row has reached a final state, or one has already been sent
+    // for it. Keeps a teardown hang-up from writing 'ended' over the
+    // 'declined' or 'missed' the row really carries, and from sending twice.
+    let settled = false;
+
+    // Claimed synchronously while this screen is being built, so the guard
+    // reflects the screen the router has just put on the display rather than
+    // the one it removed a moment ago.
+    let guard = CallGuard.claim(callId, () => { ended = true; cleanup(); });
+    // Armed in the same breath as the claim, and deliberately not at the
+    // bottom of this function: everything below can throw, and a claim that
+    // outlived a screen which failed to finish building would leave the user
+    // unable to call anybody until they restarted the app. cleanup() releases
+    // the claim before it touches anything that may not exist yet.
+    window.addEventListener('hashchange', cleanup, { once: true });
+
+    // Leaving the call screen IS hanging up: there is no ongoing-call bar to
+    // come back through. Nothing said so before, so walking away from a call
+    // left the row 'accepted' for ever - the other side sat in a call with
+    // nobody, and the table described a call that was not happening.
+    function hangUp() {
+      if (settled) return;
+      settled = true;
+      if (!call || !call.id) return;
+      try {
+        const p = window.API.endCall(call.id);
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) {}
+    }
 
     function cleanup() {
+      // Nothing this screen started may still land. This flag is what stops a
+      // join that is STILL IN FLIGHT: Agora.startCall resolves seconds after
+      // you have gone, and joinMedia then handed a live, publishing session
+      // to a closure no live code holds any more - a microphone in a channel
+      // with nothing left to stop it with. Do that once and the next call you
+      // place is your second live one. `ended` was previously set only by
+      // hang-up and by a terminal status, so the hashchange path - back
+      // button, deep link, answering another call - missed it entirely.
+      ended = true;
+      // By token identity: see CallGuard above for why a blind clear here
+      // would release the NEXT screen's claim rather than this one's.
+      if (guard) { CallGuard.release(guard); guard = null; }
       if (unsub) { try { unsub(); } catch (e) {} unsub = null; }
       if (timer) { clearInterval(timer); timer = null; }
       if (ringTimeout) { clearTimeout(ringTimeout); ringTimeout = null; }
+      hangUp();
       // The microphone and camera have to be handed back, and the channel
       // left, or the call keeps billing and the recording light stays on
       // after the screen is gone. Detached from `media` first so a second
@@ -11870,6 +11977,8 @@ function autoPlay(video) {
     const end = ctl('end', icons.phone, 'إنهاء', async () => {
       if (ended) return;
       ended = true;
+      // Sent right here, so the teardown does not send a second one.
+      settled = true;
       end.btn.disabled = true;
       try { if (call) await window.API.endCall(call.id); } catch (e) {}
       leaveScreen();
@@ -11981,6 +12090,9 @@ function autoPlay(video) {
         joinMedia();
       } else if (terminal) {
         ended = true;
+        // Already final - declined, missed, or ended by them. The teardown
+        // must not write 'ended' over the reason the row really carries.
+        settled = true;
         cleanup();                       // stop the timer before it overwrites the reason
         avWrap.classList.remove('ringing', 'connected');
         avWrap.classList.add('over');
@@ -12018,6 +12130,11 @@ function autoPlay(video) {
         // Caller side: give up after 35s with no answer.
         if (call.caller_id === me && call.status === 'ringing') {
           ringTimeout = setTimeout(async () => {
+            // 'missed' is this row's final state and this screen is over, so
+            // the realtime echo of our own update must not be handled as a
+            // fresh terminal event and schedule a second departure.
+            ended = true;
+            settled = true;
             try { await window.API.missCall(call.id); } catch (e) {}
             statusEl.textContent = 'لم يتم الرد';
             setTimeout(leaveScreen, 1400);
@@ -12026,7 +12143,6 @@ function autoPlay(video) {
       } catch (e) { console.warn('call:', e); leaveScreen(); }
     })();
 
-    window.addEventListener('hashchange', cleanup, { once: true });
     return root;
   };
 
@@ -12037,6 +12153,12 @@ function autoPlay(video) {
     let ringingId = null;
     let callUnsub = null;
     let missTimer = null;
+    // The last call auto-declined for being busy. Only so the ten-second poll
+    // cannot repeat the same toast if the decline itself fails to go through.
+    let busyDeclined = null;
+    // This card is appended to document.body, not to #app, so a route change
+    // does not sweep it away the way it sweeps away a screen.
+    let onHash = null;
 
     function dismiss() {
       // The subscription and the timeout have to go with the card. Leaving
@@ -12044,12 +12166,36 @@ function autoPlay(video) {
       // call that had already been answered somewhere else.
       if (callUnsub) { try { callUnsub(); } catch (e) {} callUnsub = null; }
       if (missTimer) { clearTimeout(missTimer); missTimer = null; }
+      if (onHash) { window.removeEventListener('hashchange', onHash); onHash = null; }
       if (overlay) { overlay.remove(); overlay = null; }
       ringingId = null;
     }
 
     async function show(row) {
       if (overlay || !row || row.status !== 'ringing') return;
+
+      // ── Already in a call ──
+      // This card used to ring straight over a live call, and answering it
+      // opened a second call screen while the first was still connected: two
+      // microphones publishing, two channels billing, and a calls row still
+      // claiming 'accepted' for a call nobody was in. Being busy is no reason
+      // to leave the caller listening to a ring that will never be answered,
+      // so the call is declined for them - they are told at once, which is
+      // what a phone does.
+      const busyId = CallGuard.busyWith();
+      if (busyId) {
+        // The call we are ON reaches here too: the ten-second poll re-reads it
+        // in the moment between answering and the row turning 'accepted'.
+        // Declining that one would hang up the call we had just taken.
+        if (row.id === busyId) return;
+        try { await window.API.declineCall(row.id); } catch (e) {}
+        if (busyDeclined !== row.id) {
+          busyDeclined = row.id;
+          toast('تم رفض مكالمة واردة لأنك في مكالمة');
+        }
+        return;
+      }
+
       ringingId = row.id;
       let caller = row.caller;
       if (!caller) {
@@ -12097,6 +12243,13 @@ function autoPlay(video) {
         ]),
       ]);
       document.body.appendChild(overlay);
+      // Answering a call navigates to its screen. A call that arrived in the
+      // moment between the two would otherwise be left ringing on top of the
+      // call now in progress - and accepting it from there would be the
+      // second call this whole change exists to prevent. If it really is
+      // still ringing, checkPending puts it back within ten seconds.
+      onHash = () => dismiss();
+      window.addEventListener('hashchange', onHash);
       try { if (window.I18N) window.I18N.apply(overlay); } catch (e) {}
 
       // ── The fix for a card that would not go away ──

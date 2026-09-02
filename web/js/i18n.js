@@ -1174,6 +1174,10 @@
     'ردًا على': 'Replying to',
     'من رؤية حسابك ومراسلتك مجددًا.': 'to see your account and message you again.',
     'يومًا. يمكنك إلغاء الحذف الآن والاحتفاظ بكل شيء.': 'days. You can cancel the deletion now and keep everything.',
+
+    // Busy-call toasts, added with the one-call-at-a-time guard.
+    'أنت في مكالمة بالفعل': 'You are already in a call',
+    'تم رفض مكالمة واردة لأنك في مكالمة': 'An incoming call was declined because you are in a call',
   };
 
   // Later blocks FILL GAPS. They must never override a key the app itself has

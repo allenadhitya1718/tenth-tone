@@ -9,7 +9,7 @@
     "cleartext": false
   },
   "ios": {
-    "contentInset": "always",
+    "contentInset": "never",
     "scheme": "FLYP",
     "limitsNavigationsToAppBoundDomains": false,
     "preferredContentMode": "mobile",
@@ -31,7 +31,7 @@
       "overlaysWebView": true
     },
     "Keyboard": {
-      "resize": "body",
+      "resize": "native",
       "style": "DARK",
       "resizeOnFullScreen": true
     },
