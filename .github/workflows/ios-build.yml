@@ -30,7 +30,9 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14
+    # macos-14 only carries Xcode 16.x, whose newest SDK is iOS 18.2, and
+    # App Store Connect now refuses anything built below the iOS 26 SDK.
+    runs-on: macos-latest
     timeout-minutes: 60
     env:
       # iOS ONLY. Android stays com.flyp.app - testers have that installed and
@@ -71,6 +73,32 @@ jobs:
 
       - name: Add iOS platform (Capacitor)
         run: npx cap add ios
+
+      # The bundle id belongs to the App target, not to every framework in the
+      # workspace. Passing PRODUCT_BUNDLE_IDENTIFIER to xcodebuild applied it
+      # to all twelve targets, so the Pods frameworks embedded inside App.app
+      # each carried com.flyp.social too and the upload was rejected:
+      #
+      #   CFBundleIdentifier Collision. There is more than one bundle with the
+      #   CFBundleIdentifier value 'com.flyp.social' under the iOS application
+      #
+      # App.xcodeproj is generated fresh by `cap add ios` from the appId in
+      # capacitor.config.json, which is com.flyp.app because ANDROID uses that
+      # and must keep it. So rewrite it here, in the App project only - the
+      # Pods live in a separate Pods.xcodeproj and are never touched.
+      - name: Set the iOS bundle identifier on the App target
+        run: |
+          PBX=ios/App/App.xcodeproj/project.pbxproj
+          CURRENT=$(grep -m1 -o 'PRODUCT_BUNDLE_IDENTIFIER = [^;]*;' "$PBX" || true)
+          echo "before: $CURRENT"
+          sed -i '' "s/PRODUCT_BUNDLE_IDENTIFIER = [^;]*;/PRODUCT_BUNDLE_IDENTIFIER = ${{ env.BUNDLE_ID }};/g" "$PBX"
+          echo "after:"
+          grep -o 'PRODUCT_BUNDLE_IDENTIFIER = [^;]*;' "$PBX" | sort -u
+          # Fail loudly rather than archiving something signed for the wrong id.
+          if ! grep -q "PRODUCT_BUNDLE_IDENTIFIER = ${{ env.BUNDLE_ID }};" "$PBX"; then
+            echo "::error::Could not set the bundle identifier in $PBX"
+            exit 1
+          fi
 
       - name: Sync web assets to iOS project
         run: npx cap sync ios
@@ -196,7 +224,6 @@ jobs:
             -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_KEY_ID }} \
             -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }} \
             DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
-            PRODUCT_BUNDLE_IDENTIFIER=${{ env.BUNDLE_ID }} \
             CODE_SIGN_STYLE=Automatic \
             archive | tee /tmp/xcodebuild.log
 
