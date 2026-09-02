@@ -126,9 +126,15 @@ jobs:
           CERT_B64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
         run: |
+          # Optional. With no certificate supplied, fall through and let
+          # -allowProvisioningUpdates create one, which works as long as the
+          # account is under Apple's 2-development-certificate cap. Supplying
+          # one is the durable fix, because CI creating a certificate per run
+          # fills that cap again; but a missing secret must not fail a build
+          # that would otherwise have succeeded.
           if [ -z "$CERT_B64" ]; then
-            echo "::error::IOS_DIST_CERT_P12_BASE64 is not set. See the header of this file for how to create it."
-            exit 1
+            echo "::notice::No IOS_DIST_CERT_P12_BASE64 secret; letting Xcode create a certificate instead."
+            exit 0
           fi
           KEYCHAIN=$RUNNER_TEMP/build.keychain
           KEYCHAIN_PASSWORD=$(uuidgen)
