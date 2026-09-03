@@ -326,8 +326,32 @@
       + '</defs>' + links + sparks + accents + nodes + '</svg>';
   }
 
+  // ===== Sign in with Apple =====
+  // Rendered wherever we offer a way in. Returns null off iOS when the OAuth
+  // provider is not configured, and `el` skips null children, so callers can
+  // drop it in unconditionally.
+  function appleAuthBlock(errorEl, opts) {
+    opts = opts || {};
+    const A = window.AppleAuth;
+    if (!A || !A.isAvailable()) return null;
+    const btn = A.button({
+      label: opts.label,
+      onSuccess: () => go(opts.next || '/home'),
+      onError: (msg) => {
+        if (!errorEl) { toast(msg); return; }
+        errorEl.textContent = msg;
+        errorEl.hidden = false;
+      },
+    });
+    return el('div', { class: 'apple-auth-block', style: { width: '100%' } }, [
+      A.divider('أو'),
+      btn,
+    ]);
+  }
+
   V.welcome = () => {
     hideNav();
+    const welcomeError = el('div', { class: 'error-box', hidden: true });
     const root = el('section', { class: 'splash' }, [
       el('div', { class: 'splash-lang' }, [langSwitch({ compact: true })]),
       el('div', { class: 'splash-hero' }, [
@@ -340,6 +364,8 @@
       el('div', { class: 'actions' }, [
         el('button', { class: 'btn', onclick: () => go('/register') }, 'أنا جديد هنا'),
         el('button', { class: 'btn btn-outline', onclick: () => go('/login') }, 'لدي حساب بالفعل'),
+        appleAuthBlock(welcomeError),
+        welcomeError,
         el('p', { class: 'welcome-legal' }, [
           document.createTextNode('بالمتابعة أنت توافق على '),
           el('a', { class: 'auth-link', onclick: () => go('/legal') }, 'الشروط وسياسة الخصوصية'),
@@ -430,6 +456,8 @@
       }
     } }, 'تسجيل الدخول');
     root.appendChild(loginBtn);
+    const appleBlock = appleAuthBlock(error);
+    if (appleBlock) root.appendChild(appleBlock);
     root.appendChild(el('div', { class: 'auth-actions text-center' }, [
       el('p', { class: 'muted' }, [document.createTextNode('ليس لديك حساب؟ '), el('a', { class: 'auth-link', onclick: () => go('/register') }, 'إنشاء حساب')]),
     ]));
