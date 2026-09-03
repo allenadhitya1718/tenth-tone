@@ -571,7 +571,9 @@ input, textarea, [contenteditable="true"] {
 
 /* === Discover === */
 .discover { padding-bottom: calc(var(--bn-h) + var(--safe-bottom)); height: 100%; overflow-y: auto; }
-.discover-search { padding: 10px 16px; }
+/* The clock and the notch sit on top of anything that ignores the inset;
+   every other header on the app already pays it. */
+.discover-search { padding: calc(10px + var(--safe-top)) 16px 10px; }
 .tag-row { display: flex; gap: 8px; padding: 4px 16px 12px; overflow-x: auto; }
 .tag-row::-webkit-scrollbar { display: none; }
 .tag {
@@ -1356,6 +1358,13 @@ body.dark .see-more-link { color: var(--primary-2); }
 @keyframes liveDot { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
 @media (prefers-reduced-motion: reduce) { .live-go-dot { animation: none; } }
 
+/* The setup screen's scrim (.live-setup::before, z-index 1) is 72% black at
+   the bottom of the screen, which is exactly where this row sits. Without a
+   stacking context of its own the row rendered UNDER it, so the start button
+   looked greyed out while remaining perfectly clickable - the scrim is
+   pointer-events:none. Lifting the row to the body's own z-index fixes the
+   appearance without touching the button's colours. */
+.live-setup .live-bottom { position: relative; z-index: 2; }
 .live-bottom {
   padding: 10px 12px calc(12px + var(--safe-bottom));
   display: flex; gap: 9px; align-items: center;
