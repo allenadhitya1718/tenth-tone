@@ -1356,7 +1356,51 @@
       }
     })();
 
-    function renderItems() { list.forEach((v, i) => renderItem(v, i)); }
+    function renderItems() {
+      list.forEach((v, i) => renderItem(v, i));
+      restoreFeedPosition();
+    }
+
+    // Jump back to the clip that was on screen when the feed was last left.
+    // Silent about failure by design: a clip that has since been deleted,
+    // filtered out, or pushed off the page simply leaves you at the top,
+    // which is exactly what happened before any of this existed.
+    let _restored = false;
+    function restoreFeedPosition() {
+      if (_restored) return;
+      let want = null;
+      try { want = sessionStorage.getItem('tt-feed-at:' + tab); } catch (e) {}
+      if (!want) return;
+
+      // The cards have no height at the moment renderItems() finishes, so
+      // scrolling here lands on offsetTop 0 for every one of them and the
+      // feed stays at the top. Wait for layout, then check the geometry is
+      // real before trusting it - and try a few times, because the first
+      // frame after a route change is often still empty.
+      let tries = 0;
+      const attempt = () => {
+        if (_restored) return;
+        const target = scroll.querySelector('.feed-item[data-feed-id="' + want + '"]');
+        // offsetTop 0 on anything but the first card means layout has not
+        // happened yet; scrolling to it would be a no-op that also burns the
+        // one chance to get this right.
+        const laid = target && (target.offsetTop > 0 || target === scroll.firstElementChild);
+        if (laid) {
+          _restored = true;
+          // 'auto', not 'smooth': this runs during the first paint, and an
+          // animated scroll from the top reads as a lurch. Nobody wants to
+          // watch the app travel to where they already were.
+          try { target.scrollIntoView({ behavior: 'auto', block: 'start' }); }
+          catch (e) { scroll.scrollTop = target.offsetTop; }
+          return;
+        }
+        // A clip that has since been deleted or filtered out never appears,
+        // so give up quietly and leave the feed at the top - exactly what
+        // happened before any of this existed.
+        if (++tries < 10) requestAnimationFrame(attempt);
+      };
+      requestAnimationFrame(attempt);
+    }
     function renderItem(v, idx) {
       // Only substitute a local sample clip in demo mode. Outside demo mode a
       // row whose video_url isn't actually a video (e.g. seed rows pointing at
@@ -1371,7 +1415,8 @@
       // WebView's grey placeholder instead of its own still.
       const still = (v.poster || v.thumbnail || v.bg || '');
       // Show dark sleek backdrop while video streams
-      const item = el('div', { class: 'feed-item', style: { background: '#000' } });
+      // The id is what lets the feed resume on this clip after a rebuild.
+      const item = el('div', { class: 'feed-item', 'data-feed-id': String(v.id || ''), style: { background: '#000' } });
       if (!isVideo) {
         if (still) {
           item.appendChild(el('div', {
@@ -1405,8 +1450,14 @@
         // turns it on it stays on as they scroll, the way every short video
         // app behaves. Starting muted is still required: browsers refuse to
         // autoplay with sound.
-        video.muted = PLAYBACK.muted;
-        video.defaultMuted = PLAYBACK.muted;
+        // ALWAYS created muted, even when the session has sound on. iOS
+        // refuses to autoplay a video that is not muted, and WKWebView then
+        // draws its own play button - so once someone unmuted, every clip
+        // after that stopped playing by itself and asked to be tapped.
+        // autoPlay() restores the preference once playback is actually
+        // running, which iOS does allow. Android never cared either way.
+        video.muted = true;
+        video.defaultMuted = true;
         armSoundOnFirstGesture();
         video.loop = true;
         video.playsInline = true;
@@ -1612,6 +1663,9 @@
                 playBadge.style.display = '';
               }
               watchStartTs = Date.now();
+              // Where to come back to. Written on every clip that becomes
+              // visible, so it is always the one being watched.
+              try { if (v.id) sessionStorage.setItem('tt-feed-at:' + tab, String(v.id)); } catch (err) {}
             } else {
               video.pause();
               flushEngagement();
@@ -1969,7 +2023,18 @@ function autoPlay(video) {
     // 'metadata' it was attached with. Data saver keeps it at metadata and
     // lets playback pull only what it needs.
     if (!PLAYBACK.dataSaver && video.preload !== 'auto') video.preload = 'auto';
-    try { video.play().catch(() => {}); } catch (e) {}
+    try {
+      const p = video.play();
+      if (p && typeof p.then === 'function') {
+        // Sound goes back on only once playback is under way. Setting it
+        // before play() is what iOS refuses; setting it after is fine, and by
+        // then the user has already gestured - that gesture is how sound was
+        // turned on at all.
+        p.then(() => { video.muted = PLAYBACK.muted; }).catch(() => {});
+      } else {
+        video.muted = PLAYBACK.muted;
+      }
+    } catch (e) {}
   }
 
   // Generous threshold: the next clip may start a moment before it is fully
