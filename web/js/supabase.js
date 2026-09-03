@@ -159,6 +159,31 @@
       return data;
     },
 
+    // ---------- Sign in with Apple ----------
+    // Native path: the iOS shell already did the authenticating and hands us
+    // Apple's identity token. Supabase verifies it against Apple's public keys
+    // and mints its own session — no redirect, no browser.
+    async signInWithApple({ token, nonce }) {
+      const c = await ready; if (!c) throw new Error('SDK not loaded');
+      const params = { provider: 'apple', token };
+      if (nonce) params.nonce = nonce;
+      const { data, error } = await c.auth.signInWithIdToken(params);
+      if (error) throw error;
+      return data;
+    },
+
+    // Web path: the ordinary OAuth redirect. Comes back to whatever page
+    // started it, where detectSessionInUrl finishes the job.
+    async signInWithAppleOAuth() {
+      const c = await ready; if (!c) throw new Error('SDK not loaded');
+      const { data, error } = await c.auth.signInWithOAuth({
+        provider: 'apple',
+        options: { redirectTo: window.location.origin, scopes: 'name email' },
+      });
+      if (error) throw error;
+      return data;
+    },
+
     async signOut() {
       const c = await ready; if (!c) return;
       await c.auth.signOut();
