@@ -75,6 +75,54 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'لعرض موقع الأصدقاء على الخريطة'" "ios/App/App/Info.plist" 2>/dev/null || \
           /usr/libexec/PlistBuddy -c "Set :NSLocationWhenInUseUsageDescription 'لعرض موقع الأصدقاء على الخريطة'" "ios/App/App/Info.plist"
 
+      # Sign in with Apple needs an entitlement on the app target, and the
+      # matching capability enabled on the App ID in the developer portal.
+      # `cap add ios` regenerates the Xcode project from scratch every run, so
+      # both the file and the build setting are written here rather than
+      # committed.
+      - name: Enable Sign in with Apple capability
+        run: |
+          ENT="ios/App/App/App.entitlements"
+          cat > "$ENT" <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>com.apple.developer.applesignin</key>
+            <array>
+              <string>Default</string>
+            </array>
+          </dict>
+          </plist>
+          EOF
+          plutil -lint "$ENT"
+          # Point the App target's build configs at it. PRODUCT_BUNDLE_IDENTIFIER
+          # appears only in the App target's Debug/Release settings, which makes
+          # it a reliable anchor in a generated pbxproj.
+          PROJ="ios/App/App.xcodeproj/project.pbxproj"
+          python3 - "$PROJ" <<'PY'
+          import re, sys
+          path = sys.argv[1]
+          src = open(path, encoding='utf-8').read()
+          if 'CODE_SIGN_ENTITLEMENTS' in src:
+              print('Entitlements already wired; leaving as is.')
+          else:
+              src, n = re.subn(
+                  r'(\n(\s*)PRODUCT_BUNDLE_IDENTIFIER = )',
+                  lambda m: '\n%sCODE_SIGN_ENTITLEMENTS = App/App.entitlements;%s' % (m.group(2), m.group(1)),
+                  src)
+              if not n:
+                  sys.exit('Could not find PRODUCT_BUNDLE_IDENTIFIER in the pbxproj')
+              open(path, 'w', encoding='utf-8').write(src)
+              print('Wired entitlements into %d build configuration(s).' % n)
+          PY
+
+      - name: Set marketing version from package.json
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "ios/App/App/Info.plist"
+          echo "Marketing version: $VERSION"
+
       - name: Pod install
         working-directory: ios/App
         run: pod install --repo-update
