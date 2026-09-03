@@ -18,6 +18,17 @@
 (function () {
   const SCOPES = 'name email';
 
+  // The app is authored in Arabic and i18n.js swaps labels after each render
+  // by exact string match. That walk never reached this button's text, which
+  // is written from script and rewritten on every state change, so the one
+  // control on an otherwise English login screen stayed in Arabic. Picking
+  // the string here is the same thing views.js does for its own live labels.
+  function L(ar, en) {
+    try {
+      return (window.I18N && window.I18N.getLang && window.I18N.getLang() === 'en') ? en : ar;
+    } catch (e) { return ar; }
+  }
+
   // Apple only returns the name on the FIRST authorization, ever. Miss it and
   // it is gone for that Apple ID until the user revokes the app in Settings,
   // so it gets stashed the moment it arrives.
@@ -177,8 +188,8 @@
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'apple-signin-btn';
-    const label = opts.label || 'تسجيل الدخول باستخدام Apple';
-    const busy = opts.busyLabel || 'جاري تسجيل الدخول...';
+    const label = opts.label || L('تسجيل الدخول باستخدام Apple', 'Sign in with Apple');
+    const busy = opts.busyLabel || L('جاري تسجيل الدخول...', 'Signing in...');
     const setLabel = (text, withMark) => {
       btn.innerHTML = (withMark ? APPLE_MARK : '') + '<span>' + text + '</span>';
     };
@@ -205,7 +216,7 @@
     injectStyles();
     const d = document.createElement('div');
     d.className = 'auth-divider';
-    d.appendChild(document.createTextNode(text || 'أو'));
+    d.appendChild(document.createTextNode(text || L('أو', 'or')));
     return d;
   }
 
@@ -213,10 +224,10 @@
   function describeError(e) {
     const m = String((e && (e.message || e.error || e)) || '');
     if (/canceled|cancelled|1001|AuthorizationError\s*error\s*1001|user.?cancel/i.test(m)) return null;
-    if (/apple-plugin-missing/.test(m)) return 'تسجيل الدخول عبر Apple غير متاح على هذا الجهاز';
-    if (/apple-no-token/.test(m)) return 'تعذر التحقق من حساب Apple — حاول مجددًا';
-    if (/network|fetch|offline/i.test(m)) return 'تعذر الاتصال — تحقق من الإنترنت';
-    return 'تعذر تسجيل الدخول عبر Apple — حاول مجددًا';
+    if (/apple-plugin-missing/.test(m)) return L('تسجيل الدخول عبر Apple غير متاح على هذا الجهاز', 'Sign in with Apple is not available on this device');
+    if (/apple-no-token/.test(m)) return L('تعذر التحقق من حساب Apple — حاول مجددًا', 'Could not verify your Apple account — try again');
+    if (/network|fetch|offline/i.test(m)) return L('تعذر الاتصال — تحقق من الإنترنت', 'Connection failed — check your internet');
+    return L('تعذر تسجيل الدخول عبر Apple — حاول مجددًا', 'Could not sign in with Apple — try again');
   }
 
   window.AppleAuth = { isAvailable, isNativeIOS, signIn, button, divider, describeError };

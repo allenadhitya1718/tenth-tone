@@ -344,7 +344,7 @@
       },
     });
     return el('div', { class: 'apple-auth-block', style: { width: '100%' } }, [
-      A.divider('أو'),
+      A.divider(),
       btn,
     ]);
   }
@@ -1599,15 +1599,16 @@
           setTimeout(() => { try { h.remove(); } catch (err) {} }, 900);
         }
 
-        // Tap toggles sound; double tap likes.
+        // Tap plays or pauses; double tap likes. Sound has its own button in
+        // the corner.
         let tapTimer = null, lastTapTs = 0;
         item.addEventListener('click', (e) => {
           if (e.target.closest('.feed-actions') || e.target.closest('.feed-info') || e.target.closest('.feed-tabs')) return;
           const now = Date.now();
 
           if (now - lastTapTs < 300) {
-            // Second tap of a pair. Cancel the sound toggle the first one
-            // queued — a double tap should never also flip the audio.
+            // Second tap of a pair. Cancel the play/pause the first one queued —
+            // a double tap should like the clip, not stop it.
             lastTapTs = 0;
             if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; }
             heartBurst(e);
@@ -1625,34 +1626,30 @@
             tapTimer = null;
             // The FIRST tap anywhere is what browsers require before audio may
             // play, and armSoundOnFirstGesture() consumes it to turn sound on.
-            // Without this guard that same tap then arrived here 260ms later,
-            // read "sound is on" and turned it straight back off - so the first
-            // tap unmuted and re-muted in one gesture and the feed stayed
-            // silent. That is the whole of "there is no sound".
-            // One-shot, not a time window. The FIRST tap anywhere is what
-            // browsers require before audio may play, and
-            // armSoundOnFirstGesture() consumes it to turn sound on. Without
-            // this the same tap arrived here and turned it straight back off,
-            // so the first tap unmuted and re-muted in one gesture and the feed
-            // stayed silent - the whole of "there is no sound".
-            //
-            // A flag rather than a deadline because the delay between the two
-            // is not fixed: measured at 1.3s on a cold feed, where the tap
-            // handler waits 260ms for a possible double tap and the rest is the
-            // page still settling. Any window short enough to be safe was too
-            // short to work.
+            // That tap belongs to the sound, not to playback: letting it fall
+            // through would pause the clip the user just turned the volume up
+            // on. A flag rather than a deadline, because the gap between the
+            // two is not fixed - measured at 1.3s on a cold feed.
             if (window._ttSoundJustArmed) {
               window._ttSoundJustArmed = false;
               playOnlyVisible();
-              playBadge.style.display = 'none';
               return;
             }
-            // Tapping a clip turns sound on or off for the whole session.
-            // It deliberately does not pause: on a scrolling feed a stray tap
-            // that freezes the video reads as the app breaking.
-            setMuted(!PLAYBACK.muted);
-            playOnlyVisible();
-            playBadge.style.display = 'none';
+            // Tap pauses, tap again resumes - what every short video app does,
+            // and what the play badge has always implied. It used to toggle
+            // sound instead, which is why tapping a clip appeared to do
+            // nothing: the seeded clips are stock footage with no audio, so
+            // the only feedback was a volume change you could not hear. Sound
+            // now lives entirely on the speaker button in the corner.
+            //
+            // The badge follows from the video's own play/pause events, so
+            // there is nothing to update here.
+            if (video.paused) {
+              const p = video.play();
+              if (p && typeof p.catch === 'function') p.catch(() => {});
+            } else {
+              video.pause();
+            }
           }, 260);
         });
 
