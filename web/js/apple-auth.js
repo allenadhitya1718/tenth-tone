@@ -95,7 +95,7 @@
     if (!p) throw new Error('apple-plugin-missing');
 
     const nonce = await makeNonce();
-    const opts = { clientId: 'com.flyp.app', redirectURI: '', scopes: SCOPES };
+    const opts = { clientId: 'com.flyp.social', redirectURI: '', scopes: SCOPES };
     if (nonce.hashed) opts.nonce = nonce.hashed;
 
     const result = await p.authorize(opts);
