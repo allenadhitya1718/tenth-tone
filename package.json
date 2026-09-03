@@ -1,6 +1,6 @@
 {
   "name": "tenth-tone",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Tenth Tone — social video app, iOS shell via Capacitor",
   "private": true,
   "scripts": {
@@ -9,6 +9,7 @@
     "ios:open": "npx cap open ios"
   },
   "dependencies": {
+    "@capacitor-community/apple-sign-in": "^6.0.0",
     "@capacitor/android": "^6.2.1",
     "@capacitor/app": "^6.0.2",
     "@capacitor/camera": "^6.1.2",
