@@ -237,6 +237,18 @@
     patchCached('feed:', apply);
   }
 
+  // Same idea for a counter. Without it the cached page still holds the old
+  // number, so scrolling away and back showed the save undone.
+  function _patchVideoCount(videoId, field, delta) {
+    const apply = (rows) => {
+      if (!Array.isArray(rows)) return;
+      rows.forEach(r => {
+        if (r && r.id === videoId) r[field] = Math.max(0, (Number(r[field]) || 0) + delta);
+      });
+    };
+    patchCached('feed:', apply);
+  }
+
   API.invalidate = invalidate;
   API.patchCached = patchCached;
   API.clearCache = () => { _cache.clear(); _inflight.clear(); clearPersisted(); };
@@ -659,7 +671,7 @@
     if (!data.length) {
       let q = c.from('videos').select(`
         id, description, music, sound_id, video_url, thumbnail, privacy,
-        likes_count, comments_count, shares_count, views_count, created_at,
+        likes_count, comments_count, shares_count, saves_count, views_count, created_at,
         user:profiles!videos_user_id_fkey ( id, name, handle, avatar_url, verified )
       `).eq('is_draft', false).eq('privacy', 'public').order('created_at', { ascending: false });
 
@@ -675,6 +687,24 @@
       const { data: fetched, error } = await q.range(offset, offset + limit - 1);
       if (error) throw error;
       data = fetched || [];
+    }
+
+    // fetch_fyp_feed's return signature lists likes, comments, shares and
+    // views - but not saves. Every row off the RPC therefore arrived with
+    // saves_count undefined, the feed rendered 0, and the optimistic +1 from
+    // tapping save was wiped by the next repaint: saving a clip appeared to
+    // do nothing. The column exists on videos and is kept correct by the
+    // tr_saves_count trigger, so read it directly rather than waiting on a
+    // migration to widen the RPC.
+    if (data && data.length && data.some(v => v.saves_count == null)) {
+      try {
+        const missing = data.filter(v => v.saves_count == null).map(v => v.id);
+        const { data: counts } = await c.from('videos').select('id, saves_count').in('id', missing);
+        const bySaves = new Map((counts || []).map(r => [r.id, r.saves_count]));
+        data.forEach(v => { if (v.saves_count == null) v.saves_count = bySaves.get(v.id) || 0; });
+      } catch (e) {
+        data.forEach(v => { if (v.saves_count == null) v.saves_count = 0; });
+      }
     }
 
     // Mark which videos current user already liked / saved
@@ -1182,6 +1212,7 @@
     const { error } = await c.from('saves').upsert({ user_id: me, video_id: videoId });
     if (error) throw error;
     _patchVideoFlag(videoId, 'saved', true);
+    _patchVideoCount(videoId, 'saves_count', 1);
     invalidate('savedvideos');
     return true;
   };
@@ -1191,6 +1222,7 @@
     const { error } = await c.from('saves').delete().eq('user_id', me).eq('video_id', videoId);
     if (error) throw error;
     _patchVideoFlag(videoId, 'saved', false);
+    _patchVideoCount(videoId, 'saves_count', -1);
     invalidate('savedvideos');
     return true;
   };

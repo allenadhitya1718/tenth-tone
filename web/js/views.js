@@ -1515,6 +1515,16 @@
         item.appendChild(video);
         item.appendChild(playBadge);
 
+        // The badge is a statement about the clip, not about a setting: it is
+        // visible exactly when the video is stopped. It used to be switched by
+        // hand at four call sites, so a clip that started playing by any route
+        // those sites did not cover kept the badge over a moving picture.
+        function syncBadge() {
+          playBadge.style.display = video.paused ? 'flex' : 'none';
+        }
+        video.addEventListener('playing', syncBadge);
+        video.addEventListener('pause', syncBadge);
+
         // ── Only clips near the viewport are allowed on the wire ──
         // Attaching the source starts the download; removing it cancels one
         // already in flight. A clip is attached when it comes within a screen
@@ -1688,7 +1698,8 @@
               if (PLAYBACK.autoplay) {
                 video.play().then(() => { playBadge.style.display = 'none'; }).catch(() => {});
               } else {
-                playBadge.style.display = '';
+                // Autoplay off: the clip is stopped, so the badge belongs up.
+                syncBadge();
               }
               watchStartTs = Date.now();
               // Where to come back to. Written on every clip that becomes
