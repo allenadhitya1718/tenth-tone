@@ -134,6 +134,30 @@ jobs:
           echo "marketing icon: $BIG"
           echo "all $(ls "$DEST"/*.png | wc -l | tr -d ' ') icon files present"
 
+      # `cap add ios` regenerates the project every run, and the template it
+      # copies ships Capacitor's own placeholder splash - the pale blue X on
+      # white that testers were seeing on every launch and reasonably read as
+      # the wrong app. Same treatment as the icons above: our asset, installed
+      # over the template's, and a loud failure rather than a silent placeholder.
+      - name: Install the splash screen
+        run: |
+          SRC=resources/ios/Splash.imageset
+          DEST=ios/App/App/Assets.xcassets/Splash.imageset
+          if [ ! -d "$SRC" ]; then
+            echo "::error::$SRC is missing - the build would ship Capacitor's placeholder splash"
+            exit 1
+          fi
+          rm -rf "$DEST"
+          mkdir -p "$(dirname "$DEST")"
+          cp -R "$SRC" "$DEST"
+          for f in $(sed -n 's/.*"filename"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$DEST/Contents.json"); do
+            if [ ! -f "$DEST/$f" ]; then
+              echo "::error::Contents.json references $f but it is not in the splash set"
+              exit 1
+            fi
+          done
+          echo "Installed splash: $(ls "$DEST" | tr '\n' ' ')"
+
       - name: Set the iOS bundle identifier on the App target
         run: |
           PBX=ios/App/App.xcodeproj/project.pbxproj
