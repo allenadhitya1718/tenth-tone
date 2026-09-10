@@ -787,9 +787,8 @@
     const root = el('section', { class: 'auth-screen' });
     root.appendChild(topBar({ title: 'التحقق' }));
     const wrap = el('div', { style: { padding: '14px 4px', textAlign: 'center' } });
-    wrap.appendChild(el('div', { class: 'auth-logo' }, [
-      el('div', { class: 'auth-logo-svg', html: icons.logo, style: { width: '150px', height: 'auto', margin: '0 auto 12px' } })
-    ]));
+    // No logo here. It pushed the code boxes down the screen for no purpose -
+    // nobody reaching this point needs reminding which app they are in.
     wrap.appendChild(el('h2', { class: 'auth-title' }, 'أدخل رمز التحقق'));
     wrap.appendChild(el('p', { class: 'auth-subtitle' }, 'أرسلنا لك رمز التحقق'));
     // Show WHERE it went. Without this a mistyped address - name@gmail.co is

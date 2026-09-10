@@ -3574,7 +3574,17 @@ body.dark .auth-screen .sec-input::placeholder { color: #9a9aa8; }
 
 /* The top bar sits on the light surface too. */
 body.dark .auth-screen .top-bar,
-.auth-screen .top-bar { background: transparent; border-bottom: none; }
+/* position:static matters as much as the transparency here - see below. */
+.auth-screen .top-bar {
+  background: transparent;
+  border-bottom: none;
+  /* NOT sticky. .top-bar is sticky by default, and a transparent
+     sticky bar lets the scrolled page show through itself: the title
+     appeared to follow the content down, printed over the password
+     field. Either the transparency or the stickiness had to go, and
+     these screens are short enough not to need a pinned header. */
+  position: static;
+}
 body.dark .auth-screen .top-bar .title,
 body.dark .auth-screen .top-bar .icon-btn { color: #14141a; }
 .auth-screen .top-bar .title { color: #14141a; }
