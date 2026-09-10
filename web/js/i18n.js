@@ -1209,6 +1209,8 @@
     'البريد غير صحيح؟ غيّره': 'Wrong email? Change it',
 
     'هذا البريد له حساب بالفعل. سجّل الدخول بدلًا من ذلك.': 'This email already has an account. Sign in instead.',
+
+    'اكتب كلمة «حذف» بالضبط لتفعيل الزر': 'Type the word delete exactly to enable the button',
   };
 
   // Later blocks FILL GAPS. They must never override a key the app itself has

@@ -10851,7 +10851,12 @@ function autoPlay(video) {
       const field = el('div', { class: 'sec-field', style: { padding: '0 18px' } }, [
         el('label', { class: 'sec-label' }, 'للتأكيد، اكتب: حذف'),
       ]);
-      const input = el('input', { class: 'sec-input' , placeholder: 'اكتب هنا' });
+      // The placeholder IS the word. "Type here" told nobody what to type,
+      // and the instruction above the field was small and easy to skip.
+      const input = el('input', {
+        class: 'sec-input', placeholder: 'حذف',
+        autocapitalize: 'none', autocorrect: 'off', spellcheck: false,
+      });
       const box = el('div', { class: 'sec-box' }, [input]);
       field.appendChild(box);
       body.appendChild(field);
@@ -10866,9 +10871,20 @@ function autoPlay(video) {
 
       const ACCEPT = ['حذف', 'delete'];
       input.addEventListener('input', () => {
-        err.style.display = 'none';
-        box.classList.remove('bad');
-        del.disabled = !ACCEPT.includes(input.value.trim().toLowerCase());
+        const typed = input.value.trim().toLowerCase();
+        const ok = ACCEPT.includes(typed);
+        del.disabled = !ok;
+        // Say WHY the button is off. Leaving it dead and silent is what made a
+        // tester think account deletion was broken - and a reviewer who
+        // concludes that files the same rejection again.
+        if (typed && !ok) {
+          err.textContent = 'اكتب كلمة «حذف» بالضبط لتفعيل الزر';
+          err.style.display = '';
+          box.classList.add('bad');
+        } else {
+          err.style.display = 'none';
+          box.classList.remove('bad');
+        }
       });
       cancel.onclick = renderChoices;
 
