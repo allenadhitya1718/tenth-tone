@@ -275,6 +275,24 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'FLYP uses your location only to show you on the friends map, and only while you choose to share it. يستخدم FLYP موقعك لعرضك على خريطة الأصدقاء فقط عندما تختار مشاركته.'" "ios/App/App/Info.plist" 2>/dev/null || \
           /usr/libexec/PlistBuddy -c "Set :NSLocationWhenInUseUsageDescription 'FLYP uses your location only to show you on the friends map, and only while you choose to share it. يستخدم FLYP موقعك لعرضك على خريطة الأصدقاء فقط عندما تختار مشاركته.'" "ios/App/App/Info.plist"
 
+      # Read the permission strings back OUT of the plist that was just
+      # written. Apple rejected 1.0 under 5.1.1 because these were Arabic-only
+      # on an English device; this prints what the built app actually carries,
+      # so the fix is checkable from the log without a phone.
+      - name: Show the permission strings that shipped
+        run: |
+          PL="ios/App/App/Info.plist"
+          echo "--- purpose strings in the built app ---"
+          for K in NSCameraUsageDescription NSMicrophoneUsageDescription                    NSPhotoLibraryUsageDescription NSPhotoLibraryAddUsageDescription                    NSLocationWhenInUseUsageDescription; do
+            V="$(/usr/libexec/PlistBuddy -c "Print :$K" "$PL" 2>/dev/null || echo '(MISSING)')"
+            echo "$K:"
+            echo "    $V"
+            case "$V" in
+              FLYP*) : ;;
+              *) echo "::warning::$K does not start with English text" ;;
+            esac
+          done
+
       # Sign in with Apple needs an entitlement on the app target, and the
       # matching capability on the App ID. `cap add ios` regenerates the Xcode
       # project every run, so both are written here rather than committed.
@@ -477,7 +495,34 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build | tee /tmp/xcodebuild.log
 
+      # The verification build above produces a SIMULATOR app and then throws
+      # it away. Keep it: dropped into a browser-based iOS simulator it runs
+      # the real UIKit date picker and real WebKit, which is the only way to
+      # check the iOS-specific fixes without owning an iPhone.
+      - name: Upload the simulator app for browser testing
+        if: env.DO_UPLOAD != 'true'
+        run: |
+          APP="$(find "$RUNNER_TEMP/derived/Build/Products" -name 'App.app' -maxdepth 3 | head -1)"
+          if [ -z "$APP" ]; then
+            echo "::warning::no simulator App.app found - nothing to upload"
+            exit 0
+          fi
+          echo "found $APP"
+          cd "$(dirname "$APP")"
+          zip -qry "$RUNNER_TEMP/FLYP-simulator.zip" App.app
+          echo "zipped $(du -h "$RUNNER_TEMP/FLYP-simulator.zip" | cut -f1)"
+
+      - name: Attach the simulator app
+        if: env.DO_UPLOAD != 'true'
+        continue-on-error: true          # a full artifact quota must not fail the run
+        uses: actions/upload-artifact@v4
+        with:
+          name: flyp-simulator-app
+          path: ${{ runner.temp }}/FLYP-simulator.zip
+          if-no-files-found: warn
+
       - name: Upload IPA artifact
+        continue-on-error: true          # TestFlight is the real delivery; storage is a bonus
         if: env.DO_UPLOAD == 'true'
         uses: actions/upload-artifact@v4
         with:
@@ -494,9 +539,29 @@ jobs:
             --apiKey ${{ secrets.APP_STORE_CONNECT_KEY_ID }} \
             --apiIssuer ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
 
+      # Print the failure where it can always be read. The artifact upload
+      # below is best-effort: it silently stops working the moment the
+      # repository's artifact storage fills up, which is exactly when a build
+      # starts failing and the log matters most.
+      - name: Show why the build failed
+        if: failure()
+        run: |
+          LOG=/tmp/xcodebuild.log
+          if [ ! -s "$LOG" ]; then
+            echo "no xcodebuild log was produced - the failure happened before xcodebuild ran"
+            exit 0
+          fi
+          echo "=============== signing / provisioning lines ==============="
+          grep -niE "error:|provisioning|signing certificate|No profiles|no signing|does not (contain|support)|Team ID|entitlement|revoked|limit" "$LOG"             | tail -40 || echo "(no matching lines)"
+          echo
+          echo "=============== last 60 lines of xcodebuild ==============="
+          tail -60 "$LOG"
+
       - name: Upload xcodebuild log on failure
         if: failure()
+        continue-on-error: true          # a full artifact quota must not mask the real error
         uses: actions/upload-artifact@v4
         with:
           name: xcodebuild-log
           path: /tmp/xcodebuild.log
+          if-no-files-found: ignore
