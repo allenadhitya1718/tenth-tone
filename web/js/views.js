@@ -586,7 +586,7 @@
     function step1() {
       body.innerHTML = '';
       body.appendChild(el('h2', { class: 'auth-title' }, 'عرّفنا بنفسك'));
-      body.appendChild(el('p', { class: 'auth-subtitle' }, 'اسمك كما سيظهر للآخرين، واسم المستخدم، وتاريخ ميلادك'));
+      body.appendChild(el('p', { class: 'auth-subtitle' }, 'اسمك كما سيظهر للآخرين، واسم المستخدم'));
       body.appendChild(error);
       body.appendChild(el('div', { class: 'input-wrap' }, [nameIn]));
       body.appendChild(el('div', { class: 'input-wrap' }, [handleIn]));

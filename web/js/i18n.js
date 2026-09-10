@@ -1203,6 +1203,8 @@
     'تاريخ الميلاد (اختياري)': 'Date of birth (optional)',
     'يمكنك تخطي هذا الحقل. لن يظهر تاريخ ميلادك لأي شخص، ولا يمكن تغييره لاحقًا.': 'You can skip this. Your birthday is never shown to anyone, and cannot be changed later.',
     'أؤكد أن عمري 13 عامًا فأكثر، وأوافق على': 'I confirm I am 13 or older, and I agree to the',
+
+    'اسمك كما سيظهر للآخرين، واسم المستخدم': 'Your name as others will see it, and your username',
   };
 
   // Later blocks FILL GAPS. They must never override a key the app itself has
