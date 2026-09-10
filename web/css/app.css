@@ -4394,3 +4394,43 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible,
   word-break: break-all;
   color: var(--ink, #14161F);
 }
+
+/* The legal documents as a sheet over the sign-up form, so reading them does
+   not unmount the form and lose what was typed. Height is capped and the
+   document scrolls inside, rather than the sheet growing past the screen. */
+.legal-sheet {
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.legal-sheet-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+.legal-sheet-tabs { margin: 0; flex: 1 1 auto; min-width: 0; border-bottom: 0; }
+.legal-sheet-close {
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+  background: none;
+  border: 0;
+  padding: 8px 10px;
+  min-height: 44px;          /* a real tap target */
+  cursor: pointer;
+}
+.legal-sheet-doc {
+  flex: 1 1 auto;
+  min-height: 0;             /* without this the flex child refuses to scroll */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 16px 28px;
+}

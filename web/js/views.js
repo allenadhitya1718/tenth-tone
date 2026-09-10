@@ -490,6 +490,59 @@
   // A three-step wizard rather than one wall of fields. The order is
   // deliberate: the birthday comes first because someone under 13 should
   // find out before they have typed anything else.
+  // The legal documents, over whatever screen you are on.
+  //
+  // Registration links to these, and go('/legal') unmounts the form - coming
+  // back restarted sign-up from step one with every field empty. Apple
+  // requires the agreement to be shown before an account is created, so the
+  // link a reviewer is most likely to tap was the one that threw their
+  // progress away.
+  function openLegalSheet() {
+    const L = (function () {
+      try { return (window.I18N && window.I18N.getLang() === 'en') ? 'en' : 'ar'; }
+      catch (e) { return 'ar'; }
+    })();
+    let active = 'terms';
+    const body = el('article', { class: 'legal-doc legal-sheet-doc' });
+    body.setAttribute('dir', L === 'en' ? 'ltr' : 'rtl');
+
+    function render() {
+      const doc = LEGAL_DOCS[active];
+      body.innerHTML = '';
+      body.appendChild(el('h1', { class: 'legal-title' }, doc.title[L]));
+      doc.sections.forEach((sec, i) => {
+        body.appendChild(el('h2', { class: 'legal-h' }, (i + 1) + '. ' + sec.h[L]));
+        body.appendChild(el('p', { class: 'legal-p' }, sec.p[L]));
+      });
+      body.scrollTop = 0;
+    }
+
+    const tabs = el('div', { class: 'legal-tabs legal-sheet-tabs' });
+    [['terms', 'الشروط'], ['privacy', 'الخصوصية']].forEach(([k, label]) => {
+      const btn = el('button', { class: 'legal-tab' + (k === active ? ' on' : ''), onclick: () => {
+        active = k;
+        [].slice.call(tabs.children).forEach(c => c.classList.toggle('on', c.dataset.k === active));
+        render();
+      } }, label);
+      btn.dataset.k = k;
+      tabs.appendChild(btn);
+    });
+
+    const sheet = el('div', { class: 'sheet legal-sheet' }, [
+      el('div', { class: 'legal-sheet-bar' }, [
+        tabs,
+        el('button', { class: 'legal-sheet-close', onclick: () => close() }, 'إغلاق'),
+      ]),
+      body,
+    ]);
+    render();
+    const close = modal(sheet);
+    // Only the chrome is translated; the documents already carry both
+    // languages and must not be run through the dictionary.
+    try { if (window.I18N) window.I18N.apply(sheet.querySelector('.legal-sheet-bar')); } catch (e) {}
+    return close;
+  }
+
   V.register = () => {
     hideNav();
     const root = el('section', { class: 'auth-screen reg-screen' });
@@ -705,7 +758,7 @@
           // reading the terms must not silently tick the box.
           el('a', {
             class: 'auth-link',
-            onclick: (ev) => { ev.preventDefault(); ev.stopPropagation(); go('/legal'); },
+            onclick: (ev) => { ev.preventDefault(); ev.stopPropagation(); openLegalSheet(); },
           }, 'الشروط وسياسة الخصوصية'),
           document.createTextNode('، وأتعهد بعدم نشر محتوى مسيء أو الإساءة إلى أي مستخدم. لا تسامح مطلقًا مع المحتوى المسيء.'),
         ]),
