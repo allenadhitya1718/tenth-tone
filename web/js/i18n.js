@@ -1198,6 +1198,11 @@
     'للإبلاغ عن هذا المحتوى': 'To report this content',
     'سجّل الدخول للإبلاغ من داخل التطبيق، أو راسلنا على البريد التالي. نراجع كل بلاغ خلال 24 ساعة ونزيل المحتوى المخالف.': 'Sign in to report from inside the app, or email us at the address below. We review every report within 24 hours and remove content that breaks the rules.',
     'مراسلة الدعم': 'Email support',
+
+    // Date of birth is optional now (Apple 5.1.1(v)); the 13+ gate moved into the agreement.
+    'تاريخ الميلاد (اختياري)': 'Date of birth (optional)',
+    'يمكنك تخطي هذا الحقل. لن يظهر تاريخ ميلادك لأي شخص، ولا يمكن تغييره لاحقًا.': 'You can skip this. Your birthday is never shown to anyone, and cannot be changed later.',
+    'أؤكد أن عمري 13 عامًا فأكثر، وأوافق على': 'I confirm I am 13 or older, and I agree to the',
   };
 
   // Later blocks FILL GAPS. They must never override a key the app itself has

@@ -2968,6 +2968,27 @@
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
     const { error } = await c.from('blocks').insert({ blocker_id: me, blocked_id: userId });
     if (error && error.code !== '23505') throw error;
+
+    // Apple 1.2 asks that blocking "also notify the developer of the
+    // inappropriate content" - not merely hide it. A block is a moderation
+    // signal, so it goes into the same reports queue an explicit report does,
+    // and gets acted on the same way.
+    //
+    // Deliberately best-effort: the block itself has already been written and
+    // the person is already protected. Failing here would undo nothing and
+    // would report a working block as broken.
+    try {
+      const { error: rErr } = await c.from('reports').insert({
+        reporter_id: me,
+        target_type: 'user',
+        target_id: userId,
+        reason: 'حظر المستخدم — بلاغ تلقائي',
+      });
+      if (rErr) console.warn('block filed, report did not:', rErr.message);
+    } catch (e) {
+      console.warn('block filed, report did not:', e && e.message);
+    }
+
     _forgetBlockCaches();
   };
   API.unblockUser = async (userId) => {

@@ -591,7 +591,7 @@
       body.appendChild(el('div', { class: 'input-wrap' }, [nameIn]));
       body.appendChild(el('div', { class: 'input-wrap' }, [handleIn]));
       body.appendChild(handleHint);
-      body.appendChild(el('label', { class: 'reg-label' }, 'تاريخ الميلاد'));
+      body.appendChild(el('label', { class: 'reg-label' }, 'تاريخ الميلاد (اختياري)'));
       // An empty input[type=date] draws NOTHING on iOS - no placeholder, no
       // format hint. Apple's reviewer saw a blank white box, did not know it
       // opened a picker, and could not finish signing up. This label sits over
@@ -607,16 +607,23 @@
       birthIn.onchange = paintBirthPh;
       paintBirthPh();
       body.appendChild(birthWrap);
-      body.appendChild(el('p', { class: 'reg-hint' }, 'لن يظهر تاريخ ميلادك لأي شخص، ولا يمكن تغييره لاحقًا.'));
+      body.appendChild(el('p', { class: 'reg-hint' }, 'يمكنك تخطي هذا الحقل. لن يظهر تاريخ ميلادك لأي شخص، ولا يمكن تغييره لاحقًا.'));
       const next = el('button', { class: 'btn btn-pill', onclick: async () => {
         nameIn.value = nameIn.value.trim();
         if (nameIn.value.length < 2) return fail('أدخل اسمك');
         if (handleIn.value.length < 3) return fail('أدخل اسم مستخدم من ثلاثة أحرف على الأقل');
         if (handleState === 'taken') return fail('اسم المستخدم محجوز، اختر غيره');
-        if (!birthIn.value) return fail('أدخل تاريخ ميلادك');
-        const age = ageOf(birthIn.value);
-        if (age == null || age > 120) return fail('تاريخ الميلاد غير صحيح');
-        if (age < 13) return fail('يجب أن يكون عمرك 13 عامًا على الأقل');
+        // OPTIONAL. Apple rejected 1.0 under 5.1.1(v) for requiring a date of
+        // birth, which is not needed to run a video app. The 13+ gate it was
+        // standing in for now lives in the agreement checkbox on step 3 - the
+        // date was a self-declaration either way, so nothing is lost, and this
+        // stops the app collecting a birthdate from a child before turning
+        // them away. Still checked when someone chooses to give it.
+        if (birthIn.value) {
+          const age = ageOf(birthIn.value);
+          if (age == null || age > 120) return fail('تاريخ الميلاد غير صحيح');
+          if (age < 13) return fail('يجب أن يكون عمرك 13 عامًا على الأقل');
+        }
         // If they moved faster than the debounce, settle it before continuing.
         if (handleState === 'checking' || handleState === 'empty') {
           try {
@@ -693,7 +700,7 @@
       const agreeRow = el('label', { class: 'reg-agree' }, [
         agreeBox,
         el('span', { class: 'reg-agree-text' }, [
-          document.createTextNode('أوافق على '),
+          document.createTextNode('أؤكد أن عمري 13 عامًا فأكثر، وأوافق على '),
           // preventDefault stops the label activating the checkbox as well:
           // reading the terms must not silently tick the box.
           el('a', {
@@ -9904,6 +9911,11 @@ function autoPlay(video) {
     // ── Danger ──
     section('منطقة الخطر', [
       { icon: 'settings', label: 'حالة الحساب', onclick: () => go('/account-status') },
+      // Apple rejected 1.0 saying the app has no way to delete an account. It
+      // does - at the bottom of the screen above - but nothing in Settings
+      // said the word "delete", so a reviewer scanning the list never found
+      // it. Same destination, named for what it does.
+      { icon: 'trash', label: 'حذف الحساب', onclick: () => go('/account-status') },
     ]);
 
     // Admin section — only renders if the signed-in user has is_admin = true
