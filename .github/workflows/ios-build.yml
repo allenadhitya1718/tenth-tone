@@ -185,7 +185,12 @@ jobs:
           [ -d "$PUB" ] || { echo "::warning::$PUB missing"; exit 0; }
           rm -f "$PUB"/*.md "$PUB"/vercel.json "$PUB"/.vercelignore 2>/dev/null || true
           rm -rf "$PUB/tools" 2>/dev/null || true
-          if grep -rIl "127\.0\.0\.1\|localhost" "$PUB" 2>/dev/null | grep -v '/vendor/' | head -5; then
+          # Test the OUTPUT, not the pipeline's exit status: that comes from
+          # `head`, which succeeds whether or not grep matched anything, so the
+          # warning used to fire on every single run.
+          LEFT="$(grep -rIl "127\.0\.0\.1\|localhost" "$PUB" 2>/dev/null | grep -v '/vendor/' | head -5 || true)"
+          if [ -n "$LEFT" ]; then
+            echo "$LEFT"
             echo "::warning::a localhost string still remains in the bundle (listed above)"
           else
             echo "verified: no localhost/127.0.0.1 left in the shipped bundle"
