@@ -1211,6 +1211,8 @@
     'هذا البريد له حساب بالفعل. سجّل الدخول بدلًا من ذلك.': 'This email already has an account. Sign in instead.',
 
     'اكتب كلمة «حذف» بالضبط لتفعيل الزر': 'Type the word delete exactly to enable the button',
+
+    'سيُحذف حسابك وكل ما فيه بعد 30 يومًا. سجّل الدخول خلال هذه المدة لإلغاء الحذف.': 'Your account and everything in it will be deleted after 30 days. Sign in during that time to cancel the deletion.',
   };
 
   // Later blocks FILL GAPS. They must never override a key the app itself has

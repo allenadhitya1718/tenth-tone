@@ -10848,47 +10848,36 @@ function autoPlay(video) {
       body.appendChild(el('p', { class: 'sec-note' },
         'سيُحذف حسابك بعد 30 يومًا. إذا سجّلت الدخول خلال هذه المدة، يُلغى الحذف تلقائيًا.'));
 
-      const field = el('div', { class: 'sec-field', style: { padding: '0 18px' } }, [
-        el('label', { class: 'sec-label' }, 'للتأكيد، اكتب: حذف'),
-      ]);
-      // The placeholder IS the word. "Type here" told nobody what to type,
-      // and the instruction above the field was small and easy to skip.
-      const input = el('input', {
-        class: 'sec-input', placeholder: 'حذف',
-        autocapitalize: 'none', autocorrect: 'off', spellcheck: false,
-      });
-      const box = el('div', { class: 'sec-box' }, [input]);
-      field.appendChild(box);
-      body.appendChild(field);
-
+      // No type-to-confirm box here any more.
+      //
+      // It asked for the word "delete", and a tester typed a whole sentence
+      // and reported that account deletion was broken - the button just sat
+      // there disabled. Apple PERMITS a confirmation step but does not require
+      // one, and this app was cited under 5.1.1(v) for account deletion the
+      // reviewer could not find or finish. A puzzle in front of the one flow a
+      // reviewer must complete costs more than it protects.
+      //
+      // The guard is still here, as one deliberate tap in a dialog rather than
+      // a word you must first notice an instruction about. The list above
+      // already says what is lost, and signing in within 30 days cancels it.
       const err = el('p', { class: 'sec-err', style: { display: 'none', margin: '8px 20px 0' } });
       body.appendChild(err);
 
-      const del = el('button', { class: 'acct-btn danger', disabled: true, style: { margin: '18px' } }, 'حذف حسابي');
+      const del = el('button', { class: 'acct-btn danger', style: { margin: '18px' } }, 'حذف حسابي');
       const cancel = el('button', { class: 'acct-btn ghost', style: { margin: '0 18px 24px' } }, 'رجوع');
       body.appendChild(del);
       body.appendChild(cancel);
 
-      const ACCEPT = ['حذف', 'delete'];
-      input.addEventListener('input', () => {
-        const typed = input.value.trim().toLowerCase();
-        const ok = ACCEPT.includes(typed);
-        del.disabled = !ok;
-        // Say WHY the button is off. Leaving it dead and silent is what made a
-        // tester think account deletion was broken - and a reviewer who
-        // concludes that files the same rejection again.
-        if (typed && !ok) {
-          err.textContent = 'اكتب كلمة «حذف» بالضبط لتفعيل الزر';
-          err.style.display = '';
-          box.classList.add('bad');
-        } else {
-          err.style.display = 'none';
-          box.classList.remove('bad');
-        }
-      });
       cancel.onclick = renderChoices;
 
       del.onclick = async () => {
+        const sure = await confirmDialog({
+          title: 'حذف حسابي',
+          danger: true,
+          message: 'سيُحذف حسابك وكل ما فيه بعد 30 يومًا. سجّل الدخول خلال هذه المدة لإلغاء الحذف.',
+          confirmLabel: 'حذف حسابي',
+        });
+        if (!sure) return;
         del.disabled = true;
         del.textContent = 'جارٍ التنفيذ...';
         try { if (window.I18N) window.I18N.apply(del); } catch (e) {}
