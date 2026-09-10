@@ -2,7 +2,11 @@
 (function () {
   const app = document.getElementById('app');
 
-  const PUBLIC_PATHS = ['/', '/onboarding', '/welcome', '/login', '/register', '/otp', '/forgot', '/reset-otp', '/home', '/legal'];
+  // '/contact' and '/guidelines' are public on purpose. Apple 1.2 wants
+  // published contact information and the content rules to be reachable, and
+  // the visitor most likely to need them is the one who has not signed up -
+  // which is exactly the state App Review was in when it rejected 1.0.
+  const PUBLIC_PATHS = ['/', '/onboarding', '/welcome', '/login', '/register', '/otp', '/forgot', '/reset-otp', '/home', '/legal', '/contact', '/guidelines'];
   // Prefixes that are also public — deep-linked videos must open for
   // signed-out visitors, otherwise a shared link is a dead end.
   const PUBLIC_PREFIXES = ['/v/'];
@@ -73,6 +77,7 @@
     { p: /^\/legal\/(terms|privacy)$/, v: (q, m) => Views.legal({ doc: m[1] }) },
     { p: /^\/report-problem$/, v: () => Views.reportProblem() },
     { p: /^\/contact$/, v: () => Views.contactUs() },
+    { p: /^\/guidelines$/, v: () => Views.guidelines() },
     { p: /^\/account-status$/, v: () => Views.accountStatus() },
     { p: /^\/u\/([A-Za-z0-9_.]+)$/, v: (q, m) => Views.userByHandle({ handle: m[1] }) },
     { p: /^\/invite$/, v: () => Views.inviteFriends() },

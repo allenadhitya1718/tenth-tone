@@ -592,7 +592,21 @@
       body.appendChild(el('div', { class: 'input-wrap' }, [handleIn]));
       body.appendChild(handleHint);
       body.appendChild(el('label', { class: 'reg-label' }, 'تاريخ الميلاد'));
-      body.appendChild(el('div', { class: 'input-wrap' }, [birthIn]));
+      // An empty input[type=date] draws NOTHING on iOS - no placeholder, no
+      // format hint. Apple's reviewer saw a blank white box, did not know it
+      // opened a picker, and could not finish signing up. This label sits over
+      // the field until a date is chosen; pointer-events:none in the CSS keeps
+      // the tap going through to the picker underneath.
+      const birthPh = el('span', { class: 'reg-date-ph' }, 'اختر تاريخ ميلادك');
+      const birthWrap = el('div', { class: 'input-wrap reg-date-wrap' }, [birthIn, birthPh]);
+      const paintBirthPh = () => birthWrap.classList.toggle('has-value', !!birthIn.value);
+      // Assigned, not addEventListener: step1() re-runs whenever the user
+      // comes back to this step, and birthIn outlives it, so listeners would
+      // stack up one pair per visit.
+      birthIn.oninput = paintBirthPh;
+      birthIn.onchange = paintBirthPh;
+      paintBirthPh();
+      body.appendChild(birthWrap);
       body.appendChild(el('p', { class: 'reg-hint' }, 'لن يظهر تاريخ ميلادك لأي شخص، ولا يمكن تغييره لاحقًا.'));
       const next = el('button', { class: 'btn btn-pill', onclick: async () => {
         nameIn.value = nameIn.value.trim();
@@ -666,14 +680,37 @@
       body.appendChild(cf);
 
       const create = el('button', { class: 'btn btn-pill', disabled: true }, 'إنشاء الحساب');
+
+      // A real agreement, not a sentence about one. App Review 1.2 asks a UGC
+      // app to take the user's agreement to terms containing a zero-tolerance
+      // policy for objectionable content; the line that used to sit here was
+      // an inert <p> and signUp ran whether or not anyone had read anything.
+      // The button stays disabled until this is ticked - see validate().
+      const agreeBox = el('input', {
+        type: 'checkbox', class: 'reg-agree-box',
+        onchange: () => validate(),
+      });
+      const agreeRow = el('label', { class: 'reg-agree' }, [
+        agreeBox,
+        el('span', { class: 'reg-agree-text' }, [
+          document.createTextNode('أوافق على '),
+          // preventDefault stops the label activating the checkbox as well:
+          // reading the terms must not silently tick the box.
+          el('a', {
+            class: 'auth-link',
+            onclick: (ev) => { ev.preventDefault(); ev.stopPropagation(); go('/legal'); },
+          }, 'الشروط وسياسة الخصوصية'),
+          document.createTextNode('، وأتعهد بعدم نشر محتوى مسيء أو الإساءة إلى أي مستخدم. لا تسامح مطلقًا مع المحتوى المسيء.'),
+        ]),
+      ]);
+      body.appendChild(agreeRow);
       body.appendChild(create);
-      body.appendChild(el('p', { class: 'reg-hint', style: { textAlign: 'center' } },
-        'بإنشاء حساب أنت توافق على الشروط وسياسة الخصوصية.'));
 
       const validate = () => {
         const checks = passwordChecks(pw.input.value);
         checks.forEach((c, i) => reqRows[i].classList.toggle('ok', c.ok));
-        create.disabled = !(checks.every(c => c.ok) && cf.input.value === pw.input.value && pw.input.value);
+        create.disabled = !(checks.every(c => c.ok) && cf.input.value === pw.input.value
+          && pw.input.value && agreeBox.checked);
       };
       pw.input.addEventListener('input', validate);
       cf.input.addEventListener('input', validate);
@@ -892,6 +929,31 @@
   // either way, whereas an insert with an invented type is simply rejected.
   const REPORT_TYPES = ['video', 'comment', 'user', 'live_stream'];
 
+  // Published contact information - Apple 1.2 requires it, and requires it to
+  // be reachable. Declared once here so the contact screen, the signed-out
+  // report sheet and the guidelines screen cannot drift apart.
+  const SUPPORT_EMAIL = 'support@flyp-sa.com';
+
+  // Shown when a report cannot be filed because nobody is signed in.
+  function openReportFallbackSheet() {
+    const sheet = el('div', { class: 'sheet', style: { padding: '16px 0' } });
+    sheet.appendChild(el('h3', { style: { margin: '0 16px 8px', textAlign: 'center' } },
+      'للإبلاغ عن هذا المحتوى'));
+    sheet.appendChild(el('p', {
+      style: { margin: '0 16px 12px', textAlign: 'center', fontSize: '13px', lineHeight: '1.6', opacity: '0.75' },
+    }, 'سجّل الدخول للإبلاغ من داخل التطبيق، أو راسلنا على البريد التالي. نراجع كل بلاغ خلال 24 ساعة ونزيل المحتوى المخالف.'));
+    // Selectable text, not just a button: a reviewer has to be able to READ
+    // the address to count it as published contact information.
+    sheet.appendChild(el('p', { class: 'support-email' }, SUPPORT_EMAIL));
+    sheet.appendChild(el('div', { class: 'divider' }));
+    sheet.appendChild(optionRow(icons.user, 'تسجيل الدخول', () => { closeFb(); go('/login'); }));
+    sheet.appendChild(optionRow(icons.mail, 'مراسلة الدعم', () => {
+      closeFb();
+      try { window.location.href = 'mailto:' + SUPPORT_EMAIL + '?subject=Report%20content'; } catch (e) {}
+    }));
+    const closeFb = modal(sheet);
+  }
+
   // Report sheet — pick a reason, submits to the `reports` table (auto-hides
   // the content once it crosses the report threshold — see 0012_moderation.sql).
   //
@@ -939,6 +1001,13 @@
             });
             toast('تم استلام بلاغك، شكرًا لك');
           } catch (e) {
+            // Signed out is not a failure to apologise for - it is a fork in
+            // the road, and the reviewer needs to see the other branch.
+            const raw = String((e && (e.message || e.error_description)) || e || '');
+            if (/not signed in|JWT|not authenticated/i.test(raw)) {
+              openReportFallbackSheet();
+              return;
+            }
             toast(friendlyError(e, 'تعذر إرسال البلاغ'));
           }
         },
@@ -1256,11 +1325,46 @@
       // a control that then disappears.
       (async () => {
         try {
-          if (!window.API || !window.API.deleteVideo || !window.SB) return;
+          if (!window.SB) return;
           const s = await window.SB.getSession();
           const meId = s && s.user && s.user.id;
           const ownerId = (v.user && v.user.id) || v.user_id;
-          if (!meId || !ownerId || meId !== ownerId) return;
+          if (!meId || !ownerId) return;
+
+          // Someone else's video: offer Block here, not only on their profile.
+          // Apple 1.2 asks for the ability to block an abusive user, and this
+          // menu is the first place anyone looks when a video is the problem.
+          if (meId !== ownerId) {
+            if (!window.API || !window.API.blockUser || !isRealId(ownerId)) return;
+            const who = (v.user && (v.user.name || v.user.handle)) || 'المستخدم';
+            const blockRow = row(icons.lock, 'حظر ' + who, async () => {
+              close();
+              const yes = await confirmDialog({
+                title: 'حظر ' + who,
+                danger: true,
+                message: 'لن يتمكن من مراسلتك أو رؤية محتواك، ولن ترى محتواه.',
+                confirmLabel: 'حظر',
+              });
+              if (!yes) return;
+              try {
+                await window.API.blockUser(ownerId);
+                // Take the video off screen straight away: a block that
+                // changes nothing you can see reads as a block that failed.
+                if (itemEl) {
+                  itemEl.style.transition = 'opacity .25s';
+                  itemEl.style.opacity = '0';
+                  setTimeout(() => itemEl.remove(), 250);
+                }
+                toast('تم حظر المستخدم');
+              } catch (e) {
+                toast(friendlyError(e, 'تعذر الحظر'));
+              }
+            }, true);
+            sheet.insertBefore(blockRow, cancelRow);
+            return;
+          }
+
+          if (!window.API || !window.API.deleteVideo) return;
 
           const delRow = row(icons.trash || icons.x, 'حذف المقطع', async () => {
             close();
@@ -10168,6 +10272,13 @@ function autoPlay(video) {
           },
         },
         {
+          h: { ar: 'عدم التسامح مطلقًا مع المحتوى المسيء', en: 'Zero tolerance for objectionable content' },
+          p: {
+            ar: 'لدينا سياسة عدم تسامح مطلقًا مع المحتوى المسيء ومع المستخدمين المسيئين. نراجع كل بلاغ خلال 24 ساعة كحد أقصى، ونزيل المحتوى المخالف ونغلق حساب من نشره. باستخدامك التطبيق فأنت توافق على هذه الشروط وعلى عدم نشر أي محتوى مسيء أو الإساءة إلى أي مستخدم.',
+            en: 'We have a zero-tolerance policy for objectionable content and for abusive users. We review every report within 24 hours, remove content that breaks these rules, and terminate the account that posted it. By using FLYP you agree to these terms and agree not to post objectionable content or to abuse any user.',
+          },
+        },
+        {
           h: { ar: 'إنهاء الحساب', en: 'Ending your account' },
           p: {
             ar: 'يمكنك حذف حسابك في أي وقت من الإعدادات. يجوز لنا تعليق أو إنهاء حساب يخالف هذه الشروط، وسنوضح السبب متى أمكن ذلك.',
@@ -10252,6 +10363,80 @@ function autoPlay(video) {
         },
       ],
     },
+  };
+
+  // ===== Community guidelines =====
+  // Apple 1.2 asks a UGC app to publish its content rules, its reporting path
+  // and its contact address. Reachable signed out (see PUBLIC_PATHS in app.js),
+  // because the visitor most likely to need it has no account yet.
+  const GUIDELINES_DOC = {
+    title: { ar: 'قواعد المجتمع', en: 'Community Guidelines' },
+    sections: [
+      {
+        h: { ar: 'عدم التسامح مطلقًا', en: 'Zero tolerance' },
+        p: {
+          ar: 'لدينا سياسة عدم تسامح مطلقًا مع المحتوى المسيء ومع المستخدمين المسيئين. نراجع كل بلاغ خلال 24 ساعة كحد أقصى، ونزيل المحتوى المخالف ونغلق حساب من نشره.',
+          en: 'We have a zero-tolerance policy for objectionable content and for abusive users. We review every report within 24 hours at most, remove content that breaks these rules, and terminate the account that posted it.',
+        },
+      },
+      {
+        h: { ar: 'ما هو ممنوع', en: 'What is not allowed' },
+        p: {
+          ar: 'العُري أو المحتوى الجنسي، العنف الصريح أو المحتوى الصادم، خطاب الكراهية أو التنمر أو التحرش، انتحال شخصية غيرك، المعلومات المضللة الضارة، انتهاك حقوق النشر، أي نشاط غير قانوني، وأي محتوى يعرّض الأطفال للخطر.',
+          en: 'Nudity or sexual content, graphic violence or shocking material, hate speech, bullying or harassment, impersonating anyone, harmful misinformation, copyright infringement, any illegal activity, and any content that endangers children.',
+        },
+      },
+      {
+        h: { ar: 'كيف تبلّغ عن محتوى', en: 'How to report content' },
+        p: {
+          ar: 'اضغط زر الخيارات على أي فيديو أو تعليق أو حساب أو بث مباشر، ثم اختر «الإبلاغ» وحدّد السبب. يصلنا البلاغ فورًا. وإن لم تكن مسجّل الدخول، راسلنا على البريد الموضّح أدناه.',
+          en: 'Tap the options button on any video, comment, account or live stream, then choose Report and pick a reason. The report reaches us immediately. If you are not signed in, email us at the address below.',
+        },
+      },
+      {
+        h: { ar: 'كيف تحظر مستخدمًا', en: 'How to block someone' },
+        p: {
+          ar: 'من قائمة الخيارات نفسها اختر «حظر». المحظور لا يستطيع مراسلتك ولا رؤية محتواك، ولن ترى محتواه. تدير قائمة المحظورين من الإعدادات ثم الخصوصية والأمان ثم المستخدمون المحظورون.',
+          en: 'From the same options menu choose Block. A blocked person cannot message you or see your content, and you will not see theirs. Manage your blocked list in Settings, then Privacy and security, then Blocked users.',
+        },
+      },
+      {
+        h: { ar: 'ماذا يحدث بعد البلاغ', en: 'What happens after a report' },
+        p: {
+          ar: 'يراجع فريقنا كل بلاغ خلال 24 ساعة. المحتوى المخالف يُزال والحساب المسؤول عنه يُغلق. والمحتوى الذي يتلقى عدة بلاغات يُخفى تلقائيًا ريثما تكتمل المراجعة.',
+          en: 'Our team reviews every report within 24 hours. Content that breaks these rules is removed and the account responsible is terminated. Content that receives several reports is hidden automatically while the review is completed.',
+        },
+      },
+    ],
+  };
+
+  V.guidelines = () => {
+    hideNav();
+    const root = el('section', { class: 'legal-screen' });
+    root.appendChild(topBar({ title: 'قواعد المجتمع' }));
+    const L = (function () {
+      try { return (window.I18N && window.I18N.getLang() === 'en') ? 'en' : 'ar'; }
+      catch (e) { return 'ar'; }
+    })();
+    const body = el('article', { class: 'legal-doc' });
+    body.setAttribute('dir', L === 'en' ? 'ltr' : 'rtl');
+    body.appendChild(el('h1', { class: 'legal-title' }, GUIDELINES_DOC.title[L]));
+    GUIDELINES_DOC.sections.forEach((sec, i) => {
+      body.appendChild(el('h2', { class: 'legal-h' }, (i + 1) + '. ' + sec.h[L]));
+      body.appendChild(el('p', { class: 'legal-p' }, sec.p[L]));
+    });
+    body.appendChild(el('h2', { class: 'legal-h' },
+      (GUIDELINES_DOC.sections.length + 1) + '. ' + (L === 'en' ? 'Contact us' : 'تواصل معنا')));
+    body.appendChild(el('p', { class: 'legal-p' }, L === 'en'
+      ? 'For questions, complaints or urgent reports, email us. We reply within 24 hours.'
+      : 'للأسئلة أو الشكاوى أو البلاغات العاجلة راسلنا على البريد التالي. نرد خلال 24 ساعة.'));
+    body.appendChild(el('p', { class: 'support-email' }, SUPPORT_EMAIL));
+    body.appendChild(el('p', { class: 'legal-foot' }, '© 2026 FLYP'));
+    root.appendChild(body);
+    // The document body is already in the right language; only the chrome
+    // goes through the dictionary, exactly as V.legal does.
+    try { if (window.I18N) window.I18N.apply(root.querySelector('.top-bar') || root); } catch (e) {}
+    return root;
   };
 
   V.legal = (params) => {
@@ -10395,11 +10580,22 @@ function autoPlay(video) {
     root.appendChild(el('p', { class: 'sec-note' },
       'اختر الطريقة الأنسب لك. البلاغ داخل التطبيق أسرع، لأنه يصلنا مع تفاصيل جهازك.'));
 
+    // The address as readable, selectable text. It used to live only inside a
+    // mailto: href behind a row labelled "Email us", which is not published
+    // contact information by any reading of Apple 1.2 - and a mailto: may not
+    // open anything at all inside a WKWebView.
+    root.appendChild(el('div', { class: 'support-block' }, [
+      el('p', { class: 'support-label' }, 'البريد الإلكتروني للدعم'),
+      el('p', { class: 'support-email' }, SUPPORT_EMAIL),
+      el('p', { class: 'support-note' }, 'نراجع كل بلاغ خلال 24 ساعة، ونزيل المحتوى المخالف ونغلق حساب من نشره.'),
+    ]));
+
     root.appendChild(subList([
       { icon: 'flag', label: 'الإبلاغ عن مشكلة', onclick: () => go('/report-problem') },
       { icon: 'mail', label: 'مراسلتنا بالبريد', onclick: () => {
-        window.location.href = 'mailto:support@flyp-sa.com';
+        window.location.href = 'mailto:' + SUPPORT_EMAIL;
       } },
+      { icon: 'shield', label: 'قواعد المجتمع', onclick: () => go('/guidelines') },
       { icon: 'globe', label: 'الشروط وسياسة الخصوصية', onclick: () => go('/legal') },
     ]));
 

@@ -175,21 +175,100 @@ jobs:
       - name: Sync web assets to iOS project
         run: npx cap sync ios
 
+      # cap sync copies the entire webDir, so developer docs end up inside the
+      # IPA - README.md carries a localhost URL and the word "staging". Nothing
+      # in the app points at them, but they have no business in a shipped
+      # binary. Removed from the COPY only; web/ itself is untouched.
+      - name: Strip developer docs from the app bundle
+        run: |
+          PUB="ios/App/App/public"
+          [ -d "$PUB" ] || { echo "::warning::$PUB missing"; exit 0; }
+          rm -f "$PUB"/*.md "$PUB"/vercel.json "$PUB"/.vercelignore 2>/dev/null || true
+          rm -rf "$PUB/tools" 2>/dev/null || true
+          if grep -rIl "127\.0\.0\.1\|localhost" "$PUB" 2>/dev/null | grep -v '/vendor/' | head -5; then
+            echo "::warning::a localhost string still remains in the bundle (listed above)"
+          else
+            echo "verified: no localhost/127.0.0.1 left in the shipped bundle"
+          fi
+
+      # Apple's privacy manifest. Required since 1 May 2024 for any app that
+      # uses a "required reason" API - Capacitor keeps bridge state in
+      # UserDefaults and its camera/filesystem plugins read file timestamps.
+      # Missing it earns ITMS-91053 and can be rejected under 5.1.1.
+      #
+      # Added with the xcodeproj gem, which CocoaPods already depends on, so it
+      # is present on the runner. Deliberately NEVER fails the build: a missing
+      # manifest is a warning from Apple, a corrupted pbxproj is a dead build.
+      - name: Install the privacy manifest
+        run: |
+          set -o pipefail
+          SRC="resources/ios/PrivacyInfo.xcprivacy"
+          DST="ios/App/App/PrivacyInfo.xcprivacy"
+          if [ ! -f "$SRC" ]; then
+            echo "::warning::$SRC missing - no privacy manifest in this build"
+            exit 0
+          fi
+          plutil -lint "$SRC" || { echo "::warning::privacy manifest is not valid plist - skipping"; exit 0; }
+          cp "$SRC" "$DST"
+
+          ruby -e '
+            begin
+              require "xcodeproj"
+            rescue LoadError
+              system("gem install xcodeproj --no-document") or abort("no xcodeproj gem")
+              require "xcodeproj"
+            end
+            proj = Xcodeproj::Project.open("ios/App/App.xcodeproj")
+            target = proj.targets.find { |t| t.name == "App" } or abort("no App target")
+            already = target.resources_build_phase.files.any? do |f|
+              f.file_ref && f.file_ref.path.to_s.include?("PrivacyInfo.xcprivacy")
+            end
+            if already
+              puts "privacy manifest already in Copy Bundle Resources"
+            else
+              group = proj.main_group.find_subpath("App", true)
+              ref = group.new_reference("PrivacyInfo.xcprivacy")
+              target.add_resources([ref])
+              proj.save
+              puts "privacy manifest added to the App target"
+            end
+          ' || echo "::warning::could not add the privacy manifest to the project - continuing"
+
+          # Say plainly whether it actually landed, rather than trusting the
+          # script above. A patch that reports success it did not achieve has
+          # cost this project two builds already.
+          if grep -q "PrivacyInfo.xcprivacy" "ios/App/App.xcodeproj/project.pbxproj"; then
+            echo "verified: PrivacyInfo.xcprivacy is referenced by the project"
+          else
+            echo "::warning::PrivacyInfo.xcprivacy is NOT referenced by the project"
+          fi
+
       - name: Set Team ID + Bundle ID in Xcode project
         run: |
           PROJ="ios/App/App.xcodeproj/project.pbxproj"
           /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName FLYP" "ios/App/App/Info.plist" 2>/dev/null || true
-          # Add permission strings (Apple requires these for any app that touches camera/mic/location)
-          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'نحتاج الكاميرا لتسجيل الفيديوهات'" "ios/App/App/Info.plist" 2>/dev/null || \
-          /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription 'نحتاج الكاميرا لتسجيل الفيديوهات'" "ios/App/App/Info.plist"
-          /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string 'نحتاج الميكروفون لتسجيل الصوت'" "ios/App/App/Info.plist" 2>/dev/null || \
-          /usr/libexec/PlistBuddy -c "Set :NSMicrophoneUsageDescription 'نحتاج الميكروفون لتسجيل الصوت'" "ios/App/App/Info.plist"
-          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'لاختيار الفيديوهات والصور'" "ios/App/App/Info.plist" 2>/dev/null || \
-          /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription 'لاختيار الفيديوهات والصور'" "ios/App/App/Info.plist"
-          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string 'لحفظ الفيديوهات إلى المكتبة'" "ios/App/App/Info.plist" 2>/dev/null || \
-          /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryAddUsageDescription 'لحفظ الفيديوهات إلى المكتبة'" "ios/App/App/Info.plist"
-          /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'لعرض موقع الأصدقاء على الخريطة'" "ios/App/App/Info.plist" 2>/dev/null || \
-          /usr/libexec/PlistBuddy -c "Set :NSLocationWhenInUseUsageDescription 'لعرض موقع الأصدقاء على الخريطة'" "ios/App/App/Info.plist"
+          # Permission strings. ENGLISH FIRST, then Arabic - both in one string.
+          #
+          # Apple rejected 1.0 under guideline 5.1.1 with a screenshot of the
+          # camera prompt reading "نحتاج الكاميرا لتسجيل الفيديوهات" on an English
+          # device. A purpose string the reader cannot understand is not a
+          # purpose string.
+          #
+          # Deliberately NOT .lproj localisation: that can silently fail to be
+          # picked up - wrong folder, not in the target, region not declared -
+          # and the failure looks identical to this rejection. One bilingual
+          # string cannot fail to display, and an Arabic reader still gets
+          # Arabic in the same dialog.
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'FLYP uses the camera so you can record videos and go live. يستخدم FLYP الكاميرا لتسجيل الفيديوهات والبث المباشر.'" "ios/App/App/Info.plist" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription 'FLYP uses the camera so you can record videos and go live. يستخدم FLYP الكاميرا لتسجيل الفيديوهات والبث المباشر.'" "ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string 'FLYP uses the microphone to record sound in your videos, for voice messages, and for calls. يستخدم FLYP الميكروفون لتسجيل الصوت والرسائل الصوتية والمكالمات.'" "ios/App/App/Info.plist" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSMicrophoneUsageDescription 'FLYP uses the microphone to record sound in your videos, for voice messages, and for calls. يستخدم FLYP الميكروفون لتسجيل الصوت والرسائل الصوتية والمكالمات.'" "ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'FLYP needs access to your photos so you can choose a video or picture to post or send. يحتاج FLYP إلى صورك لاختيار مقطع أو صورة لنشرها أو إرسالها.'" "ios/App/App/Info.plist" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription 'FLYP needs access to your photos so you can choose a video or picture to post or send. يحتاج FLYP إلى صورك لاختيار مقطع أو صورة لنشرها أو إرسالها.'" "ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryAddUsageDescription string 'FLYP saves photos and videos you download to your library. يحفظ FLYP الصور والفيديوهات التي تنزلها في مكتبتك.'" "ios/App/App/Info.plist" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryAddUsageDescription 'FLYP saves photos and videos you download to your library. يحفظ FLYP الصور والفيديوهات التي تنزلها في مكتبتك.'" "ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'FLYP uses your location only to show you on the friends map, and only while you choose to share it. يستخدم FLYP موقعك لعرضك على خريطة الأصدقاء فقط عندما تختار مشاركته.'" "ios/App/App/Info.plist" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Set :NSLocationWhenInUseUsageDescription 'FLYP uses your location only to show you on the friends map, and only while you choose to share it. يستخدم FLYP موقعك لعرضك على خريطة الأصدقاء فقط عندما تختار مشاركته.'" "ios/App/App/Info.plist"
 
       # Sign in with Apple needs an entitlement on the app target, and the
       # matching capability on the App ID. `cap add ios` regenerates the Xcode

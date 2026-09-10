@@ -1183,6 +1183,21 @@
     // Busy-call toasts, added with the one-call-at-a-time guard.
     'أنت في مكالمة بالفعل': 'You are already in a call',
     'تم رفض مكالمة واردة لأنك في مكالمة': 'An incoming call was declined because you are in a call',
+
+    // Sits over the empty date field; iOS shows nothing there otherwise.
+    'اختر تاريخ ميلادك': 'Choose your date of birth',
+
+    // Sign-up consent row - the Guideline 1.2 agreement.
+    'أوافق على': 'I agree to the',
+    '، وأتعهد بعدم نشر محتوى مسيء أو الإساءة إلى أي مستخدم. لا تسامح مطلقًا مع المحتوى المسيء.': ', and I will not post objectionable content or abuse any user. There is zero tolerance for objectionable content.',
+
+    // Guideline 1.2 surfaces: guidelines screen, published contact, signed-out reporting.
+    'قواعد المجتمع': 'Community Guidelines',
+    'البريد الإلكتروني للدعم': 'Support email',
+    'نراجع كل بلاغ خلال 24 ساعة، ونزيل المحتوى المخالف ونغلق حساب من نشره.': 'We review every report within 24 hours, remove content that breaks the rules, and terminate the account that posted it.',
+    'للإبلاغ عن هذا المحتوى': 'To report this content',
+    'سجّل الدخول للإبلاغ من داخل التطبيق، أو راسلنا على البريد التالي. نراجع كل بلاغ خلال 24 ساعة ونزيل المحتوى المخالف.': 'Sign in to report from inside the app, or email us at the address below. We review every report within 24 hours and remove content that breaks the rules.',
+    'مراسلة الدعم': 'Email support',
   };
 
   // Later blocks FILL GAPS. They must never override a key the app itself has

@@ -4263,3 +4263,111 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible,
 .feed-info {
   touch-action: manipulation;
 }
+
+
+/* Date of birth on iOS.
+   Safari gives input[type=date] a fixed intrinsic width that ignores
+   width:100%, so the field ran off the right edge of the screen in Apple's
+   rejection screenshot. Clearing -webkit-appearance lets it size to its
+   container like every other input.
+   It also draws nothing when empty - no placeholder, no format - which is why
+   the reviewer saw a blank box and never opened the picker. .reg-date-ph sits
+   over it until a value exists. */
+.reg-date {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 48px;          /* a real tap target, not a thin strip */
+  text-align: start;
+}
+.reg-date-wrap { position: relative; }
+.reg-date-ph {
+  position: absolute;
+  /* PHYSICAL left/right, not inset-inline-*. The date editor ignores dir=rtl:
+     the calendar icon stays on the physical right and the chosen date renders
+     flush physically left even in Arabic. Logical properties flipped the
+     placeholder to the right in Arabic, straight underneath the icon. Pinned
+     this way the hint sits exactly where the date itself will appear. */
+  left: 16px;
+  right: 48px;             /* clearance for the calendar icon */
+  text-align: left;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px;
+  color: var(--muted);
+  pointer-events: none;      /* the tap must reach the picker underneath */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reg-date-wrap.has-value .reg-date-ph { display: none; }
+/* Chrome (and the Android WebView) paints its own "dd-mm-yyyy" inside an empty
+   date field; iOS Safari paints nothing. Left alone, our placeholder printed
+   on top of Chrome's text and both were unreadable. Hide the browser's text
+   only while the field is empty AND unfocused, so the resting state is one
+   clean placeholder on every platform.
+   On focus we give the field back to the browser - Android types the date
+   segment by segment, and input.value stays '' until the whole date is valid,
+   so .has-value alone would leave them typing blind. */
+.reg-date-wrap:not(.has-value) .reg-date:not(:focus)::-webkit-datetime-edit {
+  color: transparent;
+}
+.reg-date-wrap:not(.has-value) .reg-date:focus + .reg-date-ph {
+  opacity: 0;
+}
+
+
+/* Sign-up consent row. Guideline 1.2 asks a UGC app to TAKE the user's
+   agreement to terms carrying a zero-tolerance policy, so this is a real
+   checkbox and the Create button waits on it. The whole label is the tap
+   target - the box itself is far too small to hit on a phone. */
+.reg-agree {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 6px 2px 16px;
+  padding: 4px 0;
+  min-height: 44px;          /* Apple's minimum tap target */
+  cursor: pointer;
+  text-align: start;
+}
+.reg-agree-box {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin: 2px 0 0;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.reg-agree-text {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.reg-agree-text .auth-link { text-decoration: underline; }
+
+/* Published contact information (Apple 1.2). The address is shown as real,
+   selectable text - a tappable "Email us" row hides it, and a reviewer cannot
+   count what they cannot read. */
+.support-block {
+  margin: 4px 16px 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  text-align: start;
+}
+.support-label { margin: 0 0 4px; font-size: 12px; color: var(--muted); }
+.support-email {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  direction: ltr;
+  text-align: start;
+  word-break: break-all;
+  -webkit-user-select: text;
+  user-select: text;          /* it must be copyable */
+}
+.support-note { margin: 8px 0 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
+.sheet .support-email { text-align: center; margin: 0 16px 10px; }
