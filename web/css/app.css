@@ -4371,3 +4371,16 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible,
 }
 .support-note { margin: 8px 0 0; font-size: 12px; line-height: 1.6; color: var(--muted); }
 .sheet .support-email { text-align: center; margin: 0 16px 10px; }
+
+/* The address the code was sent to. Shown so a mistyped email is visible -
+   name@gmail.co is a valid address, so nothing else on the screen would ever
+   have given it away. LTR because an email address is not RTL text. */
+.otp-dest {
+  margin: -4px 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  direction: ltr;
+  unicode-bidi: isolate;
+  word-break: break-all;
+  color: var(--ink, #14161F);
+}

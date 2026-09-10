@@ -773,6 +773,12 @@
     ]));
     wrap.appendChild(el('h2', { class: 'auth-title' }, 'أدخل رمز التحقق'));
     wrap.appendChild(el('p', { class: 'auth-subtitle' }, 'أرسلنا لك رمز التحقق'));
+    // Show WHERE it went. Without this a mistyped address - name@gmail.co is
+    // a real, valid address - looked identical to a code that had not arrived
+    // yet, and there was nothing on screen to tell the two apart.
+    const pending = JSON.parse(sessionStorage.getItem('tt-pending-otp') || '{}');
+    const sentTo = pending.email || pending.phone || '';
+    if (sentTo) wrap.appendChild(el('p', { class: 'otp-dest' }, sentTo));
     const inputs = [];
     const row = el('div', { class: 'otp-row' });
     for (let i = 0; i < OTP_LEN; i++) {
@@ -790,13 +796,20 @@
     wrap.appendChild(row);
     const otpError = el('div', { class: 'error-box', hidden: true, style: { marginTop: '12px' } });
     wrap.appendChild(otpError);
-    const pending = JSON.parse(sessionStorage.getItem('tt-pending-otp') || '{}');
     // Supabase will not send again for 60 seconds, so the link counts itself
     // down rather than letting someone press it into an error.
     const resendLink = el('a', { class: 'auth-link' }, 'إعادة الإرسال');
     wrap.appendChild(el('div', { class: 'otp-resend' }, [
       document.createTextNode('لم يصلك الرمز؟ '),
       resendLink,
+    ]));
+    // Resending to an address that does not exist repeats the same nothing.
+    // The way out has to be changing the address, not asking again.
+    wrap.appendChild(el('div', { class: 'otp-resend' }, [
+      el('a', { class: 'auth-link', onclick: () => {
+        try { sessionStorage.removeItem('tt-pending-otp'); } catch (e) {}
+        go('/register');
+      } }, 'البريد غير صحيح؟ غيّره'),
     ]));
 
     let ticking = 0, resendTimer = null;

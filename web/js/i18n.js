@@ -1205,6 +1205,8 @@
     'أؤكد أن عمري 13 عامًا فأكثر، وأوافق على': 'I confirm I am 13 or older, and I agree to the',
 
     'اسمك كما سيظهر للآخرين، واسم المستخدم': 'Your name as others will see it, and your username',
+
+    'البريد غير صحيح؟ غيّره': 'Wrong email? Change it',
   };
 
   // Later blocks FILL GAPS. They must never override a key the app itself has
