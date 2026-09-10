@@ -732,14 +732,33 @@
         try {
           const params = { password: pw.input.value, name: data.name, handle: data.handle };
           if (data.email) params.email = data.email; else params.phone = data.phone;
-          await window.SB.signUp(params);
-          sessionStorage.setItem('tt-pending-otp', JSON.stringify({ email: data.email || undefined, phone: data.phone || undefined }));
-          // Saved once the OTP proves the account is real - there is no
-          // session to write with until then.
-          sessionStorage.setItem('tt-pending-profile', JSON.stringify({ birth_date: data.birth }));
-          toast('تم إرسال رمز التحقق');
-          go('/otp');
-          return;
+          const signed = await window.SB.signUp(params);
+
+          // Already registered? Supabase says so only by returning a user with
+          // no identities - it will not raise an error and will not send mail,
+          // so that nobody can discover which addresses have accounts by
+          // watching for one. Without this check the person waits on the code
+          // screen for a code that was never generated.
+          //
+          // Deliberately narrow: only an array we can see, and only when it is
+          // empty. Any other shape falls through to the normal path.
+          const ident = signed && signed.user && signed.user.identities;
+          const alreadyRegistered = Array.isArray(ident) && ident.length === 0;
+
+          if (alreadyRegistered) {
+            // NOT an early return: the button is reset after the catch below,
+            // and returning here would leave it disabled on "Creating
+            // account..." for good - a worse dead end than the one being fixed.
+            fail('هذا البريد له حساب بالفعل. سجّل الدخول بدلًا من ذلك.');
+          } else {
+            sessionStorage.setItem('tt-pending-otp', JSON.stringify({ email: data.email || undefined, phone: data.phone || undefined }));
+            // Saved once the OTP proves the account is real - there is no
+            // session to write with until then.
+            sessionStorage.setItem('tt-pending-profile', JSON.stringify({ birth_date: data.birth }));
+            toast('تم إرسال رمز التحقق');
+            go('/otp');
+            return;
+          }
         } catch (e) {
           fail(mapAuthError(e));
         }

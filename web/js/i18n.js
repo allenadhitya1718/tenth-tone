@@ -1207,6 +1207,8 @@
     'اسمك كما سيظهر للآخرين، واسم المستخدم': 'Your name as others will see it, and your username',
 
     'البريد غير صحيح؟ غيّره': 'Wrong email? Change it',
+
+    'هذا البريد له حساب بالفعل. سجّل الدخول بدلًا من ذلك.': 'This email already has an account. Sign in instead.',
   };
 
   // Later blocks FILL GAPS. They must never override a key the app itself has
