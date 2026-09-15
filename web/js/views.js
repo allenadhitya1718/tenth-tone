@@ -7369,6 +7369,12 @@ function autoPlay(video) {
     const list = el('div', { class: 'list-screen' });
     root.appendChild(list);
 
+    // Who is looking, and who they actually follow. Both start unknown and
+    // are filled in by the loader below; render() is called again once they
+    // are, so the first paint is never wrong for long.
+    let myId = null;
+    let iFollow = null;          // Set of ids, or null while unknown
+
     function render(users) {
       list.innerHTML = '';
       if (!users.length) { list.appendChild(el('div', { class: 'empty-state', style: { padding: '40px', textAlign: 'center', color: 'var(--muted)' } }, 'لا يوجد مستخدمون')); return; }
@@ -7378,6 +7384,10 @@ function autoPlay(video) {
           el('div', { class: 'name' }, u.name + (u.verified ? ' ✓' : '')),
           el('div', { class: 'handle' }, '@' + (u.handle || u.handle === '' ? u.handle : '').replace('@', '')),
         ]),
+        // No button on your own row. You cannot follow yourself - the table
+        // has CHECK (follower_id <> followed_id) - so it was an action that
+        // could only ever fail.
+        (myId && u.id === myId) ? null :
         // State was read back off the button's own label and compared against
         // Arabic strings. With the app in English i18n has already rewritten
         // that label, so every comparison failed and the button did the
@@ -7387,7 +7397,12 @@ function autoPlay(video) {
           // Written as an attribute, not via `dataset`: el() assigns any key
           // that exists on the element, and dataset is read-only, so it would
           // have been dropped without a word.
-          'data-following': which === 'followers' ? '0' : '1',
+          //
+          // Taken from who you ACTUALLY follow. It used to be guessed from
+          // which list you were on - so a mutual follow, the commonest case
+          // in a small app, was drawn backwards on the followers screen.
+          'data-following': (iFollow ? (iFollow.has(u.id) ? '1' : '0')
+                                     : (which === 'followers' ? '0' : '1')),
           onclick: async (e) => {
             const btn = e.currentTarget;
             if (!window.API) return;
@@ -7407,8 +7422,9 @@ function autoPlay(video) {
               }
             } catch (err) { paint(wasFollowing); toast('تعذر التحديث'); }
           },
-        }, which === 'followers' ? 'متابعة' : 'تتم المتابعة'),
-      ])));
+        }, (iFollow ? (iFollow.has(u.id) ? 'تتم المتابعة' : 'متابعة')
+                    : (which === 'followers' ? 'متابعة' : 'تتم المتابعة'))),
+      ].filter(Boolean))));
     }
 
     render(DB.users);
@@ -7427,6 +7443,18 @@ function autoPlay(video) {
         }
         const users = which === 'followers' ? await window.API.fetchFollowers(subject) : await window.API.fetchFollowing(subject);
         render(users);
+
+        // Now the truth: who I am, and who I follow. Fetched after the first
+        // paint so the list appears immediately, then repainted once known.
+        try {
+          const me = await window.SB.getUser();
+          myId = me && me.id;
+          if (myId) {
+            const mine = await window.API.fetchFollowing(myId);
+            iFollow = new Set((mine || []).map(x => x.id));
+          }
+          render(users);
+        } catch (e) { console.warn('userList follow-state:', e); }
       } catch (e) { console.warn('userList:', e); }
     })();
 
