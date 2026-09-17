@@ -160,13 +160,19 @@ window.Compress = (function () {
       'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
       'video/mp4;codecs=h264,aac',
       'video/mp4;codecs=avc1',
+      // Safari's spelling - it answers "no" to the forms above. Without a
+      // match an iPhone re-encodes as HEVC, which Android cannot decode.
+      'video/mp4; codecs="avc1.42E01E, mp4a.40.2"',
+      'video/mp4; codecs="avc1"',
       'video/webm;codecs=vp9,opus',
       'video/webm;codecs=vp8,opus',
       'video/webm',
     ];
-    for (const m of candidates) {
-      if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m;
-    }
+    const ok = (m) => !!(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m));
+    for (const m of candidates) if (ok(m)) return m;
+    // Bare 'video/mp4' only where webm is not an option at all (Safari); on
+    // Chrome it would mean VP9 in an .mp4, which iOS cannot play.
+    if (!ok('video/webm') && ok('video/mp4')) return 'video/mp4';
     return '';
   }
 
@@ -587,7 +593,15 @@ window.Compress = (function () {
       return { file, originalSize: file.size, compressedSize: file.size, skipped: true, reason: 'not-video' };
     }
 
-    if (await alreadySmallEnough(file)) {
+    // HEVC ('hvc1'/'hev1') is what an iPhone records when nothing names a
+    // codec, and Android's WebView cannot decode it at all: sound over a
+    // black picture for every viewer not on an iPhone. Such a clip is never
+    // "small enough" and never "already what the encoder would produce" - it
+    // is the wrong codec, and it goes through the encoder whatever its size.
+    const codec = await mp4Codec(file);
+    const hevc = /^(hvc1|hev1)$/.test(codec);
+    if (hevc) console.warn('compress: HEVC clip (' + codec + '), re-encoding to H.264 for Android');
+    if (!hevc && await alreadySmallEnough(file)) {
       // Already at or below what re-encoding would produce — skip
       return { file, originalSize: file.size, compressedSize: file.size, skipped: true, reason: 'small-enough' };
     }
@@ -602,7 +616,7 @@ window.Compress = (function () {
     // at the rate it would produce - which is every clip the in-app camera
     // records - would come back the same size after a wait as long as the
     // clip itself. Upload it as it is.
-    if (!webCodecsSupported()) {
+    if (!hevc && !webCodecsSupported()) {
       const meta = await readMeta(file).catch(() => null);
       if (meta && meta.w && meta.h && meta.duration) {
         const fits = Math.max(meta.w, meta.h) <= TARGET_LONG_EDGE && Math.min(meta.w, meta.h) <= TARGET_SHORT_EDGE;
@@ -756,5 +770,143 @@ window.Compress = (function () {
     });
   }
 
-  return { video, validate, trim, readDuration, MAX_UPLOAD_BYTES, MAX_DURATION_SECS };
+  // ── MP4 box helpers ──
+  // Top-level boxes of an MP4: [{ type, start, size, hdr }]. null when the
+  // bytes are not a plain MP4 this understands (a >4 GB box, a truncated file).
+  function mp4TopLevelBoxes(u8) {
+    const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    const tag = (o) => String.fromCharCode(u8[o], u8[o + 1], u8[o + 2], u8[o + 3]);
+    const boxes = [];
+    let p = 0;
+    while (p + 8 <= u8.length) {
+      let size = dv.getUint32(p);
+      const type = tag(p + 4);
+      let hdr = 8;
+      if (size === 1) {
+        if (p + 16 > u8.length || dv.getUint32(p + 8) !== 0) return null;
+        size = dv.getUint32(p + 12); hdr = 16;
+      } else if (size === 0) {
+        size = u8.length - p;
+      }
+      if (size < hdr || p + size > u8.length) return null;
+      boxes.push({ type, start: p, size, hdr });
+      p += size;
+    }
+    return boxes;
+  }
+
+  // The codec of an MP4's first video sample entry: 'avc1', 'hvc1', 'hev1',
+  // 'vp09', ... or '' when it cannot be told. Reads only the 'moov' box.
+  //
+  // Why it matters: an iPhone left to choose records HEVC ('hvc1'), which
+  // Android's WebView and Chrome cannot decode at all - the reel plays its
+  // sound over a black picture for everyone not on an iPhone. Measured on
+  // 2026-09-17 with a clip recorded through the app that day.
+  async function mp4Codec(file) {
+    try {
+      const u8 = new Uint8Array(await file.arrayBuffer());
+      const boxes = mp4TopLevelBoxes(u8);
+      const moov = boxes && boxes.find(b => b.type === 'moov');
+      if (!moov) return '';
+      const m = u8.subarray(moov.start, moov.start + moov.size);
+      const dv = new DataView(m.buffer, m.byteOffset, m.byteLength);
+      const tag = (o) => String.fromCharCode(m[o], m[o + 1], m[o + 2], m[o + 3]);
+      const CONTAINERS = new Set(['moov', 'trak', 'mdia', 'minf', 'stbl']);
+      let found = '';
+      const walk = (start, end) => {
+        let q = start;
+        while (q + 8 <= end && !found) {
+          let size = dv.getUint32(q); const type = tag(q + 4); let hdr = 8;
+          if (size === 1) { size = dv.getUint32(q + 12); hdr = 16; } else if (size === 0) size = end - q;
+          if (size < hdr || q + size > end) return;
+          if (type === 'stsd') {
+            // full box: version/flags (4) + entry count (4), then entries
+            const n = dv.getUint32(q + hdr + 4);
+            let e = q + hdr + 8;
+            for (let i = 0; i < n && e + 8 <= end; i++) {
+              const esize = dv.getUint32(e); const etype = tag(e + 4);
+              if (/^(avc[1-4]|hvc1|hev1|vp09|av01|mp4v|s263)$/.test(etype)) { found = etype; break; }
+              if (esize < 8) break;
+              e += esize;
+            }
+          } else if (CONTAINERS.has(type)) {
+            walk(q + hdr, q + size);
+          }
+          q += size;
+        }
+      };
+      walk(moov.hdr, m.length);
+      return found;
+    } catch (e) { return ''; }
+  }
+
+  // Move 'moov' (the index) ahead of 'mdat' (the samples), so a player can
+  // start from the first bytes instead of fetching the end of the file first.
+  // Same idea as qt-faststart: no re-encoding, no quality change, same size.
+  // Returns a Uint8Array, or null when the file is already fast-start or is
+  // not something this understands - the caller keeps the original then.
+  //
+  // MediaRecorder writes the index last (it cannot know the sizes until it
+  // stops), so every clip from the in-app camera needed the tail before it
+  // could show a frame. Measured 2026-09-17: three range requests - head,
+  // tail, then the middle - before playback began.
+  function faststart(input) {
+    const src = input instanceof Uint8Array ? input : new Uint8Array(input);
+    const boxes = mp4TopLevelBoxes(src);
+    if (!boxes) return null;
+    const moov = boxes.find(b => b.type === 'moov');
+    const mdat = boxes.find(b => b.type === 'mdat');
+    if (!moov || !mdat) return null;
+    if (moov.start < mdat.start) return null;          // already fast-start
+    if (boxes.some(b => b.type === 'moof')) return null; // fragmented: a different layout
+
+    const moovBytes = src.slice(moov.start, moov.start + moov.size);
+    const shift = moov.size;
+    const mv = new DataView(moovBytes.buffer, moovBytes.byteOffset, moovBytes.byteLength);
+    const mtag = (o) => String.fromCharCode(moovBytes[o], moovBytes[o + 1], moovBytes[o + 2], moovBytes[o + 3]);
+    const CONTAINERS = new Set(['moov', 'trak', 'mdia', 'minf', 'stbl', 'edts', 'dinf', 'udta']);
+    let patched = 0;
+    // Every chunk offset points into mdat, which moves later by moov's size.
+    const walk = (start, end) => {
+      let q = start;
+      while (q + 8 <= end) {
+        let size = mv.getUint32(q); const type = mtag(q + 4); let hdr = 8;
+        if (size === 1) { size = mv.getUint32(q + 12); hdr = 16; } else if (size === 0) size = end - q;
+        if (size < hdr || q + size > end) return false;
+        if (type === 'stco') {
+          const n = mv.getUint32(q + hdr + 4);
+          for (let i = 0; i < n; i++) {
+            const at = q + hdr + 8 + i * 4;
+            const v = mv.getUint32(at) + shift;
+            if (v > 0xFFFFFFFF) return false;
+            mv.setUint32(at, v);
+          }
+          patched += n;
+        } else if (type === 'co64') {
+          const n = mv.getUint32(q + hdr + 4);
+          for (let i = 0; i < n; i++) {
+            const at = q + hdr + 8 + i * 8;
+            const v = ((BigInt(mv.getUint32(at)) << 32n) | BigInt(mv.getUint32(at + 4))) + BigInt(shift);
+            mv.setUint32(at, Number(v >> 32n)); mv.setUint32(at + 4, Number(v & 0xFFFFFFFFn));
+          }
+          patched += n;
+        } else if (CONTAINERS.has(type)) {
+          if (!walk(q + hdr, q + size)) return false;
+        }
+        q += size;
+      }
+      return true;
+    };
+    if (!walk(moov.hdr, moovBytes.length) || patched === 0) return null;
+
+    const out = new Uint8Array(src.length);
+    let w = 0;
+    const put = (a, b) => { out.set(src.subarray(a, b), w); w += b - a; };
+    for (const b of boxes) { if (b === moov) continue; if (b.start >= mdat.start) break; put(b.start, b.start + b.size); }
+    out.set(moovBytes, w); w += moovBytes.length;
+    for (const b of boxes) { if (b === moov || b.start < mdat.start) continue; put(b.start, b.start + b.size); }
+    return w === src.length ? out : null;
+  }
+
+  return { video, validate, trim, readDuration, faststart, mp4Codec, MAX_UPLOAD_BYTES, MAX_DURATION_SECS };
 })();

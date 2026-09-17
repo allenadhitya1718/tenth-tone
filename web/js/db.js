@@ -433,6 +433,9 @@
         src: url, muted: true, playsInline: true, preload: 'auto',
       });
       v.setAttribute('playsinline', '');
+      // Off-screen with NO size of its own, so its layout box is the clip's
+      // displayed size - orientation applied. The capture below reads that.
+      v.style.cssText = 'position:fixed;left:-99999px;top:0;width:auto;height:auto;max-width:none;max-height:none;';
       const cleanup = () => {
         clearTimeout(timer);
         try { URL.revokeObjectURL(url); } catch (e) {}
@@ -464,8 +467,17 @@
       };
       v.onseeked = () => {
         try {
-          const w = v.videoWidth, h = v.videoHeight;
+          let w = v.videoWidth, h = v.videoHeight;
           if (!w || !h) return done(null);
+          // A phone clip carries its orientation as metadata. Some engines
+          // report videoWidth/videoHeight from the stored frame, BEFORE that
+          // rotation is applied - so a portrait clip came back as 1280x720,
+          // its poster was drawn landscape, and the feed stretched a 720x405
+          // still over a portrait screen. That is the "low resolution" people
+          // saw while a reel loaded. The element's layout box is always the
+          // displayed orientation; when the two disagree, the box is right.
+          const lw = v.clientWidth, lh = v.clientHeight;
+          if (lw > 0 && lh > 0 && (lw > lh) !== (w > h)) { const t = w; w = h; h = t; }
           const scale = Math.min(720 / w, 1280 / h, 1);
           const c = Object.assign(document.createElement('canvas'), {
             width: Math.max(2, Math.round(w * scale)),

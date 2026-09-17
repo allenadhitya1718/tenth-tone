@@ -15,7 +15,27 @@
 
   // Cached once: lets the feed hide Follow on your own posts.
   let myFeedUserId = null;
-  (async () => { try { const u = await window.SB.getUser(); myFeedUserId = u && u.id; } catch (e) {} })();
+  (async () => {
+    try { const u = await window.SB.getUser(); myFeedUserId = u && u.id; } catch (e) {}
+    // The feed can draw before this resolves, and a card drawn without it
+    // shows "Follow" on your own clip. Every inline button records whose
+    // clip it is; once we know who is signed in, hide the ones that are ours.
+    if (myFeedUserId) {
+      document.querySelectorAll('.inline-follow[data-user]').forEach(b => {
+        if (b.dataset.user === myFeedUserId) b.hidden = true;
+      });
+    }
+  })();
+
+  // Media moved from the r2.dev development URL to media.flyp-sa.com on
+  // 2026-09-17. Resolvers still holding the old delegation answer "no such
+  // name" for the new host for a day or two, and a reel on such a network
+  // never arrives. The old address keeps serving the same files, so a clip
+  // that fails on the new host is retried once on the old one.
+  const MEDIA_FALLBACK = {
+    from: 'https://media.flyp-sa.com/',
+    to: 'https://pub-4c6ffb7f17b94966ba58385f4663c40a.r2.dev/',
+  };
 
   // Demo mode: when the database returns nothing, fall back to sample
   // content so the app can be demoed. Real data always takes priority.
@@ -447,7 +467,9 @@
         if (isEmail) params.email = idIn.value.trim();
         else params.phone = idIn.value.replace(/\s/g, '');
         await window.SB.signIn(params);
-        go('/home');
+        // Replace, not push: the login screen must not stay in the back
+        // stack, or "back" from the feed asks a signed-in person to sign in.
+        go('/home', { replace: true });
       } catch (e) {
         error.textContent = mapAuthError(e);
         error.hidden = false;
@@ -953,7 +975,8 @@
           }
           sessionStorage.removeItem('tt-pending-profile');
         } catch (e) { console.warn('birth date save:', e); }
-        go('/home');
+        // Replace, not push - same reason as the password sign-in.
+        go('/home', { replace: true });
       } catch (e) {
         otpError.textContent = mapAuthError(e);
         otpError.hidden = false;
@@ -1782,14 +1805,22 @@
           // thumbnail puts its own MP4 in the poster slot. The grid path
           // already guards this; the feed path did not, and downloaded a
           // 1,024 KB .mp4 as an Image - the same URL fetched four times over.
-          if (still && !/\.mp4(\?|$)/i.test(still)) video.poster = (safeUrl(still) || still);
+          if (still && !/\.mp4(\?|$)/i.test(still)) {
+            video.poster = (safeUrl(still) || still);
+            // The same still on the card itself. When the clip fails or has
+            // not arrived, the <video> is hidden - and its poster went with
+            // it, leaving a black card. The card's own background stays.
+            item.style.backgroundImage = `url("${safeUrl(still) || still}")`;
+          }
           video.setAttribute('src', video.dataset.src);
-          // 'metadata', not 'auto'. Attaching happens a full screen before the
-          // clip is visible, and 'auto' told the browser to pull the WHOLE
-          // file — so opening the feed downloaded two complete videos, about
-          // 10 MB, before anything had been watched. The clip that actually
-          // plays is upgraded in autoPlay(); this one may never be reached.
-          video.preload = 'metadata';
+          // 'none', not 'metadata'. Attaching happens a full screen before the
+          // clip is visible, and on a phone 'metadata' still pulled the WHOLE
+          // next clip - measured: the on-screen clip and the next one began
+          // downloading in the same millisecond and shared the connection, so
+          // the one being watched started later. The clip that actually plays
+          // is upgraded in autoPlay(); the next one is primed only after 1.5 s
+          // of real watching (see the timeupdate listener above).
+          video.preload = 'none';
           try { video.load(); } catch (e) {}
         }
         function detachSrc() {
@@ -1809,6 +1840,17 @@
           // A detached video fires 'error' on some engines. That is us, not a
           // broken file — ignore it or the poster gets hidden on every scroll.
           if (!video.getAttribute('src')) return;
+          // Once, on the old media address (see MEDIA_FALLBACK). A resolver
+          // that cannot find the new host yet is not a broken file either.
+          const cur = video.getAttribute('src') || '';
+          if (!video._fellBack && cur.startsWith(MEDIA_FALLBACK.from)) {
+            video._fellBack = true;
+            video.dataset.src = MEDIA_FALLBACK.to + cur.slice(MEDIA_FALLBACK.from.length);
+            video.setAttribute('src', video.dataset.src);
+            try { video.load(); } catch (e) {}
+            autoPlay(video);
+            return;
+          }
           // In demo mode, fall through to another sample clip. Outside it,
           // leave the poster showing rather than playing unrelated content.
           if (!video._retried && demoBgList.length) {
@@ -2076,6 +2118,8 @@
         class: 'inline-follow',
         onclick: (e) => { e.stopPropagation(); setFollowed(!followed); },
       }, 'متابعة');
+      // Whose clip this is, so the late-arriving user id above can hide it.
+      followBtn.dataset.user = String((v.user && v.user.id) || '');
       applyFollowUI();
 
       const info = el('div', { class: 'feed-info' }, [
@@ -2269,6 +2313,7 @@ function playOnlyVisible() {
 function setMuted(on) {
   PLAYBACK.muted = !!on;
   document.querySelectorAll('video').forEach(v => {
+    if (v._tile) return;   // grid tiles are thumbnails; they never carry sound
     v.muted = PLAYBACK.muted;
     v.defaultMuted = PLAYBACK.muted;
     if (PLAYBACK.muted) v.setAttribute('muted', '');
@@ -2323,9 +2368,9 @@ function autoPlay(video) {
         // before play() is what iOS refuses; setting it after is fine, and by
         // then the user has already gestured - that gesture is how sound was
         // turned on at all.
-        p.then(() => { video.muted = PLAYBACK.muted; }).catch(() => {});
+        p.then(() => { video.muted = video._tile ? true : PLAYBACK.muted; }).catch(() => {});
       } else {
-        video.muted = PLAYBACK.muted;
+        video.muted = video._tile ? true : PLAYBACK.muted;
       }
     } catch (e) {}
   }
@@ -2380,8 +2425,20 @@ function autoPlay(video) {
     video.setAttribute('loop', '');
     video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;';
 
-    video.addEventListener('canplay', () => autoPlay(video));
-    video.addEventListener('loadeddata', () => autoPlay(video));
+    // A grid tile is a moving thumbnail, never a player. It used to hand
+    // itself to the feed's autoPlay(), which finishes by copying the FEED's
+    // sound setting onto whatever it just started - so with sound on, every
+    // tile on the profile's Videos tab played out loud without being tapped.
+    // Tiles stay muted whatever the feed is doing; setMuted() and autoPlay()
+    // both honour this flag.
+    video._tile = true;
+    const tilePlay = () => {
+      if (!PLAYBACK.autoplay) return;
+      video.muted = true;
+      try { const p = video.play(); if (p && typeof p.catch === 'function') p.catch(() => {}); } catch (e) {}
+    };
+    video.addEventListener('canplay', tilePlay);
+    video.addEventListener('loadeddata', tilePlay);
     video.addEventListener('error', () => {
       const demoList = (DB && DB.VIDEO_BG) || [];
       if (!video._retried && demoList.length) {
@@ -2735,6 +2792,11 @@ function autoPlay(video) {
       poster: BLANK_POSTER,
     });
     previewVideo.setAttribute('playsinline', '');
+    // As ATTRIBUTES too, not only properties: WKWebView's autoplay gate reads
+    // the attributes, and a live camera stream with only the properties set
+    // has been seen to sit black behind a working camera.
+    previewVideo.setAttribute('autoplay', '');
+    previewVideo.setAttribute('muted', '');
     previewVideo.style.cssText = 'width:100%;height:100%;object-fit:cover;background:#000';
     previewWrap.appendChild(previewVideo);
     root.appendChild(previewWrap);
@@ -2959,7 +3021,12 @@ function autoPlay(video) {
     function showPreview(s) {
       if (!previewVideo.isConnected) { previewWrap.innerHTML = ''; previewWrap.appendChild(previewVideo); }
       previewVideo.srcObject = s;
-      try { previewVideo.play().catch(() => {}); } catch (e) {}
+      // Once now, and again when the stream's metadata lands: on some engines
+      // the first play() is issued before the track has a frame size and is
+      // quietly dropped, leaving a black preview over a running camera.
+      const kick = () => { try { previewVideo.play().catch(() => {}); } catch (e) {} };
+      kick();
+      previewVideo.addEventListener('loadedmetadata', kick, { once: true });
     }
 
     async function startCamera() {
@@ -3071,11 +3138,23 @@ function autoPlay(video) {
         'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
         'video/mp4;codecs=h264,aac',
         'video/mp4;codecs=avc1',
+        // Safari's spelling. It answers "no" to the forms above, fell through
+        // to nothing, and with no mimeType at all an iPhone records HEVC -
+        // which Android cannot decode: the reel played its sound over a black
+        // picture for everyone not on an iPhone (measured 2026-09-17).
+        'video/mp4; codecs="avc1.42E01E, mp4a.40.2"',
+        'video/mp4; codecs="avc1"',
         'video/webm;codecs=vp9,opus',
         'video/webm;codecs=vp8,opus',
         'video/webm',
       ];
-      for (const m of candidates) if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m;
+      const ok = (m) => !!(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m));
+      for (const m of candidates) if (ok(m)) return m;
+      // Bare 'video/mp4' only where webm is not an option at all - that is
+      // Safari, whose default is at least an MP4 that iPhones play. On Chrome
+      // bare mp4 would mean VP9 in an .mp4, which iOS cannot play, so it
+      // stays excluded there (see the comment above).
+      if (!ok('video/webm') && ok('video/mp4')) return 'video/mp4';
       return '';
     }
 
@@ -3113,9 +3192,19 @@ function autoPlay(video) {
       }
       if (!recorder) { teardownMix(); toast('المتصفح لا يدعم التسجيل'); return; }
       recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         const ext = (recorder.mimeType || '').includes('mp4') ? 'mp4' : 'webm';
-        const blob = new Blob(chunks, { type: recorder.mimeType || ('video/' + ext) });
+        let blob = new Blob(chunks, { type: recorder.mimeType || ('video/' + ext) });
+        // MediaRecorder writes the index at the END of the file, so a viewer
+        // had to fetch the tail before the first frame could show. Move it to
+        // the front - a byte shuffle, no re-encoding, nothing about the picture
+        // or the size changes. If it cannot be done the clip goes up as it is.
+        if (ext === 'mp4' && window.Compress && window.Compress.faststart) {
+          try {
+            const fixed = window.Compress.faststart(new Uint8Array(await blob.arrayBuffer()));
+            if (fixed) blob = new Blob([fixed], { type: blob.type });
+          } catch (e) { console.warn('faststart:', e); }
+        }
         const file = new File([blob], `clip-${Date.now()}.${ext}`, { type: blob.type });
         // Park the file in a global so /publish picks it up
         window._ttPendingClip = file;
@@ -3313,7 +3402,11 @@ function autoPlay(video) {
     const durationsRow = el('div', { class: 'cam-durations' }, [
       el('button', { class: 'cam-dur', onclick: e => setMax(90, e) }, '90s'),
       el('button', { class: 'cam-dur active', onclick: e => setMax(15, e) }, '15s'),
-      el('button', { class: 'cam-dur', onclick: e => setMax(3, e) }, 'صورة'),
+      // No "photo" mode. It was a 3-second video wearing a photo label: the
+      // button recorded a clip and the app played it back as one. FLYP posts
+      // are video only by design (see acceptFile in /publish), so a control
+      // that promises a photo has nothing honest to do. If photo posts are
+      // ever wanted, that is a product decision first and a mode second.
     ]);
     function setMax(n, e) {
       maxSecs = n;

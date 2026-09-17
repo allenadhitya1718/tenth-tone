@@ -158,7 +158,9 @@
     // mid-word, even though they are in fact signed in.
     const typing = [].slice.call(document.querySelectorAll('#app input, #app textarea'))
       .some(function (i) { return i.value; });
-    if (onAuthScreen && !typing) { location.hash = '#/home'; return; }
+    // Replace the auth screen in history rather than stacking the feed on
+    // top of it, or Android's back button walks straight back to "sign in".
+    if (onAuthScreen && !typing) { history.replaceState(null, '', '#/home'); }
     render();
   }
 
@@ -184,8 +186,9 @@
     // welcome fork after that. (This used to force '#/login', which is why
     // the welcome screen never appeared.)
     if (path === '/' && session) {
-      location.hash = '#/home';
-      return;
+      // Replace, so the landing route never sits under the feed in history.
+      history.replaceState(null, '', '#/home');
+      return render();
     }
 
     for (const r of routes) {
@@ -282,6 +285,26 @@
   }, 9000);
 
   window.addEventListener('hashchange', render);
+
+  // Android's back button. Capacitor delivers it here; without a listener
+  // the WebView walked its own history, and the entry under the feed was the
+  // login screen - so "back" from the feed asked a signed-in person to sign
+  // in again. On a root screen, back leaves the app, like every other app.
+  // Anywhere else it goes back one step. iOS has no such button; harmless.
+  (function () {
+    const cap = window.Capacitor;
+    const App = cap && cap.Plugins && cap.Plugins.App;
+    if (!App || typeof App.addListener !== 'function') return;
+    const ROOTS = ['/', '/home', '/discover', '/inbox', '/profile', '/login', '/welcome', '/onboarding'];
+    App.addListener('backButton', function () {
+      const { path } = parseHash();
+      if (ROOTS.indexOf(path) > -1 || history.length <= 1) {
+        try { App.exitApp(); } catch (e) {}
+        return;
+      }
+      history.back();
+    });
+  })();
   // Language switch re-renders the current view from its Arabic source
   window.addEventListener('tt-rerender', render);
   window.addEventListener('DOMContentLoaded', render);

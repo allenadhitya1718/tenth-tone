@@ -47,8 +47,18 @@ window.H = (function () {
     return String(n || 0);
   }
 
-  function go(path) {
-    if (location.hash !== '#' + path) location.hash = path;
+  function go(path, opts) {
+    if (location.hash === '#' + path) return;
+    // { replace: true } swaps the current history entry instead of adding
+    // one, for screens nobody should be able to go "back" to - the login
+    // page once you are signed in. A synthetic hashchange keeps the router
+    // and every screen's cleanup listener on the same path as a real one.
+    if (opts && opts.replace) {
+      history.replaceState(null, '', '#' + path);
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+      return;
+    }
+    location.hash = path;
   }
 
   function back() {
