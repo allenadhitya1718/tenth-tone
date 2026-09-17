@@ -3027,6 +3027,28 @@ function autoPlay(video) {
       const kick = () => { try { previewVideo.play().catch(() => {}); } catch (e) {} };
       kick();
       previewVideo.addEventListener('loadedmetadata', kick, { once: true });
+      // Watchdog. On iPhones the screen has been reported black with no error
+      // card: getUserMedia resolved, so no catch branch ran, and nothing said
+      // why no picture followed. This cannot be reproduced without the phone,
+      // so instead of guessing, turn a black preview into a card that names
+      // the actual state - what the tester can screenshot and send.
+      clearTimeout(previewVideo._watchdog);
+      previewVideo._watchdog = setTimeout(async () => {
+        if (previewVideo.srcObject !== s || previewVideo.videoWidth > 0) return;
+        const vt = (s.getVideoTracks && s.getVideoTracks()[0]) || null;
+        let playErr = '';
+        try { await previewVideo.play(); } catch (e) { playErr = (e && (e.name + ': ' + e.message)) || String(e); }
+        if (previewVideo.videoWidth > 0) return;   // the second play() did it
+        const st = vt ? vt.getSettings() : {};
+        const detail = [
+          'track: ' + (vt ? (vt.readyState + (vt.muted ? ', muted' : '') + (vt.enabled ? '' : ', disabled')) : 'none'),
+          'size: ' + (st.width || 0) + 'x' + (st.height || 0) + ' @' + (st.frameRate || 0),
+          'video: readyState ' + previewVideo.readyState + (previewVideo.paused ? ', paused' : ', playing'),
+          playErr ? 'play(): ' + playErr : '',
+          navigator.userAgent.replace(/^.*?(iPhone|Android)[^)]*\).*$/, '$1'),
+        ].filter(Boolean).join(' · ');
+        showCamError({ title: 'الكاميرا تعمل لكن لا تظهر صورة', detail, canRetry: true });
+      }, 5000);
     }
 
     async function startCamera() {

@@ -80,6 +80,28 @@ jobs:
       - name: Sync web assets to Android project
         run: npx cap sync android
 
+      # Firebase's config for push notifications. Kept as a base64 secret,
+      # exactly like the keystore. app/build.gradle applies the google-services
+      # plugin only when this file exists, so a build without the secret still
+      # succeeds - it just cannot receive pushes.
+      - name: Install google-services.json (push notifications)
+        env:
+          GS_B64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+        run: |
+          if [ -z "$GS_B64" ]; then
+            echo "::warning::No GOOGLE_SERVICES_JSON_BASE64 secret - building without push notifications"
+            exit 0
+          fi
+          echo "$GS_B64" | base64 --decode > android/app/google-services.json
+          python3 - <<'PY'
+          import json
+          d = json.load(open('android/app/google-services.json'))
+          pkgs = [c['client_info']['android_client_info']['package_name'] for c in d.get('client', [])]
+          print('google-services.json: project', d['project_info']['project_id'], 'packages', pkgs)
+          if 'com.flyp.app' not in pkgs:
+              raise SystemExit('::error::google-services.json is not for com.flyp.app')
+          PY
+
       - name: Patch app name, versionCode, and permissions
         run: |
           BUILD_NUM=$(date +%s | tail -c 8)

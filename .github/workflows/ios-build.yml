@@ -310,6 +310,10 @@ jobs:
             <array>
               <string>Default</string>
             </array>
+            <!-- Push notifications. 'production' is right for TestFlight and
+                 the App Store; Xcode swaps in 'development' for debug runs. -->
+            <key>aps-environment</key>
+            <string>production</string>
           </dict>
           </plist>
           EOF
@@ -338,6 +342,39 @@ jobs:
       - name: Pod install
         working-directory: ios/App
         run: pod install --repo-update
+
+      # @capacitor/push-notifications needs two AppDelegate callbacks to hand
+      # the APNs device token (or the failure) to the Capacitor bridge. `cap
+      # add ios` regenerates AppDelegate.swift on every run, so they are
+      # written in here rather than committed. Without them register() never
+      # resolves and no iPhone ever gets a token.
+      - name: Wire push registration into AppDelegate
+        run: |
+          python3 - <<'PY'
+          p = 'ios/App/App/AppDelegate.swift'
+          s = open(p).read()
+          if 'didRegisterForRemoteNotificationsWithDeviceToken' not in s:
+              # Built line by line: a Swift line at column 4 would end this
+              # YAML block scalar early ("mapping values are not allowed here").
+              hooks = '\n'.join([
+                  '',
+                  '    // Push notifications: hand the token / the failure to the Capacitor bridge.',
+                  '    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {',
+                  '        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)',
+                  '    }',
+                  '',
+                  '    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {',
+                  '        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)',
+                  '    }',
+                  '',
+              ])
+              i = s.rfind('}')          # the class's closing brace
+              s = s[:i] + hooks + s[i:]
+              open(p, 'w').write(s)
+          ok = 'didRegisterForRemoteNotificationsWithDeviceToken' in open(p).read()
+          print('AppDelegate push hooks:', 'present' if ok else 'MISSING')
+          if not ok: raise SystemExit(1)
+          PY
 
       - name: Decode App Store Connect API key
         if: env.DO_UPLOAD == 'true'

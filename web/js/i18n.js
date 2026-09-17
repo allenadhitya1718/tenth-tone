@@ -148,6 +148,7 @@
     'لا توجد كاميرا': 'No camera found',
     'لم يعثر التطبيق على كاميرا متاحة على هذا الجهاز.': 'The app could not find an available camera on this device.',
     'الكاميرا قيد الاستخدام': 'Camera in use',
+    'الكاميرا تعمل لكن لا تظهر صورة': 'Camera is running but shows no picture',
     'تطبيق آخر يستخدم الكاميرا. أغلقه ثم أعد المحاولة.': 'Another app is using the camera. Close it and try again.',
     'الميكروفون محظور — سيتم التسجيل بدون صوت': 'Microphone blocked — recording without sound',
     'إعادة المحاولة': 'Try again',

@@ -248,6 +248,13 @@
       if (event === 'SIGNED_IN' && window.API && window.API.recordSession) {
         window.API.recordSession().catch(() => {});
       }
+      // Push notifications: ask once, register the phone's token against
+      // this account. Also on INITIAL_SESSION, so a phone that was already
+      // signed in when the app launched registers without signing in again.
+      // No-op on the web (see push.js).
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && sess && window.Push) {
+        window.Push.register();
+      }
       // Signing in is the clearest possible statement that the account was
       // not meant to go away. Not awaited: it changes how OTHER people see
       // this account, so nothing on the screen we are about to render is

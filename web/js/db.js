@@ -2483,6 +2483,20 @@
     return { device: browser + ' · ' + os, platform: /Android|iPhone|iPad|iPod/.test(ua) ? 'mobile' : 'web' };
   }
 
+  // ---------- Push tokens ----------
+  // One row per (account, device token). Upserted on every registration, so
+  // a token that already exists just refreshes its language and time; the
+  // primary key is (user_id, token). Removed on sign-out by push.js.
+  API.savePushToken = async (token, platform, lang) => {
+    const c = await client(); const me = await uid(); if (!me || !token) return;
+    const row = { user_id: me, token: String(token), platform: platform === 'ios' || platform === 'android' ? platform : 'web', lang: lang === 'en' ? 'en' : 'ar', updated_at: new Date().toISOString() };
+    const { error } = await c.from('push_tokens').upsert(row, { onConflict: 'user_id,token' });
+    if (error) throw error;
+  };
+  API.removePushToken = async (token) => {
+    const c = await client(); const me = await uid(); if (!me || !token) return;
+    await c.from('push_tokens').delete().eq('user_id', me).eq('token', String(token));
+  };
   API.recordSession = async () => {
     const c = await client(); const me = await uid();
     if (!me) return null;

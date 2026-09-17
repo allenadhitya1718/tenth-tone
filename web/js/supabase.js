@@ -201,6 +201,10 @@
     },
 
     async signOut() {
+      // Drop this phone's push token FIRST, while the session can still
+      // authorise the delete; after signOut nothing can. Otherwise a phone
+      // that signed out keeps receiving the old account's notifications.
+      try { if (window.Push) await window.Push.unregister(); } catch (e) {}
       const c = await ready; if (!c) return;
       await c.auth.signOut();
     },
