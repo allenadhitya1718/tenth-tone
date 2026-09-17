@@ -4434,3 +4434,9 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible,
   -webkit-overflow-scrolling: touch;
   padding: 14px 16px 28px;
 }
+
+/* The paused-clip badge. Its icon is an inline SVG with only a viewBox, and
+   WebKit gives such an SVG no size inside a flex box - so on iPhones the
+   badge drew as an empty grey circle with nothing in it. Chrome sized it and
+   hid the fault. */
+.play-badge svg { width: 30px; height: 30px; display: block; margin-left: 3px; }

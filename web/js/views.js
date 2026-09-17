@@ -1556,6 +1556,11 @@
         // promises they are gone. The inbox already does exactly this.
         const real = await window.API.fetchFeed({ tab, onFresh: (rows) => {
           if (!rows || !rows.length) return;
+          // The refresh replaced the whole list, so the clip pinned to the
+          // top by a deep link vanished the moment the fresh feed arrived -
+          // one of the two things that turned "open my video" into "open the
+          // feed". It stays at the top through the refresh as well.
+          if (focused) rows = [focused].concat(rows.filter(r => r.id !== focused.id));
           list = rows.map((r, i) => adapt(r, i));
           scroll.innerHTML = '';
           renderItems();
@@ -1591,6 +1596,11 @@
     let _restored = false;
     function restoreFeedPosition() {
       if (_restored) return;
+      // Opened on one specific clip (/v/<id>): it sits at the top and it is
+      // what was asked for. Jumping back to where the feed was last left
+      // scrolled straight past it, so tapping your own video on your profile
+      // landed on whatever you had been watching before - "the home page".
+      if (params && params.videoId) return;
       let want = null;
       try { want = sessionStorage.getItem('tt-feed-at:' + tab); } catch (e) {}
       if (!want) return;
@@ -1719,6 +1729,17 @@
         }
         video.addEventListener('playing', syncBadge);
         video.addEventListener('pause', syncBadge);
+
+        // While this clip plays, the one after it is pulled in full, so the
+        // swipe to it starts at once instead of waiting for its first seconds
+        // to download - the "slow, laggy" feel between clips. One clip ahead,
+        // never the page, and only when data saver is off.
+        video.addEventListener('playing', () => {
+          if (PLAYBACK.dataSaver) return;
+          const nextItem = item.nextElementSibling;
+          const nextVideo = nextItem && nextItem.querySelector('video');
+          if (nextVideo && nextVideo.getAttribute('src') && nextVideo.preload !== 'auto') nextVideo.preload = 'auto';
+        });
 
         // ── Only clips near the viewport are allowed on the wire ──
         // Attaching the source starts the download; removing it cancels one
@@ -1895,8 +1916,10 @@
               }
               watchStartTs = Date.now();
               // Where to come back to. Written on every clip that becomes
-              // visible, so it is always the one being watched.
-              try { if (v.id) sessionStorage.setItem('tt-feed-at:' + tab, String(v.id)); } catch (err) {}
+              // visible, so it is always the one being watched. Not from a
+              // deep link: viewing one clip must not overwrite where the feed
+              // proper was left.
+              try { if (v.id && !(params && params.videoId)) sessionStorage.setItem('tt-feed-at:' + tab, String(v.id)); } catch (err) {}
             } else {
               video.pause();
               flushEngagement();
@@ -2657,7 +2680,9 @@ function autoPlay(video) {
     // played back while recording so the user can perform to it, and is
     // carried through to publish so the new video joins that sound.
     const incomingSoundId = (params && params.q && params.q.sound) || null;
-    const soundAudio = Object.assign(document.createElement('audio'), { preload: 'auto', loop: false });
+    // The out-loud fallback player. It only ever gets a source when the
+    // mixed route is not available - see setSound() below.
+    const soundAudio = Object.assign(document.createElement('audio'), { preload: 'none', loop: false });
     soundAudio.style.display = 'none';
     const root = el('section', { class: 'camera' });
 
@@ -2674,6 +2699,13 @@ function autoPlay(video) {
     previewVideo.style.cssText = 'width:100%;height:100%;object-fit:cover;background:#000';
     previewWrap.appendChild(previewVideo);
     root.appendChild(previewWrap);
+    // If the preview stalls while the camera is still live - iOS pauses
+    // inline media when the audio route changes under it - start it again.
+    previewVideo.addEventListener('pause', () => {
+      if (!stream || previewVideo.srcObject !== stream) return;
+      if (!stream.getVideoTracks().some(t => t.readyState === 'live')) return;
+      setTimeout(() => { try { previewVideo.play().catch(() => {}); } catch (e) {} }, 60);
+    });
 
     let stream = null;
     let recorder = null;
@@ -2697,6 +2729,149 @@ function autoPlay(video) {
     // starts as a no-op and is replaced once they do.
     let onCameraReady = () => {};
     const dur = el('span', { class: 'camera-side-pill' }, '00:00');
+
+    // ── The chosen sound ──
+    // Before, the sound was a hidden <audio> element played out loud when
+    // recording started, with the microphone left to pick it up. On iPhones
+    // that failed twice over: the microphone's echo canceller treats sound
+    // from the phone's own speaker as echo and scrubs it back out, so the
+    // music barely reached the clip - and starting a second media player
+    // beside a live camera is the kind of audio-session change iOS answers
+    // by interrupting the capture, which is the black preview testers saw
+    // the moment they recorded with a reel's sound.
+    //
+    // Now the file is fetched once and decoded into memory. At record time
+    // Web Audio plays it into the speaker AND into a recording bus mixed
+    // with the microphone: no second media element exists, and the clip
+    // carries the clean track instead of a room recording of it.
+    //
+    // Fetching needs the storage bucket to allow cross-origin reads. Where
+    // it does not, the old route still runs - the <audio> element plays out
+    // loud and the microphone picks it up - with echo cancellation switched
+    // off so the phone does not remove the music again.
+    let selectedSound = null;
+    let soundBuffer = null;    // decoded sound, when the mixed route is possible
+    let soundLoud = false;     // true when falling back to the out-loud route
+    let audioCtx = null;
+    let mixNodes = null;       // { src, mic, dest } while recording with a sound
+    let loudSrc = null;        // speaker-only playback when the mix was refused
+
+    function getAudioCtx() {
+      if (audioCtx) return audioCtx;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try { audioCtx = new AC(); } catch (e) { audioCtx = null; }
+      return audioCtx;
+    }
+
+    // Without a size WebKit opens the camera at 640x480 - every clip filmed
+    // in the app on an iPhone came out at that, cropped hard to fill a 9:19
+    // screen, and read as "low resolution". 1080p is asked for as an ideal:
+    // a camera that cannot do it gives the nearest it can rather than
+    // failing. Landscape numbers on purpose - that is how a sensor lists its
+    // modes; frames still arrive the way up the phone is held.
+    function videoConstraints() {
+      return { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } };
+    }
+    function micConstraints() {
+      return soundLoud
+        ? { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        : true;
+    }
+
+    async function setSound(snd) {
+      selectedSound = snd || null;
+      window._ttSelectedSound = snd || null;
+      soundBuffer = null;
+      soundLoud = false;
+      try { soundAudio.pause(); soundAudio.removeAttribute('src'); soundAudio.load(); } catch (e) {}
+      if (!snd || !snd.audio_url) return;
+      const url = snd.audio_url;
+      try {
+        const ctx = getAudioCtx();
+        if (!ctx) throw new Error('no web audio');
+        const res = await fetch(url, { mode: 'cors' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const bytes = await res.arrayBuffer();
+        // Older Safari has the callback form only.
+        const buf = await new Promise((resolve, reject) => {
+          const p = ctx.decodeAudioData(bytes, resolve, reject);
+          if (p && p.then) p.then(resolve, reject);
+        });
+        if (selectedSound !== snd) return;   // another sound was chosen meanwhile
+        soundBuffer = buf;
+      } catch (e) {
+        if (selectedSound !== snd) return;
+        console.warn('sound: cannot be mixed in, playing it out loud instead:', e && e.message);
+        soundLoud = true;
+        soundAudio.preload = 'auto';
+        soundAudio.src = url;
+        reopenMicRaw();
+      }
+    }
+
+    // The microphone was opened with echo cancellation on. For the out-loud
+    // route it is re-opened without it, or the music is cancelled as echo.
+    async function reopenMicRaw() {
+      if (!stream || (recorder && recorder.state !== 'inactive')) return;
+      const current = stream;
+      try {
+        const raw = await navigator.mediaDevices.getUserMedia({ audio: micConstraints() });
+        if (stream !== current) { raw.getTracks().forEach(t => t.stop()); return; }
+        current.getAudioTracks().forEach(t => { try { t.stop(); } catch (e) {} current.removeTrack(t); });
+        raw.getAudioTracks().forEach(t => current.addTrack(t));
+      } catch (e) { /* keep the microphone we have */ }
+    }
+
+    // What the recorder is given: with a decoded sound, the camera picture
+    // plus one audio bus carrying microphone and sound together; otherwise
+    // the camera stream as it is.
+    function buildRecordingStream() {
+      teardownMix();
+      const ctx = soundBuffer ? getAudioCtx() : null;
+      if (!ctx) return stream;
+      try {
+        const dest = ctx.createMediaStreamDestination();
+        const mic = stream.getAudioTracks().length ? ctx.createMediaStreamSource(stream) : null;
+        if (mic) mic.connect(dest);
+        const src = ctx.createBufferSource();
+        src.buffer = soundBuffer;
+        src.connect(dest);              // into the clip
+        src.connect(ctx.destination);   // and out of the speaker, for the performer
+        mixNodes = { src, mic, dest };
+        return new MediaStream(stream.getVideoTracks().concat(dest.stream.getAudioTracks()));
+      } catch (e) {
+        console.warn('sound mix failed, recording the microphone alone:', e);
+        teardownMix();
+        return stream;
+      }
+    }
+
+    function startSoundPlayback() {
+      try { if (audioCtx && audioCtx.state !== 'running') audioCtx.resume(); } catch (e) {}
+      if (mixNodes) {
+        try { mixNodes.src.start(0); } catch (e) {}
+      } else if (soundBuffer && audioCtx) {
+        // The mix was refused: still play it for the performer to follow.
+        try {
+          loudSrc = audioCtx.createBufferSource();
+          loudSrc.buffer = soundBuffer;
+          loudSrc.connect(audioCtx.destination);
+          loudSrc.start(0);
+        } catch (e) { loudSrc = null; }
+      } else if (soundLoud && soundAudio.src) {
+        try { soundAudio.currentTime = 0; soundAudio.play().catch(() => {}); } catch (e) {}
+      }
+    }
+
+    function teardownMix() {
+      if (loudSrc) { try { loudSrc.stop(); loudSrc.disconnect(); } catch (e) {} loudSrc = null; }
+      if (!mixNodes) return;
+      try { mixNodes.src.stop(); } catch (e) {}
+      try { mixNodes.src.disconnect(); } catch (e) {}
+      try { if (mixNodes.mic) mixNodes.mic.disconnect(); } catch (e) {}
+      mixNodes = null;
+    }
 
     // Reads the standing decision without triggering a prompt. Returns
     // 'granted' | 'denied' | 'prompt' | null when the engine cannot say.
@@ -2736,6 +2911,15 @@ function autoPlay(video) {
       try { if (window.I18N) window.I18N.apply(card); } catch (e) {}
     }
 
+    // showCamError() empties the preview box, so after "try again" the
+    // element the stream was handed to was no longer on screen - the camera
+    // ran, and the screen stayed black. Put it back before using it.
+    function showPreview(s) {
+      if (!previewVideo.isConnected) { previewWrap.innerHTML = ''; previewWrap.appendChild(previewVideo); }
+      previewVideo.srcObject = s;
+      try { previewVideo.play().catch(() => {}); } catch (e) {}
+    }
+
     async function startCamera() {
       if (stream) stream.getTracks().forEach(t => t.stop());
 
@@ -2753,9 +2937,12 @@ function autoPlay(video) {
       }
 
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: true });
+        const rawMic = soundLoud;
+        stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints(), audio: micConstraints() });
         root.classList.remove('cam-blocked');
-        previewVideo.srcObject = stream;
+        showPreview(stream);
+        // The out-loud route was chosen while this request was in flight.
+        if (soundLoud && !rawMic) reopenMicRaw();
         try { onCameraReady(); } catch (e) {}
         return;
       } catch (e) {
@@ -2764,9 +2951,9 @@ function autoPlay(video) {
         // with video alone to find out which of the two actually said no.
         if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
           try {
-            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode }, audio: false });
+            stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints(), audio: false });
             root.classList.remove('cam-blocked');
-            previewVideo.srcObject = stream;
+            showPreview(stream);
             try { onCameraReady(); } catch (e) {}
             // The camera works; it was the microphone. Recording silently
             // would be worse than saying so.
@@ -2824,6 +3011,8 @@ function autoPlay(video) {
       } catch (e) {}
       try { if (recorder && recorder.state !== 'inactive') recorder.stop(); } catch (e) {}
       try { soundAudio.pause(); } catch (e) {}
+      teardownMix();
+      try { if (audioCtx) { audioCtx.close(); audioCtx = null; } } catch (e) {}
       if (stream) stream.getTracks().forEach(t => t.stop());
     }
     window.addEventListener('hashchange', stopAll, { once: true });
@@ -2856,18 +3045,31 @@ function autoPlay(video) {
       // the browser defaults to and re-encoding afterwards. A clip captured
       // here never goes near the compressor, so it costs no quality and cannot
       // hit the timing problems re-encoding has. Kept in step with
-      // compress.js's TARGET_BITRATE — this is the same 1.4 Mbps at 720p, and
-      // the voice recorder already pins audioBitsPerSecond the same way.
-      const recOpts = { videoBitsPerSecond: 1400000, audioBitsPerSecond: 128000 };
+      // compress.js's TARGET_BITRATE - 2.4 Mbps now that the capture is asked
+      // for at 1080p - and the voice recorder already pins audioBitsPerSecond
+      // the same way.
+      const recOpts = { videoBitsPerSecond: 2400000, audioBitsPerSecond: 128000 };
       if (mimeType) recOpts.mimeType = mimeType;
-      try { recorder = new MediaRecorder(stream, recOpts); }
-      catch (e) {
-        // Some runtimes reject the options object wholesale rather than
-        // ignoring a field they do not know. Recording at the default is far
-        // better than not recording at all.
-        try { recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined); }
-        catch (e2) { toast('المتصفح لا يدعم التسجيل'); return; }
+      // With a decoded sound the recorder is handed the camera picture plus a
+      // mixed audio bus; otherwise the camera stream as it is. Some runtimes
+      // reject the options object wholesale rather than ignoring a field they
+      // do not know, and one might refuse the mixed stream - so each is tried
+      // with and without options, the plain stream last. Recording at the
+      // default is far better than not recording at all.
+      const mixed = buildRecordingStream();
+      const attempts = [];
+      [mixed, stream].forEach(s => {
+        if (attempts.some(a => a.s === s)) return;
+        attempts.push({ s, o: recOpts });
+        attempts.push({ s, o: mimeType ? { mimeType } : undefined });
+      });
+      recorder = null;
+      for (const a of attempts) {
+        try { recorder = new MediaRecorder(a.s, a.o); } catch (e) { continue; }
+        if (a.s !== mixed) teardownMix();
+        break;
       }
+      if (!recorder) { teardownMix(); toast('المتصفح لا يدعم التسجيل'); return; }
       recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
       recorder.onstop = () => {
         const ext = (recorder.mimeType || '').includes('mp4') ? 'mp4' : 'webm';
@@ -2881,10 +3083,7 @@ function autoPlay(video) {
         go('/edit-video');
       };
       recorder.start();
-      // Play the chosen sound out loud so the performer can follow it. The
-      // mic picks it up, which is how the audio ends up in the clip - the app
-      // does not mix tracks together.
-      if (soundAudio.src) { try { soundAudio.currentTime = 0; soundAudio.play().catch(() => {}); } catch (e) {} }
+      startSoundPlayback();
       recBtn.classList.add('recording');
       secs = 0;
       timer = setInterval(() => {
@@ -2896,6 +3095,7 @@ function autoPlay(video) {
     function stopRec() {
       if (recorder && recorder.state !== 'inactive') recorder.stop();
       try { soundAudio.pause(); } catch (e) {}
+      teardownMix();
       recBtn.classList.remove('recording');
       if (timer) { clearInterval(timer); timer = null; }
     }
@@ -2908,7 +3108,6 @@ function autoPlay(video) {
       ]),
       el('span', { class: 'cam-spacer' }),
     ]));
-    let selectedSound = null;
     const soundPill = root.querySelector('.camera-sound-pill');
 
     // Preload a sound passed in from the sound page.
@@ -2917,11 +3116,9 @@ function autoPlay(video) {
       try {
         const snd = await window.API.fetchSound(incomingSoundId);
         if (!snd) return;
-        selectedSound = snd;
-        window._ttSelectedSound = snd;
         soundPill.querySelector('.sound-name').textContent = snd.title || 'صوت أصلي';
         soundPill.style.display = 'inline-flex';
-        if (snd.audio_url) soundAudio.src = snd.audio_url;
+        setSound(snd);
       } catch (e) { console.warn('sound preload:', e); }
     })();
 
@@ -2941,9 +3138,7 @@ function autoPlay(video) {
         list.innerHTML = '';
         sounds.forEach(s => {
           list.appendChild(el('div', { class: 'user-row', style: { cursor: 'pointer', padding: '10px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)' }, onclick: () => {
-            selectedSound = s;
-            window._ttSelectedSound = s;
-            if (s.audio_url) soundAudio.src = s.audio_url;
+            setSound(s);
             soundPill.querySelector('.sound-name').textContent = s.title;
             soundPill.style.display = 'inline-flex';
             toast('تم اختيار: ' + s.title);

@@ -11,8 +11,11 @@
  */
 window.Compress = (function () {
 
-  const TARGET_WIDTH       = 720;                  // max long-edge px
-  const TARGET_HEIGHT      = 1280;
+  // 1080x1920, not 720x1280. Phone screens are 1170+ px wide, so 720 was
+  // upscaled on every device and read as soft - testers called it "low
+  // resolution". About twice the bytes per clip; storage is far under its cap.
+  const TARGET_WIDTH       = 1080;                 // max long-edge px
+  const TARGET_HEIGHT      = 1920;
 
   // 1.4 Mbps at 720x1280. The previous 2.5 Mbps was set for 1080p and never
   // actually ran (see SKIP_FLOOR_BYTES below), so in practice clips uploaded
@@ -28,7 +31,9 @@ window.Compress = (function () {
   // encoding; a single-pass browser encode at the bottom of that range looks
   // visibly worse. 1.1 sits inside their range with room for one file to
   // serve every connection, since we store one rendition, not a ladder.
-  const TARGET_BITRATE     = 1_100_000;           // 1.1 Mbps video
+  // Raised with the resolution: 1.1 Mbps was tuned for 720p and would fall
+  // apart across a 1080p frame.
+  const TARGET_BITRATE     = 2_400_000;           // 2.4 Mbps video
   const AUDIO_BITRATE      = 128_000;             // 128 kbps audio
 
   // Used only when a file's duration cannot be read. Nothing this pipeline
@@ -170,6 +175,47 @@ window.Compress = (function () {
     try {
       const s = video.captureStream ? video.captureStream() : null;
       const tracks = s ? s.getAudioTracks() : [];
+      tracks.forEach(t => canvasStream.addTrack(t));
+      if (tracks.length) return tracks.length;
+    } catch (_) { /* fall through to the Web Audio route */ }
+
+    // WebKit has no captureStream() on media elements - only on <canvas> - so
+    // on every iPhone the block above attaches nothing and, until this
+    // existed, every upload from an iPhone went out silent. Web Audio can tap
+    // the same element and hand back a real MediaStreamTrack.
+    //
+    // The element must not be muted: on WebKit a muted element feeds silence
+    // into the graph. Nothing reaches the speakers regardless, because the
+    // graph is never connected to the context's destination - rerouting is
+    // total. And createMediaElementSource may be called once per element,
+    // ever, so the nodes are kept on the element for any later call.
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return 0;
+      if (!video._ttAudioTap) {
+        const ctx = new AC();
+        const src = ctx.createMediaElementSource(video);
+        const dest = ctx.createMediaStreamDestination();
+        src.connect(dest);
+        video._ttAudioTap = { ctx, dest };
+      }
+      const tap = video._ttAudioTap;
+      try { tap.ctx.resume(); } catch (_) {}
+      if (!video._ttUnmuteGuard) {
+        video._ttUnmuteGuard = true;
+        // An engine that wanted a gesture before hearing this element answers
+        // the unmute below by pausing it. The re-encode must never stall on
+        // that: carry on muted, and accept a silent clip over a hung upload.
+        // (The app's WebView asks for no gesture, so this is a safety net.)
+        video.addEventListener('pause', () => {
+          if (video._ttDone || video.ended) return;
+          video.muted = true;
+          video.play().catch(() => {});
+        });
+      }
+      video.muted = false;
+      video.volume = 1;
+      const tracks = tap.dest.stream.getAudioTracks();
       tracks.forEach(t => canvasStream.addTrack(t));
       return tracks.length;
     } catch (_) {
@@ -581,6 +627,7 @@ window.Compress = (function () {
           if (stopped) return;
           stopped = true;
           if (rafId) cancelAnimationFrame(rafId);
+          video._ttDone = true;   // an intended pause - see attachAudio()
           try { video.pause(); } catch (_) {}
           try { if (recorder && recorder.state !== 'inactive') recorder.stop(); } catch (_) {}
           canvasStream.getTracks().forEach(t => t.stop());
