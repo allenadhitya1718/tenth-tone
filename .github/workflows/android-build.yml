@@ -28,6 +28,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Needed to create the tag's Release and attach the APK/AAB to it.
+    # Everything else stays read-only.
+    permissions:
+      contents: write
     env:
       # Gradle 8.2.1 (see gradle-wrapper.properties) supports Java 19 at most.
       # On Java 21 it dies with "Unsupported class file major version 65".
@@ -162,36 +166,80 @@ jobs:
           find android -name "*.aab" -exec ls -lh {} \; || true
 
       # ── Artifacts ──
+      #
+      # Every upload below is `continue-on-error` on purpose. On 2026-09-17 a
+      # build that had already produced a signed, Play-Store-ready AAB was
+      # recorded as a FAILURE because of this alone:
+      #
+      #   Failed to CreateArtifact: Artifact storage quota has been hit.
+      #
+      # Nothing was wrong with the build; the account's artifact storage was
+      # simply full. A finished build must not be thrown away because there is
+      # nowhere to put a copy of it. The Release step below is the delivery
+      # that matters — these are a convenience, and they expire.
       - name: Upload debug APK (every build)
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: flyp-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
-          retention-days: 30
+          retention-days: 14
 
       - name: Upload signed release AAB (Play Store)
+        continue-on-error: true
         if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.have_signing == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: flyp-release-aab-${{ env.VERSION_CODE }}
           path: android/app/build/outputs/bundle/release/*.aab
-          retention-days: 90
+          retention-days: 30
 
       - name: Upload signed release APK (side-load testing)
+        continue-on-error: true
         if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.have_signing == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: flyp-release-apk-${{ env.VERSION_CODE }}
           path: android/app/build/outputs/apk/release/*.apk
-          retention-days: 90
+          retention-days: 30
 
       - name: Upload unsigned release APK (fallback, NOT for Play Store)
+        continue-on-error: true
         if: startsWith(github.ref, 'refs/tags/v') && steps.signing.outputs.have_signing == 'false'
         uses: actions/upload-artifact@v4
         with:
           name: flyp-release-apk-unsigned
           path: android/app/build/outputs/apk/release/*.apk
           retention-days: 30
+
+      # ── Delivery ──
+      # Release assets are not charged against the Actions artifact quota and
+      # they do not expire, so this is where a tagged build actually lands.
+      # One permanent download link per version, instead of a copy that
+      # vanishes in a month and stops being written at all once storage fills.
+      - name: Attach the build to its GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="$GITHUB_REF_NAME"
+          # Release outputs only. The debug APK lives under .../apk/debug/ and
+          # is deliberately excluded: handing a tester two APKs, one of which
+          # cannot be installed over the other, only causes confusion.
+          FILES=$(find android/app/build/outputs \( -name '*.apk' -o -name '*.aab' \) -type f ! -path '*debug*' | sort)
+          if [ -z "$FILES" ]; then
+            echo "::error::Tag build produced no release APK or AAB to attach"
+            exit 1
+          fi
+          echo "Attaching to $TAG:"
+          echo "$FILES" | sed 's/^/  /'
+          gh release view "$TAG" >/dev/null 2>&1 \
+            || gh release create "$TAG" --title "FLYP $TAG" \
+                 --notes "Automated build of $TAG (version code $VERSION_CODE). Side-load the .apk; the .aab is for Play Console."
+          # --clobber so re-running a build replaces the assets rather than
+          # failing on "asset already exists".
+          gh release upload "$TAG" $FILES --clobber
+          echo "RELEASE_URL=$(gh release view "$TAG" --json url -q .url)" >> "$GITHUB_ENV"
 
       - name: Build summary
         if: always()
@@ -201,8 +249,11 @@ jobs:
           echo "- Trigger: \`${{ github.ref }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Version code: \`${{ env.VERSION_CODE }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Signing secrets present: \`${{ steps.signing.outputs.have_signing }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$RELEASE_URL" ]; then
+            echo "- 📦 Download: $RELEASE_URL" >> $GITHUB_STEP_SUMMARY
+          fi
           if [ "${{ steps.signing.outputs.have_signing }}" == "true" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "- ✅ Play-Store-ready AAB produced — download from artifacts and upload to Play Console" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Play-Store-ready AAB produced — attached to the Release above, upload the .aab to Play Console" >> $GITHUB_STEP_SUMMARY
           elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
             echo "- ⚠️  Tag build produced UNSIGNED APK — add keystore secrets for a Play-Store-ready build" >> $GITHUB_STEP_SUMMARY
           else
