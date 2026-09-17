@@ -1196,6 +1196,12 @@
   V.home = (params) => {
     bottomNav('home');
     const tab = (params && params.q && params.q.tab) || 'foryou';
+    // The comments screen draws the feed behind its sheet. That copy is
+    // scenery: it gets each clip's still instead of a <video>, so opening
+    // comments no longer downloads the clip a second time and starts it
+    // playing under the sheet. On an iPhone that re-download was the whole
+    // clip, every time.
+    const backdrop = !!(params && params.backdrop);
     const root = el('section', { class: 'feed' });
 
     // Top: tabs
@@ -1514,6 +1520,8 @@
         saves:    real ? num(v.saves_count)    : num(demoItem.saves),
         liked: !!(v && v.liked),
         saved: !!(v && v.saved),
+        // true/false when the feed call answered it, null when it did not.
+        following: (v && typeof v.following === 'boolean') ? v.following : null,
         user: {
           id: (v && v.user && v.user.id) || ('u-' + idx),
           handle: (v && v.user && v.user.handle ? '@' + v.user.handle : (demoItem.user && demoItem.user.handle) || '@creator'),
@@ -1554,7 +1562,9 @@
         // is thrown away. Measured: mute someone, reload 10s later, they are
         // still there - three of their videos - while the Muted screen
         // promises they are gone. The inbox already does exactly this.
-        const real = await window.API.fetchFeed({ tab, onFresh: (rows) => {
+        // Under the comments sheet, whatever is cached will do - scenery is
+        // not worth a feed call of its own.
+        const real = await window.API.fetchFeed({ tab, cachedOk: backdrop, onFresh: (rows) => {
           if (!rows || !rows.length) return;
           // The refresh replaced the whole list, so the clip pinned to the
           // top by a deep link vanished the moment the fresh feed arrived -
@@ -1585,8 +1595,16 @@
     })();
 
     function renderItems() {
-      list.forEach((v, i) => renderItem(v, i));
-      restoreFeedPosition();
+      let rows = list;
+      if (backdrop) {
+        // The sheet covers most of the screen; one still is all it ever
+        // reveals, and it should be the clip whose comments these are.
+        const want = params && params.backdropId;
+        const hit = want ? list.find(v => String(v.id) === String(want)) : null;
+        rows = hit ? [hit] : list.slice(0, 1);
+      }
+      rows.forEach((v, i) => renderItem(v, i));
+      if (!backdrop) restoreFeedPosition();
     }
 
     // Jump back to the clip that was on screen when the feed was last left.
@@ -1642,7 +1660,7 @@
       const demoBgList = (DEMO && DB.VIDEO_BG) || [];
       const fallbackUrl = demoBgList.length ? demoBgList[idx % demoBgList.length] : '';
       const videoSrc = (v.video_url && isVideoUrl(v.video_url)) ? v.video_url : ((v.bg && isVideoUrl(v.bg)) ? v.bg : fallbackUrl);
-      const isVideo = !!videoSrc;
+      const isVideo = !!videoSrc && !backdrop;
       // Hoisted out of the !isVideo branch: a video row has a thumbnail too,
       // and it was going unused, so a clip that had not loaded showed the
       // WebView's grey placeholder instead of its own still.
@@ -1651,7 +1669,14 @@
       // The id is what lets the feed resume on this clip after a rebuild.
       const item = el('div', { class: 'feed-item', 'data-feed-id': String(v.id || ''), style: { background: '#000' } });
       if (!isVideo) {
-        if (still) {
+        if (still && backdrop) {
+          // Scenery under the comments sheet: the one still, and nothing
+          // else on the wire.
+          item.appendChild(el('img', {
+            src: safeUrl(still) || still, alt: '', decoding: 'async',
+            style: { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 },
+          }));
+        } else if (still) {
           item.appendChild(el('div', {
             style: {
               position: 'absolute', inset: 0, zIndex: 1,
@@ -1730,15 +1755,20 @@
         video.addEventListener('playing', syncBadge);
         video.addEventListener('pause', syncBadge);
 
-        // While this clip plays, the one after it is pulled in full, so the
-        // swipe to it starts at once instead of waiting for its first seconds
-        // to download - the "slow, laggy" feel between clips. One clip ahead,
-        // never the page, and only when data saver is off.
-        video.addEventListener('playing', () => {
-          if (PLAYBACK.dataSaver) return;
+        // Once this clip has been watched for a moment, the one after it is
+        // pulled ahead, so the swipe to it starts at once instead of waiting
+        // for its first seconds to download - the "slow, laggy" feel between
+        // clips. One clip ahead, never the page, only when data saver is off,
+        // and only after 1.5 s of actual watching: someone flicking past
+        // clips must not pay for a download of every clip they skipped.
+        let nextPrimed = false;
+        video.addEventListener('timeupdate', () => {
+          if (nextPrimed || PLAYBACK.dataSaver || video.paused || video.currentTime < 1.5) return;
           const nextItem = item.nextElementSibling;
           const nextVideo = nextItem && nextItem.querySelector('video');
-          if (nextVideo && nextVideo.getAttribute('src') && nextVideo.preload !== 'auto') nextVideo.preload = 'auto';
+          if (!nextVideo || !nextVideo.getAttribute('src')) return;
+          nextPrimed = true;
+          if (nextVideo.preload !== 'auto') nextVideo.preload = 'auto';
         });
 
         // ── Only clips near the viewport are allowed on the wire ──
@@ -1976,12 +2006,21 @@
       // and the +/check badge on the rail avatar, so the two never disagree.
       if (!window._followedUsers) window._followedUsers = {};
       let followed = !!window._followedUsers[v.user.id];
+      // The feed call itself now says whether I follow this creator (0084),
+      // so the button is right from the first paint and no further trip is
+      // needed. A tap made since then wins: it is the newer fact.
+      if (typeof v.following === 'boolean' && !(v.user.id in window._followedUsers)) {
+        followed = v.following;
+        window._followedUsers[v.user.id] = followed;
+      }
 
       // The follow state used to live only in memory, so after a reload every
       // creator showed "Follow" even if you already followed them - and there
-      // was no way to unfollow from the feed. Ask the server once per card.
+      // was no way to unfollow from the feed. Ask the server once per card -
+      // only when the feed call did not already answer.
       (async () => {
         if (!window.API || !isRealId(v.user.id)) return;
+        if (typeof v.following === 'boolean') return;
         try {
           const real = await window.API.isFollowing(v.user.id);
           if (real !== followed) {
@@ -2766,12 +2805,15 @@ function autoPlay(video) {
 
     // Without a size WebKit opens the camera at 640x480 - every clip filmed
     // in the app on an iPhone came out at that, cropped hard to fill a 9:19
-    // screen, and read as "low resolution". 1080p is asked for as an ideal:
-    // a camera that cannot do it gives the nearest it can rather than
-    // failing. Landscape numbers on purpose - that is how a sensor lists its
-    // modes; frames still arrive the way up the phone is held.
+    // screen, and read as "low resolution". 720p is asked for as an ideal: a
+    // camera that cannot do it gives the nearest it can rather than failing.
+    // Not 1080p: the phone's recorder picks its own bitrate from the frame
+    // size, and 1080p clips came out at about twice the data of 720p ones
+    // for a difference nobody can see on a phone. Landscape numbers on
+    // purpose - that is how a sensor lists its modes; frames still arrive
+    // the way up the phone is held.
     function videoConstraints() {
-      return { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } };
+      return { facingMode, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } };
     }
     function micConstraints() {
       return soundLoud
@@ -3044,11 +3086,11 @@ function autoPlay(video) {
       // Record at the size we actually want, rather than recording at whatever
       // the browser defaults to and re-encoding afterwards. A clip captured
       // here never goes near the compressor, so it costs no quality and cannot
-      // hit the timing problems re-encoding has. Kept in step with
-      // compress.js's TARGET_BITRATE - 2.4 Mbps now that the capture is asked
-      // for at 1080p - and the voice recorder already pins audioBitsPerSecond
-      // the same way.
-      const recOpts = { videoBitsPerSecond: 2400000, audioBitsPerSecond: 128000 };
+      // hit the timing problems re-encoding has. 1.4 Mbps at 720p, a little
+      // above compress.js's target because a camera clip is never re-encoded
+      // afterwards; the voice recorder already pins audioBitsPerSecond the
+      // same way. (iOS decides its own rate and ignores this.)
+      const recOpts = { videoBitsPerSecond: 1400000, audioBitsPerSecond: 128000 };
       if (mimeType) recOpts.mimeType = mimeType;
       // With a decoded sound the recorder is handed the camera picture plus a
       // mixed audio bus; otherwise the camera stream as it is. Some runtimes
@@ -7909,8 +7951,8 @@ function autoPlay(video) {
     hideNav();
     const id = params.id;
 
-    // Render the underlying home in background
-    const home = V.home({});
+    // Render the underlying home in background - one still, see V.home.
+    const home = V.home({ backdrop: true, backdropId: id });
     home.style.position = 'absolute';
     home.style.inset = '0';
     const root = el('section', { style: { position: 'relative', height: '100%', overflow: 'hidden' } });
@@ -12910,9 +12952,18 @@ function autoPlay(video) {
     // truth - a ringing row in the database is.
     let armed = false;
     let poll = null;
+    let lastCheck = 0;
 
     async function checkPending() {
       if (overlay) return;                       // already ringing
+      // Boot, four retry timers, and every auth event all call this, and at
+      // start-up the session restore fires several auth events in a row -
+      // measured as five identical "calls" queries in the first seconds,
+      // competing with the feed for the same connection. One look per few
+      // seconds is plenty: a ring that arrives in that window is still
+      // caught by the realtime channel, and by the next look.
+      if (Date.now() - lastCheck < 4000) return;
+      lastCheck = Date.now();
       try {
         const pending = await window.API.fetchIncomingCall();
         if (pending) show(pending);

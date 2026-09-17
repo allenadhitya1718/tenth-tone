@@ -82,11 +82,14 @@
   // Bump this again on any change that alters the SHAPE or the meaning of
   // cached values. Stale-but-valid data is what PERSIST_MAX_AGE is for;
   // this is for data that is no longer true.
-  const PERSIST_KEY = 'tt-cache-v2';
+  // v3: feed rows now carry liked / saved / following / saves_count from
+  // the feed call itself (0084). A v2 feed lacks them, and the app would
+  // spend the first launch fetching each one separately again.
+  const PERSIST_KEY = 'tt-cache-v3';
 
   // Cleared rather than left behind: localStorage is a small shared quota, and
   // an abandoned 400KB blob nothing will ever read again is pure waste.
-  ['tt-cache-v1'].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+  ['tt-cache-v1', 'tt-cache-v2'].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
   const PERSIST_PREFIXES = ['chats', 'feed:', 'profile:', 'uservideos:'];
   const PERSIST_MAX_CHARS = 400000;   // ~400KB; storage is small and shared
   const PERSIST_MAX_AGE = 24 * 60 * 60 * 1000;
@@ -661,6 +664,14 @@
               avatar_url: r.user_avatar_url,
               verified: r.user_verified,
             },
+            // Since 0084 the function answers these itself, so the feed is
+            // ONE round trip instead of three plus one per creator. Left
+            // undefined when an older function is still installed; the
+            // lookups below then fill them in as before.
+            saves_count: (typeof r.saves_count === 'number') ? r.saves_count : undefined,
+            liked:       (typeof r.liked === 'boolean') ? r.liked : undefined,
+            saved:       (typeof r.saved === 'boolean') ? r.saved : undefined,
+            following:   (typeof r.following === 'boolean') ? r.following : undefined,
           }));
         }
       } catch (err) {
@@ -696,29 +707,61 @@
     // do nothing. The column exists on videos and is kept correct by the
     // tr_saves_count trigger, so read it directly rather than waiting on a
     // migration to widen the RPC.
+    //
+    // Everything below only runs for rows the function did not answer - the
+    // plain query fallback, or a database still on the pre-0084 function -
+    // and then all of it runs AT ONCE rather than one lookup after another.
+    // Measured: each of these waits 0.2-1.0 s on the API from a phone, and
+    // nothing can be drawn until they are all back.
+    const me = await uid();
+    const lookups = [];
     if (data && data.length && data.some(v => v.saves_count == null)) {
-      try {
-        const missing = data.filter(v => v.saves_count == null).map(v => v.id);
-        const { data: counts } = await c.from('videos').select('id, saves_count').in('id', missing);
-        const bySaves = new Map((counts || []).map(r => [r.id, r.saves_count]));
-        data.forEach(v => { if (v.saves_count == null) v.saves_count = bySaves.get(v.id) || 0; });
-      } catch (e) {
-        data.forEach(v => { if (v.saves_count == null) v.saves_count = 0; });
-      }
+      lookups.push((async () => {
+        try {
+          const missing = data.filter(v => v.saves_count == null).map(v => v.id);
+          const { data: counts } = await c.from('videos').select('id, saves_count').in('id', missing);
+          const bySaves = new Map((counts || []).map(r => [r.id, r.saves_count]));
+          data.forEach(v => { if (v.saves_count == null) v.saves_count = bySaves.get(v.id) || 0; });
+        } catch (e) {
+          data.forEach(v => { if (v.saves_count == null) v.saves_count = 0; });
+        }
+      })());
     }
 
     // Mark which videos current user already liked / saved
-    const me = await uid();
-    if (me && data && data.length) {
-      const ids = data.map(v => v.id);
-      const [{ data: likes }, { data: saves }] = await Promise.all([
-        c.from('likes').select('video_id').eq('user_id', me).in('video_id', ids),
-        c.from('saves').select('video_id').eq('user_id', me).in('video_id', ids),
-      ]);
-      const likeSet = new Set((likes || []).map(r => r.video_id));
-      const saveSet = new Set((saves || []).map(r => r.video_id));
-      data.forEach(v => { v.liked = likeSet.has(v.id); v.saved = saveSet.has(v.id); });
+    if (me && data && data.length && data.some(v => v.liked == null || v.saved == null)) {
+      lookups.push((async () => {
+        const ids = data.map(v => v.id);
+        const [{ data: likes }, { data: saves }] = await Promise.all([
+          c.from('likes').select('video_id').eq('user_id', me).in('video_id', ids),
+          c.from('saves').select('video_id').eq('user_id', me).in('video_id', ids),
+        ]);
+        const likeSet = new Set((likes || []).map(r => r.video_id));
+        const saveSet = new Set((saves || []).map(r => r.video_id));
+        data.forEach(v => {
+          if (v.liked == null) v.liked = likeSet.has(v.id);
+          if (v.saved == null) v.saved = saveSet.has(v.id);
+        });
+      })());
     }
+
+    // Which of these creators I follow - one query for the whole page. The
+    // feed used to ask once PER CARD after it had drawn (isFollowing), so a
+    // page of twenty clips cost up to twenty more trips before every Follow
+    // button was right.
+    if (me && data && data.length && data.some(v => v.following == null)) {
+      lookups.push((async () => {
+        try {
+          const creators = Array.from(new Set(data.filter(v => v.following == null && v.user && v.user.id).map(v => v.user.id)));
+          if (!creators.length) return;
+          const { data: rows } = await c.from('follows').select('followed_id').eq('follower_id', me).in('followed_id', creators);
+          const followed = new Set((rows || []).map(r => r.followed_id));
+          data.forEach(v => { if (v.following == null && v.user) v.following = followed.has(v.user.id); });
+        } catch (e) { /* the per-card lookup still exists as a last resort */ }
+      })());
+    }
+    if (lookups.length) await Promise.all(lookups);
+    if (!me && data) data.forEach(v => { if (v.liked == null) v.liked = false; if (v.saved == null) v.saved = false; });
     return data || [];
   };
 
@@ -730,9 +773,14 @@
   // Only page one is cached. Paging further is always live, or the cache
   // key would have to track scroll position to no benefit.
   API.fetchFeed = async (opts = {}) => {
-    const { tab = 'foryou', limit = 20, offset = 0, onFresh } = opts;
+    const { tab = 'foryou', limit = 20, offset = 0, onFresh, cachedOk = false } = opts;
     if (offset > 0) return _fetchFeedRaw({ tab, limit, offset });
-    return swr('feed:' + tab + ':' + limit, 30000,
+    // cachedOk: whatever is cached will do, however old. The comments
+    // screen draws the feed as scenery under its sheet, and that used to
+    // cost a full feed call whenever the cache was over 30 s old. It still
+    // fetches when nothing is cached at all - a cold deep link straight
+    // into comments.
+    return swr('feed:' + tab + ':' + limit, cachedOk ? Infinity : 30000,
       () => _fetchFeedRaw({ tab, limit, offset }), onFresh);
   };
 

@@ -11,11 +11,17 @@
  */
 window.Compress = (function () {
 
-  // 1080x1920, not 720x1280. Phone screens are 1170+ px wide, so 720 was
-  // upscaled on every device and read as soft - testers called it "low
-  // resolution". About twice the bytes per clip; storage is far under its cap.
-  const TARGET_WIDTH       = 1080;                 // max long-edge px
-  const TARGET_HEIGHT      = 1920;
+  // 720 on the short edge, 1280 on the long one, whichever way the clip is
+  // held. Briefly 1080x1920 after testers called uploads "low resolution",
+  // but the real cause of that was the in-app camera opening at 640x480 -
+  // and on an iPhone, where the phone's own recorder chooses the bitrate,
+  // 1080p clips carried about twice the data of 720p ones for a difference
+  // nobody can see on a phone screen. Instagram serves 720p to most phones.
+  const TARGET_SHORT_EDGE  = 720;
+  const TARGET_LONG_EDGE   = 1280;
+  // Kept for the messages and callers that think in portrait terms.
+  const TARGET_WIDTH       = TARGET_SHORT_EDGE;
+  const TARGET_HEIGHT      = TARGET_LONG_EDGE;
 
   // 1.4 Mbps at 720x1280. The previous 2.5 Mbps was set for 1080p and never
   // actually ran (see SKIP_FLOOR_BYTES below), so in practice clips uploaded
@@ -31,10 +37,18 @@ window.Compress = (function () {
   // encoding; a single-pass browser encode at the bottom of that range looks
   // visibly worse. 1.1 sits inside their range with room for one file to
   // serve every connection, since we store one rendition, not a ladder.
-  // Raised with the resolution: 1.1 Mbps was tuned for 720p and would fall
-  // apart across a 1080p frame.
-  const TARGET_BITRATE     = 2_400_000;           // 2.4 Mbps video
+  // 1.2 Mbps at 720x1280 with the High profile where the encoder has it
+  // (see pickAvcCodec): about 2.4 MB for a 15-second reel, against 4-7 MB
+  // before. Only the WebCodecs path honours this number at all.
+  const TARGET_BITRATE     = 1_200_000;           // 1.2 Mbps video
   const AUDIO_BITRATE      = 128_000;             // 128 kbps audio
+
+  // What MediaRecorder produces at 720p when left to itself - measured at
+  // 1.98-2.0 Mbps on the iPhone uploads in the library. On the runtimes
+  // where MediaRecorder is the only encoder (iOS), re-encoding a clip that
+  // is already this size and this rate cannot make it smaller; it only
+  // makes the person wait the clip's own length for an identical file.
+  const MR_NATIVE_BITRATE  = 2_000_000;
 
   // Used only when a file's duration cannot be read. Nothing this pipeline
   // produces for a clip worth compressing lands under 2 MB, so below that
@@ -223,8 +237,52 @@ window.Compress = (function () {
     }
   }
 
+  // Reads duration AND frame size in one metadata load.
+  function readMeta(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      v.onloadedmetadata = () => {
+        const d = v.duration;
+        const out = { duration: isFinite(d) ? d : null, w: v.videoWidth || 0, h: v.videoHeight || 0 };
+        URL.revokeObjectURL(url);
+        resolve(out);
+      };
+      v.onerror = () => { URL.revokeObjectURL(url); reject(new Error('تعذر قراءة الفيديو')); };
+      v.src = url;
+    });
+  }
+
+  // H.264 profile and level for the WebCodecs encoder, chosen by asking. The
+  // string used to be fixed at Baseline 3.1 ('avc1.42001f'): Baseline is the
+  // least efficient profile there is - High gets the same picture from
+  // noticeably fewer bits - and level 3.1 tops out at exactly 720x1280, so a
+  // larger frame made the encoder close itself, the whole WebCodecs path was
+  // abandoned, and the MediaRecorder fallback then produced a file at
+  // whatever rate it liked (measured: 9 Mbps). High, then Main, then
+  // Baseline; the level that fits the frame, then one bigger.
+  async function pickAvcCodec(w, h, bitrate) {
+    const big = w * h > 1280 * 720;
+    const levels = big ? ['2a', '28'] : ['1f', '28', '2a'];  // 4.2, 4.0 / 3.1, 4.0, 4.2
+    for (const lv of levels) {
+      for (const pf of ['64', '4d', '42']) {                   // High, Main, Baseline
+        const codec = 'avc1.' + pf + '00' + lv;
+        try {
+          const r = await VideoEncoder.isConfigSupported({ codec, width: w, height: h, bitrate, framerate: 30, avc: { format: 'avc' } });
+          if (r && r.supported) return codec;
+        } catch (_) { /* try the next one */ }
+      }
+    }
+    return 'avc1.42001f';
+  }
+
+  // Fits the frame inside 720 x 1280 whichever way round it is. This used to
+  // treat the two numbers as width and height, so a landscape 1920x1080 clip
+  // was squeezed to 720x405.
   function scaleDimensions(vw, vh) {
-    const ratio = Math.min(TARGET_WIDTH / vw, TARGET_HEIGHT / vh, 1);
+    const long = Math.max(vw, vh), short = Math.min(vw, vh);
+    const ratio = Math.min(TARGET_LONG_EDGE / long, TARGET_SHORT_EDGE / short, 1);
     return {
       w: Math.round(vw * ratio / 2) * 2,   // keep even (required by most codecs)
       h: Math.round(vh * ratio / 2) * 2,
@@ -398,8 +456,9 @@ window.Compress = (function () {
       });
       // Configured at the TARGET size while frames arrive at the source size:
       // the encoder rescales them itself. Measured 1080x1920 in, 720x1280 out.
+      const codec = await pickAvcCodec(w, h, TARGET_BITRATE);
       vEnc.configure({
-        codec: 'avc1.42001f', width: w, height: h,
+        codec, width: w, height: h,
         bitrate: TARGET_BITRATE, framerate: 30, avc: { format: 'avc' },
       });
 
@@ -536,6 +595,22 @@ window.Compress = (function () {
     if (!webCodecsSupported() && !window.MediaRecorder) {
       // Nothing here can re-encode; upload what we were given.
       return { file, originalSize: file.size, compressedSize: file.size, skipped: true, reason: 'no-encoder' };
+    }
+
+    // MediaRecorder is the only encoder here (every iPhone). It cannot be
+    // told a bitrate, so a clip that already fits the frame and is already
+    // at the rate it would produce - which is every clip the in-app camera
+    // records - would come back the same size after a wait as long as the
+    // clip itself. Upload it as it is.
+    if (!webCodecsSupported()) {
+      const meta = await readMeta(file).catch(() => null);
+      if (meta && meta.w && meta.h && meta.duration) {
+        const fits = Math.max(meta.w, meta.h) <= TARGET_LONG_EDGE && Math.min(meta.w, meta.h) <= TARGET_SHORT_EDGE;
+        const rate = file.size * 8 / meta.duration;
+        if (fits && rate <= (MR_NATIVE_BITRATE + AUDIO_BITRATE) * SKIP_MARGIN) {
+          return { file, originalSize: file.size, compressedSize: file.size, skipped: true, reason: 'encoder-cannot-shrink' };
+        }
+      }
     }
 
     try {
