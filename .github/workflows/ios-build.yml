@@ -416,12 +416,35 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false"             "ios/App/App/Info.plist" 2>/dev/null             || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false"             "ios/App/App/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :ITSAppUsesNonExemptEncryption" "ios/App/App/Info.plist"
 
-      - name: Auto-increment build number
+      # Two different numbers, and only one of them was ever set.
+      #
+      # CFBundleVersion is the build number — unique per upload, nobody reads it.
+      # CFBundleShortVersionString is the VERSION: what a tester sees, and what
+      # App Store Connect calls a "train". It was never written here, so it kept
+      # Capacitor's default of 1.0 and every build went up as version 1.0. Apple
+      # eventually closed that train and started refusing uploads outright:
+      #   90062  This bundle is invalid. The value for key CFBundleShortVersionString [1.0]
+      #   90186  Invalid Pre-Release Train. The train version '1.0' is closed
+      # Take the version from the tag — refs/tags/v1.4.9 gives 1.4.9 — so the
+      # tag, the app and TestFlight can never disagree again.
+      - name: Set the version and build number
         if: env.DO_UPLOAD == 'true'
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          # A manual run sits on a branch, not a tag, and a branch name is not a
+          # version. Fall back to the one the app itself reports.
+          case "$VERSION" in
+            [0-9]*.[0-9]*) ;;
+            *) VERSION=$(grep -oE "appVersion = '[0-9][0-9.]*'" web/js/config.js | grep -oE "[0-9][0-9.]*" | head -1) ;;
+          esac
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not determine a version for CFBundleShortVersionString"
+            exit 1
+          fi
           BUILD_NUM=$(date +%s)
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "ios/App/App/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUM" "ios/App/App/Info.plist"
-          echo "Build number: $BUILD_NUM"
+          echo "Version: $VERSION   Build number: $BUILD_NUM"
 
       # Do NOT pin CODE_SIGN_IDENTITY here. With CODE_SIGN_STYLE=Automatic,
       # Xcode refuses a manually specified identity ("conflicting provisioning
