@@ -6075,7 +6075,12 @@ function autoPlay(video) {
       vnChunks = []; vnPeaks = []; vnLive = []; vnDiscard = false;
       vnRec.ondataavailable = (e) => { if (e.data && e.data.size) vnChunks.push(e.data); };
       vnRec.onstop = vnOnStop;
-      try { vnRec.start(); }
+      // With a timeslice, not without. Without one, WebKit hands over the
+      // whole recording in a single 'dataavailable' on stop - and on some
+      // iOS builds that event carries nothing, so the note "recorded" and
+      // then had no data to send. Chunks every 250 ms sidestep that on every
+      // engine; the chunks are concatenated into one blob on stop as before.
+      try { vnRec.start(250); }
       catch (e) { vnReleaseMic(); vnReset(); toast('تعذر بدء التسجيل'); return; }
 
       vnStartAt = Date.now();
@@ -6107,6 +6112,10 @@ function autoPlay(video) {
       if (vnTick) { clearInterval(vnTick); vnTick = null; }
       if (vnRaf) { cancelAnimationFrame(vnRaf); vnRaf = 0; }
       if (vnRec.state === 'inactive') { vnOnStop(); return; }
+      // Ask for whatever is buffered before stopping. Harmless where stop()
+      // already flushes; on WebKit it is the difference between a note with
+      // data and one without.
+      try { if (vnRec.state === 'recording' && vnRec.requestData) vnRec.requestData(); } catch (e) {}
       try { vnRec.stop(); } catch (e) { vnReset(); }
     }
 
@@ -6127,6 +6136,12 @@ function autoPlay(video) {
       const peaks = vnPeaks.slice();
       const mime = (vnRec && vnRec.mimeType) || vnMime || 'audio/webm';
       const discard = vnDiscard;
+      // One line to the database (0088): the phone's own account of what the
+      // recorder handed back. This is how "records but will not send" on an
+      // iPhone gets diagnosed from here instead of guessed at.
+      if (window.API && window.API.logClient) {
+        window.API.logClient('vn_stop', { chunks: chunks.length, bytes: chunks.reduce((n, c) => n + (c.size || 0), 0), mime, heldMs, discard: !!discard });
+      }
       vnReleaseMic();
       if (discard) { vnReset(); return; }
       if (heldMs < VN_MIN_MS || !chunks.length) {
@@ -6195,12 +6210,14 @@ function autoPlay(video) {
       // why. Observed in testing. If the recording is gone the honest move is
       // to say so and clear the preview, not to sit there.
       if (!vnBlob) {
+        if (window.API && window.API.logClient) window.API.logClient('vn_send_no_blob', {});
         vnReset();
         toast('لا يوجد تسجيل لإرساله');
         return;
       }
       const blob = vnBlob;
       const mime = blob.type || 'audio/webm';
+      if (window.API && window.API.logClient) window.API.logClient('vn_send_start', { bytes: blob.size, mime, dur: vnDur });
       const ext = mime.indexOf('mp4') >= 0 ? 'm4a' : mime.indexOf('ogg') >= 0 ? 'ogg' : 'webm';
       const fname = 'voice-' + Date.now() + '.' + ext;
       // sendMessage() derives the storage extension from file.name, so a bare
@@ -6232,8 +6249,12 @@ function autoPlay(video) {
             if (tempNode) tempNode.dataset.msgId = saved.id;
           }
           untrackSend(tracked);
+          if (window.API.logClient) window.API.logClient('vn_send_ok', { id: saved && saved.id });
         }
-        catch (e) { untrackSend(tracked); undoOptimistic(tempNode); toast(sendFailMessage(e)); }
+        catch (e) {
+          untrackSend(tracked); undoOptimistic(tempNode); toast(sendFailMessage(e));
+          if (window.API.logClient) window.API.logClient('vn_send_error', { message: String((e && e.message) || e).slice(0, 300), code: (e && e.code) || null, status: (e && e.status) || null });
+        }
       }
     }
 

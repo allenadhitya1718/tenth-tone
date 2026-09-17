@@ -2483,6 +2483,23 @@
     return { device: browser + ' · ' + os, platform: /Android|iPhone|iPad|iPod/.test(ua) ? 'mobile' : 'web' };
   }
 
+  // ---------- Client logs ----------
+  // One line from the phone at a point that matters (migration 0088). Best
+  // effort: never throws, never awaited by the caller, so a log that fails
+  // cannot fail the thing it was logging. Read from the database, by admins.
+  API.logClient = (kind, detail) => {
+    (async () => {
+      try {
+        const c = await client(); const me = await uid(); if (!me) return;
+        await c.from('client_logs').insert({
+          user_id: me, kind: String(kind).slice(0, 60),
+          detail: detail && typeof detail === 'object' ? detail : { value: String(detail == null ? '' : detail).slice(0, 500) },
+          ua: String(navigator.userAgent || '').slice(0, 200),
+        });
+      } catch (e) { /* a log is never worth an error */ }
+    })();
+  };
+
   // ---------- Push tokens ----------
   // One row per (account, device token). Upserted on every registration, so
   // a token that already exists just refreshes its language and time; the
