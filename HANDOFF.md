@@ -2,7 +2,26 @@
 
 Read this first in a new session. It is the complete state of the work as of the end of the 17 Sep session; the repo, git history and the memory folder hold the details.
 
-> **Update, later the same day — sections 1 and 4 below are now out of date.**
+> **Update, 17 Sep evening — read this block, the rest is history.**
+>
+> - **v1.4.11 is built on both platforms** (Android run #63 → APK on the GitHub
+>   Release page; iOS run #66 → TestFlight). It carries eleven fixes, each
+>   measured before and after; the full list and the root causes are in the
+>   commit message of `f14d331` and in the memory note `flyp-v1411-fix-batch`.
+> - **A second batch is committed to the branch but NOT tagged, on the user's
+>   instruction: push notifications must be set up before the next build.**
+>   In it: "Replying to" rendered as its own node so it translates; a reply to
+>   a shared reel quotes "🎥 فيديو" instead of nothing; and the **Android half of
+>   the earpiece plugin, which had never existed** (iOS only; agora.js fell back
+>   to "earpiece = loudspeaker at 55%"). The Android plugin is untested — no
+>   JDK here; the next CI run is its first compile.
+> - **Not reproducible here, needs the phone:** voice note "records but will
+>   not send" (passes end to end on Chromium with a fake mic, upload 200);
+>   the black camera preview; the ~3 s silence at the start of calls.
+> - Push notifications: only a `push_tokens` table exists. No client
+>   registration, no send function, no FCM/APNs credentials anywhere.
+>
+> **Earlier update the same day — sections 1 and 4 below are out of date.**
 >
 > - **v1.4.8 was tagged and pushed, and both builds failed.** v1.4.9 (`45885cd`)
 >   fixes the CI and is pushed. **iOS v1.4.9 succeeded and is on TestFlight.**

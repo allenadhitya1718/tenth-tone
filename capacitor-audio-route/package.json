@@ -4,9 +4,10 @@
   "description": "Earpiece / loudspeaker routing for FLYP calls. A WebView cannot do this; routing belongs to the OS.",
   "main": "dist/plugin.js",
   "types": "dist/esm/index.d.ts",
-  "files": ["ios/", "CapacitorAudioRoute.podspec"],
+  "files": ["ios/", "android/", "CapacitorAudioRoute.podspec"],
   "capacitor": {
-    "ios": { "src": "ios" }
+    "ios": { "src": "ios" },
+    "android": { "src": "android" }
   },
   "license": "UNLICENSED",
   "private": true

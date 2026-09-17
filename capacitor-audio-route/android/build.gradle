@@ -1,0 +1,30 @@
+// Android half of capacitor-audio-route. The iOS half has existed since
+// 508e6f1; agora.js and the .m registration both say "must match the Android
+// @CapacitorPlugin(name = "AudioRoute")" - and nothing on Android ever did.
+// So Capacitor.Plugins.AudioRoute was undefined on every Android phone, the
+// JS fell back to "earpiece = the loudspeaker at 55%", and testers reported
+// that the earpiece does not work. It did not exist.
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'app.flyp.audioroute'
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':capacitor-android')
+    implementation "androidx.appcompat:appcompat:$rootProject.ext.androidxAppCompatVersion"
+}

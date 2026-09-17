@@ -5115,7 +5115,9 @@ function autoPlay(video) {
       } else if (shareCard) {
         bubble.classList.add('share');
         bubble.appendChild(shareCard);
-        m = Object.assign({}, m, { text: '' }); // the card IS the link now
+        // The card IS the link now, so the text is blanked - but kept under
+        // share_url, or a reply to this bubble has nothing to say it quotes.
+        m = Object.assign({}, m, { text: '', share_url: m.text });
       }
       // A quoted copy of what this message answers, above its own text.
       if (m.reply_to) {
@@ -6454,6 +6456,17 @@ function autoPlay(video) {
       if (m.type === 'voice') return '🎤 رسالة صوتية';
       if (m.type === 'file') return '📎 ملف';
       if (m.type === 'location') return '📍 موقع';
+      // A shared reel/profile/live is a lone deep link in a text message.
+      // The bubble draws it as a card and blanks its text (see appendMessage),
+      // so a reply to a shared reel quoted nothing at all. Same labels the
+      // inbox uses for the same rows.
+      const t = String(m.share_url || m.text || '').trim();
+      if (t && !/\s/.test(t) && window.DeepLink && window.DeepLink.routeForUrl) {
+        const r = window.DeepLink.routeForUrl(t);
+        if (r) return r.indexOf('/live/') === 0 ? '🔴 بث مباشر'
+                    : r.indexOf('/profile/') === 0 ? '👤 حساب'
+                    : '🎥 فيديو';
+      }
       return (m.text || '').slice(0, 80);
     }
 
@@ -6462,7 +6475,18 @@ function autoPlay(video) {
       if (!replyTo) { replyBar.hidden = true; return; }
       replyBar.hidden = false;
       const mine = replyTo.from_user_id === myUserId;
-      replyName.textContent = mine ? 'ردًا على نفسك' : ('ردًا على ' + ((replyTo.from && replyTo.from.name) || (chatInfo && chatInfo.title) || ''));
+      // Two nodes, not one string. The translator swaps whole text nodes
+      // against the dictionary, so 'ردًا على ' + name was one node it could
+      // never match and the English UI kept showing Arabic here (reported
+      // after the dictionary entry alone had been added and changed nothing).
+      // The word sits in its own span and the name follows it untranslated.
+      replyName.textContent = '';
+      if (mine) {
+        replyName.textContent = 'ردًا على نفسك';
+      } else {
+        replyName.appendChild(el('span', {}, 'ردًا على'));
+        replyName.appendChild(document.createTextNode(' ' + ((replyTo.from && replyTo.from.name) || (chatInfo && chatInfo.title) || '')));
+      }
       replyText.textContent = msgPreviewText(replyTo);
       try { if (window.I18N) window.I18N.apply(replyBar); } catch (e) {}
       inputField.focus();
