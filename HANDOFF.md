@@ -18,8 +18,14 @@ Read this first in a new session. It is the complete state of the work as of the
 > - **Not reproducible here, needs the phone:** voice note "records but will
 >   not send" (passes end to end on Chromium with a fake mic, upload 200);
 >   the black camera preview; the ~3 s silence at the start of calls.
-> - Push notifications: only a `push_tokens` table exists. No client
->   registration, no send function, no FCM/APNs credentials anywhere.
+> - **Push notifications are built (`523acfc`) but not deployed or tagged.**
+>   Client registration, the notifications→send-push trigger (0087, applied),
+>   the `send-push` function and both build wirings are in. Waiting on the
+>   user: `google-services.json` → GitHub secret, the Firebase service-account
+>   JSON and the Apple APNs key → Supabase secrets, and deploying the function
+>   with `npx supabase functions deploy send-push --no-verify-jwt`. Firebase
+>   project `flyp-4a726` exists (Spark, all opt-ins off). Details in the memory
+>   note `flyp-push-notifications`. Then ONE tag for everything waiting.
 >
 > **Earlier update the same day — sections 1 and 4 below are out of date.**
 >
