@@ -22,12 +22,13 @@ Read this first in a new session. It is the complete state of the work as of the
 >   Secrets set, `send-push` deployed (`npx.cmd supabase functions deploy
 >   send-push --no-verify-jwt`), 0087 applied. **Android run #64 is green** and
 >   its log shows `google-services.json: project flyp-4a726` — the APK on the
->   Release page has push. **iOS run #67 failed at signing** with Apple's
->   certificate cap ("Choose a certificate to revoke … maximum number of
->   certificates"), a recurring CI issue, not the push change. Fix: revoke a
->   stale *Development* certificate at developer.apple.com → Certificates, then
->   re-run the job (no new tag). Also confirm Push Notifications is ticked on
->   identifier `com.flyp.social`. Details in memory note `flyp-push-notifications`.
+>   Release page has push. iOS run #67 first failed at signing with Apple's
+>   certificate cap ("Choose a certificate to revoke") — the recurring CI
+>   issue, not the push change; the user revoked a stale Development cert and
+>   ticked Push Notifications on `com.flyp.social`, and **attempt #2 went green:
+>   1.4.12 is on TestFlight.** Still unproven: a real push arriving on a phone —
+>   needs a tester on 1.4.12 who allowed notifications, then check
+>   `push_tokens` and `net._http_response`. Details in `flyp-push-notifications`.
 >
 > **Earlier update the same day — sections 1 and 4 below are out of date.**
 >
