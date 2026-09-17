@@ -18,14 +18,16 @@ Read this first in a new session. It is the complete state of the work as of the
 > - **Not reproducible here, needs the phone:** voice note "records but will
 >   not send" (passes end to end on Chromium with a fake mic, upload 200);
 >   the black camera preview; the ~3 s silence at the start of calls.
-> - **Push notifications are built (`523acfc`) but not deployed or tagged.**
->   Client registration, the notifications→send-push trigger (0087, applied),
->   the `send-push` function and both build wirings are in. Waiting on the
->   user: `google-services.json` → GitHub secret, the Firebase service-account
->   JSON and the Apple APNs key → Supabase secrets, and deploying the function
->   with `npx supabase functions deploy send-push --no-verify-jwt`. Firebase
->   project `flyp-4a726` exists (Spark, all opt-ins off). Details in the memory
->   note `flyp-push-notifications`. Then ONE tag for everything waiting.
+> - **Push notifications are deployed and tagged as v1.4.12 (18 Sep, early).**
+>   Secrets set, `send-push` deployed (`npx.cmd supabase functions deploy
+>   send-push --no-verify-jwt`), 0087 applied. **Android run #64 is green** and
+>   its log shows `google-services.json: project flyp-4a726` — the APK on the
+>   Release page has push. **iOS run #67 failed at signing** with Apple's
+>   certificate cap ("Choose a certificate to revoke … maximum number of
+>   certificates"), a recurring CI issue, not the push change. Fix: revoke a
+>   stale *Development* certificate at developer.apple.com → Certificates, then
+>   re-run the job (no new tag). Also confirm Push Notifications is ticked on
+>   identifier `com.flyp.social`. Details in memory note `flyp-push-notifications`.
 >
 > **Earlier update the same day — sections 1 and 4 below are out of date.**
 >
