@@ -2,6 +2,27 @@
 
 Read this first in a new session. It is the complete state of the work as of the end of the 17 Sep session; the repo, git history and the memory folder hold the details.
 
+> **Update, later the same day — sections 1 and 4 below are now out of date.**
+>
+> - **v1.4.8 was tagged and pushed, and both builds failed.** v1.4.9 (`45885cd`)
+>   fixes the CI and is pushed. **iOS v1.4.9 succeeded and is on TestFlight.**
+>   Android v1.4.9 *builds* (signed Play-Store AAB) but the run still fails at the
+>   last step because GitHub's **artifact storage quota is full** — free it and
+>   re-run, no code change needed. See [[flyp-ci-build-fixes]] in the memory
+>   folder for all three root causes, including that **every iOS build before
+>   v1.4.9 went to Apple as version 1.0**.
+> - **The Cloudflare/R2 migration in section 4 is finished.** Nameservers cut
+>   over, bucket CORS now allows GET/HEAD, `media.flyp-sa.com` is connected and
+>   caching (`cf-cache-status: HIT`), `R2_PUBLIC_BASE` is set, and the stored
+>   links are rewritten — **80 of them across five columns, not the 73 across
+>   three that section 4 claims.** The missing two were `sounds.cover_url` and
+>   `live_streams.thumbnail`; the authoritative list is `REFERENCED_BY` in
+>   `supabase/functions/media-upload/index.ts`.
+> - **The "no sound on any reel" report is the upload bug**, one of the six in
+>   `a3c232e`: reels filmed through FLYP on 15 and 17 Sep have no audio track at
+>   all (`handlers vide`, no `mp4a`), while 31 of the other 35 do. Untested on a
+>   phone until someone opens TestFlight build 1.4.9.
+
 ## 1. Code state — committed, NOT tagged, NOT pushed
 
 Branch `fixes/apk-review-and-security` (repo `C:\dev\TenthTone\Tiktok`). Three commits are waiting for the user's go:
