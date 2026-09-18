@@ -13488,14 +13488,18 @@ function autoPlay(video) {
       noteRoute(info);
       const avail = Array.isArray(info.available) ? info.available.slice() : ['speaker', 'earpiece'];
       if ((info.bluetoothConnected || info.hasBluetooth) && avail.indexOf('bluetooth') < 0) avail.push('bluetooth');
-      // ── No receiver on iPhone, for now ──
-      // Six builds (1.4.14-1.4.19) moved the audio to the receiver and lost
-      // the outgoing audio every time - the phone's own log: receiving
-      // fine, sendBitrate 0 - and the last two repairs froze the WebView.
-      // Until the WebView can survive the move (call_sink_probe in agora.js
-      // is the way back) an iPhone gets the loudspeaker and any headset,
-      // and is told why rather than handed a control that ends the call.
-      const noReceiver = isIOSShell();
+      // ── The receiver on iPhone: only when the audio is not in the WebView ──
+      // Six builds (1.4.14-1.4.19) moved an iPhone call to the receiver from
+      // inside WKWebView and lost the outgoing audio every time - the phone's
+      // own log: receiving fine, sendBitrate 0 - and the last two repairs
+      // froze it outright. So 1.4.20 took the row away.
+      //
+      // A NATIVE voice session (media.native, agora.js) is a different thing
+      // entirely: Agora's own SDK owns the audio session and rebuilds its
+      // capture around the move, which is what the WebView could never do.
+      // There the receiver is an ordinary supported control and the row comes
+      // back. A web session on an iPhone still does not get one.
+      const noReceiver = isIOSShell() && !(media && media.native);
       if (noReceiver) { const i = avail.indexOf('earpiece'); if (i >= 0) avail.splice(i, 1); }
       const s = sheetOf('مخرج الصوت');
       const list = el('div', { style: { padding: '8px 0' } });
