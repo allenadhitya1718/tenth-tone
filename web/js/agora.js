@@ -562,8 +562,8 @@
         if (repairing || !mic) return;
         const sent = () => { try { return (client.getLocalAudioStats() || {}).sendBitrate || 0; } catch (e) { return -1; } };
         const reads = [];
-        for (let i = 0; i < 4; i++) {
-          await new Promise(res => setTimeout(res, 1500));
+        for (let i = 0; i < 3; i++) {
+          await new Promise(res => setTimeout(res, 1200));
           if (!mic || repairing) return;
           reads.push(sent());
         }
@@ -598,28 +598,42 @@
           Promise.resolve(promise),
           new Promise((_, rej) => setTimeout(() => rej(new Error('timeout:' + label)), ms)),
         ]);
+        // Budgeted, because the previous version could run for half a minute:
+        // 9 s on the first attempt and 20 more on the second, while the person
+        // sat in silence wondering whether to hang up. The log shows exactly
+        // that - it decided to act and never reported back. A repair nobody
+        // waits for is not a repair.
+        const dead = mic;
         try {
-          const dead = mic;
-          // (1) The cheapest thing that can work, and the only one that does
-          // not touch getUserMedia.
-          try {
-            await limit(client.unpublish([dead]), 4000, 'unpublish');
-            await limit(client.publish([dead]), 4000, 'republish');
-            await new Promise(res => setTimeout(res, 1200));
-            if (sent() > 0) { note(true, 'republished same track'); return; }
-          } catch (e) {
-            note(false, 'republish: ' + String((e && e.message) || e).slice(0, 60));
+          // (1) Cycle the track. Agora's own way to restart a capture, no
+          // renegotiation and no getUserMedia - typically a few hundred ms.
+          if (dead && dead.setEnabled) {
+            try {
+              await limit(dead.setEnabled(false), 1200, 'disable');
+              await limit(dead.setEnabled(true), 1200, 'enable');
+              await new Promise(res => setTimeout(res, 900));
+              if (sent() > 0) { note(true, 'cycled the track'); return; }
+            } catch (e) { /* fall through */ }
           }
-          // (2) Still silent. A new track, on a leash.
-          const AgoraRTC = await limit(loadSdk(), 5000, 'sdk');
+          // (2) Republish it. Renegotiates, still no device request.
+          try {
+            await limit(client.unpublish([dead]), 1500, 'unpublish');
+            await limit(client.publish([dead]), 1500, 'republish');
+            await new Promise(res => setTimeout(res, 900));
+            if (sent() > 0) { note(true, 'republished same track'); return; }
+          } catch (e) { /* fall through */ }
+          // (3) A new microphone, last and briefest. Asking WebKit for a
+          // capture device while its audio unit is the broken thing is how
+          // 1.4.16 froze the app, so this gets the shortest leash of all.
+          const AgoraRTC = await limit(loadSdk(), 2000, 'sdk');
           const fresh = await limit(
-            AgoraRTC.createMicrophoneAudioTrack({ encoderConfig: 'speech_standard' }), 6000, 'getusermedia');
+            AgoraRTC.createMicrophoneAudioTrack({ encoderConfig: 'speech_standard' }), 3000, 'getusermedia');
           if (dead && dead.muted && fresh.setMuted) { try { await fresh.setMuted(true); } catch (e) {} }
-          try { await limit(client.unpublish([dead]), 4000, 'unpublish2'); } catch (e) {}
+          try { await limit(client.unpublish([dead]), 1500, 'unpublish2'); } catch (e) {}
           mic = fresh;
-          await limit(client.publish([fresh]), 5000, 'publish2');
+          await limit(client.publish([fresh]), 2000, 'publish2');
           try { dead.close(); } catch (e) {}
-          note(true, 'new track');
+          note(sent() > 0, 'new track');
         } catch (e) {
           note(false, String((e && e.message) || e).slice(0, 120));
         } finally {
@@ -674,7 +688,55 @@
         // where there is no plugin, so the UI falls back to the on/off toggle.
         getRoute: () => readRoute(),
         setRoute: async (route) => {
+          // ── Park the encoder across the switch ──
+          // Five attempts have treated this as damage to repair afterwards.
+          // The phone's numbers say what actually happens: sendLevel 15480
+          // (the microphone is capturing, loudly) with sendBitrate 0 (nothing
+          // encoded). iOS tears the audio unit down and rebuilds it - often at
+          // a different hardware sample rate - and WebRTC's encoder does not
+          // survive that, while the capture does.
+          //
+          // Muting does not unpublish; it feeds the encoder silence and keeps
+          // the stream alive. So mute, move the route, let it settle, unmute -
+          // the encoder restarts against the new hardware instead of dying
+          // against it. Cheap, and it happens in under half a second rather
+          // than the ten-to-thirty the repair below could take.
+          //
+          // Someone who muted themselves stays muted.
+          // Deterministic, because five rounds of detect-and-repair have not
+          // worked. The publish is KNOWN to die here - the phone has said so
+          // every time, sendLevel loud and sendBitrate zero - so it is taken
+          // down on purpose and rebuilt after the route has moved, rather
+          // than being mourned three to six seconds later by a check that has
+          // twice failed to fire at all.
+          //
+          // Order matters. Unpublishing first means nothing is encoding while
+          // iOS tears the audio unit down and rebuilds it, possibly at a
+          // different sample rate; publishing afterwards builds a fresh
+          // encoder against the hardware that now exists. Muting around the
+          // whole thing keeps the gap from being heard as a click.
+          //
+          // The cost is roughly a second of silence on a deliberate button
+          // press, which is what every phone does when you switch to the
+          // earpiece. The alternative has been a call that is silent in one
+          // direction until somebody gives up and hangs up.
+          const wasMuted = !!(mic && mic.muted);
+          if (mic && !wasMuted) { try { await mic.setMuted(true); } catch (e) {} }
+          let taken = false;
+          if (mic) {
+            try { await client.unpublish([mic]); taken = true; } catch (e) { taken = false; }
+          }
           const r = await applyRoute(route);
+          // Let the route actually settle before anything starts encoding
+          // against it; switching is not instantaneous on the device.
+          await new Promise(res => setTimeout(res, 300));
+          if (taken && mic) {
+            try { await client.publish([mic]); }
+            catch (e) {
+              try { if (window.API && window.API.logClient) window.API.logClient('call_route_republish_failed', { want: route, message: String((e && e.message) || e).slice(0, 120) }); } catch (x) {}
+            }
+          }
+          if (mic && !wasMuted) { try { await mic.setMuted(false); } catch (e) {} }
           if (r && typeof r.speakerOn === 'boolean') {
             speakerOn = r.speakerOn;
             remoteAudio.forEach(t => applySpeakerTo(t));

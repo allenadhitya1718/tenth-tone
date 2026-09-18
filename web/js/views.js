@@ -13785,12 +13785,22 @@ function autoPlay(video) {
             });
           }
           refreshMembers();
-          // Sign the token while it rings rather than after they answer.
-          // No microphone here: this phone has not accepted anything, and
-          // opening it would light the recording indicator during a call
-          // nobody has picked up. See Agora.prewarm.
+          // Sign the token while it rings rather than after they answer - and
+          // for the CALLER, open the microphone too.
+          //
+          // Measured on a real call: the caller published at 4921 ms, of which
+          // 2548 was opening the microphone, because nothing had warmed it.
+          // Nobody can hear anybody until both sides have published, so the
+          // slower side sets the whole delay - the other phone published at
+          // 2761 ms and then waited three seconds in silence for this one.
+          //
+          // mic only for the caller. They chose to place this call, so the
+          // recording indicator is expected and honest. A phone that is merely
+          // RINGING has agreed to nothing, and its microphone stays shut until
+          // Accept is pressed - that distinction is the whole reason this was
+          // mic:false to begin with, and it still holds for the other side.
           if (call.status === 'ringing' && window.Agora && window.Agora.prewarm) {
-            try { window.Agora.prewarm(call.channel, { mic: false }); } catch (e) {}
+            try { window.Agora.prewarm(call.channel, { mic: call.caller_id === me }); } catch (e) {}
           }
           if (call.caller_id === me && call.status === 'ringing' && call.id === row.id) {
             ActiveCall.ringTimeout = setTimeout(async () => {
