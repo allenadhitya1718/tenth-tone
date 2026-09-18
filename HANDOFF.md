@@ -1,9 +1,20 @@
 # FLYP handoff — 2026-09-18 (v1.4.13 tagged and building)
 
-> **Newest first.** **v1.4.13 is TAGGED** (`7bce166`, tag pushed to
-> `tenthtone`) — the user asked for both builds. Android run #65 and iOS run
-> #68. It carries everything below: the back button, the call screen, group
-> calls, mid-call video, Instagram messaging.
+> **Newest first.** **v1.4.13 is BUILT AND DELIVERED on both platforms**
+> (`7bce166`). Android run #65 green — `app-release.apk` (23.0 MB) and
+> `app-release.aab` (21.4 MB) attached to the v1.4.13 Release. iOS run #68
+> green — altool reported "No errors … uploading archive", **Version 1.4.13,
+> build 1789723952**, on TestFlight. It carries the back button, the call
+> screen, group calls, mid-call video and Instagram messaging.
+> - **The version fix is PROVEN in the build log:** `versionCode 9723937`,
+>   `versionName "1.4.13"` (were 21 and 1.4.1). The APK finally reports its
+>   own version in Settings.
+> - Artifact upload hit the storage quota again — harmless, it is
+>   `continue-on-error` and the Release is the real delivery path.
+> - **New deadline from Apple (warning 90068):** the app ships
+>   `MinimumOSVersion 13.0`; from **Spring 2027** App Store Connect will
+>   refuse anything below **15.0**. Not urgent, but it is a hard future
+>   blocker — raise the iOS deployment target before then.
 > - **The duplicate Android audio plugin is gone.** The app has had a complete
 >   one since 1.3.0 at `com.flyp.app.AudioRoutePlugin`, registered BY NAME in
 >   MainActivity (same package, no import — which is why searching the plugin
