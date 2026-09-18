@@ -1,3 +1,34 @@
+# FLYP handoff — 2026-09-18 (night): v1.4.14 shipped, call notification merged
+
+> **Newest first.** **v1.4.14 is on TestFlight (build 1789739360) and the APK
+> is on the v1.4.14 Release.** It carries the nine-bug batch (`fd19b89`) and
+> the voice-note fix (`f60e780`). Memory: `flyp-call-notification-and-ci-billing`.
+> - **CI BILLING, not code.** Both builds began failing in 3 seconds with zero
+>   steps: the 2,000 free monthly Actions minutes for a PRIVATE repo were
+>   gone. iOS burned 84% of them (macOS bills **10x**: 53 runs, 134 min of
+>   real work, ~1,343 billed) and took Android down with it. **The iOS
+>   workflow is workflow_dispatch ONLY now** (`ba0d87f`); Android still builds
+>   on tags. Nothing was ever charged - there is no payment method.
+> - **To build while out of minutes:** flip the repo PUBLIC (unlimited free
+>   minutes), run, flip back. Verified safe: no key files committed or ever in
+>   history, secrets live in GitHub Secrets. Use the scratchpad scripts, which
+>   flip back in a `trap … EXIT`. **Ask the user every time** - it publishes
+>   their source.
+> - **Apple cert cap again** ("choose a certificate to revoke"): CI mints a
+>   development certificate per run and Apple caps them at 2. The user revoked
+>   one and the rerun went green. The durable fix is already supported by the
+>   workflow - set `IOS_DIST_CERT_P12_BASE64` + `IOS_DIST_CERT_PASSWORD`.
+> - **The Android call notification is merged** (`bfe43e7`) and **compiles**
+>   (run 35353848461 - its first compile anywhere; there is no JDK here). A
+>   foreground service keeps the call alive when FLYP leaves the screen, with
+>   the other person's name, a timer, tap-to-return and Hang up. Hang up is
+>   handed to JS so one code path ends a call. NOT yet in a build. iOS CallKit
+>   is deliberately not started.
+> - **media-reconcile** was answering 401 for months (same secret fault as
+>   send-push); fixed, and given a `?dry=1` rehearsal. Its rehearsal says: 161
+>   objects scanned, **0 orphans**, would delete **8 abandoned uploads /
+>   15.3 MB**. Nothing deleted - waiting on the user.
+
 # FLYP handoff — 2026-09-18 (v1.4.13 tagged and building)
 
 > **Newest first.** **v1.4.13 is BUILT AND DELIVERED on both platforms**
