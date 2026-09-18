@@ -13012,6 +13012,13 @@ function autoPlay(video) {
   // blind clear would have the dead screen release the live screen's claim -
   // and a guard that leaks in that direction locks the user out of calling
   // until they restart the app, which is worse than the bug being fixed.
+  // iPhone or iPad inside the native shell, where a call's audio is at the
+  // mercy of WKWebView's audio session (see the route sheet in V.call).
+  function isIOSShell() {
+    try { return !!(window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'ios'); }
+    catch (e) { return false; }
+  }
+
   const CallGuard = (function () {
     let holder = null;
     return {
@@ -13099,7 +13106,10 @@ function autoPlay(video) {
         if (call && call.status === 'accepted' && window.API.leaveCall) {
           if (await window.API.leaveCall(call.channel)) { this.teardown(); return; }
         }
-        if (call && call.id) await window.API.endCall(call.id);
+        // Same rule as the screen's leaveOrEnd: someone who was ADDED may
+        // end their own invite row, never the root everyone else is on.
+        const own = (this.row && this.row.root_id) ? this.row.id : (call && call.id);
+        if (own) await window.API.endCall(own);
       } catch (e) { console.warn('hang up from the bar:', e); }
       this.teardown();
     },
@@ -13238,7 +13248,13 @@ function autoPlay(video) {
           if (await window.API.leaveCall(call.channel)) return;
         }
       } catch (e) { console.warn('leave:', e); }
-      try { await window.API.endCall(call.id); } catch (e) {}
+      // No membership row to leave. For the two people on the root row that
+      // is a call older than 0092, ended the old way. For someone ADDED it
+      // means their row never reached 'joined' (rung from a push, never
+      // accepted) - and ending the root here hung up on everyone else. Their
+      // own invite row is the only thing they may end.
+      const mine = (row && row.root_id) ? row.id : call.id;
+      try { await window.API.endCall(mine); } catch (e) {}
     }
     function hangUp() {
       if (settled) return;
@@ -13281,10 +13297,14 @@ function autoPlay(video) {
       // Above the call screen (z 120): a sheet at its usual 100 opened from
       // here was drawn UNDERNEATH it - untappable and invisible.
       sheet.style.zIndex = '130'; bd.style.zIndex = '129';
-      const close = () => { sheet.remove(); bd.remove(); };
+      // Body-level, so a route change does not sweep it away with #app: the
+      // Add sheet and its full-screen backdrop used to outlive the call and
+      // sit on top of whatever screen came next. Gone with the screen now.
+      const onHash = () => close();
+      const close = () => { sheet.remove(); bd.remove(); window.removeEventListener('hashchange', onHash); };
       bd.onclick = close;
       if (title) sheet.appendChild(el('div', { class: 'modal-head', style: { padding: '12px', textAlign: 'center', fontWeight: 700 } }, title));
-      return { sheet, bd, close, open() { document.body.appendChild(bd); document.body.appendChild(sheet); try { if (window.I18N) window.I18N.apply(sheet); } catch (e) {} } };
+      return { sheet, bd, close, open() { document.body.appendChild(bd); document.body.appendChild(sheet); window.addEventListener('hashchange', onHash); try { if (window.I18N) window.I18N.apply(sheet); } catch (e) {} } };
     }
 
     // ── Message: the chat this call belongs to, or the DM with that person ──
@@ -13293,7 +13313,10 @@ function autoPlay(video) {
     async function openChat() {
       if (!call) return;
       try {
-        const cid = call.chat_id || (other && await window.API.openOrCreateDm(other.id));
+        // The root's chat belongs to the two people on the root row; someone
+        // ADDED is not in it and would land in a chat they cannot read.
+        const party = call.caller_id === me || call.callee_id === me;
+        const cid = (party && call.chat_id) || (other && await window.API.openOrCreateDm(other.id));
         if (cid) go('/chat/' + cid);
       } catch (e) { toast('تعذر فتح المحادثة'); }
     }
@@ -13323,45 +13346,85 @@ function autoPlay(video) {
           if (window.API.missCallIfRinging) window.API.missCallIfRinging(inv.id).catch(() => {});
         }, 35000);
         refreshMembers();
-      } catch (e) { toast(friendlyError(e, 'تعذرت الدعوة')); }
+      } catch (e) {
+        const raw = String((e && e.message) || e || '');
+        toast(/blocked/i.test(raw) ? 'لا يمكن دعوة هذا الشخص'
+          : /rate|limit|calls/i.test(raw) ? 'محاولات اتصال كثيرة، حاول بعد قليل'
+          : friendlyError(e, 'تعذرت الدعوة'));
+      }
     }
     async function openAddSheet() {
       if (!call || !ActiveCall.isLive()) return;
+      // `me` is read asynchronously at the top of the screen; a sheet opened
+      // from a resumed call could beat it and ask for nobody's friends.
+      const myId = me || (((await window.SB.getUser()) || {}).id) || null;
       const s = sheetOf('أضف أشخاصًا إلى المكالمة');
       const input = el('input', { class: 'input', placeholder: 'ابحث عن مستخدم بالاسم' });
       const list = el('div', { style: { overflowY: 'auto', padding: '8px 0', minHeight: '120px' } });
       s.sheet.appendChild(el('div', { style: { padding: '0 4px 8px' } }, [input]));
       s.sheet.appendChild(list);
       s.open();
-      let candidates = [];
-      try { candidates = await window.API.fetchFollowing(me) || []; } catch (e) { candidates = []; }
-      const inCall = new Set((ActiveCall.members || []).filter(m => m.status === 'joined' || m.status === 'ringing').map(m => m.user_id));
-      function paint() {
-        const q = input.value.trim().toLowerCase();
+      // Inside the tap's own task, or the phone shows a caret and no keyboard.
+      try { input.focus(); } catch (e) {}
+      // People you follow by default; typing searches EVERYONE, as the
+      // placeholder promises - it used to filter the follow list only, so a
+      // friend you do not follow "did not exist". Whoever is already in the
+      // call (or being rung) is left out, read live each time: the old
+      // one-shot Set was empty until the members arrived, and offered them
+      // a second ring - which then threw them out of the call (0094).
+      let following = null, results = [], seq = 0, lastKey = '';
+      const inCall = () => new Set((ActiveCall.members || []).filter(m => m.status === 'joined' || m.status === 'ringing').map(m => m.user_id));
+      function personRow(p) {
+        const nm = p.name || p.handle || '';
+        return el('div', {
+          class: 'user-row', style: { cursor: 'pointer', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px' },
+          onclick: () => { s.close(); inviteUser(p); },
+        }, [
+          avatar(p.avatar_url || '', nm, 40),
+          el('div', { style: { minWidth: 0 } }, [
+            el('div', { class: 'name', style: { fontWeight: 600, fontSize: '15px' } }, nm),
+            el('div', { class: 'handle' }, '@' + (p.handle || '')),
+          ]),
+        ]);
+      }
+      function paint(loading) {
+        const q = input.value.trim();
+        const skip = inCall();
+        lastKey = Array.from(skip).sort().join(',');
         list.innerHTML = '';
-        const rows = candidates.filter(p => p && p.id !== me && !inCall.has(p.id)
-          && (!q || String(p.name || '').toLowerCase().includes(q) || String(p.handle || '').toLowerCase().includes(q))).slice(0, 60);
+        const src = q ? results : (following || []);
+        const rows = src.filter(p => p && p.id !== myId && !skip.has(p.id)).slice(0, 60);
         if (!rows.length) {
-          list.appendChild(el('p', { class: 'muted', style: { textAlign: 'center', padding: '22px 12px' } }, 'لا يوجد أحد لإضافته'));
+          const msg = loading ? 'جاري البحث...'
+            : (!q && following === null) ? 'تعذر تحميل القائمة'
+            : 'لا يوجد أحد لإضافته';
+          list.appendChild(el('p', { class: 'muted', style: { textAlign: 'center', padding: '22px 12px' } }, msg));
         }
-        rows.forEach(p => {
-          const nm = p.name || p.handle || '';
-          list.appendChild(el('div', {
-            class: 'user-row', style: { cursor: 'pointer', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px' },
-            onclick: () => { s.close(); inviteUser(p); },
-          }, [
-            avatar(p.avatar_url || '', nm, 40),
-            el('div', { style: { minWidth: 0 } }, [
-              el('div', { style: { fontWeight: 600, fontSize: '15px' } }, nm),
-              el('div', { class: 'muted', style: { fontSize: '12px' } }, '@' + (p.handle || '')),
-            ]),
-          ]));
-        });
+        rows.forEach(p => list.appendChild(personRow(p)));
         try { if (window.I18N) window.I18N.apply(list); } catch (e) {}
       }
-      input.oninput = paint;
-      paint();
-      try { input.focus(); } catch (e) {}
+      let timer = null;
+      input.oninput = () => {
+        const q = input.value.trim();
+        clearTimeout(timer);
+        if (!q) { results = []; paint(false); return; }
+        paint(true);
+        timer = setTimeout(async () => {
+          const my = ++seq;
+          try { const r = await window.API.searchProfiles(q); if (my !== seq) return; results = r || []; }
+          catch (e) { if (my !== seq) return; results = []; }
+          paint(false);
+        }, 250);
+      };
+      // Membership can change while the sheet is open (someone answers, or
+      // leaves); repaint only when it does, so typing is never interrupted.
+      const watch = setInterval(() => {
+        if (!document.body.contains(list)) { clearInterval(watch); return; }
+        if (Array.from(inCall()).sort().join(',') !== lastKey) paint(false);
+      }, 1000);
+      paint(true);
+      try { following = (await window.API.fetchFollowing(myId)) || []; } catch (e) { following = null; }
+      if (!input.value.trim()) paint(false);
     }
 
     // ── Who is in the call ──
@@ -13425,6 +13488,15 @@ function autoPlay(video) {
       noteRoute(info);
       const avail = Array.isArray(info.available) ? info.available.slice() : ['speaker', 'earpiece'];
       if ((info.bluetoothConnected || info.hasBluetooth) && avail.indexOf('bluetooth') < 0) avail.push('bluetooth');
+      // ── No receiver on iPhone, for now ──
+      // Six builds (1.4.14-1.4.19) moved the audio to the receiver and lost
+      // the outgoing audio every time - the phone's own log: receiving
+      // fine, sendBitrate 0 - and the last two repairs froze the WebView.
+      // Until the WebView can survive the move (call_sink_probe in agora.js
+      // is the way back) an iPhone gets the loudspeaker and any headset,
+      // and is told why rather than handed a control that ends the call.
+      const noReceiver = isIOSShell();
+      if (noReceiver) { const i = avail.indexOf('earpiece'); if (i >= 0) avail.splice(i, 1); }
       const s = sheetOf('مخرج الصوت');
       const list = el('div', { style: { padding: '8px 0' } });
       ['speaker', 'earpiece', 'bluetooth', 'wired'].forEach(r => {
@@ -13474,6 +13546,10 @@ function autoPlay(video) {
         if (r === routeName) rowEl.appendChild(el('span', { style: { marginInlineStart: 'auto', display: 'flex', width: '18px', height: '18px' }, html: icons.check }));
         list.appendChild(rowEl);
       });
+      if (noReceiver) {
+        list.appendChild(el('p', { class: 'muted', style: { padding: '6px 16px 12px', fontSize: '12px', textAlign: 'center' } },
+          'سماعة الأذن غير متاحة على iPhone في هذا الإصدار'));
+      }
       s.sheet.appendChild(list);
       s.open();
     }
@@ -13738,20 +13814,54 @@ function autoPlay(video) {
           call = row.root_id ? await window.API.fetchCall(row.root_id) : row;
           if (!call) { leaveScreen(); return; }
         }
+        // ── Rung, and not yet answered: this screen cannot answer ──
+        // A call push deep-links straight here (send-push -> /call/<id>),
+        // skipping the incoming card: the screen said 'مكالمة واردة' with
+        // only End to press, and the ring timed out as missed. Every
+        // add-to-call invite answered from a notification died this way,
+        // and so does a direct call answered from the lock screen. The
+        // card is the thing that can answer, so the ring is handed back to
+        // it: release this screen's claim (the card will not ring over a
+        // held call), step back to where the person was, and show it.
+        if (!resuming && !accepted && row.callee_id === me && row.status === 'ringing') {
+          const ring = row;
+          ended = true; settled = true;         // nothing here may hang up
+          ActiveCall.teardown();
+          back();
+          setTimeout(() => { try { if (window.__ttShowIncoming) window.__ttShowIncoming(ring); } catch (e) {} }, 120);
+          return;
+        }
         ActiveCall.row = row;
         ActiveCall.call = call;
-        other = (row.caller_id === me) ? row.callee : row.caller;
-        const oname = (other && other.name) || (other && other.handle) || '';
-        avWrap.innerHTML = '';
-        avWrap.appendChild(avPulse);
-        avWrap.appendChild(avatar((other && other.avatar_url) || '', oname, 64));
-        const photo = (other && other.avatar_url) ? (safeUrl(other.avatar_url) || other.avatar_url) : '';
-        if (photo) {
-          bg.style.backgroundImage = 'url("' + photo.replace(/"/g, '%22') + '")';
-          root.classList.add('has-photo');
+        const paintOther = () => {
+          other = (row.caller_id === me) ? row.callee : row.caller;
+          const oname = (other && other.name) || (other && other.handle) || '';
+          avWrap.innerHTML = '';
+          avWrap.appendChild(avPulse);
+          avWrap.appendChild(avatar((other && other.avatar_url) || '', oname, 64));
+          const photo = (other && other.avatar_url) ? (safeUrl(other.avatar_url) || other.avatar_url) : '';
+          if (photo) {
+            bg.style.backgroundImage = 'url("' + photo.replace(/"/g, '%22') + '")';
+            root.classList.add('has-photo');
+          }
+          nameEl.textContent = oname;
+          ActiveCall.otherName = oname;        // the bar names them too
+        };
+        paintOther();
+        // The incoming card hands over the raw realtime row, which carries
+        // no profiles: whoever ANSWERED got a blank name, a grey avatar and
+        // a nameless green bar for the whole call. Filled in off the audio
+        // path - a fetch must not sit between Accept and the first sound.
+        if (!row.caller || !row.callee) {
+          window.API.fetchCall(row.id).then((full) => {
+            if (!full || ActiveCall.id !== callId) return;
+            row.caller = row.caller || full.caller;
+            row.callee = row.callee || full.callee;
+            paintOther();
+            try { if (ActiveCall.pillName) ActiveCall.pillName.textContent = ActiveCall.otherName; } catch (e) {}
+            paintPeople();
+          }).catch(() => {});
         }
-        nameEl.textContent = oname;
-        ActiveCall.otherName = oname;        // the bar names them too
         if (call.kind === 'video') enterVideoMode(false);
         attachPainters();
         if (resuming) {
@@ -13841,6 +13951,10 @@ function autoPlay(video) {
       if (overlay) { overlay.remove(); overlay = null; }
       ringingId = null;
     }
+
+    // The call screen hands a ring back here when it was opened for a call
+    // nobody has answered yet - a push deep-link. See V.call.
+    window.__ttShowIncoming = (row) => show(row);
 
     async function show(row) {
       if (overlay || !row || row.status !== 'ringing') return;

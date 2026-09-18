@@ -26,6 +26,40 @@
   // Bluetooth device can refuse the switch, and the UI should show the truth
   // rather than what was asked for. Resolves null off-device, where the volume
   // fallback below is all there is.
+  // ── Can this WebView put a call on the receiver by itself? ──
+  // WebKit can route WebRTC audio to the receiver without native help: it
+  // lists the built-in receiver and speaker as audio OUTPUT devices and
+  // honours setSinkId() when its "expose speakers" setting is on - and
+  // then it rebuilds its own audio unit coherently, which is exactly what
+  // the audio-session fight in the plugin cannot do. Whether that is
+  // available on a given iPhone is unknowable from here, so it is asked
+  // once per call and written down. Never acted on.
+  let sinkProbed = false;
+  async function probeSinks() {
+    if (sinkProbed) return;
+    sinkProbed = true;
+    try {
+      const cap = window.Capacitor;
+      const platform = cap && cap.getPlatform ? cap.getPlatform() : 'web';
+      if (platform !== 'ios') return;
+      const md = navigator.mediaDevices;
+      let outs = [];
+      try {
+        const all = md && md.enumerateDevices ? await md.enumerateDevices() : [];
+        outs = all.filter(d => d.kind === 'audiooutput')
+          .map(d => ({ label: String(d.label || '').slice(0, 40), id: String(d.deviceId || '').slice(0, 12) }));
+      } catch (e) { outs = [{ label: 'enumerate failed: ' + String((e && e.message) || e).slice(0, 60), id: '' }]; }
+      if (window.API && window.API.logClient) {
+        window.API.logClient('call_sink_probe', {
+          setSinkId: typeof (window.HTMLMediaElement && HTMLMediaElement.prototype.setSinkId),
+          selectAudioOutput: typeof (md && md.selectAudioOutput),
+          ctxSink: typeof (window.AudioContext && AudioContext.prototype.setSinkId),
+          outputs: outs.slice(0, 8),
+        });
+      }
+    } catch (e) {}
+  }
+
   async function routeAudio(on) {
     try {
       const p = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AudioRoute;
@@ -386,6 +420,7 @@
         try {
           if (window.API && window.API.logClient) window.API.logClient('call_join_timing', mark);
         } catch (e) {}
+        probeSinks();
         // Their audio arriving is a separate question, and it is the one a
         // person experiences as "when can I hear them". Timed from the same
         // zero, on its own line, once.
@@ -558,6 +593,12 @@
       // the first. And record what was seen either way - a repair that
       // decides NOT to act was previously silent, which is how this hid.
       let repairing = false;
+      // Observe only. Every repair attempted from here has hung the
+      // WebView - 1.4.16 asked for a new getUserMedia, 1.4.19 called
+      // setEnabled on the dead track - a synchronous wait inside WebKit
+      // that no JavaScript timeout can interrupt. The readings stay, as
+      // the record that finally made the failure legible; nothing acts.
+      const REPAIR_SEND = false;
       async function recheckSend() {
         if (repairing || !mic) return;
         const sent = () => { try { return (client.getLocalAudioStats() || {}).sendBitrate || 0; } catch (e) { return -1; } };
@@ -573,10 +614,10 @@
         const alive = reads.slice(-2).some(v => v > 0);
         try {
           if (window.API && window.API.logClient) {
-            window.API.logClient('call_send_check', { reads, muted, alive, acting: !alive && !muted });
+            window.API.logClient('call_send_check', { reads, muted, alive, acting: !alive && !muted && REPAIR_SEND, repair: REPAIR_SEND });
           }
         } catch (e) {}
-        if (alive || muted) return;
+        if (alive || muted || !REPAIR_SEND) return;
         repairing = true;
         const note = (ok, why) => {
           try {
@@ -688,80 +729,28 @@
         // where there is no plugin, so the UI falls back to the on/off toggle.
         getRoute: () => readRoute(),
         setRoute: async (route) => {
-          // ── Park the encoder across the switch ──
-          // Five attempts have treated this as damage to repair afterwards.
-          // The phone's numbers say what actually happens: sendLevel 15480
-          // (the microphone is capturing, loudly) with sendBitrate 0 (nothing
-          // encoded). iOS tears the audio unit down and rebuilds it - often at
-          // a different hardware sample rate - and WebRTC's encoder does not
-          // survive that, while the capture does.
-          //
-          // Muting does not unpublish; it feeds the encoder silence and keeps
-          // the stream alive. So mute, move the route, let it settle, unmute -
-          // the encoder restarts against the new hardware instead of dying
-          // against it. Cheap, and it happens in under half a second rather
-          // than the ten-to-thirty the repair below could take.
-          //
-          // Someone who muted themselves stays muted.
-          // Deterministic, because five rounds of detect-and-repair have not
-          // worked. The publish is KNOWN to die here - the phone has said so
-          // every time, sendLevel loud and sendBitrate zero - so it is taken
-          // down on purpose and rebuilt after the route has moved, rather
-          // than being mourned three to six seconds later by a check that has
-          // twice failed to fire at all.
-          //
-          // Order matters. Unpublishing first means nothing is encoding while
-          // iOS tears the audio unit down and rebuilds it, possibly at a
-          // different sample rate; publishing afterwards builds a fresh
-          // encoder against the hardware that now exists. Muting around the
-          // whole thing keeps the gap from being heard as a click.
-          //
-          // The cost is roughly a second of silence on a deliberate button
-          // press, which is what every phone does when you switch to the
-          // earpiece. The alternative has been a call that is silent in one
-          // direction until somebody gives up and hangs up.
-          const wasMuted = !!(mic && mic.muted);
-          if (mic && !wasMuted) { try { await mic.setMuted(true); } catch (e) {} }
-          let taken = false;
-          if (mic) {
-            try { await client.unpublish([mic]); taken = true; } catch (e) { taken = false; }
-          }
+          // ── Nothing but the route ──
+          // Six builds tried to save the outgoing audio across an iOS route
+          // change from here: detect-and-repair (1.4.14-1.4.18), then a
+          // deliberate unpublish/republish around the switch (1.4.19). The
+          // phone's own numbers, one per build, are the verdict:
+          //   1.4.17  sendLevel 142    sendBitrate 0   capture alive, encoder dead
+          //   1.4.18  sendLevel 15480  sendBitrate 0   capture alive, encoder dead
+          //   1.4.19  sendLevel 0      sendBitrate 0   capture dead as well - and
+          //           the repair that followed never wrote its completion line,
+          //           which is the "no button works" freeze.
+          // Touching the microphone track after the switch made it worse;
+          // touching it during the switch killed the capture too. So this
+          // moves the route and does nothing else. On iOS the receiver is
+          // not offered at all (the call screen hides it) until the WebView
+          // can survive the move - see probeSinks() for the way back - and
+          // the check below only records what it sees.
           const r = await applyRoute(route);
-          // Let the route actually settle before anything starts encoding
-          // against it; switching is not instantaneous on the device.
-          await new Promise(res => setTimeout(res, 300));
-          if (taken && mic) {
-            try { await client.publish([mic]); }
-            catch (e) {
-              try { if (window.API && window.API.logClient) window.API.logClient('call_route_republish_failed', { want: route, message: String((e && e.message) || e).slice(0, 120) }); } catch (x) {}
-            }
-          }
-          if (mic && !wasMuted) { try { await mic.setMuted(false); } catch (e) {} }
           if (r && typeof r.speakerOn === 'boolean') {
             speakerOn = r.speakerOn;
             remoteAudio.forEach(t => applySpeakerTo(t));
             onRouteChange && onRouteChange(speakerOn);
           }
-          // ── Put the outgoing audio back if the route change killed it ──
-          //
-          // The iPhone finally said what happens, three seconds after the
-          // switch to the earpiece:
-          //   {"want":"earpiece","sendBitrate":0,"sendLevel":4790,"recvBitrate":14848}
-          // sendLevel is not zero, so the microphone is still capturing; recvBitrate
-          // is not zero, so the far side is still audible. Only sendBitrate is
-          // zero: the PUBLISHED track died while the capture stayed alive. That
-          // is exactly "I can hear him, my voice does not reach him".
-          //
-          // Changing the route restarts the audio unit underneath WKWebView's
-          // WebRTC, and the published track does not come back on its own. It
-          // cannot be prevented from here - overrideOutputAudioPort is the call
-          // that moves the audio and the whole point of the button - so it is
-          // repaired instead: notice the send has stopped, and republish.
-          //
-          // Conditional on purpose. Android changes route without losing the
-          // send (its own log shows sendBitrate 16776 afterwards), and a
-          // republish costs a few hundred milliseconds of silence. Only the
-          // broken case pays it.
           recheckSend();
           return r;
         },

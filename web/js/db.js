@@ -2205,6 +2205,9 @@
       id, type, payload, read_at, created_at,
       actor:profiles!notifications_actor_id_fkey ( id, name, avatar_url )
     `).eq('user_id', me).in('type', ACTIVITY_TYPES)
+      // Ring rows (notify_on_call, 0093) carry the push and nothing else: in
+      // the list they read as a nameless 'تحديث جديد' and counted on the bell.
+      .or('payload->>kind.is.null,payload->>kind.neq.incoming_call')
       .order('created_at', { ascending: false }).limit(100);
     if (error) throw error;
     return data || [];
@@ -2228,7 +2231,10 @@
       // Same filter as the list above, or the bell would count messages the
       // notifications screen does not show — a badge you cannot clear by
       // opening it.
-      .eq('user_id', me).in('type', ACTIVITY_TYPES).is('read_at', null);
+      .eq('user_id', me).in('type', ACTIVITY_TYPES)
+      // Ring rows (notify_on_call, 0093) carry the push and nothing else: in
+      // the list they read as a nameless 'تحديث جديد' and counted on the bell.
+      .or('payload->>kind.is.null,payload->>kind.neq.incoming_call').is('read_at', null);
     if (error) return 0;
     return count || 0;
   };
