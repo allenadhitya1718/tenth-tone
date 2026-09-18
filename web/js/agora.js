@@ -560,6 +560,27 @@
           }
         },
         remoteCount: () => client.remoteUsers.length,
+        // Is audio actually moving, right now? Not "did the plugin say yes" -
+        // the iPhone has twice reported success on a route change that killed
+        // the call, and nothing recorded whether the media survived it. Read
+        // straight off the SDK so a route change can be judged two seconds
+        // later by what is still flowing.
+        audioStats: () => {
+          try {
+            const l = client.getLocalAudioStats() || {};
+            const r = client.getRemoteAudioStats() || {};
+            const ids = Object.keys(r);
+            const first = ids.length ? (r[ids[0]] || {}) : {};
+            return {
+              sendBitrate: Math.round(l.sendBitrate || 0),
+              sendLevel: Math.round(((l.sendVolumeLevel || 0) * 100)) / 100,
+              remotes: ids.length,
+              recvBitrate: Math.round(first.receiveBitrate || 0),
+              recvLevel: Math.round(((first.receiveLevel || 0) * 100)) / 100,
+              micMuted: !!(mic && mic.muted),
+            };
+          } catch (e) { return null; }
+        },
         isSpeakerOn: () => speakerOn,
         setSpeakerOn: (on) => {
           const wanted = !!on;

@@ -183,17 +183,19 @@ public class AudioRoutePlugin: CAPPlugin {
 
         // Activating is idempotent and can legitimately fail while another app
         // holds the session; that is not a reason to skip the override below.
-        //
-        // Only on the way in, though. "Idempotent" here still means a round
-        // trip into the audio daemon, and this runs on every single route
-        // change - mid-call, over a live capture, for no gain once the session
-        // is already ours and active.
-        if !configured {
-            do {
-                try session.setActive(true, options: [])
-            } catch {
-                print("AudioRoute: setActive failed: \(error.localizedDescription)")
-            }
+        // It runs unconditionally. An earlier version skipped it once `configured` was
+        // set, to avoid a round trip into the audio daemon on every route
+        // change - and that quietly broke interruption recovery: a phone call
+        // or Siri leaves `configured` true while iOS has DEACTIVATED the
+        // session underneath, and handleInterruption calls back in here for the
+        // express purpose of reactivating it. Skipping would have left the call
+        // silent for good. There is no API that answers "is my session active",
+        // so the flag cannot stand in for one; setActive is idempotent, and a
+        // call that survives an interruption is worth the round trip.
+        do {
+            try session.setActive(true, options: [])
+        } catch {
+            print("AudioRoute: setActive failed: \(error.localizedDescription)")
         }
 
         configured = true
@@ -215,7 +217,11 @@ public class AudioRoutePlugin: CAPPlugin {
             preferBluetoothInput()
             setOverride(AVAudioSession.PortOverride.none)
         default: // "auto"
-            try? session.setPreferredInput(nil)
+            // Same rule as the two branches above: clearing a preference that
+            // is already nil still restarts the audio unit under a live
+            // capture. The route sheet's "wired" row maps here, and so does any
+            // unrecognised route, so this runs mid-call in normal use.
+            if session.preferredInput != nil { try? session.setPreferredInput(nil) }
             setOverride(AVAudioSession.PortOverride.none)
         }
     }

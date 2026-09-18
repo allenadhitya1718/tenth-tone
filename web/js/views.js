@@ -5909,6 +5909,13 @@ function autoPlay(video) {
     let vnCtx = null, vnAnalyser = null, vnBuf = null, vnRaf = 0;
     let vnMeterTrack = null;      // the level meter's OWN copy of the microphone
     let vnPcm = null;             // WebKit: the samples, read straight off the microphone
+    let vnPcmSeconds = 0;         // how much audio the samples actually hold
+    // "A recording is in progress" - true for either engine. Several places
+    // used `vnRec` to mean this, which silently became false-on-iPhone the
+    // moment the WebKit path stopped creating a MediaRecorder: slide-to-cancel
+    // and drag-to-lock both returned early on every pointermove, and the
+    // re-entry guard would let a second recording start over the first.
+    const vnRecording = () => !!(vnRec || vnPcm);
     // WebKit's MediaRecorder is a different animal and the iPhone logs say so.
     // Not a "browser sniff" for behaviour we could feature-detect: there is no
     // flag that reports "mp4 cannot be fragmented mid-recording", and the cost
@@ -6032,18 +6039,46 @@ function autoPlay(video) {
     // WAV is uncompressed: about 32 KB a second at 16 kHz mono, so a ten
     // second note is ~320 KB. Larger than AAC and worth it for a voice note
     // that exists rather than one that does not.
-    function vnPcmStart(stream) {
+    async function vnPcmStart(stream) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       try {
         const ctx = new AC();
-        if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} }
+        // AWAITED, and then checked. This was fire-and-forget, which is how
+        // attempt three would have failed exactly like attempt two: on iOS the
+        // transient user activation from the press is spent on the microphone
+        // permission sheet, so by the time getUserMedia resolves WebKit can
+        // refuse to start the context. A suspended context never fires
+        // onaudioprocess - no samples, no bytes, an empty note and nothing to
+        // tell it apart from the MediaRecorder failure it replaced.
+        if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (e) {} }
+        if (ctx.state !== 'running') {
+          if (window.API && window.API.logClient) {
+            window.API.logClient('vn_ctx_blocked', { state: ctx.state, rate: ctx.sampleRate });
+          }
+          try { ctx.close(); } catch (e) {}
+          return null;              // say so now, not after they have spoken
+        }
         const src = ctx.createMediaStreamSource(stream);
         const node = ctx.createScriptProcessor(4096, 1, 1);
         const chunks = [];
+        let heard = false;
         node.onaudioprocess = (e) => {
           // The buffer is reused between callbacks, so it has to be copied.
-          chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+          const d = e.inputBuffer.getChannelData(0);
+          chunks.push(new Float32Array(d));
+          heard = true;
+          // The level meter reads from HERE on this path rather than from a
+          // second AudioContext on a cloned track. Two contexts on one
+          // microphone is a way to glitch the capture on iOS, and the clone
+          // only ever existed to keep MediaRecorder fed - which this path no
+          // longer uses.
+          let sum = 0;
+          for (let i = 0; i < d.length; i++) sum += d[i] * d[i];
+          const level = Math.min(1, Math.sqrt(sum / d.length) * 3.2);
+          vnLive.push(level);
+          if (vnLive.length > 120) vnLive.shift();
+          vnPeaks.push(level);
         };
         // A ScriptProcessor only runs while connected to the destination, and
         // connecting the microphone to the speaker would put the caller's own
@@ -6051,7 +6086,8 @@ function autoPlay(video) {
         const mute = ctx.createGain();
         mute.gain.value = 0;
         src.connect(node); node.connect(mute); mute.connect(ctx.destination);
-        return { ctx, src, node, mute, chunks, rate: ctx.sampleRate };
+        const p = { ctx, src, node, mute, chunks, rate: ctx.sampleRate, seconds: 0, get heard() { return heard; } };
+        return p;
       } catch (e) { console.warn('vn: sample recorder failed to start:', e); return null; }
     }
 
@@ -6060,7 +6096,15 @@ function autoPlay(video) {
       try { p.node.onaudioprocess = null; } catch (e) {}
       try { p.src.disconnect(); p.node.disconnect(); p.mute.disconnect(); } catch (e) {}
       try { p.ctx.close(); } catch (e) {}
-      return vnEncodeWav(p.chunks, p.rate);
+      let samples = 0;
+      for (const c of p.chunks) samples += c.length;
+      // The REAL length of what was captured. iOS suspends an AudioContext
+      // when the app is backgrounded or the session is interrupted, and
+      // onaudioprocess simply stops - while the on-screen timer, which runs off
+      // the wall clock, carries on. Without this the preview claims 0:45 for
+      // six seconds of audio and nobody is told.
+      const seconds = p.rate ? samples / p.rate : 0;
+      return { blob: vnEncodeWav(p.chunks, p.rate), seconds };
     }
 
     function vnEncodeWav(chunks, sampleRate) {
@@ -6116,6 +6160,13 @@ function autoPlay(video) {
 
     // Analyser on the live MediaStream. It is never connected to the audio
     // destination — that would loop the mic back out of the speaker.
+    // The same animation loop as vnMeterStart, without an AudioContext: the
+    // levels are already being pushed by the sample recorder.
+    function vnMeterDrawOnly() {
+      const loop = () => { vnRaf = requestAnimationFrame(loop); vnDrawLive(); };
+      vnRaf = requestAnimationFrame(loop);
+    }
+
     function vnMeterStart(stream) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;                    // no meter; recording still works
@@ -6235,8 +6286,12 @@ function autoPlay(video) {
     }
 
     async function vnStart(lockNow) {
-      if (vnStarting || vnRec || !previewBar.hidden) return;
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+      if (vnStarting || vnRecording() || !previewBar.hidden) return;
+      // MediaRecorder is only needed by the engines that still use it. The
+      // WebKit path wants getUserMedia and an AudioContext, and refusing it
+      // here would turn away an iPhone on which it would have worked.
+      const needsRecorder = !VN_WEBKIT && !window.MediaRecorder;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || needsRecorder) {
         toast('التسجيل الصوتي غير مدعوم على هذا الجهاز'); return;
       }
       vnStarting = true; vnAbandon = false; vnDiscard = false; vnPendingLock = !!lockNow;
@@ -6271,7 +6326,8 @@ function autoPlay(video) {
       if (VN_WEBKIT) {
         // No MediaRecorder here. See vnPcmStart.
         vnMime = 'audio/wav';
-        vnPcm = vnPcmStart(stream);
+        vnPcmSeconds = 0;
+        vnPcm = await vnPcmStart(stream);
         if (!vnPcm) { vnReleaseMic(); vnReset(); toast('تعذر بدء التسجيل'); return; }
       } else {
         vnMime = vnPickMime();
@@ -6308,7 +6364,10 @@ function autoPlay(video) {
       lockPill.hidden = false;
       inputBar.classList.add('vn-active');
       micBtn.classList.add('vn-recording');
-      vnMeterStart(stream);
+      // On WebKit the meter is fed by the sample recorder itself (see
+      // vnPcmStart); a second AudioContext on the same microphone is a way to
+      // glitch the capture on iOS.
+      if (VN_WEBKIT) vnMeterDrawOnly(); else vnMeterStart(stream);
       vnSetLocked(vnPendingLock);
       vnTick = setInterval(() => {
         const s = (Date.now() - vnStartAt) / 1000;
@@ -6327,13 +6386,30 @@ function autoPlay(video) {
       if (vnPcm) {
         if (vnTick) { clearInterval(vnTick); vnTick = null; }
         if (vnRaf) { cancelAnimationFrame(vnRaf); vnRaf = 0; }
-        const wav = vnPcmStop(vnPcm);
-        vnPcm = null;
-        if (wav) vnChunks = [wav];
+        const p = vnPcm;
+        vnPcm = null;                       // cleared FIRST: a second vnStop
+                                            // (the finger lifting after the
+                                            // five-minute limit already fired)
+                                            // must not encode it twice.
+        let out = null;
+        try { out = vnPcmStop(p); }
+        catch (e) {
+          // Encoding allocates the whole recording twice over; on a long note
+          // an older iPhone can refuse. Left unguarded this threw out of
+          // vnStop and wedged the composer with the microphone still live.
+          console.warn('vn: encode failed:', e);
+          if (window.API && window.API.logClient) {
+            window.API.logClient('vn_encode_failed', { message: String((e && e.message) || e).slice(0, 200) });
+          }
+        }
+        if (out && out.blob) { vnChunks = [out.blob]; vnPcmSeconds = out.seconds || 0; }
         vnOnStop();
         return;
       }
-      if (!vnRec) { vnReset(); return; }
+      // Nothing is recording. If a preview is already up - the limit stopped it
+      // while the finger was still down - leave it alone rather than resetting
+      // it away, which threw the whole recording out silently.
+      if (!vnRec) { if (previewBar.hidden) vnReset(); return; }
       // Only the timer and the meter stop here; the recorder still has to emit
       // its last chunk, so the microphone is released inside onstop.
       if (vnTick) { clearInterval(vnTick); vnTick = null; }
@@ -6389,7 +6465,17 @@ function autoPlay(video) {
       }
       vnBlob = new Blob(chunks, { type: mime });
       vnPeaks = peaks;
-      vnDur = heldMs / 1000;
+      // The samples know how long they are; the wall clock only knows how long
+      // the button was held. They differ when iOS suspends the context mid
+      // recording (backgrounded, or an incoming phone call), and the honest
+      // number is the one with audio behind it.
+      vnDur = vnPcmSeconds > 0 ? vnPcmSeconds : heldMs / 1000;
+      if (vnPcmSeconds > 0 && heldMs / 1000 - vnPcmSeconds > 1.5) {
+        toast('انقطع التسجيل — تحقق منه قبل الإرسال');
+        if (window.API && window.API.logClient) {
+          window.API.logClient('vn_truncated', { heldMs, seconds: vnPcmSeconds });
+        }
+      }
       vnShowPreview();
     }
 
@@ -6456,7 +6542,12 @@ function autoPlay(video) {
       const blob = vnBlob;
       const mime = blob.type || 'audio/webm';
       if (window.API && window.API.logClient) window.API.logClient('vn_send_start', { bytes: blob.size, mime, dur: vnDur });
-      const ext = mime.indexOf('mp4') >= 0 ? 'm4a' : mime.indexOf('ogg') >= 0 ? 'ogg' : 'webm';
+      // 'wav' was missing, so every iPhone note went up as voice-<ts>.webm -
+      // and the storage path takes its extension straight from the name, so
+      // anything downstream that types by extension would call a WAV a WebM.
+      const ext = mime.indexOf('wav') >= 0 ? 'wav'
+                : mime.indexOf('mp4') >= 0 ? 'm4a'
+                : mime.indexOf('ogg') >= 0 ? 'ogg' : 'webm';
       const fname = 'voice-' + Date.now() + '.' + ext;
       // sendMessage() derives the storage extension from file.name, so a bare
       // Blob would be uploaded as ".bin" and would never play back.
@@ -6532,7 +6623,7 @@ function autoPlay(video) {
       const inlineD = (vnPressX - e.clientX) * vnAx();     // + = toward inline start
       const upD = vnPressY - e.clientY;                    // + = upward
       if (Math.abs(inlineD) > VN_SLOP_PX || Math.abs(upD) > VN_SLOP_PX) vnMoved = true;
-      if (!vnRec) return;                                  // nothing to steer yet
+      if (!vnRecording()) return;                          // nothing to steer yet
       if (upD > VN_SLOP_PX && upD > inlineD) {
         const lift = Math.min(upD, VN_LOCK_PX);
         lockPill.style.transform = 'translateY(' + (-(lift / VN_LOCK_PX) * 10).toFixed(1) + 'px)';
@@ -6562,7 +6653,7 @@ function autoPlay(video) {
       micBtn.style.transform = '';
       if (armed || quickTap) {
         vnPendingLock = true;               // applied when the stream arrives
-        if (vnRec) vnSetLocked(true);
+        if (vnRecording()) vnSetLocked(true);
         return;
       }
       if (vnStarting) { vnAbandon = true; return; }   // permission sheet outlived the press
@@ -6577,7 +6668,7 @@ function autoPlay(video) {
     } else {
       // No pointer events: fall back to tap to start hands-free, tap to stop.
       micBtn.addEventListener('click', () => {
-        if (vnRec || vnStarting) vnStop(); else vnStart(true);
+        if (vnRecording() || vnStarting) vnStop(); else vnStart(true);
       });
     }
 
@@ -13291,6 +13382,18 @@ function autoPlay(video) {
             // Swift to re-read and another guess to ship. This is the
             // difference between "the plugin refused" and "the plugin said
             // yes and the sound came out of the loudspeaker anyway".
+            // Two seconds later, is the call still alive? The plugin reporting
+            // 'earpiece' has never been the question - iOS confirmed that much
+            // last time. Whether the audio survived the move is the question,
+            // and this is the first time anything records the answer.
+            setTimeout(() => {
+              try {
+                const st = media && media.audioStats ? media.audioStats() : null;
+                if (st && window.API && window.API.logClient) {
+                  window.API.logClient('call_route_after', Object.assign({ want: r }, st));
+                }
+              } catch (e) {}
+            }, 2500);
             if (window.API && window.API.logClient) {
               window.API.logClient('call_route', {
                 want: r,
