@@ -12792,7 +12792,7 @@ function autoPlay(video) {
     row: null, members: null, unsubMembers: null, inviteTimers: {}, onMembers: null,
     // Who the bar names, and the row handed over by the incoming card when
     // Accept was tapped (see initIncomingCalls).
-    otherName: '', accepting: null, pillName: null,
+    otherName: '', accepting: null, pillName: null, hangupWired: false,
     pill: null, pillTime: null,
     ensurePill() {
       if (this.pill) return this.pill;
@@ -12859,6 +12859,33 @@ function autoPlay(video) {
       this.startedAt = Date.now();
       this.timer = setInterval(() => this.tick(), 1000);
       this.tick();
+      this.notify(true);
+    },
+    // ── The call in the phone's notification shade (Android) ──
+    // The in-app bar only exists while FLYP is the app on screen. Leave it and
+    // Android is free to freeze this process, which takes the call with it -
+    // silently, with nothing to tap. CallNotificationPlugin runs a foreground
+    // service for exactly as long as the call, which is what keeps the process
+    // alive; the notification is how a person gets back to the call or ends it
+    // without opening the app first.
+    //
+    // Hang up from the shade comes back HERE rather than being handled
+    // natively, so the session is wound down by the same code that ends it on
+    // screen. Two endings is how a call finishes half-dead: a row still
+    // saying accepted and a microphone still publishing.
+    notify(on) {
+      const P = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.CallNotification;
+      if (!P) return;                       // iOS and the web: nothing to do
+      try {
+        if (!on) { P.stop(); return; }
+        if (!this.hangupWired) {
+          this.hangupWired = true;
+          P.addListener('hangup', () => { try { ActiveCall.hangUp(); } catch (e) {} });
+        }
+        let label = 'مكالمة جارية';
+        try { if (window.I18N && window.I18N.t) label = window.I18N.t(label); } catch (e) {}
+        P.start({ name: this.otherName || '', text: label });
+      } catch (e) { console.warn('call notification:', e); }
     },
     isLive() { return !!this.id && !this.over && !!this.startedAt; },
     // Everything down: media, audio route, timers, subscription, pill. Safe
@@ -12875,6 +12902,7 @@ function autoPlay(video) {
       const m = this.media; this.media = null;
       if (m) { Promise.resolve().then(() => m.stop()).catch(() => {}); }
       this.showPill(false);
+      this.notify(false);                 // the shade notification goes with it
       // A token or microphone warmed for a call that never connected.
       try { if (window.Agora && window.Agora.dropWarm) window.Agora.dropWarm(); } catch (e) {}
       this.id = null; this.call = null; this.startedAt = null; this.over = true;

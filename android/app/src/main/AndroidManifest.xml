@@ -56,7 +56,17 @@
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
-        </provider>
+        </provider>
+        <!-- Holds the process open for the duration of a call and puts it in
+             the shade with a Hang up button. Not exported: only this app
+             starts it. stopWithTask so a swiped-away app does not leave a
+             call notification behind with nothing running under it. -->
+        <service
+            android:name=".CallForegroundService"
+            android:exported="false"
+            android:stopWithTask="true"
+            android:foregroundServiceType="microphone" />
+
     </application>
 
     <!-- Permissions -->
@@ -69,6 +79,14 @@
       its patch when RECORD_AUDIO is already present, so this stays correct
       for CI builds too.
     -->
+
+    <!-- A call keeps running when FLYP is not the app on screen. Android
+         only allows that for a foreground service, and from 14 each one must
+         name the type it is and hold the matching permission. MICROPHONE is
+         what a call actually holds; phoneCall would need a self-managed
+         ConnectionService the app does not have. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
     <uses-permission android:name="android.permission.INTERNET" />
 

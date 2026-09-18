@@ -18,6 +18,11 @@ public class MainActivity extends BridgeActivity {
         // inert in a WebView and the share sheet only offers other apps, so
         // without this the Save button did nothing a person could find.
         registerPlugin(MediaSavePlugin.class);
+        // Keeps a call alive - and visible, with a Hang up button - while the
+        // person is in another app. Android may freeze or kill this process
+        // the moment FLYP leaves the screen; a foreground service is the only
+        // way to say the call is still worth keeping.
+        registerPlugin(CallNotificationPlugin.class);
         super.onCreate(savedInstanceState);
 
         // ── The back button ──
