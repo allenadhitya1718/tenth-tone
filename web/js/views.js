@@ -5194,7 +5194,23 @@ function autoPlay(video) {
         }
         bubble.appendChild(tag);
       } else if (m.attachment_url && m.type === 'voice') {
-        bubble.appendChild(Object.assign(document.createElement('audio'), { src: m.attachment_url, controls: true }));
+        const au = Object.assign(document.createElement('audio'), { src: m.attachment_url, controls: true });
+        // A voice note that arrives and will not play leaves no trace at all -
+        // the bubble is there, the file is there, and the person just says "I
+        // did not get it". The <audio> element knows exactly why; ask it.
+        au.addEventListener('error', () => {
+          const e = au.error || {};
+          try {
+            if (window.API && window.API.logClient) {
+              window.API.logClient('vn_play_failed', {
+                code: e.code || 0, msg: String(e.message || '').slice(0, 120),
+                ext: String(m.attachment_url).split('?')[0].split('.').pop().slice(0, 8),
+                mid: String(m.id || '').slice(0, 8),
+              });
+            }
+          } catch (x) {}
+        }, { once: true });
+        bubble.appendChild(au);
       } else if (m.type === 'file' && m.attachment_url) {
         bubble.appendChild(el('a', {
           // safeUrl, because attachment_url is attacker-supplied: it is

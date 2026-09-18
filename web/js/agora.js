@@ -509,22 +509,47 @@
             if (window.API && window.API.logClient) window.API.logClient('call_send_repair', { ok: !!ok, why: why || '' });
           } catch (e) {}
         };
+        // NOTHING here may hang. The first version asked for a brand new
+        // microphone (createMicrophoneAudioTrack -> getUserMedia) and the
+        // phone's log shows what that costs: the repair ran once and worked
+        // (22:24), and on the next route change it started and never finished -
+        // no completion line, and the whole app stopped responding. Acquiring a
+        // capture device while the audio unit is exactly the thing that just
+        // broke is asking WebKit to answer from inside the fault. So:
+        //   1. republish the track we ALREADY hold - no device acquisition;
+        //   2. only if that does not restore the send, try a fresh one;
+        //   3. every step on a timeout, so a wedged WebKit cannot take the
+        //      interface down with it.
+        const limit = (promise, ms, label) => Promise.race([
+          Promise.resolve(promise),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout:' + label)), ms)),
+        ]);
         try {
-          // A fresh track, published before the dead one is dropped, so the
-          // gap is as short as the SDK allows.
-          const AgoraRTC = await loadSdk();
-          const fresh = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig: 'speech_standard' });
           const dead = mic;
+          // (1) The cheapest thing that can work, and the only one that does
+          // not touch getUserMedia.
+          try {
+            await limit(client.unpublish([dead]), 4000, 'unpublish');
+            await limit(client.publish([dead]), 4000, 'republish');
+            await new Promise(res => setTimeout(res, 1200));
+            if (sent() > 0) { note(true, 'republished same track'); return; }
+          } catch (e) {
+            note(false, 'republish: ' + String((e && e.message) || e).slice(0, 60));
+          }
+          // (2) Still silent. A new track, on a leash.
+          const AgoraRTC = await limit(loadSdk(), 5000, 'sdk');
+          const fresh = await limit(
+            AgoraRTC.createMicrophoneAudioTrack({ encoderConfig: 'speech_standard' }), 6000, 'getusermedia');
           if (dead && dead.muted && fresh.setMuted) { try { await fresh.setMuted(true); } catch (e) {} }
-          try { await client.unpublish([dead]); } catch (e) {}
+          try { await limit(client.unpublish([dead]), 4000, 'unpublish2'); } catch (e) {}
           mic = fresh;
-          await client.publish([fresh]);
+          await limit(client.publish([fresh]), 5000, 'publish2');
           try { dead.close(); } catch (e) {}
-          note(sent() >= 0, 'republished');
+          note(true, 'new track');
         } catch (e) {
           note(false, String((e && e.message) || e).slice(0, 120));
         } finally {
-          repairing = false;
+          repairing = false;      // ALWAYS, so a failure never blocks the next try
         }
       }
 
