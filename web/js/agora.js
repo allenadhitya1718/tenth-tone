@@ -461,7 +461,14 @@
       }
 
       const session = {
-        native: true,
+        // TRUE only while the audio is actually on the native SDK. After a
+        // handover to video the audio is back inside WKWebView, where the
+        // receiver is exactly as broken as it ever was - and the call screen
+        // decides whether to offer the earpiece row from this flag. Left as a
+        // constant it would go on claiming "native" and hand the user a
+        // control that kills a video call's audio, which is the whole fault
+        // this path exists to end. A getter, so it can never drift.
+        get native() { return !web; },
         // The screen writes this into call_members.agora_uid; without it the
         // write is a silent no-op on every native call.
         userId: uid,
