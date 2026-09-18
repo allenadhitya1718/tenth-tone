@@ -104,20 +104,39 @@ function parseList(xml: string) {
   return { items, truncated, token };
 }
 
-Deno.serve(async (req) => {
+// The hourly caller presents the secret stored on this job's own row in
+// job_endpoints, which was regenerated at some point and has not matched the
+// RECONCILE_SECRET env var since. Every run for months answered 401 and swept
+// nothing - the same fault send-push had, fixed the same way: the row's own
+// secret is accepted as well as the environment's.
+async function callerAllowed(req: Request, db: ReturnType<typeof createClient>): Promise<boolean> {
   const given = req.headers.get('x-reconcile-secret') ?? '';
-  if (!RECONCILE_SECRET || given.length !== RECONCILE_SECRET.length || given !== RECONCILE_SECRET) {
-    return json({ error: 'unauthorized' }, 401);
-  }
+  if (!given) return false;
+  if (RECONCILE_SECRET && given === RECONCILE_SECRET) return true;
+  const { data } = await db.from('job_endpoints').select('headers').eq('name', 'media-reconcile').maybeSingle();
+  const want = data && data.headers && (data.headers['x-reconcile-secret'] || data.headers['X-Reconcile-Secret']);
+  return !!want && given === String(want);
+}
+
+Deno.serve(async (req) => {
   if (!R2_ACCOUNT_ID || !R2_BUCKET || !SUPABASE_URL || !SERVICE_KEY) {
     return json({ error: 'not_configured' }, 500);
   }
 
   const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+  if (!(await callerAllowed(req, db))) return json({ error: 'unauthorized' }, 401);
+
+  // ── Report-only ──
+  // ?dry=1 walks exactly the same ground and deletes nothing, so the first
+  // run after a long silence can be READ before it is trusted. It also skips
+  // expire_pending_media, which writes.
+  const DRY = new URL(req.url).searchParams.get('dry') === '1';
+  const wouldDelete: { key: string; bytes: number }[] = [];
   const deleted: string[] = [];
   const failures: string[] = [];
 
-  const drop = async (key: string) => {
+  const drop = async (key: string, bytes = 0) => {
+    if (DRY) { wouldDelete.push({ key, bytes }); return; }
     try {
       const res = await r2.fetch(`${base()}/${key}`, { method: 'DELETE' });
       // S3 DELETE is idempotent and answers 204 whether or not the object was
@@ -132,15 +151,31 @@ Deno.serve(async (req) => {
   // ── 1. Authorisations that never became files ──
   // Clears the rows, and hands back the keys because some of them DID become
   // files — that is case 1 above, and those bytes have to go.
-  const { data: expired, error: expErr } = await db.rpc('expire_pending_media', {
-    p_older_than: '01:00:00',
-  });
-  if (expErr) return json({ error: 'expire_failed', detail: expErr.message }, 500);
-
-  for (const row of (expired ?? []) as { out_bucket: string; out_key: string }[]) {
-    await drop(row.out_key);
+  let expiredCount = 0;
+  if (DRY) {
+    // expire_pending_media CLEARS rows, so it is not run here. Count the same
+    // set instead: authorisations older than an hour that never confirmed.
+    const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: pend, error: pendErr } = await db
+      .from('media_objects')
+      .select('key, size_bytes')
+      .eq('status', 'pending')
+      .lt('created_at', cutoff);
+    if (pendErr) return json({ error: 'pending_read_failed', detail: pendErr.message }, 500);
+    expiredCount = (pend ?? []).length;
+    for (const row of (pend ?? []) as { key: string; size_bytes: number }[]) {
+      await drop(row.key, Number(row.size_bytes) || 0);
+    }
+  } else {
+    const { data: expired, error: expErr } = await db.rpc('expire_pending_media', {
+      p_older_than: '01:00:00',
+    });
+    if (expErr) return json({ error: 'expire_failed', detail: expErr.message }, 500);
+    for (const row of (expired ?? []) as { out_bucket: string; out_key: string }[]) {
+      await drop(row.out_key);
+    }
+    expiredCount = (expired ?? []).length;
   }
-  const expiredCount = (expired ?? []).length;
 
   // ── 2. Objects in the bucket with no ledger row at all ──
   let token = '';
@@ -176,7 +211,7 @@ Deno.serve(async (req) => {
 
       const seen = new Set((known ?? []).map(k => k.key));
       for (const c of candidates) {
-        if (!seen.has(c.key)) { orphaned++; await drop(c.key); }
+        if (!seen.has(c.key)) { orphaned++; await drop(c.key, c.size); }
       }
     }
 
@@ -194,8 +229,16 @@ Deno.serve(async (req) => {
     .select('id', { count: 'exact', head: true })
     .eq('status', 'stored');
 
+  const wouldBytes = wouldDelete.reduce((n, w) => n + (w.bytes || 0), 0);
   return json({
     ok: true,
+    dry_run: DRY,
+    // Only in a dry run: what a real run WOULD remove, with a sample so a
+    // person can recognise the keys before agreeing to any of it.
+    would_delete_count: DRY ? wouldDelete.length : undefined,
+    would_delete_bytes: DRY ? wouldBytes : undefined,
+    would_delete_mb: DRY ? Math.round((wouldBytes / 1048576) * 10) / 10 : undefined,
+    would_delete_sample: DRY ? wouldDelete.slice(0, 15).map(w => w.key) : undefined,
     expired_pending: expiredCount,
     scanned,
     orphaned,
