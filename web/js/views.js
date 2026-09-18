@@ -13517,9 +13517,12 @@ function autoPlay(video) {
             // 'earpiece' has never been the question - iOS confirmed that much
             // last time. Whether the audio survived the move is the question,
             // and this is the first time anything records the answer.
-            setTimeout(() => {
+            setTimeout(async () => {
               try {
-                const st = media && media.audioStats ? media.audioStats() : null;
+                // await, because the native iOS voice session answers this
+                // across the plugin bridge (a promise) while the web session
+                // answers synchronously. Promise.resolve covers both.
+                const st = media && media.audioStats ? await Promise.resolve(media.audioStats()) : null;
                 if (st && window.API && window.API.logClient) {
                   window.API.logClient('call_route_after', Object.assign({ want: r }, st));
                 }

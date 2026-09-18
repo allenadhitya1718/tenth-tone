@@ -1,7 +1,7 @@
 {
   "name": "flyp",
   "version": "1.0.6",
-  "description": "FLYP — social video app, iOS shell via Capacitor",
+  "description": "FLYP \u2014 social video app, iOS shell via Capacitor",
   "private": true,
   "scripts": {
     "cap:sync": "npx cap sync",
@@ -16,11 +16,12 @@
     "@capacitor/core": "^6.2.1",
     "@capacitor/geolocation": "^6.1.0",
     "@capacitor/haptics": "^6.0.2",
-    "@capacitor/push-notifications": "^6.0.2",
     "@capacitor/ios": "^6.2.1",
     "@capacitor/keyboard": "^6.0.3",
+    "@capacitor/push-notifications": "^6.0.2",
     "@capacitor/splash-screen": "^6.0.3",
     "@capacitor/status-bar": "^6.0.2",
+    "capacitor-agora-call": "file:./capacitor-agora-call",
     "capacitor-audio-route": "file:./capacitor-audio-route"
   },
   "devDependencies": {

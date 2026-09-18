@@ -1,0 +1,13 @@
+{
+  "name": "capacitor-agora-call",
+  "version": "1.0.0",
+  "description": "Voice calls on iPhone run by Apple's audio instead of the WebView's, so the earpiece works. iOS only; Android keeps the web SDK.",
+  "main": "dist/plugin.js",
+  "types": "dist/esm/index.d.ts",
+  "files": ["ios/", "CapacitorAgoraCall.podspec"],
+  "capacitor": {
+    "ios": { "src": "ios" }
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

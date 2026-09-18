@@ -88,6 +88,31 @@
       return r && typeof r === 'object' ? r : null;
     } catch (e) { return null; }
   }
+  // ── Voice calls on iPhone, run by Apple's audio ──
+  //
+  // Six builds tried to move an iPhone call to the earpiece from inside the
+  // WebView and lost the outgoing audio every time (sendBitrate 0 while the
+  // microphone was plainly capturing). The seventh check closed the last
+  // door: call_sink_probe on iOS 18.3 reported no setSinkId, no
+  // selectAudioOutput and an EMPTY audiooutput list, so WebKit's own way to
+  // choose the receiver is not available either. There is no web-side fix.
+  //
+  // So a VOICE call on iOS runs on Agora's native SDK instead, which owns
+  // AVAudioSession and rebuilds its capture around a route change coherently.
+  // Video calls stay on the web SDK - nobody holds a video call to their ear.
+  //
+  // Everything below is guarded: if the plugin is missing, or the join fails
+  // for any reason, the caller falls through to the web path and the call
+  // behaves exactly as it shipped in 1.4.20.
+  function nativeCallPlugin() {
+    try {
+      const cap = window.Capacitor;
+      if (!cap || !cap.getPlatform || cap.getPlatform() !== 'ios') return null;
+      const p = cap.Plugins && cap.Plugins.AgoraCall;
+      return (p && typeof p.join === 'function') ? p : null;
+    } catch (e) { return null; }
+  }
+
   async function releaseAudioRoute() {
     try {
       const p = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AudioRoute;
@@ -356,6 +381,141 @@
     // to flip a CSS class and call it muted, so "muted" was a claim the UI
     // made rather than a fact about the microphone, and the two could
     // disagree with nothing to catch it.
+    // ── The native voice session ──
+    // Exposes exactly the shape V.call already reads from a web session, so
+    // one call screen drives both. After a handover to video (enableVideo
+    // below) every method forwards to the web session that replaced it, and
+    // the screen never learns that the thing under it changed.
+    async _startNativeCall({ channel, uid, token, onRemote, onError, onRouteChange }) {
+      const p = nativeCallPlugin();
+      if (!p) throw new Error('no native call plugin');
+      let web = null;                       // set once video takes over
+      let remotes = 0;
+      let muted = false;
+      let speakerOn = true;
+      let stopped = false;
+      let localEls = { local: null, remote: null };
+      const subs = [];
+
+      try {
+        const r = await p.join({ appId: AGORA_APP_ID, channel: String(channel), token: token, uid: uid, speaker: true });
+        if (!r || !r.joined) throw new Error('native join refused');
+      } catch (e) {
+        try { await p.leave(); } catch (x) {}
+        throw e;
+      }
+
+      try {
+        subs.push(await p.addListener('remoteChanged', (ev) => {
+          if (web) return;
+          remotes = (ev && ev.remotes) || 0;
+          onRemote && onRemote({ remotes: remotes, hasRemoteVideo: false });
+        }));
+        subs.push(await p.addListener('callError', (ev) => {
+          if (web) return;
+          try { if (window.API && window.API.logClient) window.API.logClient('call_native_error', { code: (ev && ev.code) }); } catch (x) {}
+        }));
+      } catch (e) { /* events are a nicety; the call works without them */ }
+
+      const dropSubs = () => {
+        subs.forEach(h => { try { if (h && h.remove) h.remove(); } catch (e) {} });
+        subs.length = 0;
+      };
+
+      const session = {
+        native: true,
+        isMuted: () => web ? web.isMuted() : muted,
+        setMuted: async (on) => {
+          if (web) return web.setMuted(on);
+          try { const r = await p.setMuted({ muted: !!on }); muted = !!(r && r.muted); }
+          catch (e) { onError && onError(e); }
+          return muted;
+        },
+
+        // No camera on this path by definition - the screen reads these to
+        // decide what the camera button offers, and enableVideo is what it
+        // calls when somebody asks for video.
+        hasCamera: () => web ? web.hasCamera() : false,
+        isCameraOn: () => web ? web.isCameraOn() : false,
+        setCameraOn: async (on) => web ? web.setCameraOn(on) : false,
+        switchCamera: async () => { if (web) return web.switchCamera(); },
+        hasRemoteVideo: () => web ? web.hasRemoteVideo() : false,
+        canRouteAudio: () => web ? web.canRouteAudio() : remotes > 0,
+        remoteCount: () => web ? web.remoteCount() : remotes,
+
+        attachVideo: (localEl, remoteEl) => {
+          localEls = { local: localEl, remote: remoteEl };
+          if (web) web.attachVideo(localEl, remoteEl);
+        },
+
+        // ── A voice call becoming a video call ──
+        // Video needs the WebView (the camera and the video elements live
+        // there), so this hands the call over: a full web session is started
+        // on the same channel, and only once it is up does the native one go.
+        // Costs a few seconds of reconnect, which is the honest price and is
+        // why it is not done for voice.
+        enableVideo: async () => {
+          if (web) return web.enableVideo();
+          const ws = await Agora.startCall({
+            channel: channel, withVideo: true,
+            localVideoEl: localEls.local, remoteVideoEl: localEls.remote,
+            onRemote: onRemote, onError: onError, onRouteChange: onRouteChange,
+          });
+          // startCall took the call slot, which already stopped the native
+          // half through slot.stop; this is belt and braces and is safe twice.
+          dropSubs();
+          try { await p.leave(); } catch (e) {}
+          web = ws;
+          try { if (window.API && window.API.logClient) window.API.logClient('call_native_handover', { to: 'web' }); } catch (e) {}
+          return true;
+        },
+
+        // Reading the route is safe while the SDK owns the session -
+        // currentRoute is a read - so the picker still shows the truth,
+        // including a Bluetooth device the SDK moved to by itself.
+        getRoute: () => web ? web.getRoute() : readRoute(),
+        setRoute: async (route) => {
+          if (web) return web.setRoute(route);
+          // The whole reason this path exists. The SDK moves the route AND
+          // rebuilds its own capture around the move, which is exactly what
+          // the WebView could not do. 'bluetooth' and 'auto' are "not the
+          // loudspeaker" - iOS picks a connected device over the receiver on
+          // its own, and refuses to leave one for the loudspeaker.
+          try {
+            const r = await p.setSpeaker({ on: String(route) === 'speaker' });
+            speakerOn = !!(r && r.speakerOn);
+          } catch (e) { onError && onError(e); }
+          onRouteChange && onRouteChange(speakerOn);
+          const now = await readRoute();
+          return now || { route: speakerOn ? 'speaker' : 'earpiece', speakerOn: speakerOn };
+        },
+        isSpeakerOn: () => web ? web.isSpeakerOn() : speakerOn,
+        setSpeakerOn: (on) => {
+          if (web) return web.setSpeakerOn(on);
+          speakerOn = !!on;
+          p.setSpeaker({ on: speakerOn }).then(r => {
+            const actual = !!(r && r.speakerOn);
+            if (actual !== speakerOn) { speakerOn = actual; onRouteChange && onRouteChange(actual); }
+          }).catch(() => {});
+          return speakerOn;
+        },
+
+        audioStats: async () => {
+          if (web) return web.audioStats();
+          try { return await p.stats(); } catch (e) { return null; }
+        },
+
+        stop: async () => {
+          if (stopped) return;
+          stopped = true;
+          dropSubs();
+          if (web) { try { await web.stop(); } catch (e) {} return; }
+          try { await p.leave(); } catch (e) {}
+        },
+      };
+      return session;
+    },
+
     async startCall({ channel, uid, withVideo, localVideoEl, remoteVideoEl, onRemote, onError, onRouteChange }) {
       if (!AGORA_APP_ID) throw new Error('AGORA_APP_ID not configured');
       // Before the first await, so two overlapping joins cannot each believe
@@ -372,6 +532,49 @@
       const T0 = Date.now();
       const mark = {};
       const at = (k) => { mark[k] = Date.now() - T0; };
+
+      // ── iPhone voice call: Apple's audio, not the WebView's ──
+      // Tried FIRST, because everything below opens a microphone the native
+      // SDK would then have to fight for. Anything at all going wrong falls
+      // through to the web path underneath, which is what 1.4.20 shipped -
+      // so the worst case here is today's behaviour, never worse.
+      if (!withVideo && nativeCallPlugin()) {
+        const wn = takeWarm(channel);
+        // A prewarmed microphone is a WebView capture and must not be left
+        // open: two owners of one microphone is the fault this replaces.
+        if (wn && wn.micP) { wn.micP.then(t => { try { if (t) t.close(); } catch (e) {} }).catch(() => {}); }
+        const nUid = uid || (wn && wn.uid) || newUid();
+        let nToken = null;
+        try {
+          nToken = (wn && wn.uid === nUid && wn.tokenP) ? await wn.tokenP : null;
+          if (!nToken) nToken = await fetchToken(channel, nUid, 'host');
+          at('token');
+          const ns = await Agora._startNativeCall({
+            channel: channel, uid: nUid, token: nToken,
+            onRemote: onRemote, onError: onError, onRouteChange: onRouteChange,
+          });
+          at('join');
+          slot.stop = ns.stop;
+          if (slot.cancelled) { try { await ns.stop(); } catch (e) {} throw new Error('call superseded'); }
+          try {
+            if (window.API && window.API.logClient) {
+              window.API.logClient('call_native_join', { ok: true, token: mark.token, join: mark.join, warmToken: !!(wn && wn.tokenP) });
+            }
+          } catch (e) {}
+          return ns;
+        } catch (e) {
+          if (String((e && e.message) || e) === 'call superseded') throw e;
+          // Down to the web path. Recorded either way: this line is the only
+          // way to learn from a Windows machine whether the native half ever
+          // ran on the phone, and why it did not.
+          try {
+            if (window.API && window.API.logClient) {
+              window.API.logClient('call_native_join', { ok: false, why: String((e && e.message) || e).slice(0, 120) });
+            }
+          } catch (x) {}
+        }
+      }
+
       const AgoraRTC = await loadSdk();
       at('sdk');
       AgoraRTC.setLogLevel(2);
