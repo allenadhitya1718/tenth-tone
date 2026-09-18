@@ -5907,6 +5907,13 @@ function autoPlay(video) {
 
     let vnStream = null, vnRec = null, vnChunks = [], vnMime = '';
     let vnCtx = null, vnAnalyser = null, vnBuf = null, vnRaf = 0;
+    let vnMeterTrack = null;      // the level meter's OWN copy of the microphone
+    // WebKit's MediaRecorder is a different animal and the iPhone logs say so.
+    // Not a "browser sniff" for behaviour we could feature-detect: there is no
+    // flag that reports "mp4 cannot be fragmented mid-recording", and the cost
+    // of guessing wrong is a voice note that records and cannot be sent.
+    const VN_WEBKIT = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+                      (/safari/i.test(navigator.userAgent) && !/chrome|crios|android|fxios|edg/i.test(navigator.userAgent));
     let vnTick = null, vnStartAt = 0;
     let vnPeaks = [], vnLive = [];                 // real amplitudes, not decoration
     let vnLocked = false, vnDiscard = false, vnStarting = false, vnAbandon = false;
@@ -6031,7 +6038,21 @@ function autoPlay(video) {
         vnAnalyser = vnCtx.createAnalyser();
         vnAnalyser.fftSize = 1024;
         vnAnalyser.smoothingTimeConstant = 0.5;
-        vnCtx.createMediaStreamSource(stream).connect(vnAnalyser);
+        // The meter gets its OWN copy of the microphone track.
+        //
+        // It used to take the very stream the MediaRecorder was recording. On
+        // iOS that is a known way to starve the recorder: WebKit routes the
+        // track into the AudioContext and the recorder is handed nothing. The
+        // iPhone's own log is exactly that shape - held 4.3 s, 0 chunks,
+        // 0 bytes - while an Android phone recording the same way produced 13
+        // chunks. A clone is an independent track from the same microphone, so
+        // both can read it.
+        let meterSource = stream;
+        try {
+          const t = stream.getAudioTracks()[0];
+          if (t && t.clone) { vnMeterTrack = t.clone(); meterSource = new MediaStream([vnMeterTrack]); }
+        } catch (e) { meterSource = stream; vnMeterTrack = null; }
+        vnCtx.createMediaStreamSource(meterSource).connect(vnAnalyser);
         vnBuf = new Uint8Array(vnAnalyser.fftSize);
       } catch (e) { vnCtx = null; vnAnalyser = null; vnBuf = null; return; }
       let lastPeak = 0;
@@ -6068,6 +6089,7 @@ function autoPlay(video) {
         vnStream = null;
       }
       if (vnAnalyser) { try { vnAnalyser.disconnect(); } catch (e) {} vnAnalyser = null; }
+      if (vnMeterTrack) { try { vnMeterTrack.stop(); } catch (e) {} vnMeterTrack = null; }
       if (vnCtx) { try { vnCtx.close(); } catch (e) {} vnCtx = null; }
       vnBuf = null;
     }
@@ -6167,12 +6189,15 @@ function autoPlay(video) {
       vnChunks = []; vnPeaks = []; vnLive = []; vnDiscard = false;
       vnRec.ondataavailable = (e) => { if (e.data && e.data.size) vnChunks.push(e.data); };
       vnRec.onstop = vnOnStop;
-      // With a timeslice, not without. Without one, WebKit hands over the
-      // whole recording in a single 'dataavailable' on stop - and on some
-      // iOS builds that event carries nothing, so the note "recorded" and
-      // then had no data to send. Chunks every 250 ms sidestep that on every
-      // engine; the chunks are concatenated into one blob on stop as before.
-      try { vnRec.start(250); }
+      // A timeslice on Chrome, none on WebKit.
+      //
+      // The previous comment here had this backwards. Chunking every 250 ms
+      // does work on Chrome - the Android logs show 9 to 13 chunks and a note
+      // that sends. On iOS 18.3 the same call produced ZERO: WebKit records
+      // audio/mp4, and mp4 cannot be cut into playable fragments part-way
+      // through, so there is nothing to hand over until the file is finalised
+      // at stop(). Asking for slices there gets you no slices and no file.
+      try { vnRec.start(VN_WEBKIT ? undefined : 250); }
       catch (e) { vnReleaseMic(); vnReset(); toast('تعذر بدء التسجيل'); return; }
 
       vnStartAt = Date.now();
@@ -6204,10 +6229,11 @@ function autoPlay(video) {
       if (vnTick) { clearInterval(vnTick); vnTick = null; }
       if (vnRaf) { cancelAnimationFrame(vnRaf); vnRaf = 0; }
       if (vnRec.state === 'inactive') { vnOnStop(); return; }
-      // Ask for whatever is buffered before stopping. Harmless where stop()
-      // already flushes; on WebKit it is the difference between a note with
-      // data and one without.
-      try { if (vnRec.state === 'recording' && vnRec.requestData) vnRec.requestData(); } catch (e) {}
+      // Ask for whatever is buffered before stopping - but NOT on WebKit,
+      // where the single blob stop() is about to produce is the whole
+      // recording, and requesting data first can hand back an empty one in
+      // its place.
+      try { if (!VN_WEBKIT && vnRec.state === 'recording' && vnRec.requestData) vnRec.requestData(); } catch (e) {}
       try { vnRec.stop(); } catch (e) { vnReset(); }
     }
 
@@ -6231,11 +6257,21 @@ function autoPlay(video) {
       // One line to the database (0088): the phone's own account of what the
       // recorder handed back. This is how "records but will not send" on an
       // iPhone gets diagnosed from here instead of guessed at.
+      const bytes = chunks.reduce((n, c) => n + (c.size || 0), 0);
       if (window.API && window.API.logClient) {
-        window.API.logClient('vn_stop', { chunks: chunks.length, bytes: chunks.reduce((n, c) => n + (c.size || 0), 0), mime, heldMs, discard: !!discard });
+        window.API.logClient('vn_stop', { chunks: chunks.length, bytes: bytes, mime, heldMs, discard: !!discard, webkit: VN_WEBKIT });
       }
       vnReleaseMic();
       if (discard) { vnReset(); return; }
+      // Held long enough, and the recorder still handed back nothing. That is
+      // not the same as a tap, and telling someone to "press and hold" after
+      // they held it for four seconds is how this bug hid: the iPhone read as
+      // "it recorded and then refused to send". Say what happened.
+      if (heldMs >= VN_MIN_MS && !chunks.length) {
+        vnReset();
+        toast('تعذر تسجيل الصوت — حاول مرة أخرى');
+        return;
+      }
       if (heldMs < VN_MIN_MS || !chunks.length) {
         vnReset();
         toast('اضغط مطولًا للتسجيل');
@@ -13111,7 +13147,28 @@ function autoPlay(video) {
           try {
             const res = await media.setRoute(r === 'wired' ? 'auto' : r);
             noteRoute(res || { route: r });
-          } catch (e) { toast('تعذر تغيير مخرج الصوت'); }
+            // What was asked for, and what the phone actually did. The iOS
+            // earpiece has been reported three times and never once left a
+            // trace here, so there was nothing to reason from - only the
+            // Swift to re-read and another guess to ship. This is the
+            // difference between "the plugin refused" and "the plugin said
+            // yes and the sound came out of the loudspeaker anyway".
+            if (window.API && window.API.logClient) {
+              window.API.logClient('call_route', {
+                want: r,
+                got: (res && res.route) || null,
+                speakerOn: res ? res.speakerOn : null,
+                bt: res ? !!(res.bluetoothConnected || res.hasBluetooth) : null,
+                avail: (res && res.available) || null,
+                plugin: !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AudioRoute),
+              });
+            }
+          } catch (e) {
+            toast('تعذر تغيير مخرج الصوت');
+            if (window.API && window.API.logClient) {
+              window.API.logClient('call_route_error', { want: r, message: String((e && e.message) || e).slice(0, 200) });
+            }
+          }
           paintMedia();
         });
         if (r === routeName) rowEl.appendChild(el('span', { style: { marginInlineStart: 'auto', display: 'flex', width: '18px', height: '18px' }, html: icons.check }));

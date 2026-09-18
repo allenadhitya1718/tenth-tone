@@ -2585,9 +2585,15 @@
     (async () => {
       try {
         const c = await client(); const me = await uid(); if (!me) return;
+        // The version goes in every line. Reading these logs meant guessing
+        // which build a phone was on, and a fix that "did not work" is a very
+        // different thing from a fix that was never installed.
+        const base = detail && typeof detail === 'object' ? detail : { value: String(detail == null ? '' : detail).slice(0, 500) };
+        let ver = '';
+        try { ver = (window.TT_CONFIG && window.TT_CONFIG.appVersion) || ''; } catch (e) {}
         await c.from('client_logs').insert({
           user_id: me, kind: String(kind).slice(0, 60),
-          detail: detail && typeof detail === 'object' ? detail : { value: String(detail == null ? '' : detail).slice(0, 500) },
+          detail: Object.assign({ v: ver }, base),
           ua: String(navigator.userAgent || '').slice(0, 200),
         });
       } catch (e) { /* a log is never worth an error */ }
