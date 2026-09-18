@@ -563,6 +563,14 @@
         // A prewarmed microphone is a WebView capture and must not be left
         // open: two owners of one microphone is the fault this replaces.
         if (wn && wn.micP) { wn.micP.then(t => { try { if (t) t.close(); } catch (e) {} }).catch(() => {}); }
+        // Disarm the OLD route plugin before Agora takes the audio session.
+        // It only acts while its own `configured` flag is set, and reset()
+        // clears that - but a previous web call that ended abnormally could
+        // leave the flag standing, and then its route-change handler would
+        // "correct" the session underneath the native SDK mid-call. That is
+        // the two-owners fight this whole path exists to end, so it is closed
+        // here rather than assumed away. Harmless when nothing is armed.
+        try { await releaseAudioRoute(); } catch (e) {}
         const nUid = uid || (wn && wn.uid) || newUid();
         let nToken = null;
         try {
