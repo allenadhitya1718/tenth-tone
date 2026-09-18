@@ -1776,27 +1776,24 @@
     invalidate('chats');
   };
 
+  // One conversation per pair, decided in one statement by the database.
+  //
+  // This used to read the DMs it could see and create one if it found none -
+  // a read, then a write, with nothing underneath to stop two of them. Two
+  // people pressing Message at the same moment each saw no chat and each made
+  // one, and then there were two conversations with the same person. It is
+  // not theoretical: five such pairs existed, and every twin was created in
+  // the SAME MINUTE as its sibling. 0093 merged them, gave a DM a key made of
+  // its two members with a unique index over it, and put find-or-create in
+  // open_or_create_dm, which runs as the definer - so it also cannot be
+  // fooled by a chat the caller happens not to be allowed to see.
   API.openOrCreateDm = async (otherUserId) => {
     const c = await client(); const me = await uid(); if (!me) throw new Error('not signed in');
     if (otherUserId === me) throw new Error('cannot DM yourself');
-
-    // Find existing DM that has BOTH me and otherUserId
-    const { data: myChats } = await c.from('chat_members').select('chat_id, chats!inner(type)').eq('user_id', me);
-    const dmIds = (myChats || []).filter(r => r.chats && r.chats.type === 'dm').map(r => r.chat_id);
-    if (dmIds.length) {
-      const { data: shared } = await c.from('chat_members').select('chat_id').eq('user_id', otherUserId).in('chat_id', dmIds);
-      if (shared && shared.length) return shared[0].chat_id;
-    }
-
-    // Create new DM
-    const { data: newChat, error: e1 } = await c.from('chats').insert({ type: 'dm', created_by: me }).select('id').single();
-    if (e1) throw e1;
-    const { error: e2 } = await c.from('chat_members').insert([
-      { chat_id: newChat.id, user_id: me, role: 'member' },
-      { chat_id: newChat.id, user_id: otherUserId, role: 'member' },
-    ]);
-    if (e2) throw e2;
-    return newChat.id;
+    const { data, error } = await c.rpc('open_or_create_dm', { p_other: otherUserId });
+    if (error) throw error;
+    if (!data) throw new Error('could not open the conversation');
+    return data;
   };
 
   API.createGroup = async ({ name, memberIds, photoFile }) => {

@@ -132,7 +132,26 @@ function compose(n: Row, actor: string, lang: 'ar' | 'en') {
   const short = (s: unknown) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, 120);
   let title = '', body = '', route = '';
   switch (n.type) {
-    case 'message':        title = en ? `${actor} sent you a message` : `${actor} أرسل لك رسالة`; body = short(p.text); route = p.chat_id ? `/chat/${p.chat_id}` : '/inbox'; break;
+    case 'message': {
+      // A voice note, a photo or a location has no text, so the body was an
+      // empty line; and a CALL RECORD - which 0045 writes into the chat as a
+      // message whose text is a JSON blob - went out as
+      //   "Alim sent you a message" / {"kind":"video","status":"ended",...}
+      // 0093 stops notifying for call records at all and now sends the kind,
+      // so each one can be named for what it is.
+      const kindLabel: Record<string, [string, string]> = {
+        voice:    ['🎤 رسالة صوتية', '🎤 Voice message'],
+        image:    ['📷 صورة', '📷 Photo'],
+        video:    ['🎥 فيديو', '🎥 Video'],
+        location: ['📍 موقع', '📍 Location'],
+        file:     ['📎 ملف', '📎 File'],
+      };
+      const k = String(p.kind || 'text');
+      title = en ? `${actor} sent you a message` : `${actor} أرسل لك رسالة`;
+      body = kindLabel[k] ? kindLabel[k][en ? 1 : 0] : short(p.text);
+      route = p.chat_id ? `/chat/${p.chat_id}` : '/inbox';
+      break;
+    }
     case 'follow':         title = en ? `${actor} started following you` : `${actor} بدأ بمتابعتك`; route = n.actor_id ? `/profile/${n.actor_id}` : '/notifications'; break;
     case 'follow_request': title = en ? `${actor} requested to follow you` : `${actor} طلب متابعتك`; route = '/notifications'; break;
     case 'like':           title = p.kind === 'comment' ? (en ? `${actor} liked your comment` : `${actor} أعجب بتعليقك`) : (en ? `${actor} liked your video` : `${actor} أعجب بفيديوك`); body = short(p.excerpt); route = p.video_id ? `/v/${p.video_id}` : '/notifications'; break;
@@ -144,6 +163,19 @@ function compose(n: Row, actor: string, lang: 'ar' | 'en') {
       // A deliberate test row, inserted by hand to prove the pipeline reaches
       // a real phone. Says exactly what it is.
       if (p.kind === 'push_test') { title = en ? 'Push notifications are working ✓' : 'إشعارات FLYP تعمل ✓'; body = en ? 'FLYP can reach this phone.' : 'يمكن لـ FLYP الوصول إلى هذا الهاتف.'; route = '/inbox'; }
+      // Somebody is CALLING. Nothing used to push for a call at all: the only
+      // way to know was to have the app open with a live subscription, so a
+      // phone in a pocket stayed silent and the call was logged as missed.
+      // That silence is also why "add to call" looked broken - the invite row
+      // was always created, the invited phone simply never rang.
+      if (p.kind === 'incoming_call') {
+        const video = p.call_kind === 'video';
+        title = en ? `${actor} is calling you` : `${actor} يتصل بك`;
+        body = p.is_invite
+          ? (en ? 'Added you to a call' : 'أضافك إلى مكالمة')
+          : (video ? (en ? 'Video call' : 'مكالمة فيديو') : (en ? 'Voice call' : 'مكالمة صوتية'));
+        route = p.call_id ? `/call/${p.call_id}` : '/inbox';
+      }
       break;
   }
   return title ? { title, body, route } : null;

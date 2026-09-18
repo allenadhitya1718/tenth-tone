@@ -127,10 +127,57 @@
     return data.token;
   }
 
+  // ── Warming a call up before it is answered ──
+  //
+  // Joining used to begin only once the row turned 'accepted', and then did
+  // everything in series: sign a token (an Edge Function call), join the
+  // channel, open the microphone, publish. Measured, the token alone is
+  // 150-700 ms and the microphone another 200-500 ms, on top of the round
+  // trip that told us the call was answered at all. That is the "3-5 seconds
+  // of silence after I pick up".
+  //
+  // Neither the token nor the microphone depends on the answer, so they are
+  // prepared while the phone is ringing and merely awaited when the call
+  // connects. `mic` is opt-in and deliberately so: opening the microphone
+  // lights the recording indicator, so it is warmed only for someone who has
+  // already ACCEPTED - never on a phone that is only ringing.
+  let warm = null;
+  function prewarm(channel, opts) {
+    if (!AGORA_APP_ID || !channel || !window.SB) return;
+    const wantMic = !!(opts && opts.mic);
+    if (warm && warm.channel === channel) {
+      if (wantMic && !warm.micP) warmMic(warm);
+      return;
+    }
+    dropWarm();
+    const w = { channel: channel, uid: newUid(), tokenP: null, micP: null };
+    warm = w;
+    w.tokenP = fetchToken(channel, w.uid, 'host').catch(() => null);
+    if (wantMic) warmMic(w);
+  }
+  function warmMic(w) {
+    w.micP = loadSdk()
+      .then(AgoraRTC => AgoraRTC.createMicrophoneAudioTrack({ encoderConfig: 'speech_standard' }))
+      .catch(() => null);
+  }
+  // Anything warmed and not used has to be closed, or the microphone stays
+  // open on a call that never happened.
+  function dropWarm() {
+    const w = warm; warm = null;
+    if (!w) return;
+    if (w.micP) w.micP.then(t => { try { if (t) t.close(); } catch (e) {} }).catch(() => {});
+  }
+  function takeWarm(channel) {
+    if (!warm || warm.channel !== channel) { dropWarm(); return null; }
+    const w = warm; warm = null; return w;
+  }
+
   const Agora = {
     isConfigured() { return !!AGORA_APP_ID; },
     appId() { return AGORA_APP_ID; },
     fetchToken,
+    prewarm,
+    dropWarm,
 
     // ─── HOST: publish your camera+mic to a channel ───
     async startHost({ channel, uid, videoEl, withVideo = true, onError }) {
@@ -283,11 +330,16 @@
       const AgoraRTC = await loadSdk();
       AgoraRTC.setLogLevel(2);
       const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-      const userId = uid || newUid();
+      // Whatever prewarm() got ready for THIS channel. The uid has to come
+      // with the token: a token is signed for one uid and Agora rejects any
+      // mismatch.
+      const w = takeWarm(channel);
+      const userId = uid || (w && w.uid) || newUid();
       // 'host' is the publishing role in both modes, and a call needs it on
       // BOTH sides — an 'audience' token cannot publish, so whoever got one
       // would join the channel able to hear and unable to be heard.
-      const token = await fetchToken(channel, userId, 'host');
+      let token = (w && w.uid === userId && w.tokenP) ? await w.tokenP : null;
+      if (!token) token = await fetchToken(channel, userId, 'host');
       await client.join(AGORA_APP_ID, channel, token, userId);
 
       let mic = null, cam = null;
@@ -297,7 +349,8 @@
       // call while it recovered. No-op on the web.
       try { await routeAudio(true); } catch (e) {}
       try {
-        mic = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig: 'speech_standard' });
+        if (w && w.micP) mic = await w.micP;      // opened while it rang
+        if (!mic) mic = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig: 'speech_standard' });
         if (withVideo) {
           // A refused camera should still leave you an audio call rather than
           // no call at all, so this one failure is reported and swallowed.

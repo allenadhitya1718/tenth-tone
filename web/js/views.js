@@ -9107,7 +9107,10 @@ function autoPlay(video) {
     ]);
     // How long it has been running. A stream with no elapsed time gives no
     // sense of whether you have just missed the start or arrived an hour late.
-    const elapsedEl = el('span', { class: 'live-pill elapsed' }, '0:00');
+    const elapsedEl = el('span', { class: 'elapsed' }, '0:00');
+    // The host leaves with End, which also ends the stream; a second X beside
+    // it only crowded the row and invited the wrong one to be tapped.
+    const liveCloseBtn = el('button', { class: 'icon-btn live-close', html: icons.x, onclick: () => go('/home') });
     let elapsedTimer = null;
     function startElapsed(fromIso) {
       const t0 = fromIso ? new Date(fromIso).getTime() : Date.now();
@@ -9329,14 +9332,19 @@ function autoPlay(video) {
         el('div', { class: 'lh-text' }, [hostNameEl, hostHandleEl]),
         followBtn,
       ]),
+      // Seven separate things sat in this row - LIVE, an eye and a count, a
+      // timer, End, the viewer list, a menu and a close - and on a phone they
+      // ran into each other. The badge carries the timer now (they say one
+      // thing: this is live, and for how long), and the host's close X is
+      // dropped because End already leaves. Six became five, and four for
+      // someone watching.
       el('div', { class: 'live-top-right' }, [
-        el('span', { class: 'live-pill live-badge' }, 'مباشر'),
+        el('span', { class: 'live-pill live-badge' }, [el('span', {}, 'مباشر'), elapsedEl]),
         viewersEl,
-        elapsedEl,
         endLiveBtn,
         viewerListBtn,
         liveMoreBtn,
-        el('button', { class: 'icon-btn live-close', html: icons.x, onclick: () => go('/home') }),
+        liveCloseBtn,
       ]),
     ]));
 
@@ -9428,6 +9436,7 @@ function autoPlay(video) {
         if (iAmHost()) {
           // Host: no Follow button for yourself, and a deliberate way to stop.
           endLiveBtn.hidden = false;
+          liveCloseBtn.hidden = true;
         } else {
           followBtn.hidden = false;
           try {
@@ -9605,7 +9614,18 @@ function autoPlay(video) {
       ]),
       // Was sharing the stream id as though it were a video, so the link
       // opened a video that does not exist. Shares the live link instead.
-      el('button', { class: 'icon-btn live-round-btn', html: icons.share, onclick: () => go('/share/' + liveId + '?kind=live') }),
+      el('button', { class: 'icon-btn live-round-btn', html: icons.share, onclick: async () => {
+        // This used to NAVIGATE to the share screen - and leaving this screen
+        // is exactly what stops the broadcast (the hashchange cleanup further
+        // down stops the host session). So sharing your own live ENDED it.
+        // Share in place; the stream never loses its screen.
+        const url = (window.DeepLink && window.DeepLink.liveLink(liveId)) || location.href;
+        try {
+          if (navigator.share) { await navigator.share({ title: 'FLYP', url: url }); return; }
+          await navigator.clipboard.writeText(url);
+          toast('تم نسخ الرابط');
+        } catch (e) { /* the person cancelled the share sheet */ }
+      } }),
       // One tap sends a heart immediately and opens the tray. Both at once so
       // the common case stays a single tap while the choice is one tap away —
       // making the tray the only route would slow down the thing people do
@@ -12734,19 +12754,59 @@ function autoPlay(video) {
     // someone added), who is in the channel, its subscription, and the
     // 35 s timers for rings we placed ourselves.
     row: null, members: null, unsubMembers: null, inviteTimers: {}, onMembers: null,
+    // Who the bar names, and the row handed over by the incoming card when
+    // Accept was tapped (see initIncomingCalls).
+    otherName: '', accepting: null, pillName: null,
     pill: null, pillTime: null,
     ensurePill() {
       if (this.pill) return this.pill;
+      // A small green lozenge that said only "call in progress" and covered
+      // whatever was under it. It is a bar now: who you are talking to, how
+      // long, tap to go back, and hang up without going back first - which is
+      // what a person actually wants from the thing.
       this.pillTime = el('span', { class: 'cp-time' }, '0:00');
-      this.pill = el('button', {
-        class: 'call-pill', type: 'button', hidden: true, title: 'العودة إلى المكالمة',
+      this.pillName = el('span', { class: 'cp-name' }, '');
+      this.pill = el('div', {
+        class: 'call-pill', hidden: true, role: 'button', tabindex: '0',
+        title: 'العودة إلى المكالمة',
         onclick: () => { if (ActiveCall.id) go('/call/' + ActiveCall.id); },
-      }, [el('span', { class: 'cp-dot' }), el('span', { class: 'cp-label' }, 'مكالمة جارية'), this.pillTime]);
+      }, [
+        el('span', { class: 'cp-dot' }),
+        el('span', { class: 'cp-text' }, [
+          el('span', { class: 'cp-label' }, 'مكالمة جارية'),
+          this.pillName,
+        ]),
+        this.pillTime,
+        el('button', {
+          class: 'cp-end', type: 'button', title: 'إنهاء', html: icons.phone,
+          // Without this the tap also reaches the bar and reopens the call
+          // we are hanging up.
+          onclick: (e) => { e.stopPropagation(); ActiveCall.hangUp(); },
+        }),
+      ]);
       document.body.appendChild(this.pill);
       try { if (window.I18N) window.I18N.apply(this.pill); } catch (e) {}
       return this.pill;
     },
-    showPill(on) { this.ensurePill().hidden = !on; },
+    showPill(on) {
+      const p = this.ensurePill();
+      if (on && this.pillName) this.pillName.textContent = this.otherName || '';
+      p.hidden = !on;
+    },
+    // Hanging up from the bar, with no call screen attached. Same rule as the
+    // screen's End: on a connected call I only LEAVE (0092 ends it once fewer
+    // than two remain); anything else ends the row.
+    async hangUp() {
+      const call = this.call;
+      this.showPill(false);
+      try {
+        if (call && call.status === 'accepted' && window.API.leaveCall) {
+          if (await window.API.leaveCall(call.channel)) { this.teardown(); return; }
+        }
+        if (call && call.id) await window.API.endCall(call.id);
+      } catch (e) { console.warn('hang up from the bar:', e); }
+      this.teardown();
+    },
     tick() {
       if (!this.startedAt) return;
       const s = fmtDuration(Math.floor((Date.now() - this.startedAt) / 1000));
@@ -12779,7 +12839,10 @@ function autoPlay(video) {
       const m = this.media; this.media = null;
       if (m) { Promise.resolve().then(() => m.stop()).catch(() => {}); }
       this.showPill(false);
+      // A token or microphone warmed for a call that never connected.
+      try { if (window.Agora && window.Agora.dropWarm) window.Agora.dropWarm(); } catch (e) {}
       this.id = null; this.call = null; this.startedAt = null; this.over = true;
+      this.otherName = ''; this.accepting = null;
       this.onTick = null; this.onStatus = null; this.onRemote = null; this.onMedia = null; this.onRouteChange = null;
     },
   };
@@ -13069,7 +13132,14 @@ function autoPlay(video) {
       mute.btn.title = mute.labelEl.textContent;
 
       const spk = live && routeName === 'speaker';
-      speaker.btn.disabled = !live || !media.canRouteAudio();
+      // Was `!live || !media.canRouteAudio()`, and canRouteAudio means "the
+      // other side's audio has arrived". So the output picker was dead until
+      // they spoke, and went dead AGAIN every time their track dropped and
+      // republished - a network blip on either phone - which is the button
+      // "dulling out frequently for no cause". Where the sound comes out of
+      // THIS phone has nothing to do with what the other phone is sending:
+      // it only needs the call to be live.
+      speaker.btn.disabled = !live;
       speaker.btn.classList.toggle('on', !!spk);
       speaker.btn.setAttribute('aria-pressed', spk ? 'true' : 'false');
       speaker.iconWrap.innerHTML = live ? (ROUTE_ICON[routeName] || icons.speaker) : icons.speakerOff;
@@ -13293,9 +13363,19 @@ function autoPlay(video) {
     (async () => {
       try {
         const u = await window.SB.getUser(); me = u && u.id;
+        // Just answered from the incoming card. It already holds the row, and
+        // the answer is a decision this phone made - so neither the fetch nor
+        // the realtime echo of our own update belongs on the path between the
+        // tap and the audio.
+        const accepted = (ActiveCall.accepting && ActiveCall.accepting.id === callId)
+          ? ActiveCall.accepting : null;
+        ActiveCall.accepting = null;
         if (!resuming) {
-          row = await window.API.fetchCall(callId);
+          row = (accepted && accepted.row) || await window.API.fetchCall(callId);
           if (!row) { leaveScreen(); return; }
+          if (accepted) {
+            row = Object.assign({}, row, { status: 'accepted', answered_at: row.answered_at || new Date().toISOString() });
+          }
           // Added to someone else's call: the row we were rung with points
           // at the root; that is the call.
           call = row.root_id ? await window.API.fetchCall(row.root_id) : row;
@@ -13314,6 +13394,7 @@ function autoPlay(video) {
           root.classList.add('has-photo');
         }
         nameEl.textContent = oname;
+        ActiveCall.otherName = oname;        // the bar names them too
         if (call.kind === 'video') enterVideoMode(false);
         attachPainters();
         if (resuming) {
@@ -13347,6 +13428,13 @@ function autoPlay(video) {
             });
           }
           refreshMembers();
+          // Sign the token while it rings rather than after they answer.
+          // No microphone here: this phone has not accepted anything, and
+          // opening it would light the recording indicator during a call
+          // nobody has picked up. See Agora.prewarm.
+          if (call.status === 'ringing' && window.Agora && window.Agora.prewarm) {
+            try { window.Agora.prewarm(call.channel, { mic: false }); } catch (e) {}
+          }
           if (call.caller_id === me && call.status === 'ringing' && call.id === row.id) {
             ActiveCall.ringTimeout = setTimeout(async () => {
               ended = true;
@@ -13446,9 +13534,20 @@ function autoPlay(video) {
             el('div', { class: 'ic-slot' }, [
               el('button', {
                 class: 'ic-btn accept', title: 'قبول',
-                onclick: async () => {
-                  const id = ringingId; dismiss();
-                  try { await window.API.acceptCall(id); } catch (e) {}
+                onclick: () => {
+                  const id = ringingId, answered = row;
+                  dismiss();
+                  // Everything that does not need the server starts now: the
+                  // token and the microphone are prepared while the screen is
+                  // still being built, and the row we already have saves the
+                  // call screen a fetch. acceptCall is fired, not awaited -
+                  // the other side hears about it through realtime either
+                  // way, and making someone watch a round trip before the
+                  // screen even appears was a good part of the wait after
+                  // pressing answer.
+                  try { if (window.Agora && window.Agora.prewarm) window.Agora.prewarm(answered.channel, { mic: true }); } catch (e) {}
+                  ActiveCall.accepting = { id: id, row: answered };
+                  try { const p = window.API.acceptCall(id); if (p && p.catch) p.catch(() => {}); } catch (e) {}
                   go('/call/' + id);
                 },
               }, [el('span', { html: isVideo ? icons.video : icons.phone })]),
