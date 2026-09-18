@@ -45,6 +45,16 @@ import AgoraRtcKit
 @objc(AgoraCallPlugin)
 public class AgoraCallPlugin: CAPPlugin {
 
+    /// Every field below is written from Agora's own delegate thread and read
+    /// from Capacitor's bridge queue, which are different threads. Without a
+    /// single owner that is a data race on a Set and an optional - an
+    /// intermittent crash mid-call, most likely while the route sheet is open,
+    /// because that is when stats() is read while people are joining. One
+    /// serial queue owns them all; nothing touches them from outside it.
+    ///
+    /// Rule for this file: never `q.sync` from inside `q`.
+    private let q = DispatchQueue(label: "app.flyp.agoracall.state")
+
     private var engine: AgoraRtcEngineKit?
 
     /// Held from joinChannel() until the SDK confirms through
@@ -116,7 +126,10 @@ public class AgoraCallPlugin: CAPPlugin {
         config.channelProfile = .communication
 
         let kit = AgoraRtcEngineKit.sharedEngine(with: config, delegate: self)
-        engine = kit
+        // Under the lock like everything else: sharedEngine has already been
+        // handed `self` as its delegate, so callbacks can begin arriving on
+        // Agora's thread from this line onwards.
+        q.sync { engine = kit }
 
         // Audio only. Without this the SDK still prepares a video pipeline,
         // which costs start-up time and can light the camera indicator on a
@@ -136,10 +149,12 @@ public class AgoraCallPlugin: CAPPlugin {
         // builds. reportVad false: speech detection is not needed, only level.
         kit.enableAudioVolumeIndication(300, smooth: 3, reportVad: false)
 
-        speakerOn = wantSpeaker
-        micMuted = false
-        remotes.removeAll()
-        pendingJoin = call
+        q.sync {
+            speakerOn = wantSpeaker
+            micMuted = false
+            remotes.removeAll()
+            pendingJoin = call
+        }
         call.keepAlive = true
 
         let options = AgoraRtcChannelMediaOptions()
@@ -168,14 +183,26 @@ public class AgoraCallPlugin: CAPPlugin {
     /// on failure - a half-joined engine still holds the audio session, and
     /// the web SDK is about to want it.
     private func finishJoin(uid: UInt? = nil, error: String? = nil) {
-        guard let call = pendingJoin else { return }
-        pendingJoin = nil
+        // Claimed under the lock, so two threads racing here - the SDK
+        // confirming a join while the timeout fires - cannot both settle it.
+        var call: CAPPluginCall?
+        q.sync {
+            call = pendingJoin
+            pendingJoin = nil
+            if error == nil && call != nil { joined = true }
+        }
+        guard let call = call else { return }
         call.keepAlive = false
         if let error = error {
-            teardownEngine()
+            // Settled BEFORE the teardown, never after. One caller is
+            // didOccurError, running on the SDK's own thread; tearing down
+            // first would block that thread inside destroy() and this
+            // rejection would never be sent - leaving the JS promise pending
+            // for ever, so the call screen never falls back to the web SDK
+            // and simply sits there.
             call.reject(error)
+            teardownEngine()
         } else {
-            joined = true
             call.resolve(["joined": true, "uid": Int(uid ?? 0)])
         }
     }
@@ -184,9 +211,10 @@ public class AgoraCallPlugin: CAPPlugin {
 
     @objc func setMuted(_ call: CAPPluginCall) {
         let muted = call.getBool("muted") ?? false
-        engine?.muteLocalAudioStream(muted)
-        micMuted = muted
-        call.resolve(["muted": micMuted])
+        var kit: AgoraRtcEngineKit?
+        q.sync { kit = engine; micMuted = muted }
+        kit?.muteLocalAudioStream(muted)
+        call.resolve(["muted": muted])
     }
 
     /**
@@ -202,10 +230,13 @@ public class AgoraCallPlugin: CAPPlugin {
      */
     @objc func setSpeaker(_ call: CAPPluginCall) {
         let on = call.getBool("on") ?? true
-        guard let kit = engine else { call.reject("not in a call"); return }
+        var kit: AgoraRtcEngineKit?
+        q.sync { kit = engine }
+        guard let kit = kit else { call.reject("not in a call"); return }
         kit.setEnableSpeakerphone(on)
-        speakerOn = kit.isSpeakerphoneEnabled()
-        call.resolve(["speakerOn": speakerOn])
+        let actual = kit.isSpeakerphoneEnabled()
+        q.sync { speakerOn = actual }
+        call.resolve(["speakerOn": actual])
     }
 
     /**
@@ -217,23 +248,32 @@ public class AgoraCallPlugin: CAPPlugin {
      * capture was alive and the encoder dead.
      */
     @objc func stats(_ call: CAPPluginCall) {
-        call.resolve([
-            "sendBitrate": txAudioKbps * 1000,
-            "recvBitrate": rxAudioKbps * 1000,
-            "sendLevel": localVolume,
-            "recvLevel": remoteVolume,
-            "remotes": remotes.count,
-            "micMuted": micMuted,
-            "speakerOn": speakerOn,
-            "native": true,
-        ])
+        var out: [String: Any] = [:]
+        q.sync {
+            out = [
+                "sendBitrate": txAudioKbps * 1000,
+                "recvBitrate": rxAudioKbps * 1000,
+                "sendLevel": localVolume,
+                "recvLevel": remoteVolume,
+                "remotes": remotes.count,
+                "micMuted": micMuted,
+                "speakerOn": speakerOn,
+                "native": true,
+            ]
+        }
+        call.resolve(out)
     }
 
     // MARK: - Leaving
 
     @objc func leave(_ call: CAPPluginCall) {
-        teardownEngine()
+        // Resolve FIRST. The teardown below takes a real fraction of a second
+        // inside Agora, and Capacitor runs plugin calls on one shared queue -
+        // blocking it here would stall push, haptics, the keyboard and the
+        // status bar behind a hang-up, which reads as the whole app freezing
+        // at exactly the moment the call screen is closing.
         call.resolve()
+        teardownEngine()
     }
 
     /**
@@ -246,26 +286,53 @@ public class AgoraCallPlugin: CAPPlugin {
      * a failed join, a normal hang-up, a second join arriving.
      */
     private func teardownEngine() {
-        if let call = pendingJoin {
+        var pending: CAPPluginCall?
+        var kit: AgoraRtcEngineKit?
+        q.sync {
+            pending = pendingJoin
             pendingJoin = nil
-            call.keepAlive = false
-            call.reject("superseded")
+            joined = false
+            remotes.removeAll()
+            txAudioKbps = 0
+            rxAudioKbps = 0
+            localVolume = 0
+            remoteVolume = 0
+            kit = engine
+            engine = nil          // cleared up front, so a re-entrant join
+        }                         // never finds the engine being destroyed
+        if let pending = pending {
+            pending.keepAlive = false
+            pending.reject("superseded")
         }
-        joined = false
-        remotes.removeAll()
-        txAudioKbps = 0
-        rxAudioKbps = 0
-        localVolume = 0
-        remoteVolume = 0
-        if engine != nil {
-            engine?.leaveChannel(nil)
-            engine = nil
+        guard let kit = kit else { return }
+
+        // ── Why this is not just leaveChannel + destroy ──
+        //
+        // Two separate hazards, and the obvious spelling hits both.
+        //
+        // destroy() blocks until every outstanding SDK callback has returned,
+        // so calling it FROM a callback deadlocks - and one caller here is
+        // didOccurError, which IS a callback. It therefore runs on a plain
+        // background thread that belongs to nobody.
+        //
+        // leaveChannel is asynchronous. Destroying immediately after it
+        // interrupts the departure before it reaches Agora's servers, so the
+        // other phone goes on seeing a participant who has hung up until the
+        // server times the ghost out - tens of seconds of a call screen
+        // showing somebody who left. So: wait for the leave to complete,
+        // off the callback thread, and only then destroy. The 2 s ceiling is
+        // there because a dead network must not leak a thread; the audio
+        // session still has to come back either way.
+        DispatchQueue.global(qos: .userInitiated).async {
+            let done = DispatchSemaphore(value: 0)
+            kit.leaveChannel { _ in done.signal() }
+            _ = done.wait(timeout: .now() + 2.0)
             AgoraRtcEngineKit.destroy()
         }
     }
 
-    private func emitRemotes() {
-        notifyListeners("remoteChanged", data: ["remotes": remotes.count])
+    private func emitRemotes(_ n: Int) {
+        notifyListeners("remoteChanged", data: ["remotes": n])
     }
 }
 
@@ -278,13 +345,15 @@ extension AgoraCallPlugin: AgoraRtcEngineDelegate {
     }
 
     public func rtcEngine(_ engine: AgoraRtcEngineKit, didJoinedOfUid uid: UInt, elapsed: Int) {
-        remotes.insert(uid)
-        emitRemotes()
+        var n = 0
+        q.sync { remotes.insert(uid); n = remotes.count }
+        emitRemotes(n)
     }
 
     public func rtcEngine(_ engine: AgoraRtcEngineKit, didOfflineOfUid uid: UInt, reason: AgoraUserOfflineReason) {
-        remotes.remove(uid)
-        emitRemotes()
+        var n = 0
+        q.sync { remotes.remove(uid); n = remotes.count }
+        emitRemotes(n)
     }
 
     /// Reported on a timer while the call runs. txAudioKBitrate is the
@@ -292,23 +361,39 @@ extension AgoraCallPlugin: AgoraRtcEngineDelegate {
     public func rtcEngine(_ engine: AgoraRtcEngineKit, reportRtcStats stats: AgoraChannelStats) {
         // Agora reports these as UInt; everything this plugin hands back to JS
         // is Int, so convert here rather than widening the stored fields.
-        txAudioKbps = Int(stats.txAudioKBitrate)
-        rxAudioKbps = Int(stats.rxAudioKBitrate)
+        let tx = Int(stats.txAudioKBitrate)
+        let rx = Int(stats.rxAudioKBitrate)
+        q.async { self.txAudioKbps = tx; self.rxAudioKbps = rx }
     }
 
     /// uid 0 is this phone's own microphone; everything else is somebody
     /// else's. Both are kept so stats() can say "capturing but not sending",
     /// which is the distinction that took six builds to see.
     public func rtcEngine(_ engine: AgoraRtcEngineKit, reportAudioVolumeIndicationOfSpeakers speakers: [AgoraRtcAudioVolumeInfo], totalVolume: Int) {
+        // Agora fires this callback TWICE on a timer: once carrying only the
+        // local speaker (uid 0), once carrying the remote ones. So an empty
+        // remote list here usually means "this was the local report", NOT
+        // "nobody is talking" - and overwriting remoteVolume with 0 on those
+        // ticks would make recvLevel read zero through a perfectly audible
+        // call. That matters more than it sounds: these logs are the only
+        // instrument this project has on an iPhone, and a lying recvLevel
+        // would read as "the incoming audio died when I hit the earpiece",
+        // which is precisely the wrong diagnosis to chase a seventh time.
+        var sawRemote = false
         var remoteMax = 0
+        var localSeen: Int?
         for s in speakers {
             if s.uid == 0 {
-                localVolume = Int(s.volume)
+                localSeen = Int(s.volume)
             } else {
+                sawRemote = true
                 remoteMax = max(remoteMax, Int(s.volume))
             }
         }
-        if !speakers.isEmpty { remoteVolume = remoteMax }
+        q.async {
+            if let l = localSeen { self.localVolume = l }
+            if sawRemote { self.remoteVolume = remoteMax }
+        }
     }
 
     /// A token expiring mid-call, a channel that cannot be reached. Reported
@@ -317,7 +402,12 @@ extension AgoraCallPlugin: AgoraRtcEngineDelegate {
     /// this plugin cannot be debugged from a Windows machine any other way.
     public func rtcEngine(_ engine: AgoraRtcEngineKit, didOccurError errorCode: AgoraErrorCode) {
         notifyListeners("callError", data: ["code": errorCode.rawValue])
-        if pendingJoin != nil {
+        var waiting = false
+        q.sync { waiting = (pendingJoin != nil) }
+        if waiting {
+            // finishJoin rejects before it tears down, and the teardown puts
+            // destroy() on a background thread - both deliberate, because this
+            // is the SDK's own callback thread and destroy() waits on it.
             finishJoin(error: "agora error \(errorCode.rawValue)")
         }
     }
