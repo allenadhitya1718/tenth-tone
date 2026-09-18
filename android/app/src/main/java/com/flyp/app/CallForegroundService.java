@@ -79,23 +79,35 @@ public class CallForegroundService extends Service {
         final String text = intent != null && intent.getStringExtra(EXTRA_TEXT) != null
                 ? intent.getStringExtra(EXTRA_TEXT) : "";
 
-        startInForeground(buildNotification(name, text));
+        if (!startInForeground(buildNotification(name, text))) {
+            // Started with startForegroundService() but unable to become a
+            // foreground service: the system gives about five seconds and then
+            // kills the app with ForegroundServiceDidNotStartInTimeException.
+            // Leaving quietly is strictly better than taking the call - and the
+            // app - down over a notification.
+            stopSelfSafely();
+            return START_NOT_STICKY;
+        }
         return START_STICKY;
     }
 
-    private void startInForeground(Notification n) {
+    private boolean startInForeground(Notification n) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 startForeground(NOTIFICATION_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
             } else {
                 startForeground(NOTIFICATION_ID, n);
             }
+            return true;
         } catch (Exception e) {
             // A refused foreground start must not take the call with it: the
-            // call is running in the WebView and works without this, it is
-            // only less protected. Better a call with no notification than a
-            // crash mid-conversation.
-            try { startForeground(NOTIFICATION_ID, n); } catch (Exception ignored) {}
+            // call runs in the WebView and works without this, it is only less
+            // protected. Better a call with no notification than a crash mid
+            // conversation. Android 14 can refuse for reasons we cannot undo
+            // here - a missing permission, or the app not being foreground at
+            // the moment of the start.
+            try { startForeground(NOTIFICATION_ID, n); return true; } catch (Exception ignored) {}
+            return false;
         }
     }
 
