@@ -415,6 +415,8 @@ jobs:
         env:
           CERT_B64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          DEV_CERT_B64: ${{ secrets.IOS_DEV_CERT_P12_BASE64 }}
+          DEV_CERT_PASSWORD: ${{ secrets.IOS_DEV_CERT_PASSWORD }}
         run: |
           # Optional. With no certificate supplied, fall through and let
           # -allowProvisioningUpdates create one, which works as long as the
@@ -422,8 +424,17 @@ jobs:
           # one is the durable fix, because CI creating a certificate per run
           # fills that cap again; but a missing secret must not fail a build
           # that would otherwise have succeeded.
-          if [ -z "$CERT_B64" ]; then
-            echo "::notice::No IOS_DIST_CERT_P12_BASE64 secret; letting Xcode create a certificate instead."
+          #
+          # TWO certificates, because the two halves of this job sign with
+          # different ones. The ARCHIVE below signs for development (see the
+          # comment at the xcodebuild step - pinning it to distribution breaks
+          # every Pod), and the EXPORT re-signs for distribution. Supplying only
+          # the distribution half therefore left the archive still asking Apple
+          # for a fresh development certificate on every run, which is what
+          # filled the 2-certificate cap four times. IOS_DEV_CERT_P12_BASE64 is
+          # the half that actually stops it.
+          if [ -z "$CERT_B64" ] && [ -z "$DEV_CERT_B64" ]; then
+            echo "::notice::No signing certificate secrets; letting Xcode create one instead."
             exit 0
           fi
           KEYCHAIN=$RUNNER_TEMP/build.keychain
@@ -433,11 +444,19 @@ jobs:
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
 
-          echo "$CERT_B64" | base64 --decode > $RUNNER_TEMP/cert.p12
           # -A lets codesign use the key without prompting, which matters
           # because there is nobody at the runner to click Allow.
-          security import $RUNNER_TEMP/cert.p12 -k "$KEYCHAIN" \
-            -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -A
+          import_p12() {
+            local b64="$1" pw="$2" label="$3"
+            [ -z "$b64" ] && { echo "::notice::no $label certificate supplied"; return 0; }
+            echo "$b64" | base64 --decode > $RUNNER_TEMP/cert.p12
+            security import $RUNNER_TEMP/cert.p12 -k "$KEYCHAIN" \
+              -P "$pw" -T /usr/bin/codesign -T /usr/bin/security -A
+            rm -f $RUNNER_TEMP/cert.p12
+            echo "imported the $label certificate"
+          }
+          import_p12 "$DEV_CERT_B64" "$DEV_CERT_PASSWORD" "development"
+          import_p12 "$CERT_B64" "$CERT_PASSWORD" "distribution"
           security set-key-partition-list -S apple-tool:,apple: \
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" > /dev/null
 
@@ -447,9 +466,13 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
           security default-keychain -s "$KEYCHAIN"
 
-          rm -f $RUNNER_TEMP/cert.p12
           echo "Identities now available to codesign:"
           security find-identity -v -p codesigning "$KEYCHAIN"
+          # A development identity here is the whole point: without one the
+          # archive asks Apple for a new certificate and the cap fills again.
+          if ! security find-identity -v -p codesigning "$KEYCHAIN" | grep -q "Apple Development"; then
+            echo "::warning::No Apple Development identity in the keychain - the archive will ask Apple for a new certificate and may hit the 2-certificate cap. Set IOS_DEV_CERT_P12_BASE64 and IOS_DEV_CERT_PASSWORD."
+          fi
 
       # Without this every single upload sits at "Missing Compliance" in
       # App Store Connect until somebody answers the encryption question by
