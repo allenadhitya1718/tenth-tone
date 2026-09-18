@@ -63,6 +63,15 @@ public class AudioRoutePlugin: CAPPlugin {
 
     private var observing = false
     private var lastReassert = Date.distantPast
+    // A deliberate switch takes about a second on the JavaScript side, which
+    // unpublishes the microphone, moves the route and publishes it again. Both
+    // the unpublish and the publish make WKWebView reconfigure the audio
+    // session, and that arrives here as .categoryChange - which would call
+    // apply() again, moving the route WHILE the new encoder is being built
+    // against it. That is the very thing five attempts at this bug have been
+    // fighting. So an intentional switch closes the automatic one out for a
+    // moment; drift correction resumes straight afterwards.
+    private var suppressReassertUntil = Date.distantPast
 
     override public func load() {
         startObserving()
@@ -84,7 +93,14 @@ public class AudioRoutePlugin: CAPPlugin {
      * A deliberate tap by the user should NOT pass it: choosing the
      * loudspeaker while wearing a headset is a real thing people do.
      */
+    /// Called by the two entry points a PERSON can trigger, never by the
+    /// automatic route-change handler - that one still needs to react.
+    private func beginIntentionalSwitch() {
+        suppressReassertUntil = Date().addingTimeInterval(2.5)
+    }
+
     @objc func setSpeaker(_ call: CAPPluginCall) {
+        beginIntentionalSwitch()
         let on = call.getBool("on") ?? true
         let respectExternal = call.getBool("respectExternal") ?? false
 
@@ -109,6 +125,7 @@ public class AudioRoutePlugin: CAPPlugin {
      * there is one.
      */
     @objc func setRoute(_ call: CAPPluginCall) {
+        beginIntentionalSwitch()
         let wanted = normalise(call.getString("route"))
         configureSession()
         userRoute = wanted
@@ -447,6 +464,9 @@ public class AudioRoutePlugin: CAPPlugin {
     /// before it acts, so re-applying cannot chase its own notification
     /// forever, and refuses to run twice in quick succession as a backstop.
     private func reassertIfDrifted() {
+        // Mid-switch: the drift being observed is our own doing, and correcting
+        // it now would land on top of the rebuild.
+        if Date() < suppressReassertUntil { return }
         let wantsSpeaker = (appliedRoute == "speaker")
         if wantsSpeaker == session.currentRoute.outputs.contains(where: { $0.portType == .builtInSpeaker }) {
             return
