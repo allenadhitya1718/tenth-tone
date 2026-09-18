@@ -3098,6 +3098,20 @@ function autoPlay(video) {
     // ran, and the screen stayed black. Put it back before using it.
     function showPreview(s) {
       if (!previewVideo.isConnected) { previewWrap.innerHTML = ''; previewWrap.appendChild(previewVideo); }
+      // ── The front camera is shown as a MIRROR ──
+      // A camera hands back what it sees, so raising your left hand raises the
+      // hand on the right of the screen. Every camera app corrects that for the
+      // front lens, because people are framing themselves and expect the
+      // mirror they have used every morning of their lives. Reported as "the
+      // camera is reversed, if I move left it moves right".
+      //
+      // CSS only, deliberately: a transform does not touch the MediaStream, so
+      // the RECORDING stays as the camera saw it. That is the convention and
+      // the right way round - you compose in a mirror, everyone else sees you
+      // the way they would in the room, and any writing in shot stays readable.
+      // The back camera is not mirrored: there is nothing to mirror, you are
+      // pointing it at the world.
+      previewWrap.classList.toggle('mirror', facingMode === 'user');
       previewVideo.srcObject = s;
       // Once now, and again when the stream's metadata lands: on some engines
       // the first play() is issued before the track has a frame size and is

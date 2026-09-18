@@ -4483,3 +4483,12 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible,
 .ic-btn.decline span svg { transform: rotate(135deg); }
 @keyframes icNudge { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 @media (prefers-reduced-motion: reduce) { .ic-btn.accept { animation: none; } }
+
+/* The front camera is previewed as a mirror; the back camera is not. See the
+   comment at the srcObject assignment in views.js - the transform is CSS so
+   the recorded video is untouched, which is what everyone else should see.
+   Restoring the lost .live-pill.elapsed rule here too: it was dropped when the
+   call styles were rewritten, and it is what greys the elapsed time once a
+   broadcast has finished. */
+.camera-preview.mirror video { transform: scaleX(-1); }
+.live-pill.elapsed { opacity: .75; }
