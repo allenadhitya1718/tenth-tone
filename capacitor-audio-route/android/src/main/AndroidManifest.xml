@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- MODIFY_AUDIO_SETTINGS is what setSpeakerphoneOn / setMode need. The
-         app's own manifest may already carry it; merging a duplicate is harmless. -->
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-</manifest>

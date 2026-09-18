@@ -102,11 +102,29 @@ jobs:
               raise SystemExit('::error::google-services.json is not for com.flyp.app')
           PY
 
-      - name: Patch app name, versionCode, and permissions
+      - name: Patch app name, version, and permissions
         run: |
           BUILD_NUM=$(date +%s | tail -c 8)
           echo "VERSION_CODE=$BUILD_NUM" >> $GITHUB_ENV
-          sed -i "s/versionCode 1/versionCode $BUILD_NUM/" android/app/build.gradle || true
+          # versionCode: the sed here matched the literal "versionCode 1", which
+          # stopped matching the moment the file said 21 - and `|| true` hid
+          # that, so every build since has shipped versionCode 21. Play refuses
+          # any upload whose code is not strictly higher than the last, so the
+          # store could only ever have accepted one of them. Match the number,
+          # whatever it is.
+          sed -i -E "s/versionCode [0-9]+/versionCode $BUILD_NUM/" android/app/build.gradle
+          # versionName is the version a PERSON sees - Settings reads it through
+          # App.getInfo(). It was never patched at all and sat at 1.4.1 while
+          # the app called itself 1.4.12 everywhere else. Take it from the tag,
+          # exactly as the iOS workflow takes CFBundleShortVersionString, so the
+          # tag, the APK and the about screen cannot disagree. A manual run sits
+          # on a branch, not a tag, and keeps whatever the file says.
+          VERSION="${GITHUB_REF_NAME#v}"
+          case "$VERSION" in
+            [0-9]*.[0-9]*) sed -i -E "s/versionName \"[^\"]*\"/versionName \"$VERSION\"/" android/app/build.gradle ;;
+            *) echo "Not a version tag ($GITHUB_REF_NAME) - keeping versionName as committed" ;;
+          esac
+          grep -nE "versionCode|versionName" android/app/build.gradle
           sed -i 's|<string name="app_name">.*</string>|<string name="app_name">FLYP</string>|' android/app/src/main/res/values/strings.xml || true
           sed -i 's|<string name="title_activity_main">.*</string>|<string name="title_activity_main">FLYP</string>|' android/app/src/main/res/values/strings.xml || true
           # Allow camera, mic, location, internet — Capacitor adds most by default but be explicit
