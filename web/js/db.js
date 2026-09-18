@@ -2452,7 +2452,7 @@
   const SETTINGS_DEFAULTS = {
     notif_likes: true, notif_comments: true, notif_follows: true,
     notif_messages: true, notif_live: true, notif_gifts: true,
-    who_can_message: 'following', who_can_comment: 'everyone', who_can_tag: 'everyone',
+    who_can_message: 'everyone', who_can_comment: 'everyone', who_can_tag: 'everyone',
     autoplay: true, data_saver: false,
   };
 
