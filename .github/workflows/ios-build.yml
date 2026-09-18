@@ -14,19 +14,28 @@ name: iOS build & TestFlight upload (Capacitor)
 # To base64 the .p8 file on Windows PowerShell:
 #   [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\path\AuthKey_XXXXX.p8"))
 
+# MANUAL ONLY, deliberately.
+#
+# GitHub bills a macOS runner at TEN TIMES a Linux one. In September this
+# workflow ran 53 times for about 134 minutes of real work and was charged
+# roughly 1,343 minutes - 84% of the account's entire 2,000-minute monthly
+# allowance - while Android's 47 runs cost 261. The allowance ran out on the
+# 18th and BOTH platforms stopped building, Android included, for want of
+# minutes iOS had spent.
+#
+# Tagging a release no longer starts an iPhone build. Most tags are Android
+# fixes and never needed one. Start this by hand when a TestFlight drop is
+# actually wanted: Actions -> this workflow -> Run workflow -> pick the tag.
+# Choosing a tag is what turns the upload on (DO_UPLOAD below reads the ref),
+# so a run against a branch still builds and verifies without uploading.
 on:
-  push:
-    tags:
-      - 'v*'
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       upload:
-        description: 'Upload to TestFlight'
+        description: 'Upload to TestFlight (a tag ref uploads anyway)'
         required: false
         type: boolean
-        default: false
+        default: true
 
 jobs:
   build:
