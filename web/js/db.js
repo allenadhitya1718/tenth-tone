@@ -1852,8 +1852,22 @@
 
   API.fetchMessages = async (chatId, limit = 100) => {
     const c = await client();
+    // NEWEST first, then reversed for display.
+    //
+    // This asked for the OLDEST hundred: ascending order with a limit. In any
+    // conversation longer than the limit that means the most recent messages
+    // are never fetched at all - opening the chat showed history and nothing
+    // since. A real one: 117 messages, so 17 were invisible, and a voice note
+    // sent into it produced a notification and an inbox preview (both of which
+    // read the latest row by other routes) and then "nothing at all" in the
+    // thread. It would have done the same to every text message, quietly, for
+    // as long as that chat has been over a hundred messages long.
+    //
+    // catchUp() in the chat screen calls this too, so the safety net that is
+    // supposed to recover messages a dropped websocket missed was re-reading
+    // the same old hundred and finding nothing new, every time.
     const q = (sel) => c.from('messages').select(sel)
-      .eq('chat_id', chatId).order('created_at', { ascending: true }).limit(limit);
+      .eq('chat_id', chatId).order('created_at', { ascending: false }).limit(limit);
 
     let { data, error } = await q(MSG_SELECT_FULL);
     if (error) {
@@ -1864,7 +1878,9 @@
       ({ data, error } = await q(MSG_SELECT_BASIC));
       if (error) throw error;
     }
-    return data || [];
+    // Back into reading order. The caller appends in sequence and every
+    // consumer assumes oldest-to-newest.
+    return (data || []).slice().reverse();
   };
 
   // Returns the emoji now standing, or null when the reaction was cleared.
