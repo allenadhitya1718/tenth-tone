@@ -5171,7 +5171,15 @@ function autoPlay(video) {
       }
 
       maybeDateDivider(m.created_at);
-      const bubble = el('div', { class: 'bubble ' + (mine ? 'me' : 'them') });
+      // The kind goes on the bubble too. app.css has carried `.bubble.voice`
+      // (flex, min-width 160px) and `.bubble.image` (tighter padding) for a
+      // long time and NOTHING ever set those classes - the stylesheet was
+      // written for markup that did not exist. A voice bubble therefore had
+      // no minimum width and laid out as though it were empty, which is
+      // exactly what "I got the notification and the preview but there is no
+      // audio in the chat" looks like on a narrow screen.
+      const kindClass = (m.type === 'voice' || m.type === 'image') ? ' ' + m.type : '';
+      const bubble = el('div', { class: 'bubble ' + (mine ? 'me' : 'them') + kindClass });
       // A shared reel/profile/live is a lone deep link in a text message.
       const shareCard = (!m.attachment_url && (!m.type || m.type === 'text'))
         ? buildShareCard(m.text) : null;

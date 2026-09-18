@@ -3745,7 +3745,14 @@ body.dark .auth-screen .lang-opt.active,
 
 /* A sent voice note renders as a native <audio controls>, whose default
    width overflowed the bubble. */
-.bubble audio { display: block; width: 210px; max-width: 58vw; }
+.bubble audio {
+  display: block; width: 210px; max-width: 58vw;
+  /* A floor as well as a ceiling. 58vw on a 320px phone is 185px, and an
+     older WebView that lays the native player out smaller than its content
+     collapses it to a sliver - a bubble that looks empty, which is what a
+     voice note "not arriving" turned out to look like. */
+  min-width: 140px; min-height: 40px;
+}
 
 body.dark .vn-bar, body.dark .vn-preview { background: var(--bg-2); }
 /* --bg-2 is what the composer and the message list already use in dark, so
