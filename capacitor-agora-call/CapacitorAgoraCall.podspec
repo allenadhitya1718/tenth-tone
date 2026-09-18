@@ -21,6 +21,12 @@ Pod::Spec.new do |s|
   # Pinned exactly. An SDK that moves under a build nobody can compile locally
   # is a failure nobody would see coming; 4.6.4 is the version this plugin was
   # written against.
-  s.dependency 'AgoraAudio_iOS', '4.6.4'
+  # The RtcBasic SUBSPEC, not the whole pod. AgoraAudio_iOS declares no
+  # default_subspecs, so naming the pod alone pulls every optional
+  # extension with it - AI noise suppression, echo cancellation, audio
+  # beauty, spatial audio, lip sync - none of which a voice call needs,
+  # all of which ship inside the app. RtcBasic is the engine itself and
+  # is what vends AgoraRtcKit.xcframework, the module this plugin imports.
+  s.dependency 'AgoraAudio_iOS/RtcBasic', '4.6.4'
   s.swift_version = '5.1'
 end

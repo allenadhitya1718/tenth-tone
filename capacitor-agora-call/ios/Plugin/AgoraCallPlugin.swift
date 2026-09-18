@@ -140,7 +140,7 @@ public class AgoraCallPlugin: CAPPlugin {
         micMuted = false
         remotes.removeAll()
         pendingJoin = call
-        call.keepAlive(true)
+        call.keepAlive = true
 
         let options = AgoraRtcChannelMediaOptions()
         options.publishMicrophoneTrack = true
@@ -170,7 +170,7 @@ public class AgoraCallPlugin: CAPPlugin {
     private func finishJoin(uid: UInt? = nil, error: String? = nil) {
         guard let call = pendingJoin else { return }
         pendingJoin = nil
-        call.keepAlive(false)
+        call.keepAlive = false
         if let error = error {
             teardownEngine()
             call.reject(error)
@@ -248,7 +248,7 @@ public class AgoraCallPlugin: CAPPlugin {
     private func teardownEngine() {
         if let call = pendingJoin {
             pendingJoin = nil
-            call.keepAlive(false)
+            call.keepAlive = false
             call.reject("superseded")
         }
         joined = false
