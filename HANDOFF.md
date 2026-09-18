@@ -1,3 +1,25 @@
+# FLYP handoff — 2026-09-18
+
+> **Newest first (18 Sep).** A large call/chat/feed/push batch is committed as
+> `da8c123` on `fixes/apk-review-and-security`, **NOT tagged** (a tag is a
+> build; the user tags). Browser-verified, whole-app smoke test clean (8
+> routes, 0 console errors). Details in memory note `flyp-call-inbox-feed-batch`.
+> - **Calls** survive back (green "Call in progress" pill, tap to return),
+>   iOS earpiece no longer kills the call, audio starts without the silent
+>   seconds, and Bluetooth routing + an output picker were added. The **Android
+>   call plugin has never compiled here (no JDK)** — the first CI Android build
+>   is its first compile; watch that step (AudioDeviceInfo APIs vs minSdk 22).
+> - **Chat:** who-can-message default is now 'following' (0089); the inbox
+>   preview, unread dot and Chat-tab badge update live without opening the chat.
+> - **Push actually works now:** the trigger had been calling the wrong schema's
+>   http_post, so EVERY push (and the hourly media-reconcile cron) silently made
+>   zero calls. 0090 fixes it; a test notification returned `sent:1`. Displaying
+>   on the phone is the only unproven step left.
+> - **Feed:** pull down at the top to reload.
+> - Migrations 0088–0090 applied live; send-push redeployed. Still phone-only:
+>   the voice-note send (client_logs 0088 will report the cause) and the camera
+>   black-preview watchdog.
+
 # FLYP handoff — 2026-09-17
 
 Read this first in a new session. It is the complete state of the work as of the end of the 17 Sep session; the repo, git history and the memory folder hold the details.
