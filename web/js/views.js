@@ -1300,9 +1300,50 @@
     // so a quick swipe could sail past three to five videos. The gesture is
     // driven by hand instead and the travel is clamped to a single row, so a
     // gentle swipe and a violent one both advance exactly one.
+    // ── Pull down at the top to reload ──
+    // The feed keeps a 30 s cache, so coming back to it showed what it showed
+    // before. A pull past PULL_TO_REFRESH_PX drops that cache, fetches the
+    // feed again and rebuilds the list from the first clip. The indicator is
+    // a pill under the tabs that follows the finger and spins while loading.
+    const PULL_TO_REFRESH_PX = 72;
+    const refreshEl = el('div', { class: 'feed-refresh' }, [
+      el('span', { class: 'fr-spin' }),
+      el('span', { class: 'fr-label' }, 'اسحب للتحديث'),
+    ]);
+    root.appendChild(refreshEl);
+    function hideRefresh() { refreshEl.classList.remove('show', 'armed', 'busy'); refreshEl.style.transform = ''; }
+    let refreshing = false;
+    async function refreshFeed() {
+      if (refreshing) return;
+      refreshing = true;
+      refreshEl.classList.add('show', 'busy');
+      refreshEl.classList.remove('armed');
+      refreshEl.style.transform = '';
+      refreshEl.querySelector('.fr-label').textContent = 'جارٍ التحديث...';
+      try { if (window.I18N) window.I18N.apply(refreshEl); } catch (e) {}
+      try {
+        if (window.API && window.API.invalidate) window.API.invalidate('feed:');
+        const rows = window.API ? await window.API.fetchFeed({ tab }) : [];
+        if (rows && rows.length) {
+          list = rows.map((r, i) => adapt(r, i));
+          scroll.innerHTML = '';
+          renderItems();
+          scroll.scrollTop = 0;
+          playOnlyVisible();
+        }
+      } catch (e) { console.warn('feed refresh:', e); toast('تعذر التحديث'); }
+      finally {
+        refreshing = false;
+        refreshEl.querySelector('.fr-label').textContent = 'اسحب للتحديث';
+        try { if (window.I18N) window.I18N.apply(refreshEl); } catch (e) {}
+        hideRefresh();
+      }
+    }
+
     (function oneClipPerSwipe() {
       let startY = 0, startX = 0, startTop = 0, startTs = 0;
       let dragging = false, animating = false, axis = null;
+      let pulling = false;   // finger dragging down from the very top
       const H = () => scroll.clientHeight || 1;
 
       function releaseSnap() { scroll.style.scrollSnapType = 'none'; }
@@ -1317,6 +1358,7 @@
         // Start from the row we are actually resting on, not a half-scrolled
         // position, or the clamp below would be measured from the wrong place.
         startTop = Math.round(scroll.scrollTop / H()) * H();
+        pulling = false;
       }, { passive: true });
 
       scroll.addEventListener('touchmove', (e) => {
@@ -1331,6 +1373,19 @@
           // Horizontal belongs to the tab switcher — let it through untouched.
           if (axis === 'h') { dragging = false; return; }
           releaseSnap();
+        }
+
+        // Resting on the first clip and dragging DOWN: that is a pull to
+        // refresh, not a scroll. The indicator follows the finger and arms at
+        // the threshold; the list itself does not move.
+        if (!pulling && startTop === 0 && dy > 6) pulling = true;
+        if (pulling) {
+          if (e.cancelable) e.preventDefault();
+          const pull = Math.max(0, Math.min(dy, 140));
+          refreshEl.classList.add('show');
+          refreshEl.classList.toggle('armed', pull >= PULL_TO_REFRESH_PX);
+          refreshEl.style.transform = 'translate(-50%, ' + (pull * 0.45).toFixed(0) + 'px)';
+          return;
         }
 
         // Clamped to one screen in either direction. This is what makes
@@ -1359,6 +1414,14 @@
         dragging = false;
         if (axis !== 'v') { restoreSnap(); return; }
 
+        if (pulling) {
+          pulling = false;
+          restoreSnap();
+          const pdy = e.changedTouches[0].clientY - startY;
+          if (pdy >= PULL_TO_REFRESH_PX) refreshFeed(); else hideRefresh();
+          return;
+        }
+
         const dy = e.changedTouches[0].clientY - startY;
         const dt = Math.max(1, Date.now() - startTs);
         // Either a decisive distance or a quick flick commits the move, so a
@@ -1373,6 +1436,8 @@
       scroll.addEventListener('touchcancel', () => {
         if (!dragging) return;
         dragging = false;
+        pulling = false;
+        hideRefresh();
         restoreSnap();
       });
     })();
@@ -4179,6 +4244,20 @@ function autoPlay(video) {
     (async () => {
       try {
         if (!window.API) { chatsLoaded = true; paint(); return; }
+        // Live: a new message in any of my chats refetches and repaints the
+        // list, so the preview line and the unread dot move without the chat
+        // being opened. Dropped when the screen goes away.
+        let inboxUnsub = window.API.subscribeToInbox ? window.API.subscribeToInbox(async () => {
+          try {
+            const rows = await window.API.fetchChats({
+              onFresh: (r) => { allChats = r || []; chatsLoaded = true; paint(); },
+            });
+            if (rows) { allChats = rows; chatsLoaded = true; paint(); }
+          } catch (e) {}
+        }) : null;
+        window.addEventListener('hashchange', () => {
+          if (inboxUnsub) { try { inboxUnsub(); } catch (e) {} inboxUnsub = null; }
+        }, { once: true });
         // onFresh repaints if the background refresh turns up something
         // different from what was served out of the cache.
         const apiChats = await window.API.fetchChats({
@@ -12621,14 +12700,74 @@ function autoPlay(video) {
     };
   })();
 
+  // ── A call that outlives its screen ──
+  // Pressing back used to END the call: the screen's cleanup stopped the
+  // media session and hung up. Now a CONNECTED call is kept here when its
+  // screen goes away, a green pill at the top of every other screen shows it
+  // is still running (with the timer), and tapping the pill brings the screen
+  // back and re-attaches it to the same session - the way Instagram does it.
+  // A call that is still ringing is hung up on leaving, as before: nobody
+  // wants a call ringing on behind another screen.
+  //
+  // The screen registers its own painters (onTick, onStatus, onRemote,
+  // onMedia, onRouteChange) while attached and clears them when it detaches;
+  // the session's callbacks always go through these, never through a
+  // screen's closure, so a screen built later paints into its own elements.
+  const ActiveCall = {
+    id: null, call: null, media: null, guard: null, unsub: null,
+    startedAt: null, timer: null, ringTimeout: null, over: false,
+    onTick: null, onStatus: null, onRemote: null, onMedia: null, onRouteChange: null,
+    pill: null, pillTime: null,
+    ensurePill() {
+      if (this.pill) return this.pill;
+      this.pillTime = el('span', { class: 'cp-time' }, '0:00');
+      this.pill = el('button', {
+        class: 'call-pill', type: 'button', hidden: true, title: 'العودة إلى المكالمة',
+        onclick: () => { if (ActiveCall.id) go('/call/' + ActiveCall.id); },
+      }, [el('span', { class: 'cp-dot' }), el('span', { class: 'cp-label' }, 'مكالمة جارية'), this.pillTime]);
+      document.body.appendChild(this.pill);
+      try { if (window.I18N) window.I18N.apply(this.pill); } catch (e) {}
+      return this.pill;
+    },
+    showPill(on) { this.ensurePill().hidden = !on; },
+    tick() {
+      if (!this.startedAt) return;
+      const s = fmtDuration(Math.floor((Date.now() - this.startedAt) / 1000));
+      if (this.pillTime) this.pillTime.textContent = s;
+      if (this.onTick) { try { this.onTick(s); } catch (e) {} }
+    },
+    start(id, guard) {
+      this.id = id; this.call = null; this.guard = guard; this.over = false;
+      this.media = null; this.startedAt = null;
+    },
+    connected() {
+      if (this.timer) return;
+      this.startedAt = Date.now();
+      this.timer = setInterval(() => this.tick(), 1000);
+      this.tick();
+    },
+    isLive() { return !!this.id && !this.over && !!this.startedAt; },
+    // Everything down: media, audio route, timers, subscription, pill. Safe
+    // to call twice.
+    teardown() {
+      if (this.timer) { clearInterval(this.timer); this.timer = null; }
+      if (this.ringTimeout) { clearTimeout(this.ringTimeout); this.ringTimeout = null; }
+      if (this.unsub) { try { this.unsub(); } catch (e) {} this.unsub = null; }
+      if (this.guard) { CallGuard.release(this.guard); this.guard = null; }
+      const m = this.media; this.media = null;
+      if (m) { Promise.resolve().then(() => m.stop()).catch(() => {}); }
+      this.showPill(false);
+      this.id = null; this.call = null; this.startedAt = null; this.over = true;
+      this.onTick = null; this.onStatus = null; this.onRemote = null; this.onMedia = null; this.onRouteChange = null;
+    },
+  };
+
   V.call = (params) => {
     hideNav();
     const callId = params.id;
+    // Back on a call that is still running: same session, new screen.
+    const resuming = ActiveCall.id === callId && !ActiveCall.over;
     const root = el('section', { class: 'call-screen' });
-
-    // Rebuilt to read like a phone call rather than a settings page: the
-    // person fills the screen, the state is one clear line under their name,
-    // and the controls sit in a fixed row at the bottom where a thumb is.
     const avPulse = el('span', { class: 'call-pulse' });
     const avWrap = el('div', { class: 'call-avatar ringing' }, [avPulse, avatar('', '', 132)]);
     const nameEl = el('div', { class: 'call-name' }, '');
@@ -12636,29 +12775,17 @@ function autoPlay(video) {
     const kindEl = el('div', { class: 'call-kind' }, '');
     const mediaNote = el('div', { class: 'call-media-note', hidden: true },
       'الصوت والفيديو غير مفعلين — أضف Agora App ID');
+    let call = resuming ? ActiveCall.call : null, me = null;
+    let ended = false;      // this screen is done with the call
+    let settled = false;    // endCall has been sent
+    let media = resuming ? ActiveCall.media : null;
+    let joining = false;
+    // A different call claims the slot and evicts whatever was running.
+    const guard = resuming ? ActiveCall.guard
+                           : CallGuard.claim(callId, () => { ended = true; hangUp(); ActiveCall.teardown(); });
+    if (!resuming) ActiveCall.start(callId, guard);
+    ActiveCall.showPill(false);
 
-    let call = null, me = null, unsub = null, timer = null, startedAt = null, ringTimeout = null;
-    let ended = false;
-    // The calls row has reached a final state, or one has already been sent
-    // for it. Keeps a teardown hang-up from writing 'ended' over the
-    // 'declined' or 'missed' the row really carries, and from sending twice.
-    let settled = false;
-
-    // Claimed synchronously while this screen is being built, so the guard
-    // reflects the screen the router has just put on the display rather than
-    // the one it removed a moment ago.
-    let guard = CallGuard.claim(callId, () => { ended = true; cleanup(); });
-    // Armed in the same breath as the claim, and deliberately not at the
-    // bottom of this function: everything below can throw, and a claim that
-    // outlived a screen which failed to finish building would leave the user
-    // unable to call anybody until they restarted the app. cleanup() releases
-    // the claim before it touches anything that may not exist yet.
-    window.addEventListener('hashchange', cleanup, { once: true });
-
-    // Leaving the call screen IS hanging up: there is no ongoing-call bar to
-    // come back through. Nothing said so before, so walking away from a call
-    // left the row 'accepted' for ever - the other side sat in a call with
-    // nobody, and the table described a call that was not happening.
     function hangUp() {
       if (settled) return;
       settled = true;
@@ -12668,36 +12795,27 @@ function autoPlay(video) {
         if (p && p.catch) p.catch(() => {});
       } catch (e) {}
     }
-
-    function cleanup() {
-      // Nothing this screen started may still land. This flag is what stops a
-      // join that is STILL IN FLIGHT: Agora.startCall resolves seconds after
-      // you have gone, and joinMedia then handed a live, publishing session
-      // to a closure no live code holds any more - a microphone in a channel
-      // with nothing left to stop it with. Do that once and the next call you
-      // place is your second live one. `ended` was previously set only by
-      // hang-up and by a terminal status, so the hashchange path - back
-      // button, deep link, answering another call - missed it entirely.
+    // The call is over, from this screen: hang up and wind everything down.
+    function finish() {
       ended = true;
-      // By token identity: see CallGuard above for why a blind clear here
-      // would release the NEXT screen's claim rather than this one's.
-      if (guard) { CallGuard.release(guard); guard = null; }
-      if (unsub) { try { unsub(); } catch (e) {} unsub = null; }
-      if (timer) { clearInterval(timer); timer = null; }
-      if (ringTimeout) { clearTimeout(ringTimeout); ringTimeout = null; }
       hangUp();
-      // The microphone and camera have to be handed back, and the channel
-      // left, or the call keeps billing and the recording light stays on
-      // after the screen is gone. Detached from `media` first so a second
-      // cleanup — hangup and hashchange both call it — cannot stop it twice.
-      const session = media; media = null;
-      if (session) { Promise.resolve().then(() => session.stop()).catch(() => {}); }
+      ActiveCall.teardown();
     }
-    function leaveScreen() { cleanup(); back(); }
+    function leaveScreen() { finish(); back(); }
+    // Leaving the screen. A connected call keeps running behind the pill;
+    // anything else - still ringing, already over - is wound up as before.
+    function onLeave() {
+      if (ended) return;
+      if (ActiveCall.isLive() && ActiveCall.id === callId) {
+        ActiveCall.onTick = null; ActiveCall.onStatus = null; ActiveCall.onRemote = null;
+        ActiveCall.onMedia = null; ActiveCall.onRouteChange = null;
+        ActiveCall.showPill(true);
+        return;
+      }
+      finish();
+    }
+    window.addEventListener('hashchange', onLeave, { once: true });
 
-    // A labelled round control. Every button carries its own label so none of
-    // them is a bare icon you have to guess at. The icon and the label live
-    // in fields because both change with the control's state.
     function ctl(cls, icon, label, onclick) {
       const iconWrap = el('span', { html: icon });
       const labelEl = el('small', {}, label);
@@ -12708,36 +12826,56 @@ function autoPlay(video) {
       return { btn, iconWrap, labelEl, node: el('div', { class: 'call-ctl' }, [btn, labelEl]) };
     }
 
-    // ── Media controls ───────────────────────────────────────
-    //
-    // These three used to be `classList.toggle('on')` and a comment saying
-    // the media layer would arrive later. Two things were wrong with that.
-    //
-    // The visible one: the toggled look never survived the tap. Nothing else
-    // set or cleared `on`, so the class did latch — but the only feedback
-    // anyone noticed was the WebView's blue tap highlight flashing and going
-    // away, and with the icon unchanged there was nothing to read afterwards
-    // that said "this is muted".
-    //
-    // The one underneath: "muted" was a claim the screen made about itself.
-    // Nothing had ever touched a microphone. A local boolean that no device
-    // is attached to cannot be wrong, which is exactly what makes it useless
-    // — it would have gone on looking correct after the media layer landed
-    // and started disagreeing with it.
-    //
-    // So the media layer is attached here, and `paintMedia` is the only thing
-    // that writes to these buttons. It reads the live track every time and
-    // draws that. A handler's job is to ask for a change, wait for it, and
-    // repaint; if the SDK refuses, the repaint puts the button back where the
-    // hardware actually is and the user is told.
-    let media = null;                 // the Agora session, once connected
-    let joining = false;
+    // ── Audio output ──
+    // Speaker, earpiece, and a Bluetooth headset when one is connected. On
+    // a phone the native plugin reports what is available and where sound is
+    // going; on the web there is no plugin and the button stays a plain
+    // speaker on/off toggle.
+    const ROUTE_LABEL = { speaker: 'مكبر الصوت', earpiece: 'سماعة الأذن', bluetooth: 'بلوتوث', wired: 'سماعة سلكية' };
+    const ROUTE_ICON = { speaker: icons.speaker, earpiece: icons.earpiece, bluetooth: icons.bluetooth, wired: icons.earpiece };
+    let routeName = 'speaker';
+    function noteRoute(info) {
+      if (info && typeof info.route === 'string' && ROUTE_LABEL[info.route]) routeName = info.route;
+      else if (media) routeName = media.isSpeakerOn() ? 'speaker' : 'earpiece';
+    }
+    async function openRouteSheet() {
+      if (!media) return;
+      const info = media.getRoute ? await media.getRoute() : null;
+      if (!info) {
+        await media.setSpeakerOn(!media.isSpeakerOn());
+        noteRoute(null); paintMedia();
+        return;
+      }
+      noteRoute(info);
+      const avail = Array.isArray(info.available) ? info.available.slice() : ['speaker', 'earpiece'];
+      if ((info.bluetoothConnected || info.hasBluetooth) && avail.indexOf('bluetooth') < 0) avail.push('bluetooth');
+      const sheet = el('div', { class: 'sheet-scroll', style: { maxHeight: '60vh', overflowY: 'auto' } });
+      const close = () => { sheet.remove(); bd.remove(); };
+      const bd = el('div', { class: 'backdrop', onclick: close });
+      sheet.appendChild(el('div', { class: 'modal-head', style: { padding: '12px', textAlign: 'center', fontWeight: 700 } }, 'مخرج الصوت'));
+      const list = el('div', { style: { padding: '8px 0' } });
+      ['speaker', 'earpiece', 'bluetooth', 'wired'].forEach(r => {
+        if (avail.indexOf(r) < 0) return;
+        const label = (r === 'bluetooth' && info.bluetoothName) ? info.bluetoothName : ROUTE_LABEL[r];
+        const row = optionRow(ROUTE_ICON[r], label, async () => {
+          close();
+          try {
+            const res = await media.setRoute(r === 'wired' ? 'auto' : r);
+            noteRoute(res || { route: r });
+          } catch (e) { toast('تعذر تغيير مخرج الصوت'); }
+          paintMedia();
+        });
+        if (r === routeName) row.appendChild(el('span', { style: { marginInlineStart: 'auto', display: 'flex', width: '18px', height: '18px' }, html: icons.check }));
+        list.appendChild(row);
+      });
+      sheet.appendChild(list);
+      document.body.appendChild(bd);
+      document.body.appendChild(sheet);
+      try { if (window.I18N) window.I18N.apply(sheet); } catch (e) {}
+    }
 
     function paintMedia() {
       const live = !!media;
-
-      // Mute: active (white, struck-through mic) means the mic is OFF. The
-      // label flips to the action the next tap performs.
       const muted = live && media.isMuted();
       mute.btn.disabled = !live;
       mute.btn.classList.toggle('on', muted);
@@ -12746,19 +12884,14 @@ function autoPlay(video) {
       mute.labelEl.textContent = muted ? 'إلغاء الكتم' : 'كتم';
       mute.btn.title = mute.labelEl.textContent;
 
-      // Speaker: active means the loudspeaker is ON, which is the opposite
-      // sense to mute. That looks inconsistent written down and is what every
-      // phone does — the button always lights up for the state you switched
-      // INTO, and for a speaker that state is "loud".
-      const spk = live && media.isSpeakerOn();
+      const spk = live && routeName === 'speaker';
       speaker.btn.disabled = !live || !media.canRouteAudio();
       speaker.btn.classList.toggle('on', !!spk);
       speaker.btn.setAttribute('aria-pressed', spk ? 'true' : 'false');
-      speaker.iconWrap.innerHTML = spk ? icons.speaker : icons.speakerOff;
-      speaker.labelEl.textContent = spk ? 'مكبر الصوت' : 'سماعة الأذن';
+      speaker.iconWrap.innerHTML = live ? (ROUTE_ICON[routeName] || icons.speaker) : icons.speakerOff;
+      speaker.labelEl.textContent = live ? (ROUTE_LABEL[routeName] || 'مكبر الصوت') : 'مكبر الصوت';
       speaker.btn.title = speaker.labelEl.textContent;
 
-      // Camera: active means the camera is OFF, matching mute.
       const camOff = live && media.hasCamera() && !media.isCameraOn();
       cam.btn.disabled = !live || !media.hasCamera();
       cam.btn.classList.toggle('on', !!camOff);
@@ -12766,73 +12899,66 @@ function autoPlay(video) {
       cam.iconWrap.innerHTML = camOff ? icons.videoOff : icons.video;
       cam.labelEl.textContent = camOff ? 'تشغيل الكاميرا' : 'إيقاف الكاميرا';
       cam.btn.title = cam.labelEl.textContent;
-
-      // These labels are written after the screen's one-time I18N.apply has
-      // already run, so they come back as Arabic on an English device unless
-      // each repaint re-translates them.
       try {
         if (window.I18N) [mute, speaker, cam].forEach(c => window.I18N.apply(c.node));
       } catch (e) {}
     }
-
-    // Shared by all three: run the change, repaint from whatever the track
-    // says afterwards, and say so if it did not take. `paintMedia` runs in
-    // the failure path too — that is what puts a button that refused to move
-    // back where it was instead of leaving it showing a state we only asked
-    // for.
     async function toggleMedia(fn, failMsg) {
       if (!media) return;
       try { await fn(); }
       catch (e) { console.warn('call media:', e); toast(failMsg); }
       finally { paintMedia(); }
     }
-
     const mute = ctl('', icons.mic, 'كتم', () =>
       toggleMedia(() => media.setMuted(!media.isMuted()), 'تعذر تغيير حالة الميكروفون'));
-
     const speaker = ctl('', icons.speakerOff, 'مكبر الصوت', () =>
-      toggleMedia(async () => media.setSpeakerOn(!media.isSpeakerOn()), 'تعذر تغيير مخرج الصوت'));
-
+      toggleMedia(() => openRouteSheet(), 'تعذر تغيير مخرج الصوت'));
     const cam = ctl('', icons.video, 'إيقاف الكاميرا', () =>
       toggleMedia(() => media.setCameraOn(!media.isCameraOn()), 'تعذر تغيير حالة الكاميرا'));
     cam.node.hidden = true;
-
     const end = ctl('end', icons.phone, 'إنهاء', async () => {
       if (ended) return;
       ended = true;
-      // Sent right here, so the teardown does not send a second one.
       settled = true;
       end.btn.disabled = true;
       try { if (call) await window.API.endCall(call.id); } catch (e) {}
-      leaveScreen();
+      ActiveCall.teardown();
+      back();
     });
 
-    // Video surfaces for a video call: the other person fills the screen, you
-    // sit in the corner. Both stay hidden until a track is actually playing
-    // into them, so an audio call — and a video call before it connects — is
-    // the avatar screen it has always been rather than two black rectangles.
     const remoteVideo = el('div', { class: 'call-remote', hidden: true });
     const localVideo = el('div', { class: 'call-local', hidden: true });
     const videoStage = el('div', { class: 'call-stage', hidden: true }, [remoteVideo, localVideo]);
-
     root.appendChild(videoStage);
     root.appendChild(el('div', { class: 'call-body' }, [kindEl, avWrap, nameEl, statusEl, mediaNote]));
     root.appendChild(el('div', { class: 'call-actions' }, [mute.node, speaker.node, cam.node, end.node]));
     paintMedia();     // start disabled: there is no microphone to speak of yet
 
-    function startTimer() {
-      startedAt = Date.now();
-      statusEl.textContent = '0:00';
-      timer = setInterval(() => {
-        statusEl.textContent = fmtDuration(Math.floor((Date.now() - startedAt) / 1000));
-      }, 1000);
+    const isVideoCall = () => !!(call && call.kind === 'video');
+    // The session's events land here while this screen is attached.
+    function attachPainters() {
+      ActiveCall.onTick = (s) => { statusEl.textContent = s; };
+      ActiveCall.onRouteChange = () => { noteRoute(null); paintMedia(); };
+      ActiveCall.onRemote = (st) => {
+        if (isVideoCall()) {
+          remoteVideo.hidden = !(st && st.hasRemoteVideo);
+          if (!remoteVideo.hidden) videoStage.hidden = false;
+          root.classList.toggle('has-remote-video', !remoteVideo.hidden);
+        }
+        paintMedia();
+      };
+      ActiveCall.onMedia = (session) => {
+        media = session;
+        if (session.attachVideo) session.attachVideo(isVideoCall() ? localVideo : null, isVideoCall() ? remoteVideo : null);
+        if (isVideoCall() && session.hasCamera()) { videoStage.hidden = false; localVideo.hidden = false; }
+        if (isVideoCall() && session.hasRemoteVideo()) { remoteVideo.hidden = false; videoStage.hidden = false; root.classList.add('has-remote-video'); }
+        noteRoute(null);
+        if (session.getRoute) session.getRoute().then(info => { noteRoute(info); paintMedia(); }).catch(() => {});
+        paintMedia();
+      };
+      ActiveCall.onStatus = applyStatus;
     }
 
-    // Both sides join the same Agora channel the moment the call is accepted.
-    // applyStatus can be handed the same status more than once — the screen
-    // subscribes to the call and also reads it once on open — so this guards
-    // on `joining` as well as on `media`, or a double 'accepted' would join
-    // twice and publish two microphones into the channel.
     async function joinMedia() {
       if (media || joining || ended) return;
       if (!(window.Agora && window.Agora.isConfigured && window.Agora.isConfigured())) {
@@ -12842,51 +12968,26 @@ function autoPlay(video) {
       }
       joining = true;
       paintMedia();
-      const isVideo = call && call.kind === 'video';
+      const isVideo = isVideoCall();
       try {
         const session = await window.Agora.startCall({
           channel: (call && call.channel) || callId,
           withVideo: isVideo,
           localVideoEl: isVideo ? localVideo : null,
           remoteVideoEl: isVideo ? remoteVideo : null,
-          // Fires when the other side publishes or stops publishing. The
-          // speaker button is dead until there is remote audio to route, so
-          // it has to be repainted when that arrives rather than only on tap.
-          // The device is the authority on routing: a connected headset or
-          // Bluetooth speaker can refuse the switch, and the button must then
-          // show what actually happened rather than what was asked for.
-          onRouteChange: () => { paintMedia(); },
-          onRemote: (st) => {
-            if (isVideo) {
-              // Only show the far-side surface once they are actually sending
-              // pictures. A video call where they have their camera off keeps
-              // the avatar rather than covering it with a black rectangle.
-              remoteVideo.hidden = !(st && st.hasRemoteVideo);
-              if (!remoteVideo.hidden) videoStage.hidden = false;
-              // Once their picture is on screen, the identity block has done
-              // its job and must get out of the way. It was staying put - the
-              // avatar disc, the name, the timer and the "VIDEO CALL" label all
-              // sat on top of the other person's face for the whole call. Every
-              // video calling app collapses this the moment video arrives.
-              root.classList.toggle('has-remote-video', !remoteVideo.hidden);
-            }
-            paintMedia();
-          },
+          // Through ActiveCall, never this closure: the screen that is
+          // attached when the event arrives may be a later one.
+          onRouteChange: () => { if (ActiveCall.onRouteChange) ActiveCall.onRouteChange(); },
+          onRemote: (st) => { if (ActiveCall.onRemote) ActiveCall.onRemote(st); },
           onError: (e) => console.warn('call media:', e),
         });
-        // Hanging up during the join leaves a session nobody is holding.
-        // Close it rather than leaking the microphone and the channel.
-        if (ended) { try { await session.stop(); } catch (e) {} return; }
-        media = session;
-        if (isVideo && session.hasCamera()) {
-          videoStage.hidden = false;
-          localVideo.hidden = false;
-        }
+        if (ActiveCall.over || ActiveCall.id !== callId) { try { await session.stop(); } catch (e) {} return; }
+        ActiveCall.media = session;
+        if (ActiveCall.onMedia) ActiveCall.onMedia(session);
+        else media = session;
       } catch (e) {
         console.warn('call media join failed:', e);
         mediaNote.hidden = false;
-        // The overwhelmingly common cause is a refused microphone prompt, and
-        // "أضف Agora App ID" is no help to the person holding the phone.
         mediaNote.textContent = 'تعذر تشغيل الصوت — تأكد من السماح بالوصول إلى الميكروفون.';
         try { if (window.I18N) window.I18N.apply(mediaNote); } catch (e2) {}
       } finally {
@@ -12898,25 +12999,19 @@ function autoPlay(video) {
     function applyStatus(row) {
       if (!row) return;
       call = Object.assign(call || {}, row);
-
-      // A terminal status must only be handled once. The screen subscribes to
-      // the call and also ends it locally, so without this guard hanging up
-      // could schedule two departures and pop the history twice.
+      ActiveCall.call = call;
       const terminal = (row.status === 'declined' || row.status === 'missed' || row.status === 'ended');
       if (terminal && ended) return;
-
-      if (row.status === 'accepted' && !timer) {
-        if (ringTimeout) { clearTimeout(ringTimeout); ringTimeout = null; }
+      if (row.status === 'accepted' && !ActiveCall.startedAt) {
+        if (ActiveCall.ringTimeout) { clearTimeout(ActiveCall.ringTimeout); ActiveCall.ringTimeout = null; }
         avWrap.classList.remove('ringing');
         avWrap.classList.add('connected');
-        startTimer();
+        ActiveCall.connected();
         joinMedia();
       } else if (terminal) {
         ended = true;
-        // Already final - declined, missed, or ended by them. The teardown
-        // must not write 'ended' over the reason the row really carries.
         settled = true;
-        cleanup();                       // stop the timer before it overwrites the reason
+        ActiveCall.teardown();               // stops the timer before it overwrites the reason
         avWrap.classList.remove('ringing', 'connected');
         avWrap.classList.add('over');
         end.btn.disabled = true;
@@ -12924,15 +13019,16 @@ function autoPlay(video) {
                              : row.status === 'missed'   ? 'لم يتم الرد'
                              : 'انتهت المكالمة';
         try { if (window.I18N) window.I18N.apply(statusEl); } catch (e) {}
-        setTimeout(leaveScreen, 1300);
+        setTimeout(() => back(), 1300);
       }
     }
 
     (async () => {
       try {
         const u = await window.SB.getUser(); me = u && u.id;
-        call = await window.API.fetchCall(callId);
+        if (!resuming) call = await window.API.fetchCall(callId);
         if (!call) { leaveScreen(); return; }
+        ActiveCall.call = call;
         const other = (call.caller_id === me) ? call.callee : call.caller;
         const oname = (other && other.name) || (other && other.handle) || '';
         avWrap.innerHTML = '';
@@ -12940,37 +13036,47 @@ function autoPlay(video) {
         nameEl.textContent = oname;
         kindEl.textContent = callKindLabel(call.kind);
         if (call.kind === 'video') cam.node.hidden = false;
-        // Ringing out and being connected are different states and should not
-        // share a label.
-        if (call.status === 'ringing') {
-          statusEl.textContent = (call.caller_id === me) ? 'جاري الاتصال...' : 'مكالمة واردة';
+        attachPainters();
+        if (resuming) {
+          // Picking the running call back up: connected already, timer
+          // already going, media already flowing.
+          avWrap.classList.remove('ringing');
+          avWrap.classList.add('connected');
+          ActiveCall.tick();
+          if (ActiveCall.media) ActiveCall.onMedia(ActiveCall.media);
+          else joinMedia();
+        } else {
+          if (call.status === 'ringing') {
+            statusEl.textContent = (call.caller_id === me) ? 'جاري الاتصال...' : 'مكالمة واردة';
+          }
+          applyStatus(call);
+          // The subscription belongs to the call, not the screen, and reads
+          // whichever painter is attached when a change arrives. A call that
+          // ends while its screen is away is wound up right here.
+          ActiveCall.unsub = window.API.subscribeToCall(call.id, (row) => {
+            if (!row) return;
+            ActiveCall.call = Object.assign(ActiveCall.call || {}, row);
+            const terminal = row.status === 'declined' || row.status === 'missed' || row.status === 'ended';
+            if (ActiveCall.onStatus) { ActiveCall.onStatus(row); return; }
+            if (terminal) { ActiveCall.teardown(); toast('انتهت المكالمة'); }
+          });
+          if (call.caller_id === me && call.status === 'ringing') {
+            ActiveCall.ringTimeout = setTimeout(async () => {
+              ended = true;
+              settled = true;
+              try { await window.API.missCall(call.id); } catch (e) {}
+              statusEl.textContent = 'لم يتم الرد';
+              try { if (window.I18N) window.I18N.apply(statusEl); } catch (e) {}
+              ActiveCall.teardown();
+              setTimeout(() => back(), 1400);
+            }, 35000);
+          }
         }
-        applyStatus(call);
         try { if (window.I18N) window.I18N.apply(root); } catch (e) {}
-
-        unsub = window.API.subscribeToCall(call.id, applyStatus);
-
-        // Caller side: give up after 35s with no answer.
-        if (call.caller_id === me && call.status === 'ringing') {
-          ringTimeout = setTimeout(async () => {
-            // 'missed' is this row's final state and this screen is over, so
-            // the realtime echo of our own update must not be handled as a
-            // fresh terminal event and schedule a second departure.
-            ended = true;
-            settled = true;
-            try { await window.API.missCall(call.id); } catch (e) {}
-            statusEl.textContent = 'لم يتم الرد';
-            setTimeout(leaveScreen, 1400);
-          }, 35000);
-        }
       } catch (e) { console.warn('call:', e); leaveScreen(); }
     })();
-
     return root;
   };
-
-  // Global incoming-call listener: lives outside the router so a call can
-  // reach you on any screen.
   (function initIncomingCalls() {
     let overlay = null;
     let ringingId = null;

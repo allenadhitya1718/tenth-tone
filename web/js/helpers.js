@@ -244,6 +244,8 @@ window.H = (function () {
     micOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 9.34V5a3 3 0 0 0-5.68-1.33"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12"/><path d="M19 10v2a7 7 0 0 1-.11 1.23"/><path d="M5 10v2a7 7 0 0 0 12 5"/><line x1="12" x2="12" y1="19" y2="22"/><line x1="2" x2="22" y1="2" y2="22"/></svg>',
     speaker: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
     speakerOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>',
+    bluetooth: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5"/></svg>',
+    earpiece: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="3"/><line x1="10" y1="5" x2="14" y2="5"/></svg>',
     videoOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.66 6H14a2 2 0 0 1 2 2v2.34l1 1L22 8v8"/><path d="M16 16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h2l10 10Z"/><line x1="2" x2="22" y1="2" y2="22"/></svg>',
 
     // Location & Wallet
@@ -308,6 +310,34 @@ window.H = (function () {
           : svg(it.icon),
         it.label && el('span', {}, it.label),
       ]);
+      if (it.key === 'inbox') {
+        // Unread messages, on the tab itself. Painted after the nav draws,
+        // hidden at zero, and kept live by ONE message subscription for the
+        // signed-in person - re-made if a different account signs in.
+        btn.style.position = 'relative';
+        const badge = el('span', { class: 'bn-badge', hidden: true });
+        btn.appendChild(badge);
+        const paintBadge = async () => {
+          try {
+            const n = window.API && window.API.countUnreadChats ? await window.API.countUnreadChats() : 0;
+            if (!badge.isConnected) return;
+            badge.textContent = n > 99 ? '99+' : String(n);
+            badge.hidden = !(n > 0);
+          } catch (e) {}
+        };
+        paintBadge();
+        bottomNav._paintBadge = paintBadge;
+        (async () => {
+          try {
+            const u = window.SB && window.SB.getUser ? await window.SB.getUser() : null;
+            const id = u && u.id;
+            if (!id || bottomNav._liveFor === id || !window.API || !window.API.subscribeToInbox) return;
+            if (bottomNav._live) { try { bottomNav._live(); } catch (e) {} }
+            bottomNav._liveFor = id;
+            bottomNav._live = window.API.subscribeToInbox(() => { if (bottomNav._paintBadge) bottomNav._paintBadge(); });
+          } catch (e) {}
+        })();
+      }
       nav.appendChild(btn);
     });
     // The nav used to go black on the Home tab only, so it flipped colour as

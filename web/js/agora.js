@@ -35,6 +35,25 @@
     } catch (e) { return null; }
   }
 
+  // Named routes, for the picker: 'speaker' | 'earpiece' | 'bluetooth'.
+  // Resolves to { route, speakerOn, hasBluetooth } or null where there is no
+  // plugin (the web), so callers can hide what cannot be offered.
+  async function readRoute() {
+    try {
+      const p = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AudioRoute;
+      if (!p || !p.getRoute) return null;
+      const r = await p.getRoute();
+      return r && typeof r === 'object' ? r : null;
+    } catch (e) { return null; }
+  }
+  async function applyRoute(route) {
+    try {
+      const p = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AudioRoute;
+      if (!p || !p.setRoute) return null;
+      const r = await p.setRoute({ route: String(route || 'speaker') });
+      return r && typeof r === 'object' ? r : null;
+    } catch (e) { return null; }
+  }
   async function releaseAudioRoute() {
     try {
       const p = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AudioRoute;
@@ -272,6 +291,11 @@
       await client.join(AGORA_APP_ID, channel, token, userId);
 
       let mic = null, cam = null;
+      // Put the phone in call mode BEFORE the microphone opens, and wait for
+      // it. Doing it afterwards made the OS switch audio mode underneath a
+      // running capture - a couple of silent seconds at the start of every
+      // call while it recovered. No-op on the web.
+      try { await routeAudio(true); } catch (e) {}
       try {
         mic = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig: 'speech_standard' });
         if (withVideo) {
@@ -308,7 +332,11 @@
       // the hand, not a phone raised to the ear, and a call that starts silent-
       // seeming because it is on the earpiece reads as broken.
       let speakerOn = true;
-      routeAudio(true);
+      // routeAudio(true) used to be called HERE - after the microphone was
+      // already open. On a phone that means the OS switches audio mode
+      // underneath a running capture, which is a couple of seconds of
+      // silence at the start of every call. It now runs before the
+      // microphone is created (see above), so the mode is settled first.
 
       function applySpeakerTo(track) {
         // Volume is the FALLBACK now, not the mechanism. On a device
@@ -395,6 +423,26 @@
         // Nothing to route until the other side is actually sending audio.
         canRouteAudio: () => remoteAudio.size > 0,
         hasRemoteVideo: () => remoteVideo.size > 0,
+        // Named routes for the picker (speaker / earpiece / bluetooth). null
+        // where there is no plugin, so the UI falls back to the on/off toggle.
+        getRoute: () => readRoute(),
+        setRoute: async (route) => {
+          const r = await applyRoute(route);
+          if (r && typeof r.speakerOn === 'boolean') {
+            speakerOn = r.speakerOn;
+            remoteAudio.forEach(t => applySpeakerTo(t));
+            onRouteChange && onRouteChange(speakerOn);
+          }
+          return r;
+        },
+        // A call that survives leaving its screen comes back to NEW video
+        // elements; the tracks are still playing, they just need somewhere
+        // to draw again.
+        attachVideo: (localEl, remoteEl) => {
+          localVideoEl = localEl || null; remoteVideoEl = remoteEl || null;
+          try { if (cam && localVideoEl) cam.play(localVideoEl); } catch (e) {}
+          remoteVideo.forEach(t => { try { if (remoteVideoEl) t.play(remoteVideoEl); } catch (e) {} });
+        },
         isSpeakerOn: () => speakerOn,
         setSpeakerOn: (on) => {
           const wanted = !!on;

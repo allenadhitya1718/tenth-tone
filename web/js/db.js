@@ -1991,6 +1991,35 @@
   // coming and let either side accept, decline or hang up. All of it works
   // without an Agora App ID.
 
+  // ---------- Inbox, live ----------
+  // Every new message in any chat this person belongs to - row-level
+  // security filters the stream to member chats, so no filter is needed
+  // here. The inbox refetches and repaints on each one, so a preview and an
+  // unread dot move without the chat being opened; the tab badge does the
+  // same. Reported: "only after I enter the chat can I see the new message".
+  API.subscribeToInbox = (cb) => {
+    let channel = null;
+    (async () => {
+      const c = await client(); const me = await uid(); if (!me) return;
+      // Unique per subscription: the inbox screen AND the nav badge both call
+      // this, and two channels with the same topic name make supabase-js
+      // reject the second - so one of them silently never fired, which is why
+      // the preview did not move until the chat was opened.
+      channel = c.channel('inbox:' + me + ':' + Math.random().toString(36).slice(2)).on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'messages',
+      }, payload => { invalidate('chats'); try { cb(payload.new); } catch (e) {} }).subscribe();
+    })();
+    return () => { if (channel) channel.unsubscribe(); };
+  };
+  // Unread messages across all chats, for the tab badge.
+  API.countUnreadChats = async () => {
+    try {
+      const c = await client(); const me = await uid(); if (!me) return 0;
+      const { data, error } = await c.rpc('chat_unread_counts');
+      if (error || !Array.isArray(data)) return 0;
+      return data.reduce((n, r) => n + (Number(r.unread_count) || 0), 0);
+    } catch (e) { return 0; }
+  };
   API.startCall = async ({ calleeId, kind = 'audio', chatId = null }) => {
     const c = await client(); const me = await uid();
     if (!me) throw new Error('not signed in');
@@ -2423,7 +2452,7 @@
   const SETTINGS_DEFAULTS = {
     notif_likes: true, notif_comments: true, notif_follows: true,
     notif_messages: true, notif_live: true, notif_gifts: true,
-    who_can_message: 'everyone', who_can_comment: 'everyone', who_can_tag: 'everyone',
+    who_can_message: 'following', who_can_comment: 'everyone', who_can_tag: 'everyone',
     autoplay: true, data_saver: false,
   };
 

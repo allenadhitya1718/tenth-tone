@@ -156,9 +156,16 @@ public class AudioRoutePlugin: CAPPlugin {
 
         // Note the absence of .defaultToSpeaker. With it, "not speaker" means
         // "speaker" and the earpiece can never be reached.
+        // .playAndRecord is enough. Once a call is running, WKWebView owns the
+        // session (getUserMedia put it in .playAndRecord itself) and re-issuing
+        // setCategory - even to the "same" category with a different mode or
+        // options - tears that session down under the running WebRTC audio:
+        // the other side goes silent and the microphone stops in the same
+        // instant. Reported as "switching to the earpiece stops the whole
+        // call". Only when the category is genuinely something else (before
+        // any call audio exists) is it set here; mid-call, only the output
+        // override below changes.
         let alreadyRight = session.category == .playAndRecord
-            && session.mode == .voiceChat
-            && session.categoryOptions.contains(.allowBluetooth)
 
         if !alreadyRight {
             do {

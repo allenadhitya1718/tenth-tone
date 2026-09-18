@@ -4440,3 +4440,45 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible,
    badge drew as an empty grey circle with nothing in it. Chrome sized it and
    hid the fault. */
 .play-badge svg { width: 30px; height: 30px; display: block; margin-left: 3px; }
+
+/* ── Unread messages on the inbox tab ── */
+.bn-badge {
+  position: absolute; top: 5px; left: calc(50% + 3px);
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: var(--danger); color: #fff; font-size: 10px; font-weight: 800;
+  line-height: 16px; text-align: center; pointer-events: none;
+}
+.bn-badge[hidden] { display: none; }
+
+/* ── A call running behind another screen ──
+   Tapping it returns to the call screen; the timer keeps counting. Above
+   the bottom nav and the feed, below the call screen itself (z 120), which
+   hides the pill while it is showing. */
+.call-pill {
+  position: fixed; top: calc(10px + var(--safe-top)); left: 50%; transform: translateX(-50%);
+  z-index: 115; display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px 8px 12px; border-radius: 999px; border: 0; cursor: pointer;
+  background: #16a34a; color: #fff; font-weight: 700; font-size: 13px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.35); font-variant-numeric: tabular-nums;
+  -webkit-tap-highlight-color: transparent;
+}
+.call-pill[hidden] { display: none; }
+.call-pill .cp-dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: callPulse 1.6s ease-out infinite; }
+.call-pill .cp-time { opacity: .85; }
+
+/* ── Pull down at the top of the feed to reload ── */
+.feed-refresh {
+  position: fixed; top: calc(58px + var(--safe-top)); left: 50%; transform: translate(-50%, 0);
+  z-index: 6; display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border-radius: 999px; background: rgba(0,0,0,.62); color: #fff;
+  font-size: 12px; font-weight: 700; opacity: 0; pointer-events: none;
+  transition: opacity .15s ease;
+}
+.feed-refresh.show { opacity: 1; }
+.feed-refresh.armed { background: var(--primary); }
+.feed-refresh .fr-spin {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.35); border-top-color: #fff;
+}
+.feed-refresh.busy .fr-spin { animation: frSpin .8s linear infinite; }
+@keyframes frSpin { to { transform: rotate(360deg); } }

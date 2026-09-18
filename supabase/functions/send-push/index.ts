@@ -141,15 +141,33 @@ function compose(n: Row, actor: string, lang: 'ar' | 'en') {
     case 'live':           title = en ? `${actor} is live now` : `${actor} بدأ بثًا مباشرًا الآن`; body = short(p.title); route = (p.live_id || p.stream_id) ? `/live/${p.live_id || p.stream_id}` : '/home'; break;
     case 'system':
       if (p.kind === 'follow_accepted') { title = en ? `${actor} accepted your follow request` : `${actor} قبل طلب متابعتك`; route = n.actor_id ? `/profile/${n.actor_id}` : '/notifications'; }
+      // A deliberate test row, inserted by hand to prove the pipeline reaches
+      // a real phone. Says exactly what it is.
+      if (p.kind === 'push_test') { title = en ? 'Push notifications are working ✓' : 'إشعارات FLYP تعمل ✓'; body = en ? 'FLYP can reach this phone.' : 'يمكن لـ FLYP الوصول إلى هذا الهاتف.'; route = '/inbox'; }
       break;
   }
   return title ? { title, body, route } : null;
 }
 
+// The caller is the database trigger, sending the headers stored on its own
+// job_endpoints row. So the secret that row holds IS the truth: read it back
+// with the service role and compare. The RECONCILE_SECRET env is accepted as
+// well, but nothing has to be pasted anywhere for the two to agree - the
+// first version required exactly that, and the first real call came back 401.
+async function callerAllowed(req: Request, db: ReturnType<typeof createClient>): Promise<boolean> {
+  const given = req.headers.get('x-reconcile-secret') ?? '';
+  if (!given) return false;
+  if (RECONCILE_SECRET && given === RECONCILE_SECRET) return true;
+  const { data } = await db.from('job_endpoints').select('headers').eq('name', 'send-push').maybeSingle();
+  const want = data && data.headers && (data.headers['x-reconcile-secret'] || data.headers['X-Reconcile-Secret']);
+  return !!want && given === String(want);
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
-  if (!RECONCILE_SECRET || (req.headers.get('x-reconcile-secret') ?? '') !== RECONCILE_SECRET) return json({ error: 'unauthorized' }, 401);
   if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'not_configured' }, 500);
+  const gate = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+  if (!(await callerAllowed(req, gate))) return json({ error: 'unauthorized' }, 401);
 
   let body: { notification_id?: string } = {};
   try { body = await req.json(); } catch { return json({ error: 'bad_request' }, 400); }
