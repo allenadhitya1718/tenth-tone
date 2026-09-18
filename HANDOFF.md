@@ -1,3 +1,33 @@
+# FLYP handoff — 2026-09-18: v1.4.16, and the earpiece finally explained
+
+> **Newest first. v1.4.16 is on TestFlight (build 1789748585) and the APK is
+> on the v1.4.16 Release.** Both green, repo flipped public and back (verified).
+> - **THE iPHONE EARPIECE, ROOT CAUSE, from 1.4.15's probe:** three seconds
+>   after the switch the phone logged `sendBitrate 0, sendLevel 4790,
+>   recvBitrate 14848`. The microphone is STILL CAPTURING and the far side is
+>   STILL AUDIBLE - only the outgoing publish is dead. Changing the route
+>   restarts the audio unit under WKWebView and the published track does not
+>   return. Nothing about the category, the preferred input or the activation
+>   was ever the point; three earlier fixes were all aimed at the wrong thing.
+>   It cannot be prevented (overrideOutputAudioPort IS the button), so
+>   agora.js `recheckSend()` now notices a dead send after a route change and
+>   republishes the mic, logging `call_send_repair`. Conditional: Android's
+>   own log shows sendBitrate 16776 after its route change and never pays.
+>   **Read `call_send_repair` first if the earpiece is reported again.**
+> - Also in 1.4.16: the front camera previews as a mirror (CSS only, so the
+>   RECORDING is untouched). NOT caused by any recent build - the camera
+>   screen had not changed since v1.4.13, which was checked before hunting.
+> - Recovered `.live-pill.elapsed`, the one rule lost in the call-screen
+>   rewrite. Found by diffing every selector in v1.4.13's stylesheet against
+>   today's - worth doing after any large CSS rewrite.
+> - Unexplained and still open: the user also reported the whole APP freezing
+>   on the earpiece switch. Nothing in the logs shows a hang and the plugin
+>   returned normally both times; it may have been the dead one-way call
+>   feeling stuck. If it recurs, that is a separate problem from the audio.
+> - Also seen in that log: the FIRST earpiece tap returned
+>   `{"want":"earpiece","got":"speaker"}` - the route did not move at all, and
+>   the second tap moved it. A separate, unfixed bug, now at least visible.
+
 # FLYP handoff — 2026-09-18 (late): v1.4.15 shipped, iPhone attempt three
 
 > **Newest first. v1.4.15 is on TestFlight (build 1789744958) and the APK is
