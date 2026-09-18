@@ -1,3 +1,35 @@
+# FLYP handoff — 2026-09-18 (late): v1.4.15 shipped, iPhone attempt three
+
+> **Newest first. v1.4.15 is on TestFlight (build 1789744958) and the APK is
+> on the v1.4.15 Release.** Both green; repo flipped public for the minutes and
+> back to private (verified). iOS is manual-only now, so it was dispatched
+> against the tag - that still uploads, because DO_UPLOAD reads the ref.
+> - **A pre-build review (workflow, 2 of 5 reviewers before it was stopped for
+>   cost) found 18 issues, THREE of them regressions written by the previous
+>   commit:** vnPcmStart called ctx.resume() without awaiting or checking it
+>   (a suspended AudioContext gives 0 bytes - the exact failure it replaced);
+>   four sites used `vnRec` to mean "recording", which is null on the WebKit
+>   path, so slide-to-cancel and hold-to-lock were dead on iPhone and a tap
+>   could start a second recording; the WAV uploaded as .webm. Also mine:
+>   gating setActive(true) on `configured` broke interruption recovery in the
+>   Swift (an interruption leaves the flag true while iOS deactivates the
+>   session) - unconditional again.
+> - **The earpiece may STILL not be fixed and this is stated plainly.** The
+>   log only proves the route MOVED (iOS reported builtInReceiver), not that
+>   setPreferredInput killed the call - and overrideOutputAudioPort, which
+>   actually moved it, is untouched. New: 2.5 s after any route change the app
+>   logs `call_route_after` with send/receive bitrate and levels from the Agora
+>   SDK. **If it breaks again, read that first** - it says whether the media
+>   died at the switch, which three rounds have never recorded.
+> - **iPhone voice notes no longer use MediaRecorder at all** (0 chunks on iOS
+>   18.3 twice over). Web Audio -> WAV, 16 kHz mono. Verified by spoofing the
+>   UA on Chrome: valid RIFF/WAVE, decodes to 3.06 s, uploads 200. Android
+>   keeps MediaRecorder/opus, confirmed unchanged in the same run.
+> - The Android call foreground service ships in this build. It compiles and
+>   now stops itself if Android refuses the foreground start (which would
+>   otherwise kill the app for never calling startForeground). **Never run on
+>   a phone** - if Android misbehaves after 1.4.15, pull it first.
+
 # FLYP handoff — 2026-09-18 (night): v1.4.14 shipped, call notification merged
 
 > **Newest first.** **v1.4.14 is on TestFlight (build 1789739360) and the APK
