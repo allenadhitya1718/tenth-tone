@@ -327,7 +327,19 @@
       // Before the first await, so two overlapping joins cannot each believe
       // they are the only one.
       const slot = takeCallSlot();
+      // ── Where do the seconds go? ──
+      // "Still 3-5 seconds before I hear anything after answering", reported
+      // after a round of work that was supposed to fix exactly that. Nobody
+      // has ever measured which step is slow - the SDK download, the token
+      // (an Edge Function, so a cold start is possible), the channel join,
+      // the audio route, opening the microphone, publishing, or simply
+      // waiting for the other phone to publish. Each is timed now and the
+      // whole breakdown goes into one line.
+      const T0 = Date.now();
+      const mark = {};
+      const at = (k) => { mark[k] = Date.now() - T0; };
       const AgoraRTC = await loadSdk();
+      at('sdk');
       AgoraRTC.setLogLevel(2);
       const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
       // Whatever prewarm() got ready for THIS channel. The uid has to come
@@ -339,8 +351,11 @@
       // BOTH sides — an 'audience' token cannot publish, so whoever got one
       // would join the channel able to hear and unable to be heard.
       let token = (w && w.uid === userId && w.tokenP) ? await w.tokenP : null;
+      mark.warmToken = !!token;              // did the prewarm actually help?
       if (!token) token = await fetchToken(channel, userId, 'host');
+      at('token');
       await client.join(AGORA_APP_ID, channel, token, userId);
+      at('join');
 
       let mic = null, cam = null;
       // Put the phone in call mode BEFORE the microphone opens, and wait for
@@ -348,9 +363,12 @@
       // running capture - a couple of silent seconds at the start of every
       // call while it recovered. No-op on the web.
       try { await routeAudio(true); } catch (e) {}
+      at('route');
       try {
         if (w && w.micP) mic = await w.micP;      // opened while it rang
+        mark.warmMic = !!mic;
         if (!mic) mic = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig: 'speech_standard' });
+        at('mic');
         if (withVideo) {
           // A refused camera should still leave you an audio call rather than
           // no call at all, so this one failure is reported and swallowed.
@@ -360,6 +378,40 @@
           } catch (e) { onError && onError(e); cam = null; }
         }
         await client.publish(cam ? [mic, cam] : [mic]);
+        at('publish');
+        // Reported NOW, not when the other side turns up. The first version
+        // waited for their audio before writing anything, so a call where the
+        // far end never published produced no measurement at all - which is
+        // exactly when you most want to know how long our own half took.
+        try {
+          if (window.API && window.API.logClient) window.API.logClient('call_join_timing', mark);
+        } catch (e) {}
+        // Their audio arriving is a separate question, and it is the one a
+        // person experiences as "when can I hear them". Timed from the same
+        // zero, on its own line, once.
+        (function timeFirstAudio() {
+          let done = false;
+          const finish = (ms) => {
+            if (done) return;
+            done = true;
+            try {
+              if (window.API && window.API.logClient) {
+                window.API.logClient('call_first_audio', { ms, sdk: mark.sdk, join: mark.join, publish: mark.publish });
+              }
+            } catch (e) {}
+          };
+          const iv = setInterval(() => {
+            // remoteAudio is declared below this block; everything between is
+            // synchronous, but a reorder would make this a dead-zone throw
+            // inside a timer - the kind of error that vanishes without trace.
+            let n = 0;
+            try { n = remoteAudio ? remoteAudio.size : 0; } catch (e) { return; }
+            if (n === 0) return;
+            clearInterval(iv);
+            finish(Date.now() - T0);
+          }, 250);
+          setTimeout(() => { clearInterval(iv); finish(null); }, 20000);
+        })();
       } catch (e) {
         // We are already in the channel by this point. A denied microphone
         // would otherwise leave us joined, silent and billing, with no handle
@@ -492,17 +544,39 @@
         return { hasRemoteAudio: remoteAudio.size > 0, hasRemoteVideo: remoteVideo.size > 0, remoteCount: client.remoteUsers.length };
       }
 
-      // Did the last route change cost us the outgoing audio? Checked twice,
-      // because the SDK's stats lag a moment behind the event.
+      // Did the last route change cost us the outgoing audio?
+      //
+      // This gave up too early and never repaired anything. It read the stats
+      // 1.6 s after the switch and returned the moment ONE reading looked
+      // healthy - but Agora refreshes getLocalAudioStats about every two
+      // seconds, so that first read is the PREVIOUS interval, from before the
+      // switch, when audio was still flowing. The iPhone's log says exactly
+      // that: call_route_after recorded sendBitrate 0 at 2.5 s and no
+      // call_send_repair line was ever written.
+      //
+      // So: sample several times, and judge on the LAST readings rather than
+      // the first. And record what was seen either way - a repair that
+      // decides NOT to act was previously silent, which is how this hid.
       let repairing = false;
       async function recheckSend() {
         if (repairing || !mic) return;
         const sent = () => { try { return (client.getLocalAudioStats() || {}).sendBitrate || 0; } catch (e) { return -1; } };
-        for (const wait of [1600, 1600]) {
-          await new Promise(res => setTimeout(res, wait));
+        const reads = [];
+        for (let i = 0; i < 4; i++) {
+          await new Promise(res => setTimeout(res, 1500));
           if (!mic || repairing) return;
-          if (sent() > 0) return;                 // still talking; nothing to repair
+          reads.push(sent());
         }
+        const muted = !!(mic && mic.muted);
+        // Alive if EITHER of the last two readings carries traffic. A muted
+        // microphone sends nothing by design and must never be "repaired".
+        const alive = reads.slice(-2).some(v => v > 0);
+        try {
+          if (window.API && window.API.logClient) {
+            window.API.logClient('call_send_check', { reads, muted, alive, acting: !alive && !muted });
+          }
+        } catch (e) {}
+        if (alive || muted) return;
         repairing = true;
         const note = (ok, why) => {
           try {

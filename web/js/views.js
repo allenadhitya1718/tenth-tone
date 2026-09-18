@@ -13837,6 +13837,21 @@ function autoPlay(video) {
       }
 
       ringingId = row.id;
+      // ── Start signing the token NOW, while it rings ──
+      // Measured on a real join: the token is 1817 ms of a 2589 ms connect -
+      // about 70% of the wait, and the biggest single thing between answering
+      // and hearing a voice. It was only ever warmed when Accept was TAPPED,
+      // so the wait was merely overlapped with building the screen rather
+      // than removed. A ringing phone has seconds of doing nothing; spend
+      // them on this and the token is already in hand when they answer.
+      //
+      // mic:false, deliberately. Opening the microphone lights the recording
+      // indicator, and this phone has accepted nothing yet - the mic is
+      // warmed on Accept, and prewarm() keeps the in-flight token when it is
+      // called again for the same channel.
+      if (window.Agora && window.Agora.prewarm && row.channel) {
+        try { window.Agora.prewarm(row.channel, { mic: false }); } catch (e) {}
+      }
       let caller = row.caller;
       if (!caller) {
         try { const full = await window.API.fetchCall(row.id); caller = full && full.caller; } catch (e) {}
