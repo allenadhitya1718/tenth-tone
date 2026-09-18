@@ -290,8 +290,10 @@ extension AgoraCallPlugin: AgoraRtcEngineDelegate {
     /// Reported on a timer while the call runs. txAudioKBitrate is the
     /// outgoing audio - the one that was zero every time the earpiece broke.
     public func rtcEngine(_ engine: AgoraRtcEngineKit, reportRtcStats stats: AgoraChannelStats) {
-        txAudioKbps = stats.txAudioKBitrate
-        rxAudioKbps = stats.rxAudioKBitrate
+        // Agora reports these as UInt; everything this plugin hands back to JS
+        // is Int, so convert here rather than widening the stored fields.
+        txAudioKbps = Int(stats.txAudioKBitrate)
+        rxAudioKbps = Int(stats.rxAudioKBitrate)
     }
 
     /// uid 0 is this phone's own microphone; everything else is somebody
