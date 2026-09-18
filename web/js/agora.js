@@ -492,6 +492,42 @@
         return { hasRemoteAudio: remoteAudio.size > 0, hasRemoteVideo: remoteVideo.size > 0, remoteCount: client.remoteUsers.length };
       }
 
+      // Did the last route change cost us the outgoing audio? Checked twice,
+      // because the SDK's stats lag a moment behind the event.
+      let repairing = false;
+      async function recheckSend() {
+        if (repairing || !mic) return;
+        const sent = () => { try { return (client.getLocalAudioStats() || {}).sendBitrate || 0; } catch (e) { return -1; } };
+        for (const wait of [1600, 1600]) {
+          await new Promise(res => setTimeout(res, wait));
+          if (!mic || repairing) return;
+          if (sent() > 0) return;                 // still talking; nothing to repair
+        }
+        repairing = true;
+        const note = (ok, why) => {
+          try {
+            if (window.API && window.API.logClient) window.API.logClient('call_send_repair', { ok: !!ok, why: why || '' });
+          } catch (e) {}
+        };
+        try {
+          // A fresh track, published before the dead one is dropped, so the
+          // gap is as short as the SDK allows.
+          const AgoraRTC = await loadSdk();
+          const fresh = await AgoraRTC.createMicrophoneAudioTrack({ encoderConfig: 'speech_standard' });
+          const dead = mic;
+          if (dead && dead.muted && fresh.setMuted) { try { await fresh.setMuted(true); } catch (e) {} }
+          try { await client.unpublish([dead]); } catch (e) {}
+          mic = fresh;
+          await client.publish([fresh]);
+          try { dead.close(); } catch (e) {}
+          note(sent() >= 0, 'republished');
+        } catch (e) {
+          note(false, String((e && e.message) || e).slice(0, 120));
+        } finally {
+          repairing = false;
+        }
+      }
+
       const session = {
         client, mic, userId,
 
@@ -545,6 +581,27 @@
             remoteAudio.forEach(t => applySpeakerTo(t));
             onRouteChange && onRouteChange(speakerOn);
           }
+          // ── Put the outgoing audio back if the route change killed it ──
+          //
+          // The iPhone finally said what happens, three seconds after the
+          // switch to the earpiece:
+          //   {"want":"earpiece","sendBitrate":0,"sendLevel":4790,"recvBitrate":14848}
+          // sendLevel is not zero, so the microphone is still capturing; recvBitrate
+          // is not zero, so the far side is still audible. Only sendBitrate is
+          // zero: the PUBLISHED track died while the capture stayed alive. That
+          // is exactly "I can hear him, my voice does not reach him".
+          //
+          // Changing the route restarts the audio unit underneath WKWebView's
+          // WebRTC, and the published track does not come back on its own. It
+          // cannot be prevented from here - overrideOutputAudioPort is the call
+          // that moves the audio and the whole point of the button - so it is
+          // repaired instead: notice the send has stopped, and republish.
+          //
+          // Conditional on purpose. Android changes route without losing the
+          // send (its own log shows sendBitrate 16776 afterwards), and a
+          // republish costs a few hundred milliseconds of silence. Only the
+          // broken case pays it.
+          recheckSend();
           return r;
         },
         // A call that survives leaving its screen comes back to NEW video
