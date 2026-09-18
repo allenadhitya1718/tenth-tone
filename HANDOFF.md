@@ -1,3 +1,30 @@
+# FLYP handoff — 2026-09-18 (v1.4.13 tagged and building)
+
+> **Newest first.** **v1.4.13 is TAGGED** (`7bce166`, tag pushed to
+> `tenthtone`) — the user asked for both builds. Android run #65 and iOS run
+> #68. It carries everything below: the back button, the call screen, group
+> calls, mid-call video, Instagram messaging.
+> - **The duplicate Android audio plugin is gone.** The app has had a complete
+>   one since 1.3.0 at `com.flyp.app.AudioRoutePlugin`, registered BY NAME in
+>   MainActivity (same package, no import — which is why searching the plugin
+>   module found "nothing"). The copy added this week in
+>   `capacitor-audio-route/android` was a second plugin answering to the same
+>   `name="AudioRoute"`, returning a poorer shape (no `available`, no
+>   `bluetoothName`, no wired) — had it won registration it would have
+>   REGRESSED the route picker it was meant to add. Deleted; that package is
+>   iOS-only again. It also had an unguarded API-31 call that
+>   `lintVitalRelease` treats as fatal.
+> - **Both Android version fields had never really been set.** `versionCode`
+>   sat at 21 for five releases (the CI sed matched the literal "versionCode
+>   1" and `|| true` hid the miss) — Play could only have accepted the first.
+>   `versionName` was never patched at all: the APK said 1.4.1 while the app
+>   called itself 1.4.12, and Settings reads that field. Both now come from
+>   the tag, as iOS does. See `flyp-android-version-fields`.
+> - **Watching a build from this machine:** no `gh`, private repo (anon API =
+>   404), browser pane blocked by the hook. Use the machine's git credential:
+>   `git credential fill` → Bearer token → `api.github.com/repos/>   allenadhitya1718/tenth-tone/actions/runs`. Script: scratchpad
+>   `watch_builds.sh`.
+
 # FLYP handoff — 2026-09-18 (evening)
 
 > **Newest first (18 Sep, evening).** Commit `cb7a242` on
