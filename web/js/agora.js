@@ -322,12 +322,15 @@
       // Remote audio tracks are held so the speaker setting can be applied to
       // them as they arrive — the other side usually publishes after we have
       // already joined, and a setting applied only at join time would be lost.
-      const remoteAudio = new Set();
+      const remoteAudio = new Map();     // uid -> audio track
       // Tracked separately from audio so the caller can tell "they joined" from
       // "they are sending pictures". Unhiding the video surface on the strength
       // of an audio publish alone would black out the avatar screen for a video
       // call in which the other side has their camera off.
-      const remoteVideo = new Set();
+      // Keyed by uid rather than by track: when someone LEAVES, the SDK has
+      // already dropped the track objects from their user record, so a set of
+      // tracks could never be cleaned up - their picture stayed "on".
+      const remoteVideo = new Map();     // uid -> video track
       // Starts on the LOUDSPEAKER deliberately: this is a social app opened in
       // the hand, not a phone raised to the ear, and a call that starts silent-
       // seeming because it is on the earpiece reads as broken.
@@ -337,6 +340,35 @@
       // underneath a running capture, which is a couple of seconds of
       // silence at the start of every call. It now runs before the
       // microphone is created (see above), so the mode is settled first.
+
+      // ── Remote pictures, one tile per person ──
+      // A group call has several; each remote user's video plays into its
+      // own tile inside the container the screen attaches (a 1:1 call is one
+      // tile filling it). Keyed by Agora uid.
+      function tileFor(uid) {
+        if (!remoteVideoEl) return null;
+        let t = remoteVideoEl.querySelector('[data-uid="' + uid + '"]');
+        if (!t) {
+          t = document.createElement('div');
+          t.className = 'call-tile'; t.dataset.uid = String(uid);
+          remoteVideoEl.appendChild(t);
+        }
+        remoteVideoEl.dataset.tiles = String(remoteVideoEl.querySelectorAll('.call-tile').length);
+        return t;
+      }
+      function dropTile(uid) {
+        if (!remoteVideoEl) return;
+        const t = remoteVideoEl.querySelector('[data-uid="' + uid + '"]');
+        if (t) t.remove();
+        remoteVideoEl.dataset.tiles = String(remoteVideoEl.querySelectorAll('.call-tile').length);
+      }
+      function playRemoteVideo(user) {
+        const t = tileFor(user.uid);
+        if (t && user.videoTrack) { try { user.videoTrack.play(t); } catch (e) { onError && onError(e); } }
+      }
+      function forgetUser(user) {
+        remoteAudio.delete(user.uid); remoteVideo.delete(user.uid); dropTile(user.uid);
+      }
 
       function applySpeakerTo(track) {
         // Volume is the FALLBACK now, not the mechanism. On a device
@@ -351,20 +383,26 @@
         try {
           await client.subscribe(user, mediaType);
           if (mediaType === 'audio' && user.audioTrack) {
-            remoteAudio.add(user.audioTrack);
+            remoteAudio.set(user.uid, user.audioTrack);
             applySpeakerTo(user.audioTrack);
             user.audioTrack.play();
           }
           if (mediaType === 'video' && user.videoTrack) {
-            remoteVideo.add(user.videoTrack);
-            if (remoteVideoEl) user.videoTrack.play(remoteVideoEl);
+            remoteVideo.set(user.uid, user.videoTrack);
+            playRemoteVideo(user);
           }
           onRemote && onRemote(state());
         } catch (e) { onError && onError(e); }
       });
       client.on('user-unpublished', (user, mediaType) => {
-        if (mediaType === 'audio' && user.audioTrack) remoteAudio.delete(user.audioTrack);
-        if (mediaType === 'video' && user.videoTrack) remoteVideo.delete(user.videoTrack);
+        if (mediaType === 'audio') remoteAudio.delete(user.uid);
+        if (mediaType === 'video') { remoteVideo.delete(user.uid); dropTile(user.uid); }
+        onRemote && onRemote(state());
+      });
+      // Leaving the channel does not always come with an unpublish first;
+      // without this a person who hung up kept their picture on the screen.
+      client.on('user-left', (user) => {
+        forgetUser(user);
         onRemote && onRemote(state());
       });
 
@@ -381,7 +419,7 @@
           if (user.hasAudio && !user.audioTrack) {
             await client.subscribe(user, 'audio');
             if (user.audioTrack) {
-              remoteAudio.add(user.audioTrack);
+              remoteAudio.set(user.uid, user.audioTrack);
               applySpeakerTo(user.audioTrack);
               user.audioTrack.play();
             }
@@ -389,8 +427,8 @@
           if (user.hasVideo && !user.videoTrack) {
             await client.subscribe(user, 'video');
             if (user.videoTrack) {
-              remoteVideo.add(user.videoTrack);
-              if (remoteVideoEl) user.videoTrack.play(remoteVideoEl);
+              remoteVideo.set(user.uid, user.videoTrack);
+              playRemoteVideo(user);
             }
           }
         } catch (e) { onError && onError(e); }
@@ -398,7 +436,7 @@
       if (client.remoteUsers.length) onRemote && onRemote(state());
 
       function state() {
-        return { hasRemoteAudio: remoteAudio.size > 0, hasRemoteVideo: remoteVideo.size > 0 };
+        return { hasRemoteAudio: remoteAudio.size > 0, hasRemoteVideo: remoteVideo.size > 0, remoteCount: client.remoteUsers.length };
       }
 
       const session = {
@@ -430,6 +468,16 @@
           await cam.setDevice(next.deviceId);
           return true;
         },
+        // A voice call turning into a video call: open the camera now and
+        // publish it. On the far side this is an ordinary 'user-published'.
+        enableVideo: async () => {
+          if (cam) { if (!cam.enabled) await cam.setEnabled(true); return true; }
+          const track = await AgoraRTC.createCameraVideoTrack({ encoderConfig: '480p_1', facingMode: 'user' });
+          try { if (localVideoEl) track.play(localVideoEl); } catch (e) {}
+          await client.publish(track);
+          cam = track;
+          return true;
+        },
 
         // Nothing to route until the other side is actually sending audio.
         canRouteAudio: () => remoteAudio.size > 0,
@@ -452,8 +500,13 @@
         attachVideo: (localEl, remoteEl) => {
           localVideoEl = localEl || null; remoteVideoEl = remoteEl || null;
           try { if (cam && localVideoEl) cam.play(localVideoEl); } catch (e) {}
-          remoteVideo.forEach(t => { try { if (remoteVideoEl) t.play(remoteVideoEl); } catch (e) {} });
+          if (remoteVideoEl) {
+            remoteVideoEl.querySelectorAll('.call-tile').forEach(t => t.remove());
+            client.remoteUsers.forEach(u => { if (u.videoTrack) playRemoteVideo(u); });
+            remoteVideoEl.dataset.tiles = String(remoteVideoEl.querySelectorAll('.call-tile').length);
+          }
         },
+        remoteCount: () => client.remoteUsers.length,
         isSpeakerOn: () => speakerOn,
         setSpeakerOn: (on) => {
           const wanted = !!on;

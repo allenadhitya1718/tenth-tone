@@ -1794,191 +1794,12 @@ body.lang-en .toast { font-family: 'Cairo', system-ui, sans-serif; }
 .chat-msgs { display: flex; flex-direction: column; }
 
 /* === Calls === */
-.call-screen {
-  position: fixed; inset: 0; z-index: 120;
-  background: linear-gradient(180deg, #17171c 0%, #0b0b0f 100%);
-  color: #fff; display: flex; flex-direction: column;
-  align-items: center; justify-content: flex-end;
-  padding: calc(10px + var(--safe-top)) 20px calc(18px + var(--safe-bottom));
-}
-/* The identity block claims the free space and centres itself inside it, so
-   the controls land at the bottom because nothing is left to push them, not
-   because of `space-between`.
-   That distinction was the bug a tester hit. A video call takes .call-body out
-   of flow (position:absolute, further down this file) to get the name off the
-   other person's face — which left `space-between` with a single item to
-   place, and it placed the whole control row at the TOP of the screen: mute,
-   speaker, camera and hang-up drawn over the caption and over the self-view
-   thumbnail, with the bottom two thirds of the video empty. */
-.call-body {
-  flex: 1 1 auto; min-height: 0;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 10px; text-align: center;
-}
-/* The avatar carries the call's state: a pulsing ring while it rings, a
-   steady ring once connected, and a dimmed one when it is over. */
-.call-avatar { position: relative; display: inline-flex; }
-.call-avatar .avatar {
-  position: relative; z-index: 1;
-  box-shadow: 0 0 0 5px rgba(255,255,255,0.14), 0 18px 50px rgba(0,0,0,0.55);
-}
-.call-pulse {
-  position: absolute; inset: -10px; border-radius: 50%;
-  border: 2px solid rgba(255,255,255,.35); opacity: 0;
-}
-.call-avatar.ringing .call-pulse { animation: callPulse 1.9s ease-out infinite; }
-.call-avatar.connected .avatar { box-shadow: 0 0 0 4px rgba(34,197,94,.5), 0 12px 40px rgba(0,0,0,.5); }
-.call-avatar.over .avatar { filter: grayscale(1); opacity: .65; }
-@keyframes callPulse {
-  0%   { opacity: .8; transform: scale(1); }
-  100% { opacity: 0;  transform: scale(1.45); }
-}
-@media (prefers-reduced-motion: reduce) { .call-avatar.ringing .call-pulse { animation: none; } }
-.call-kind {
-  font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase;
-  color: rgba(255,255,255,.5); margin-bottom: 26px; font-weight: 700;
-}
-.call-name { font-size: 28px; font-weight: 800; margin-top: 20px; letter-spacing: -.01em; }
-.call-status { font-size: 15px; color: rgba(255,255,255,0.62); font-variant-numeric: tabular-nums; }
-/* Each control keeps its label under the button rather than crammed inside
-   a 62px circle with the icon, where it was barely legible. */
-.call-ctl { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.call-ctl[hidden] { display: none; }
-.call-ctl small {
-  font-size: 11px; color: rgba(255,255,255,.65);
-  line-height: 1.25; max-width: 100%; overflow-wrap: break-word;
-}
-.call-media-note {
-  margin-top: 14px; max-width: 260px; font-size: 11.5px; line-height: 1.5;
-  color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.07);
-  border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 8px 12px;
-}
-/* Every control gets an equal share of the row, so the circles sit at even
-   intervals whatever their labels say and however many are showing — the
-   camera control is absent from an audio call.
-   Before this each column was only as wide as its own label. "Turn camera off"
-   / "إيقاف الكاميرا" made that column 83px against 62px for the rest, the
-   circles were 84px, 95px and 98px apart, the long label spilled across its
-   neighbour, and on a 360px-wide phone the row wrapped: the hang-up button
-   dropped onto a second line, alone, in the middle of the screen. */
-.call-actions {
-  width: 100%; max-width: 420px; margin-inline: auto;
-  display: flex; flex-wrap: nowrap; gap: 4px;
-  align-items: flex-start; justify-content: center;
-}
-.call-ctl { flex: 1 1 0; min-width: 0; }
-.call-btn {
-  background: rgba(255,255,255,0.16); border: 0; color: #fff; cursor: pointer;
-  width: 58px; height: 58px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  transition: background .18s ease, transform .15s ease, box-shadow .18s ease;
-  /* Android's WebView paints its own blue wash over a tapped button and then
-     fades it out. On these controls that flash was the ONLY feedback anyone
-     reported seeing, which is why the toggles read as momentary. The real
-     state is `.on` below; this stops the highlight competing with it. */
-  -webkit-tap-highlight-color: transparent;
-}
-.call-btn span { display: flex; width: 24px; height: 24px; }
-.call-btn span svg { width: 100%; height: 100%; }
-.call-btn:active:not(:disabled) { transform: scale(0.92); }
 
-/* The toggled state. It has to survive the finger leaving the button, so it
-   is a class the screen sets from the live track — never :active, :focus or
-   :hover, all of which end when the touch does.
-   Colour is not carrying this alone: the icon swaps to a struck-through one
-   at the same time, for anyone who cannot separate the white fill from the
-   grey. */
-.call-btn.on {
-  background: #fff; color: #111;
-  box-shadow: 0 0 0 3px rgba(255,255,255,0.24);
-}
-.call-btn.on + small { color: #fff; font-weight: 700; }
-/* Keyboard focus still needs to be visible; it just must not look like `on`. */
-.call-btn:focus-visible { outline: 2px solid rgba(255,255,255,.75); outline-offset: 3px; }
-.call-btn:disabled { opacity: .38; cursor: default; }
-/* Same 62px box as the others. At 68px it was the only control whose circle
-   and label sat lower than the rest of the row — the icons visibly did not
-   line up. Its weight comes from the colour and the glow instead. */
-.call-btn.end { background: #ef4444; box-shadow: 0 8px 22px rgba(239,68,68,.34); }
-.call-btn.end span svg { transform: rotate(135deg); }
-
-/* Video call surfaces. Hidden until a track is actually playing into them,
-   so an audio call is unchanged. inset-inline-end keeps the self-view in the
-   trailing corner under RTL as well as LTR. */
-.call-stage { position: absolute; inset: 0; z-index: 2; }
-.call-remote { position: absolute; inset: 0; background: #000; }
-.call-remote video { width: 100%; height: 100%; object-fit: cover; }
-.call-local {
-  position: absolute; inset-block-start: calc(64px + var(--safe-top)); inset-inline-end: 14px;
-  width: 104px; height: 150px; border-radius: 14px; overflow: hidden;
-  background: #1b1b22; box-shadow: 0 6px 20px rgba(0,0,0,.45);
-  border: 1px solid rgba(255,255,255,.18);
-}
-.call-local video { width: 100%; height: 100%; object-fit: cover; }
-/* The name, status and controls sit above the video, not behind it. */
-.call-screen .call-top, .call-screen .call-body, .call-screen .call-dock { position: relative; z-index: 3; }
 
 /* Incoming call — full screen, not a card in the corner.
    A ringing phone should take over the screen; the old small dialog read as
    a notification you could ignore rather than a call to answer. */
-.incoming-call {
-  position: fixed; inset: 0; z-index: 200;
-  display: flex; align-items: center; justify-content: center; padding: 24px;
-  animation: ic-in 220ms ease-out;
-  color: #fff;
-}
-.ic-bg {
-  position: absolute; inset: 0;
-  background: linear-gradient(180deg, #1b1b22 0%, #08080b 100%);
-}
-@keyframes ic-in { from { opacity: 0; } to { opacity: 1; } }
-.ic-card {
-  position: relative; z-index: 1;
-  width: 100%; max-width: 360px; height: 100%;
-  display: flex; flex-direction: column; align-items: center; text-align: center;
-  justify-content: center; gap: 6px;
-  padding: calc(48px + var(--safe-top)) 8px calc(40px + var(--safe-bottom));
-}
-/* Concentric rings, offset in time, so the card visibly rings. */
-.ic-avatar { position: relative; display: inline-flex; margin-top: 8px; }
-.ic-avatar .avatar { position: relative; z-index: 1; box-shadow: 0 12px 44px rgba(0,0,0,.55); }
-.ic-pulse {
-  position: absolute; inset: -12px; border-radius: 50%;
-  border: 2px solid rgba(255,255,255,.4); opacity: 0;
-  animation: icPulse 2s ease-out infinite;
-}
-.ic-pulse.d2 { animation-delay: 1s; }
-@keyframes icPulse {
-  0%   { opacity: .75; transform: scale(1); }
-  100% { opacity: 0;   transform: scale(1.5); }
-}
-@media (prefers-reduced-motion: reduce) { .ic-pulse { animation: none; } }
-.ic-name { font-size: 27px; font-weight: 800; color: #fff; margin-top: 26px; }
-.ic-sub { font-size: 14px; color: rgba(255,255,255,.6); }
-.ic-kind {
-  font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase;
-  font-weight: 700; color: rgba(255,255,255,.5);
-}
-/* Pushed to the bottom of the screen, where the thumbs are. */
-.ic-actions { display: flex; gap: 72px; margin-top: auto; padding-top: 48px; }
-.ic-slot { display: flex; flex-direction: column; align-items: center; gap: 9px; }
-.ic-slot small { font-size: 12px; color: rgba(255,255,255,.7); }
-.ic-btn {
-  border: 0; cursor: pointer; color: #fff;
-  width: 68px; height: 68px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  transition: transform .15s ease;
-}
-.ic-btn span { display: flex; width: 26px; height: 26px; }
-.ic-btn span svg { width: 100%; height: 100%; }
-.ic-btn:active { transform: scale(0.92); }
-.ic-btn.accept { background: #16a34a; animation: icNudge 1.6s ease-in-out infinite; }
-.ic-btn.decline { background: #ef4444; }
-/* The decline handset points down, the universal "hang up". */
-.ic-btn.decline span svg { transform: rotate(135deg); }
-@keyframes icNudge { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-@media (prefers-reduced-motion: reduce) { .ic-btn.accept { animation: none; } }
+
 
 /* Share targets: now 8 items, so scroll horizontally rather than cram a grid. */
 .social-row {
@@ -4058,41 +3879,7 @@ body.dark .vn-wave-pv { --vn-dim: #3f3f47; }
 .comment-like:active { transform: scale(.88); }
 .comment-like-n { font-size: 11px; color: var(--muted); min-height: 13px; }
 
-/* ── A video call should show the other person, not a card over them ──
-   The avatar, name, timer and "VIDEO CALL" label are what you look at while
-   it rings. Once their camera arrives they are in the way: they sat centred
-   on the far side's face for the entire call. Collapse to a small caption at
-   the top, the way every phone does it. */
-.call-screen.has-remote-video .call-avatar,
-.call-screen.has-remote-video .call-kind,
-.call-screen.has-remote-video .call-media-note { display: none; }
 
-.call-screen.has-remote-video .call-body {
-  position: absolute; inset-block-start: calc(58px + var(--safe-top));
-  inset-inline: 0; inset-block-end: auto; z-index: 5;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  pointer-events: none;               /* never swallow a tap meant for the video */
-  background: linear-gradient(180deg, rgba(0,0,0,.45) 0%, transparent 100%);
-  padding: 0 16px 18px;
-}
-/* The self-view drops below that caption rather than sharing the top strip
-   with it, so a long Arabic name can never run underneath the thumbnail. */
-.call-screen.has-remote-video .call-local {
-  inset-block-start: calc(128px + var(--safe-top));
-}
-/* Over their video the blurred photo is pointless and the dock's own frosted
-   ground carries the icons; the shade thins to the two edges. */
-.call-screen.has-remote-video .call-bg { display: none; }
-.call-screen.has-remote-video .call-shade {
-  background: linear-gradient(180deg, rgba(0,0,0,.5) 0%, rgba(0,0,0,0) 28%, rgba(0,0,0,0) 68%, rgba(0,0,0,.55) 100%);
-}
-.call-screen.has-remote-video .call-top { z-index: 6; }
-.call-screen.has-remote-video .call-name {
-  font-size: 15px; font-weight: 700; text-shadow: 0 1px 4px rgba(0,0,0,.6);
-}
-.call-screen.has-remote-video .call-status {
-  font-size: 12.5px; opacity: .85; text-shadow: 0 1px 4px rgba(0,0,0,.6);
-}
 
 /* ── Placing a profile photo before it is saved ──
    Picking a file used to commit it immediately, uncropped, so a landscape
@@ -4481,41 +4268,194 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible,
 .feed-refresh.busy .fr-spin { animation: frSpin .8s linear infinite; }
 @keyframes frSpin { to { transform: rotate(360deg); } }
 
-/* ── The call screen's look ──
-   Their photo, blurred, behind everything (faded in once it has loaded, so
-   the dark ground never flashes to an unblurred image); a shade over it so
-   white text reads at both ends of the screen; a top bar; a frosted dock for
-   the controls. The dock is what makes four or five circles read as a set. */
+/* ═══════════════════ Calls ═══════════════════
+   Modelled on the phone's own call screen: a dark grey ground (or the other
+   person's photo, blurred, when they have one), the state line above a
+   large name at the top, the middle left open (a group's faces go there), and
+   a 3 × 2 grid of round controls at the bottom - speaker · video · mute over
+   add · end · more. */
+.call-screen {
+  position: fixed; inset: 0; z-index: 120; color: #fff;
+  display: flex; flex-direction: column; align-items: center;
+  padding: calc(8px + var(--safe-top)) 20px calc(28px + var(--safe-bottom));
+  /* Dark grey to black - not the reference's blue; the user asked for this. */
+  background: linear-gradient(180deg, #2b2b31 0%, #17171c 48%, #0a0a0d 100%);
+}
+/* Their photo, blurred, faded in once loaded so the ground never flashes an
+   unblurred image; a shade over it so white text reads at both ends. */
 .call-bg {
   position: absolute; inset: -40px; z-index: 0;
   background: #101014 center / cover no-repeat;
   filter: blur(36px) saturate(1.15); transform: scale(1.08);
   opacity: 0; transition: opacity .7s ease;
 }
-.call-screen.has-photo .call-bg { opacity: .9; }
+.call-screen.has-photo .call-bg { opacity: .92; }
 .call-shade {
   position: absolute; inset: 0; z-index: 1; pointer-events: none;
-  background: linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,.28) 38%, rgba(0,0,0,.5) 72%, rgba(0,0,0,.8) 100%);
+  background: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 65%, rgba(0,0,0,.3) 100%);
 }
-.call-top {
-  width: 100%; max-width: 480px; margin-inline: auto; min-height: 44px;
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+.call-screen.has-photo .call-shade {
+  background: linear-gradient(180deg, rgba(0,0,0,.5) 0%, rgba(0,0,0,.25) 40%, rgba(0,0,0,.45) 75%, rgba(0,0,0,.72) 100%);
 }
-.call-top .call-kind { margin: 0; flex: 1 1 auto; text-align: center; color: rgba(255,255,255,.7); }
+.call-screen .call-top, .call-screen .call-head, .call-screen .call-people, .call-screen .call-grid { position: relative; z-index: 3; }
+.call-top { width: 100%; min-height: 40px; display: flex; align-items: center; justify-content: space-between; }
 .call-top-btn {
-  width: 42px; height: 42px; border-radius: 50%; border: 0; color: #fff; cursor: pointer;
+  width: 38px; height: 38px; border-radius: 50%; border: 0; color: #fff; cursor: pointer;
   background: rgba(255,255,255,.14); display: flex; align-items: center; justify-content: center;
-  flex: 0 0 auto; -webkit-tap-highlight-color: transparent;
-  transition: background .18s ease, transform .15s ease;
+  -webkit-tap-highlight-color: transparent; transition: transform .15s ease;
 }
 .call-top-btn svg { width: 22px; height: 22px; }
-.call-top-btn:active:not(:disabled) { transform: scale(.92); }
-.call-top-btn:disabled { opacity: .4; cursor: default; }
-.call-dock {
-  width: 100%; max-width: 440px; margin-inline: auto;
-  padding: 16px 6px 12px; border-radius: 32px;
-  background: rgba(22,22,28,.58); border: 1px solid rgba(255,255,255,.12);
-  -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
-  box-shadow: 0 18px 44px rgba(0,0,0,.4);
+.call-top-btn:active { transform: scale(.92); }
+/* The head: a small face, the state line, the name - largest thing on the screen. */
+.call-head { margin-top: 14px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; max-width: 100%; }
+.call-avatar { position: relative; display: inline-flex; margin-bottom: 14px; }
+.call-avatar[hidden] { display: none; }
+.call-avatar .avatar { position: relative; z-index: 1; box-shadow: 0 0 0 4px rgba(255,255,255,.18), 0 12px 32px rgba(0,0,0,.35); }
+.call-pulse { position: absolute; inset: -9px; border-radius: 50%; border: 2px solid rgba(255,255,255,.5); opacity: 0; }
+.call-avatar.ringing .call-pulse { animation: callPulse 1.9s ease-out infinite; }
+.call-avatar.connected .avatar { box-shadow: 0 0 0 4px rgba(255,255,255,.45), 0 12px 32px rgba(0,0,0,.35); }
+.call-avatar.over .avatar { filter: grayscale(1); opacity: .65; }
+@keyframes callPulse {
+  0%   { opacity: .8; transform: scale(1); }
+  100% { opacity: 0;  transform: scale(1.45); }
 }
-.call-dock .call-actions { gap: 2px; }
+@media (prefers-reduced-motion: reduce) { .call-avatar.ringing .call-pulse { animation: none; } }
+.call-sub { font-size: 17px; color: rgba(255,255,255,.9); font-variant-numeric: tabular-nums; }
+.call-name { font-size: 34px; font-weight: 500; line-height: 1.15; letter-spacing: -.01em; max-width: 100%; overflow-wrap: anywhere; }
+.call-media-note {
+  margin-top: 14px; max-width: 260px; font-size: 11.5px; line-height: 1.5;
+  color: rgba(255,255,255,.88); background: rgba(0,0,0,.18);
+  border: 1px solid rgba(255,255,255,.2); border-radius: 12px; padding: 8px 12px;
+}
+/* A group: the faces of everyone else in the call, the ringing ones dimmed. */
+.call-people { margin-top: 26px; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 16px; max-width: 100%; }
+.call-people[hidden] { display: none; }
+.call-person { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 66px; }
+.call-person .avatar { box-shadow: 0 0 0 3px rgba(255,255,255,.3); }
+.call-person small { font-size: 11.5px; color: rgba(255,255,255,.92); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.call-person.ringing .avatar { animation: personRing 1.6s ease-in-out infinite; }
+@keyframes personRing { 0%,100% { opacity: .45; } 50% { opacity: .9; } }
+@media (prefers-reduced-motion: reduce) { .call-person.ringing .avatar { animation: none; opacity: .55; } }
+/* The controls: a 3 × 2 grid of 72px circles. */
+.call-grid {
+  margin-top: auto; width: 100%; max-width: 340px; padding-top: 24px;
+  display: grid; grid-template-columns: repeat(3, 1fr); row-gap: 22px; column-gap: 6px; justify-items: center;
+}
+.call-ctl { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 0; width: 100%; }
+.call-ctl[hidden] { display: none; }
+.call-ctl small { font-size: 13px; color: rgba(255,255,255,.92); line-height: 1.2; text-align: center; }
+.call-btn {
+  background: rgba(255,255,255,.16); border: 0; color: #fff; cursor: pointer;
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .18s ease, transform .15s ease, box-shadow .18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.call-btn span { display: flex; width: 30px; height: 30px; }
+.call-btn span svg { width: 100%; height: 100%; }
+.call-btn:active:not(:disabled) { transform: scale(.92); }
+/* The toggled state is a class the screen sets from the live track - never
+   :active or :focus, which end when the touch does. White with the ground's
+   a dark glyph, as the phone does it; the icon swaps too. */
+.call-btn.on { background: #fff; color: #111; }
+.call-btn.on + small { font-weight: 600; }
+.call-btn:focus-visible { outline: 2px solid rgba(255,255,255,.75); outline-offset: 3px; }
+.call-btn:disabled { opacity: .38; cursor: default; }
+.call-btn.end { background: #e5484d; box-shadow: 0 10px 26px rgba(229,72,77,.35); }
+.call-btn.end span svg { transform: rotate(135deg); }
+/* Video: one tile per person, laid out by how many there are. */
+.call-stage { position: absolute; inset: 0; z-index: 2; }
+.call-remote { position: absolute; inset: 0; background: #000; display: grid; gap: 3px; grid-template-columns: 1fr; }
+.call-remote[data-tiles="2"] { grid-template-rows: 1fr 1fr; }
+.call-remote[data-tiles="3"], .call-remote[data-tiles="4"] { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.call-remote[data-tiles="3"] .call-tile:first-child { grid-column: 1 / -1; }
+.call-remote[data-tiles="5"], .call-remote[data-tiles="6"] { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; }
+.call-tile { position: relative; overflow: hidden; background: #111; min-height: 0; }
+.call-tile > div, .call-tile video { width: 100% !important; height: 100% !important; object-fit: cover; }
+.call-local {
+  position: absolute; inset-block-start: calc(56px + var(--safe-top)); inset-inline-end: 14px; z-index: 4;
+  width: 104px; height: 150px; border-radius: 14px; overflow: hidden;
+  background: #1b1b22; box-shadow: 0 6px 20px rgba(0,0,0,.45);
+  border: 1px solid rgba(255,255,255,.25);
+}
+.call-local video { width: 100%; height: 100%; object-fit: cover; }
+/* Over their video: the ground goes black, the small face goes, the head
+   becomes a caption at the top start (the self-view has the top end), the
+   grid floats on a scrim. */
+.call-screen.has-remote-video { background: #000; }
+.call-screen.has-remote-video .call-bg, .call-screen.has-remote-video .call-avatar { display: none; }
+.call-screen.has-remote-video .call-shade {
+  z-index: 3;
+  background: linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 30%, rgba(0,0,0,0) 62%, rgba(0,0,0,.6) 100%);
+}
+.call-screen.has-remote-video .call-top { z-index: 6; }
+.call-screen.has-remote-video .call-head {
+  position: absolute; inset-block-start: calc(54px + var(--safe-top)); inset-inline: 0; z-index: 5;
+  margin: 0; padding-inline: 18px 132px; pointer-events: none;
+  align-items: flex-start; text-align: start; text-shadow: 0 1px 4px rgba(0,0,0,.6);
+}
+.call-screen.has-remote-video .call-name { font-size: 20px; font-weight: 600; }
+.call-screen.has-remote-video .call-sub { font-size: 13.5px; }
+.call-screen.has-remote-video .call-people {
+  position: absolute; inset-block-start: calc(118px + var(--safe-top)); inset-inline-start: 16px; z-index: 5;
+  margin: 0; justify-content: flex-start;
+}
+.call-screen.has-remote-video .call-person small { text-shadow: 0 1px 3px rgba(0,0,0,.7); }
+.call-screen.has-remote-video .call-local { inset-block-start: calc(52px + var(--safe-top)); z-index: 6; }
+.call-screen.has-remote-video .call-grid { z-index: 6; }
+
+/* ── The incoming call, in the same style ── */
+.incoming-call {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+  animation: ic-in 220ms ease-out;
+  color: #fff;
+}
+.ic-bg {
+  position: absolute; inset: 0;
+  /* Dark grey to black - not the reference's blue; the user asked for this. */
+  background: linear-gradient(180deg, #2b2b31 0%, #17171c 48%, #0a0a0d 100%);
+}
+@keyframes ic-in { from { opacity: 0; } to { opacity: 1; } }
+.ic-card {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 360px; height: 100%;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  justify-content: flex-start; gap: 2px;
+  padding: calc(64px + var(--safe-top)) 8px calc(36px + var(--safe-bottom));
+}
+/* Concentric rings, offset in time, so the card visibly rings. */
+.ic-avatar { position: relative; display: inline-flex; margin-bottom: 16px; }
+.ic-avatar .avatar { position: relative; z-index: 1; box-shadow: 0 0 0 4px rgba(255,255,255,.2), 0 12px 32px rgba(0,0,0,.35); }
+.ic-pulse {
+  position: absolute; inset: -12px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.5); opacity: 0;
+  animation: icPulse 2s ease-out infinite;
+}
+.ic-pulse.d2 { animation-delay: 1s; }
+@keyframes icPulse {
+  0%   { opacity: .75; transform: scale(1); }
+  100% { opacity: 0;   transform: scale(1.5); }
+}
+@media (prefers-reduced-motion: reduce) { .ic-pulse { animation: none; } }
+.ic-sub { font-size: 17px; color: rgba(255,255,255,.9); }
+.ic-name { font-size: 34px; font-weight: 500; line-height: 1.15; letter-spacing: -.01em; overflow-wrap: anywhere; }
+/* Pushed to the bottom of the screen, where the thumbs are. */
+.ic-actions { display: flex; gap: 84px; margin-top: auto; padding-top: 48px; }
+.ic-slot { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.ic-slot small { font-size: 13px; color: rgba(255,255,255,.92); }
+.ic-btn {
+  border: 0; cursor: pointer; color: #fff;
+  width: 72px; height: 72px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .15s ease;
+}
+.ic-btn span { display: flex; width: 28px; height: 28px; }
+.ic-btn span svg { width: 100%; height: 100%; }
+.ic-btn:active { transform: scale(0.92); }
+.ic-btn.accept { background: #34c759; animation: icNudge 1.6s ease-in-out infinite; }
+.ic-btn.decline { background: #e5484d; }
+/* The decline handset points down, the universal "hang up". */
+.ic-btn.decline span svg { transform: rotate(135deg); }
+@keyframes icNudge { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) { .ic-btn.accept { animation: none; } }

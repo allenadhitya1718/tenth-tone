@@ -12730,6 +12730,10 @@ function autoPlay(video) {
     id: null, call: null, media: null, guard: null, unsub: null,
     startedAt: null, timer: null, ringTimeout: null, over: false,
     onTick: null, onStatus: null, onRemote: null, onMedia: null, onRouteChange: null,
+    // Group calls (0092): the row this screen was rung with (an invite, for
+    // someone added), who is in the channel, its subscription, and the
+    // 35 s timers for rings we placed ourselves.
+    row: null, members: null, unsubMembers: null, inviteTimers: {}, onMembers: null,
     pill: null, pillTime: null,
     ensurePill() {
       if (this.pill) return this.pill;
@@ -12752,6 +12756,7 @@ function autoPlay(video) {
     start(id, guard) {
       this.id = id; this.call = null; this.guard = guard; this.over = false;
       this.media = null; this.startedAt = null;
+      this.row = null; this.members = null; this.inviteTimers = {};
     },
     connected() {
       if (this.timer) return;
@@ -12766,6 +12771,10 @@ function autoPlay(video) {
       if (this.timer) { clearInterval(this.timer); this.timer = null; }
       if (this.ringTimeout) { clearTimeout(this.ringTimeout); this.ringTimeout = null; }
       if (this.unsub) { try { this.unsub(); } catch (e) {} this.unsub = null; }
+      if (this.unsubMembers) { try { this.unsubMembers(); } catch (e) {} this.unsubMembers = null; }
+      Object.keys(this.inviteTimers || {}).forEach(k => clearTimeout(this.inviteTimers[k]));
+      this.inviteTimers = {};
+      this.row = null; this.members = null; this.onMembers = null;
       if (this.guard) { CallGuard.release(this.guard); this.guard = null; }
       const m = this.media; this.media = null;
       if (m) { Promise.resolve().then(() => m.stop()).catch(() => {}); }
@@ -12781,56 +12790,73 @@ function autoPlay(video) {
     // Back on a call that is still running: same session, new screen.
     const resuming = ActiveCall.id === callId && !ActiveCall.over;
     const root = el('section', { class: 'call-screen' });
-    const avPulse = el('span', { class: 'call-pulse' });
-    const avWrap = el('div', { class: 'call-avatar ringing' }, [avPulse, avatar('', '', 132)]);
-    const nameEl = el('div', { class: 'call-name' }, '');
-    const statusEl = el('div', { class: 'call-status' }, 'جاري الاتصال...');
-    const kindEl = el('div', { class: 'call-kind' }, '');
-    const mediaNote = el('div', { class: 'call-media-note', hidden: true },
-      'الصوت والفيديو غير مفعلين — أضف Agora App ID');
-    // ── The look ──
-    // The other person's photo, blurred and darkened, fills the screen (their
-    // avatar's own two colours where they have no photo); a top bar carries
-    // the kind of call, a minimise arrow and - on a video call - a message
-    // button; the controls sit in a frosted dock at the bottom. This was a
-    // flat gradient with mute, speaker and end floating in space - "bad, with
-    // only three options in it", as a tester put it.
-    let other = null;
-    const bg = el('div', { class: 'call-bg' });
-    const shade = el('div', { class: 'call-shade' });
-    // Opening the chat leaves this screen; a connected call carries on behind
-    // the pill, a ringing one would be cancelled - so both message buttons
-    // wait for the connection (paintMedia).
-    async function openChat() {
-      if (!call) return;
-      try {
-        const cid = call.chat_id || (other && await window.API.openOrCreateDm(other.id));
-        if (cid) go('/chat/' + cid);
-      } catch (e) { toast('تعذر فتح المحادثة'); }
-    }
-    const minBtn = el('button', { class: 'call-top-btn', type: 'button', title: 'تصغير', html: icons.chevD, onclick: () => back() });
-    const msgTop = el('button', { class: 'call-top-btn', type: 'button', title: 'رسالة', html: icons.inbox, onclick: () => openChat() });
-    minBtn.style.visibility = 'hidden'; msgTop.style.visibility = 'hidden';
-    const top = el('div', { class: 'call-top' }, [minBtn, kindEl, msgTop]);
+
+    // ── The screen ──
+    // Modelled on the phone's own call screen: the state line above a large
+    // name at the top, the middle left open (a group's faces go there), and
+    // a 3 × 2 grid of round controls at the bottom - speaker · video · mute
+    // over add · end · more. The ground is a soft blue-violet, or the other
+    // person's photo blurred when they have one.
+    //
+    // `row` is the calls row this screen was opened with; `call` is the ROOT
+    // call - the session everyone shares. They are the same row for a direct
+    // call; for someone added to a call, `row` is their invite (its own
+    // calls row pointing at the root, see 0092) and `call` is the root it
+    // points at: its channel is the one to join and its status is the one to
+    // watch.
+    let row = resuming ? ActiveCall.row : null;
     let call = resuming ? ActiveCall.call : null, me = null;
-    let ended = false;      // this screen is done with the call
-    let settled = false;    // endCall has been sent
+    let other = null;
+    let upgrading = false;   // our own voice→video flip in progress (upgradeToVideo)
+    let ended = false;       // this screen is done with the call
+    let settled = false;     // our leaving has been sent
     let media = resuming ? ActiveCall.media : null;
     let joining = false;
+
+    const bg = el('div', { class: 'call-bg' });
+    const shade = el('div', { class: 'call-shade' });
+    const remoteVideo = el('div', { class: 'call-remote', hidden: true });
+    const localVideo = el('div', { class: 'call-local', hidden: true });
+    const videoStage = el('div', { class: 'call-stage', hidden: true }, [remoteVideo, localVideo]);
+    const minBtn = el('button', { class: 'call-top-btn', type: 'button', title: 'تصغير', html: icons.chevD, onclick: () => back() });
+    minBtn.style.visibility = 'hidden';
+    const top = el('div', { class: 'call-top' }, [minBtn]);
+    const avPulse = el('span', { class: 'call-pulse' });
+    const avWrap = el('div', { class: 'call-avatar ringing' }, [avPulse, avatar('', '', 64)]);
+    const subEl = el('div', { class: 'call-sub' }, 'جاري الاتصال...');
+    const nameEl = el('div', { class: 'call-name' }, '');
+    const mediaNote = el('div', { class: 'call-media-note', hidden: true },
+      'الصوت والفيديو غير مفعلين — أضف Agora App ID');
+    const head = el('div', { class: 'call-head' }, [avWrap, subEl, nameEl, mediaNote]);
+    const people = el('div', { class: 'call-people', hidden: true });
+
     // A different call claims the slot and evicts whatever was running.
     const guard = resuming ? ActiveCall.guard
                            : CallGuard.claim(callId, () => { ended = true; hangUp(); ActiveCall.teardown(); });
     if (!resuming) ActiveCall.start(callId, guard);
     ActiveCall.showPill(false);
 
+    const isVideoCall = () => !!(call && call.kind === 'video');
+    function showStage() { videoStage.hidden = false; }
+
+    // ── Leaving ──
+    // "I left", never "the call is over": the call ends by itself when fewer
+    // than two people remain (0092). A call still ringing is the caller's to
+    // cancel, and a call older than 0092 has no membership to leave - both
+    // end the row the old way.
+    async function leaveOrEnd() {
+      if (!call || !call.id) return;
+      try {
+        if (call.status === 'accepted' && window.API.leaveCall) {
+          if (await window.API.leaveCall(call.channel)) return;
+        }
+      } catch (e) { console.warn('leave:', e); }
+      try { await window.API.endCall(call.id); } catch (e) {}
+    }
     function hangUp() {
       if (settled) return;
       settled = true;
-      if (!call || !call.id) return;
-      try {
-        const p = window.API.endCall(call.id);
-        if (p && p.catch) p.catch(() => {});
-      } catch (e) {}
+      leaveOrEnd().catch(() => {});
     }
     // The call is over, from this screen: hang up and wind everything down.
     function finish() {
@@ -12845,7 +12871,7 @@ function autoPlay(video) {
       if (ended) return;
       if (ActiveCall.isLive() && ActiveCall.id === callId) {
         ActiveCall.onTick = null; ActiveCall.onStatus = null; ActiveCall.onRemote = null;
-        ActiveCall.onMedia = null; ActiveCall.onRouteChange = null;
+        ActiveCall.onMedia = null; ActiveCall.onRouteChange = null; ActiveCall.onMembers = null;
         ActiveCall.showPill(true);
         return;
       }
@@ -12861,6 +12887,132 @@ function autoPlay(video) {
         'aria-pressed': 'false', onclick,
       }, [iconWrap]);
       return { btn, iconWrap, labelEl, node: el('div', { class: 'call-ctl' }, [btn, labelEl]) };
+    }
+    function sheetOf(title) {
+      const sheet = el('div', { class: 'sheet-scroll', style: { maxHeight: '70vh', display: 'flex', flexDirection: 'column' } });
+      const bd = el('div', { class: 'backdrop' });
+      // Above the call screen (z 120): a sheet at its usual 100 opened from
+      // here was drawn UNDERNEATH it - untappable and invisible.
+      sheet.style.zIndex = '130'; bd.style.zIndex = '129';
+      const close = () => { sheet.remove(); bd.remove(); };
+      bd.onclick = close;
+      if (title) sheet.appendChild(el('div', { class: 'modal-head', style: { padding: '12px', textAlign: 'center', fontWeight: 700 } }, title));
+      return { sheet, bd, close, open() { document.body.appendChild(bd); document.body.appendChild(sheet); try { if (window.I18N) window.I18N.apply(sheet); } catch (e) {} } };
+    }
+
+    // ── Message: the chat this call belongs to, or the DM with that person ──
+    // Opening it leaves this screen; a connected call carries on behind the
+    // pill, a ringing one would be cancelled - so it waits for the connection.
+    async function openChat() {
+      if (!call) return;
+      try {
+        const cid = call.chat_id || (other && await window.API.openOrCreateDm(other.id));
+        if (cid) go('/chat/' + cid);
+      } catch (e) { toast('تعذر فتح المحادثة'); }
+    }
+    function openMoreSheet() {
+      const s = sheetOf(null);
+      const list = el('div', { style: { padding: '8px 0' } });
+      list.appendChild(optionRow(icons.inbox, 'رسالة', () => { s.close(); openChat(); }));
+      if (isVideoCall() && media && media.hasCamera() && media.isCameraOn() && typeof media.switchCamera === 'function') {
+        list.appendChild(optionRow(icons.flip, 'قلب الكاميرا', () => { s.close(); toggleMedia(() => media.switchCamera(), 'تعذر تبديل الكاميرا'); }));
+      }
+      s.sheet.appendChild(list);
+      s.open();
+    }
+
+    // ── Add people ──
+    // People you follow, minus whoever is already in (or being rung). An
+    // invite is a calls row of their own pointing at this root, so their
+    // phone rings exactly as for a direct call; the membership strip shows
+    // them ringing until they pick up. The inviter's phone is the one that
+    // gives up on an unanswered ring, after the same 35 s as a direct call.
+    async function inviteUser(p) {
+      if (!call) return;
+      try {
+        const inv = await window.API.inviteToCall({ root: call, userId: p.id });
+        toast('تمت الدعوة');
+        ActiveCall.inviteTimers[inv.id] = setTimeout(() => {
+          if (window.API.missCallIfRinging) window.API.missCallIfRinging(inv.id).catch(() => {});
+        }, 35000);
+        refreshMembers();
+      } catch (e) { toast(friendlyError(e, 'تعذرت الدعوة')); }
+    }
+    async function openAddSheet() {
+      if (!call || !ActiveCall.isLive()) return;
+      const s = sheetOf('أضف أشخاصًا إلى المكالمة');
+      const input = el('input', { class: 'input', placeholder: 'ابحث عن مستخدم بالاسم' });
+      const list = el('div', { style: { overflowY: 'auto', padding: '8px 0', minHeight: '120px' } });
+      s.sheet.appendChild(el('div', { style: { padding: '0 4px 8px' } }, [input]));
+      s.sheet.appendChild(list);
+      s.open();
+      let candidates = [];
+      try { candidates = await window.API.fetchFollowing(me) || []; } catch (e) { candidates = []; }
+      const inCall = new Set((ActiveCall.members || []).filter(m => m.status === 'joined' || m.status === 'ringing').map(m => m.user_id));
+      function paint() {
+        const q = input.value.trim().toLowerCase();
+        list.innerHTML = '';
+        const rows = candidates.filter(p => p && p.id !== me && !inCall.has(p.id)
+          && (!q || String(p.name || '').toLowerCase().includes(q) || String(p.handle || '').toLowerCase().includes(q))).slice(0, 60);
+        if (!rows.length) {
+          list.appendChild(el('p', { class: 'muted', style: { textAlign: 'center', padding: '22px 12px' } }, 'لا يوجد أحد لإضافته'));
+        }
+        rows.forEach(p => {
+          const nm = p.name || p.handle || '';
+          list.appendChild(el('div', {
+            class: 'user-row', style: { cursor: 'pointer', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px' },
+            onclick: () => { s.close(); inviteUser(p); },
+          }, [
+            avatar(p.avatar_url || '', nm, 40),
+            el('div', { style: { minWidth: 0 } }, [
+              el('div', { style: { fontWeight: 600, fontSize: '15px' } }, nm),
+              el('div', { class: 'muted', style: { fontSize: '12px' } }, '@' + (p.handle || '')),
+            ]),
+          ]));
+        });
+        try { if (window.I18N) window.I18N.apply(list); } catch (e) {}
+      }
+      input.oninput = paint;
+      paint();
+      try { input.focus(); } catch (e) {}
+    }
+
+    // ── Who is in the call ──
+    // Everyone else in the channel: ringing (dimmed) or joined. More than one
+    // other person makes it a group: their faces take the middle of the
+    // screen and the name line lists them.
+    function paintPeople() {
+      const others = (ActiveCall.members || []).filter(m => m.user_id !== me && (m.status === 'joined' || m.status === 'ringing'));
+      const group = others.length > 1;
+      root.classList.toggle('group', group);
+      people.hidden = !group;
+      people.innerHTML = '';
+      if (group) {
+        others.forEach(m => {
+          const p = m.profile || {};
+          const nm = p.name || p.handle || '';
+          people.appendChild(el('div', { class: 'call-person ' + m.status, title: nm }, [
+            avatar(p.avatar_url || '', nm, 50), el('small', {}, nm),
+          ]));
+        });
+        const names = others.filter(m => m.status === 'joined').map(m => (m.profile && (m.profile.name || m.profile.handle)) || '').filter(Boolean);
+        nameEl.textContent = names.length
+          ? names.slice(0, 2).join('، ') + (names.length > 2 ? ' +' + (names.length - 2) : '')
+          : ((other && (other.name || other.handle)) || '');
+        avWrap.hidden = true;
+      } else {
+        avWrap.hidden = false;
+        if (other) nameEl.textContent = other.name || other.handle || '';
+      }
+      try { if (window.I18N) window.I18N.apply(people); } catch (e) {}
+    }
+    async function refreshMembers() {
+      if (!call || !call.channel || !window.API.fetchCallMembers) return;
+      let list;
+      try { list = await window.API.fetchCallMembers(call.channel); } catch (e) { return; }
+      if (ActiveCall.id !== callId) return;
+      ActiveCall.members = list;
+      paintPeople();
     }
 
     // ── Audio output ──
@@ -12886,29 +13038,24 @@ function autoPlay(video) {
       noteRoute(info);
       const avail = Array.isArray(info.available) ? info.available.slice() : ['speaker', 'earpiece'];
       if ((info.bluetoothConnected || info.hasBluetooth) && avail.indexOf('bluetooth') < 0) avail.push('bluetooth');
-      const sheet = el('div', { class: 'sheet-scroll', style: { maxHeight: '60vh', overflowY: 'auto' } });
-      const close = () => { sheet.remove(); bd.remove(); };
-      const bd = el('div', { class: 'backdrop', onclick: close });
-      sheet.appendChild(el('div', { class: 'modal-head', style: { padding: '12px', textAlign: 'center', fontWeight: 700 } }, 'مخرج الصوت'));
+      const s = sheetOf('مخرج الصوت');
       const list = el('div', { style: { padding: '8px 0' } });
       ['speaker', 'earpiece', 'bluetooth', 'wired'].forEach(r => {
         if (avail.indexOf(r) < 0) return;
         const label = (r === 'bluetooth' && info.bluetoothName) ? info.bluetoothName : ROUTE_LABEL[r];
-        const row = optionRow(ROUTE_ICON[r], label, async () => {
-          close();
+        const rowEl = optionRow(ROUTE_ICON[r], label, async () => {
+          s.close();
           try {
             const res = await media.setRoute(r === 'wired' ? 'auto' : r);
             noteRoute(res || { route: r });
           } catch (e) { toast('تعذر تغيير مخرج الصوت'); }
           paintMedia();
         });
-        if (r === routeName) row.appendChild(el('span', { style: { marginInlineStart: 'auto', display: 'flex', width: '18px', height: '18px' }, html: icons.check }));
-        list.appendChild(row);
+        if (r === routeName) rowEl.appendChild(el('span', { style: { marginInlineStart: 'auto', display: 'flex', width: '18px', height: '18px' }, html: icons.check }));
+        list.appendChild(rowEl);
       });
-      sheet.appendChild(list);
-      document.body.appendChild(bd);
-      document.body.appendChild(sheet);
-      try { if (window.I18N) window.I18N.apply(sheet); } catch (e) {}
+      s.sheet.appendChild(list);
+      s.open();
     }
 
     function paintMedia() {
@@ -12929,26 +13076,30 @@ function autoPlay(video) {
       speaker.labelEl.textContent = live ? (ROUTE_LABEL[routeName] || 'مكبر الصوت') : 'مكبر الصوت';
       speaker.btn.title = speaker.labelEl.textContent;
 
-      const camOff = live && media.hasCamera() && !media.isCameraOn();
-      cam.btn.disabled = !live || !media.hasCamera();
+      const video = isVideoCall();
+      const hasCam = live && media.hasCamera();
+      // "Off" covers a camera that is paused and one that was never opened
+      // (a voice call the other side turned into video); either way the
+      // button offers to turn it on.
+      const camOff = live && (!hasCam || !media.isCameraOn());
+      cam.btn.disabled = !live || (!hasCam && typeof media.enableVideo !== 'function');
       cam.btn.classList.toggle('on', !!camOff);
       cam.btn.setAttribute('aria-pressed', camOff ? 'true' : 'false');
       cam.iconWrap.innerHTML = camOff ? icons.videoOff : icons.video;
       cam.labelEl.textContent = camOff ? 'تشغيل الكاميرا' : 'إيقاف الكاميرا';
       cam.btn.title = cam.labelEl.textContent;
+      // The self-view shows a picture or nothing - never a black box.
+      if (video) localVideo.hidden = !(hasCam && media.isCameraOn());
 
-      const video = !!(call && call.kind === 'video');
-      const camLive = live && media.hasCamera() && media.isCameraOn();
-      flip.btn.disabled = !camLive || typeof media.switchCamera !== 'function';
-      // Message and minimise need the CALL, not the microphone - and a
-      // connected one (see openChat).
+      // Video, add, more and minimise need the CALL, not the microphone -
+      // and a connected one (see openChat).
       const connected = ActiveCall.isLive() && ActiveCall.id === callId;
-      msg.btn.disabled = !connected;
-      msgTop.disabled = !connected;
+      videoCtl.btn.disabled = !connected || !live || upgrading || typeof media.enableVideo !== 'function';
+      add.btn.disabled = !connected || typeof window.API.inviteToCall !== 'function';
+      more.btn.disabled = !connected;
       minBtn.style.visibility = connected ? '' : 'hidden';
-      msgTop.style.visibility = (connected && video) ? '' : 'hidden';
       try {
-        if (window.I18N) [mute, speaker, cam, flip, msg].forEach(c => window.I18N.apply(c.node));
+        if (window.I18N) [mute, speaker, cam, videoCtl, add, more].forEach(c => window.I18N.apply(c.node));
       } catch (e) {}
     }
     async function toggleMedia(fn, failMsg) {
@@ -12957,48 +13108,96 @@ function autoPlay(video) {
       catch (e) { console.warn('call media:', e); toast(failMsg); }
       finally { paintMedia(); }
     }
-    const mute = ctl('', icons.mic, 'كتم', () =>
-      toggleMedia(() => media.setMuted(!media.isMuted()), 'تعذر تغيير حالة الميكروفون'));
     const speaker = ctl('', icons.speakerOff, 'مكبر الصوت', () =>
       toggleMedia(() => openRouteSheet(), 'تعذر تغيير مخرج الصوت'));
+    // Voice call only: turns it into a video call (upgradeToVideo below).
+    const videoCtl = ctl('', icons.video, 'فيديو', () => upgradeToVideo());
     const cam = ctl('', icons.video, 'إيقاف الكاميرا', () =>
-      toggleMedia(() => media.setCameraOn(!media.isCameraOn()), 'تعذر تغيير حالة الكاميرا'));
+      toggleMedia(async () => {
+        // A voice call the OTHER side turned into video: our camera was never
+        // opened, and "camera on" here means opening it.
+        if (!media.hasCamera() && typeof media.enableVideo === 'function') {
+          media.attachVideo(localVideo, remoteVideo);
+          await media.enableVideo();
+          showStage();
+          return;
+        }
+        await media.setCameraOn(!media.isCameraOn());
+      }, 'تعذر تغيير حالة الكاميرا'));
     cam.node.hidden = true;
-    const flip = ctl('', icons.flip, 'قلب الكاميرا', () =>
-      toggleMedia(() => media.switchCamera(), 'تعذر تبديل الكاميرا'));
-    flip.node.hidden = true;
-    // On a voice call the message button lives in the dock, as its fourth
-    // control; on a video call the dock is full and it moves to the top bar.
-    const msg = ctl('', icons.inbox, 'رسالة', () => openChat());
+    const mute = ctl('', icons.mic, 'كتم', () =>
+      toggleMedia(() => media.setMuted(!media.isMuted()), 'تعذر تغيير حالة الميكروفون'));
+    const add = ctl('', icons.users, 'إضافة', () => openAddSheet());
     const end = ctl('end', icons.phone, 'إنهاء', async () => {
       if (ended) return;
       ended = true;
       settled = true;
       end.btn.disabled = true;
-      try { if (call) await window.API.endCall(call.id); } catch (e) {}
+      await leaveOrEnd();
       ActiveCall.teardown();
       back();
     });
+    const more = ctl('', icons.moreH, 'المزيد', () => openMoreSheet());
 
-    const remoteVideo = el('div', { class: 'call-remote', hidden: true });
-    const localVideo = el('div', { class: 'call-local', hidden: true });
-    const videoStage = el('div', { class: 'call-stage', hidden: true }, [remoteVideo, localVideo]);
     root.appendChild(bg);
     root.appendChild(shade);
     root.appendChild(videoStage);
     root.appendChild(top);
-    root.appendChild(el('div', { class: 'call-body' }, [avWrap, nameEl, statusEl, mediaNote]));
-    root.appendChild(el('div', { class: 'call-dock' }, [
-      el('div', { class: 'call-actions' }, [mute.node, cam.node, flip.node, speaker.node, msg.node, end.node]),
-    ]));
+    root.appendChild(head);
+    root.appendChild(people);
+    root.appendChild(el('div', { class: 'call-grid' }, [speaker.node, videoCtl.node, cam.node, mute.node, add.node, end.node, more.node]));
     paintMedia();     // start disabled: there is no microphone to speak of yet
 
-    const isVideoCall = () => !!(call && call.kind === 'video');
+    // ── A voice call becoming a video call ──
+    // Both sides' screens come through here, and a call that started as
+    // video too. `fromRemote` means the other side turned their camera on:
+    // our camera stays OFF until we choose - a voice call that turns into
+    // someone's face without asking is the wrong surprise - and we are told
+    // once. Idempotent: the row flip and their picture arriving can both
+    // report the same event, in either order.
+    function enterVideoMode(fromRemote) {
+      if (root.classList.contains('video-mode')) return;
+      root.classList.add('video-mode');
+      call = Object.assign(call || {}, { kind: 'video' });
+      ActiveCall.call = call;
+      cam.node.hidden = false; videoCtl.node.hidden = true;
+      if (media) {
+        media.attachVideo(localVideo, remoteVideo);
+        if (media.hasRemoteVideo()) { remoteVideo.hidden = false; showStage(); root.classList.add('has-remote-video'); }
+        if (media.hasCamera() && media.isCameraOn()) { localVideo.hidden = false; showStage(); }
+      }
+      if (fromRemote) toast('الطرف الآخر شغّل الكاميرا');
+      paintMedia();
+    }
+    // Our side. The camera goes on and is published FIRST - a refused camera
+    // leaves the voice call exactly as it was - then the row's kind flips so
+    // the other side's screen and the call record learn about it. Their
+    // picture, if they turn theirs on, arrives like any video call's.
+    async function upgradeToVideo() {
+      if (!media || !ActiveCall.isLive() || isVideoCall() || upgrading) return;
+      if (typeof media.enableVideo !== 'function') return;
+      upgrading = true; paintMedia();
+      try {
+        media.attachVideo(localVideo, remoteVideo);   // somewhere for the camera to draw
+        await media.enableVideo();
+        enterVideoMode(false);
+        localVideo.hidden = false; showStage();
+        try { await window.API.setCallKind(call.id, 'video'); }
+        catch (e) { console.warn('call kind:', e); }    // the picture is already flowing
+      } catch (e) {
+        console.warn('video upgrade:', e);
+        toast('تعذر تشغيل الكاميرا');
+      } finally { upgrading = false; paintMedia(); }
+    }
+
     // The session's events land here while this screen is attached.
     function attachPainters() {
-      ActiveCall.onTick = (s) => { statusEl.textContent = s; };
+      ActiveCall.onTick = (s) => { subEl.textContent = s; };
       ActiveCall.onRouteChange = () => { noteRoute(null); paintMedia(); };
       ActiveCall.onRemote = (st) => {
+        // Their picture arriving IS the news that this is a video call now,
+        // whether or not the row has said so yet.
+        if (st && st.hasRemoteVideo && !isVideoCall() && ActiveCall.isLive()) enterVideoMode(true);
         if (isVideoCall()) {
           remoteVideo.hidden = !(st && st.hasRemoteVideo);
           if (!remoteVideo.hidden) videoStage.hidden = false;
@@ -13009,13 +13208,14 @@ function autoPlay(video) {
       ActiveCall.onMedia = (session) => {
         media = session;
         if (session.attachVideo) session.attachVideo(isVideoCall() ? localVideo : null, isVideoCall() ? remoteVideo : null);
-        if (isVideoCall() && session.hasCamera()) { videoStage.hidden = false; localVideo.hidden = false; }
+        if (isVideoCall() && session.hasCamera() && session.isCameraOn()) { videoStage.hidden = false; localVideo.hidden = false; }
         if (isVideoCall() && session.hasRemoteVideo()) { remoteVideo.hidden = false; videoStage.hidden = false; root.classList.add('has-remote-video'); }
         noteRoute(null);
         if (session.getRoute) session.getRoute().then(info => { noteRoute(info); paintMedia(); }).catch(() => {});
         paintMedia();
       };
       ActiveCall.onStatus = applyStatus;
+      ActiveCall.onMembers = refreshMembers;
     }
 
     async function joinMedia() {
@@ -13042,6 +13242,7 @@ function autoPlay(video) {
         });
         if (ActiveCall.over || ActiveCall.id !== callId) { try { await session.stop(); } catch (e) {} return; }
         ActiveCall.media = session;
+        if (window.API.setMyAgoraUid && call && call.channel) window.API.setMyAgoraUid(call.channel, session.userId);
         if (ActiveCall.onMedia) ActiveCall.onMedia(session);
         else media = session;
       } catch (e) {
@@ -13055,13 +13256,18 @@ function autoPlay(video) {
       }
     }
 
-    function applyStatus(row) {
-      if (!row) return;
-      call = Object.assign(call || {}, row);
+    // The ROOT call's row: connected, over, or turned into video.
+    function applyStatus(r) {
+      if (!r) return;
+      const wasVideo = root.classList.contains('video-mode');
+      call = Object.assign(call || {}, r);
       ActiveCall.call = call;
-      const terminal = (row.status === 'declined' || row.status === 'missed' || row.status === 'ended');
+      const terminal = (r.status === 'declined' || r.status === 'missed' || r.status === 'ended');
       if (terminal && ended) return;
-      if (row.status === 'accepted' && !ActiveCall.startedAt) {
+      // The other side turned their camera on. (Our own flip comes back
+      // through here too, already applied, so it is not announced.)
+      if (r.kind === 'video' && !wasVideo && !terminal && ActiveCall.isLive() && !upgrading) enterVideoMode(true);
+      if (r.status === 'accepted' && !ActiveCall.startedAt) {
         if (ActiveCall.ringTimeout) { clearTimeout(ActiveCall.ringTimeout); ActiveCall.ringTimeout = null; }
         avWrap.classList.remove('ringing');
         avWrap.classList.add('connected');
@@ -13076,10 +13282,10 @@ function autoPlay(video) {
         avWrap.classList.add('over');
         end.btn.disabled = true;
         paintMedia();
-        statusEl.textContent = row.status === 'declined' ? 'تم رفض المكالمة'
-                             : row.status === 'missed'   ? 'لم يتم الرد'
-                             : 'انتهت المكالمة';
-        try { if (window.I18N) window.I18N.apply(statusEl); } catch (e) {}
+        subEl.textContent = r.status === 'declined' ? 'تم رفض المكالمة'
+                          : r.status === 'missed'   ? 'لم يتم الرد'
+                          : 'انتهت المكالمة';
+        try { if (window.I18N) window.I18N.apply(subEl); } catch (e) {}
         setTimeout(() => back(), 1300);
       }
     }
@@ -13087,26 +13293,28 @@ function autoPlay(video) {
     (async () => {
       try {
         const u = await window.SB.getUser(); me = u && u.id;
-        if (!resuming) call = await window.API.fetchCall(callId);
-        if (!call) { leaveScreen(); return; }
+        if (!resuming) {
+          row = await window.API.fetchCall(callId);
+          if (!row) { leaveScreen(); return; }
+          // Added to someone else's call: the row we were rung with points
+          // at the root; that is the call.
+          call = row.root_id ? await window.API.fetchCall(row.root_id) : row;
+          if (!call) { leaveScreen(); return; }
+        }
+        ActiveCall.row = row;
         ActiveCall.call = call;
-        other = (call.caller_id === me) ? call.callee : call.caller;
+        other = (row.caller_id === me) ? row.callee : row.caller;
         const oname = (other && other.name) || (other && other.handle) || '';
         avWrap.innerHTML = '';
-        avWrap.appendChild(avatar((other && other.avatar_url) || '', oname, 124));
+        avWrap.appendChild(avPulse);
+        avWrap.appendChild(avatar((other && other.avatar_url) || '', oname, 64));
         const photo = (other && other.avatar_url) ? (safeUrl(other.avatar_url) || other.avatar_url) : '';
         if (photo) {
           bg.style.backgroundImage = 'url("' + photo.replace(/"/g, '%22') + '")';
           root.classList.add('has-photo');
-        } else {
-          // No photo: the avatar's own two colours, faint, so the screen
-          // still belongs to this person rather than to a generic gradient.
-          const av = avWrap.querySelector('.avatar');
-          if (av && av.style.background) { bg.style.background = av.style.background; bg.style.opacity = '.32'; }
         }
         nameEl.textContent = oname;
-        kindEl.textContent = callKindLabel(call.kind);
-        if (call.kind === 'video') { cam.node.hidden = false; flip.node.hidden = false; msg.node.hidden = true; }
+        if (call.kind === 'video') enterVideoMode(false);
         attachPainters();
         if (resuming) {
           // Picking the running call back up: connected already, timer
@@ -13116,28 +13324,36 @@ function autoPlay(video) {
           ActiveCall.tick();
           if (ActiveCall.media) ActiveCall.onMedia(ActiveCall.media);
           else joinMedia();
+          paintPeople();
+          refreshMembers();
         } else {
           if (call.status === 'ringing') {
-            statusEl.textContent = (call.caller_id === me) ? 'جاري الاتصال...' : 'مكالمة واردة';
+            subEl.textContent = (call.caller_id === me) ? 'جاري الاتصال...' : 'مكالمة واردة';
           }
           applyStatus(call);
           // The subscription belongs to the call, not the screen, and reads
           // whichever painter is attached when a change arrives. A call that
           // ends while its screen is away is wound up right here.
-          ActiveCall.unsub = window.API.subscribeToCall(call.id, (row) => {
-            if (!row) return;
-            ActiveCall.call = Object.assign(ActiveCall.call || {}, row);
-            const terminal = row.status === 'declined' || row.status === 'missed' || row.status === 'ended';
-            if (ActiveCall.onStatus) { ActiveCall.onStatus(row); return; }
+          ActiveCall.unsub = window.API.subscribeToCall(call.id, (r) => {
+            if (!r) return;
+            ActiveCall.call = Object.assign(ActiveCall.call || {}, r);
+            const terminal = r.status === 'declined' || r.status === 'missed' || r.status === 'ended';
+            if (ActiveCall.onStatus) { ActiveCall.onStatus(r); return; }
             if (terminal) { ActiveCall.teardown(); toast('انتهت المكالمة'); }
           });
-          if (call.caller_id === me && call.status === 'ringing') {
+          if (window.API.subscribeToCallMembers && call.channel) {
+            ActiveCall.unsubMembers = window.API.subscribeToCallMembers(call.channel, () => {
+              if (ActiveCall.onMembers) ActiveCall.onMembers();
+            });
+          }
+          refreshMembers();
+          if (call.caller_id === me && call.status === 'ringing' && call.id === row.id) {
             ActiveCall.ringTimeout = setTimeout(async () => {
               ended = true;
               settled = true;
               try { await window.API.missCall(call.id); } catch (e) {}
-              statusEl.textContent = 'لم يتم الرد';
-              try { if (window.I18N) window.I18N.apply(statusEl); } catch (e) {}
+              subEl.textContent = 'لم يتم الرد';
+              try { if (window.I18N) window.I18N.apply(subEl); } catch (e) {}
               ActiveCall.teardown();
               setTimeout(() => back(), 1400);
             }, 35000);
@@ -13209,14 +13425,13 @@ function autoPlay(video) {
       overlay = el('div', { class: 'incoming-call' }, [
         el('div', { class: 'ic-bg' }),
         el('div', { class: 'ic-card' }, [
-          el('div', { class: 'ic-kind' }, callKindLabel(row.kind)),
           el('div', { class: 'ic-avatar' }, [
             el('span', { class: 'ic-pulse' }),
             el('span', { class: 'ic-pulse d2' }),
-            avatar((caller && caller.avatar_url) || '', cname, 112),
+            avatar((caller && caller.avatar_url) || '', cname, 88),
           ]),
+          el('div', { class: 'ic-sub' }, isVideo ? 'مكالمة فيديو واردة' : 'مكالمة واردة'),
           el('div', { class: 'ic-name' }, cname),
-          el('div', { class: 'ic-sub' }, 'مكالمة واردة'),
           el('div', { class: 'ic-actions' }, [
             el('div', { class: 'ic-slot' }, [
               el('button', {

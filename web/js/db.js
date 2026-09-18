@@ -2045,6 +2045,74 @@
   API.declineCall = (callId) => _setCallStatus(callId, 'declined', { ended_at: new Date().toISOString() });
   API.endCall     = (callId) => _setCallStatus(callId, 'ended',    { ended_at: new Date().toISOString() });
   API.missCall    = (callId) => _setCallStatus(callId, 'missed',   { ended_at: new Date().toISOString() });
+  // A voice call turned into a video call, by either side. The other side's
+  // screen hears about it through subscribeToCall; the call record in the
+  // chat reads the kind at the end.
+  API.setCallKind = async (callId, kind) => {
+    const c = await client();
+    const { data, error } = await c.from('calls').update({ kind }).eq('id', callId).select().maybeSingle();
+    if (error) throw error;
+    return data;
+  };
+
+  // ── Group calls (0092) ──
+  // An invite is a calls row pointing at the ROOT call: the invitee's phone
+  // rings like a direct call, and accepting opens a screen that joins the
+  // root's channel. Membership (call_members) is written by triggers on
+  // calls; the client writes only its own "I left" and its Agora uid.
+  API.inviteToCall = async ({ root, userId }) => {
+    const c = await client(); const me = await uid();
+    if (!me) throw new Error('not signed in');
+    const { data, error } = await c.from('calls')
+      .insert({ caller_id: me, callee_id: userId, kind: root.kind, channel: root.channel, root_id: root.id, status: 'ringing' })
+      .select().single();
+    if (error) throw error;
+    return data;
+  };
+  // The inviter giving up on a ring nobody answered - only while it is STILL
+  // ringing, or an answered invite would be flagged missed.
+  API.missCallIfRinging = async (callId) => {
+    const c = await client();
+    const { error } = await c.from('calls')
+      .update({ status: 'missed', ended_at: new Date().toISOString() })
+      .eq('id', callId).eq('status', 'ringing');
+    if (error) throw error;
+  };
+  API.fetchCallMembers = async (channel) => {
+    const c = await client();
+    const { data, error } = await c.from('call_members')
+      .select('*, profile:profiles!call_members_user_id_fkey ( id, name, handle, avatar_url )')
+      .eq('channel', channel).order('created_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  };
+  // Every change to who is in the channel. Unique topic per subscription
+  // (see subscribeToInbox for why).
+  API.subscribeToCallMembers = (channel, cb) => {
+    let ch = null;
+    (async () => {
+      const c = await client();
+      ch = c.channel('call_members:' + channel + ':' + Math.random().toString(36).slice(2)).on('postgres_changes', {
+        event: '*', schema: 'public', table: 'call_members', filter: `channel=eq.${channel}`,
+      }, payload => cb(payload.new || payload.old)).subscribe();
+    })();
+    return () => { if (ch) ch.unsubscribe(); };
+  };
+  // "I left." True when there was a membership row to leave; false for a
+  // call older than 0092, which the screen then ends the old way.
+  API.leaveCall = async (channel) => {
+    const c = await client();
+    const { data, error } = await c.rpc('leave_call', { p_channel: channel });
+    if (error) throw error;
+    return !!data;
+  };
+  // So a tile can one day be labelled with a name. Never worth an error.
+  API.setMyAgoraUid = async (channel, agoraUid) => {
+    try {
+      const c = await client(); const me = await uid(); if (!me) return;
+      await c.from('call_members').update({ agora_uid: agoraUid }).eq('channel', channel).eq('user_id', me);
+    } catch (e) {}
+  };
 
   // Any call still ringing for me right now (e.g. the app was reopened
   // mid-ring, or the realtime event was missed).

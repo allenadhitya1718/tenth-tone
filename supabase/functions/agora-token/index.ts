@@ -94,19 +94,31 @@ Deno.serve(async (req) => {
   // and never needed the token - which is exactly why this survived testing.
   let role = RtcRole.SUBSCRIBER;
   if (wantsHost) {
-    // RLS on `calls` only returns rows where the requester is caller or callee,
-    // so finding a row is itself proof of participation.
-    const { data: call, error: callErr } = await supabase
+    // RLS on `calls` returns the rows of this channel the requester may see:
+    // their own call, or - since 0092 - any call of a channel they are a
+    // member of. A channel can now carry several rows (the call, plus an
+    // invite row per person added), so ALL of them are read: taking one at
+    // random picked the root row for an added person, who is neither its
+    // caller nor its callee, and refused them with 403 - joined to the call
+    // on paper, silent in the channel.
+    const { data: rows, error: callErr } = await supabase
       .from('calls')
       .select('id, caller_id, callee_id')
-      .eq('channel', channel)
-      .limit(1)
-      .maybeSingle();
+      .eq('channel', channel);
     if (callErr) return json({ error: 'could not check the call' }, 500);
 
-    if (call) {
-      if (call.caller_id !== userId && call.callee_id !== userId) {
-        return json({ error: 'you are not a party to this call' }, 403);
+    if (rows && rows.length) {
+      const party = rows.some((c) => c.caller_id === userId || c.callee_id === userId);
+      if (!party) {
+        // Visible only through membership: confirm it explicitly rather than
+        // trust the read policy alone.
+        const { data: member } = await supabase
+          .from('call_members')
+          .select('user_id')
+          .eq('channel', channel)
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (!member) return json({ error: 'you are not a party to this call' }, 403);
       }
       role = RtcRole.PUBLISHER;
     } else {
