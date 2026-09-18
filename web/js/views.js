@@ -239,7 +239,14 @@
 
     function finish() {
       try { localStorage.setItem(ONBOARD_KEY, '1'); } catch (e) {}
-      go('/welcome');
+      // Every step of the way into the app REPLACES the history entry rather
+      // than adding one: tour -> welcome -> login/register -> code -> feed
+      // leaves a single entry behind, so nothing under the feed can ever be
+      // a sign-in screen. Sign-in itself replaced its entry since 1.4.11,
+      // but the welcome screen was still stacked beneath it, and an Android
+      // phone whose back control walks the WebView's own history landed
+      // there (18 Sep: "back from the feed takes me to the login page").
+      go('/welcome', { replace: true });
     }
 
     function render() {
@@ -356,7 +363,7 @@
     if (!A || !A.isAvailable()) return null;
     const btn = A.button({
       label: opts.label,
-      onSuccess: () => go(opts.next || '/home'),
+      onSuccess: () => go(opts.next || '/home', { replace: true }),   // signed in: never a back stop
       onError: (msg) => {
         if (!errorEl) { toast(msg); return; }
         errorEl.textContent = msg;
@@ -382,8 +389,8 @@
         el('p', {}, 'شارك لحظتك مع العالم'),
       ]),
       el('div', { class: 'actions' }, [
-        el('button', { class: 'btn', onclick: () => go('/register') }, 'أنا جديد هنا'),
-        el('button', { class: 'btn btn-outline', onclick: () => go('/login') }, 'لدي حساب بالفعل'),
+        el('button', { class: 'btn', onclick: () => go('/register', { replace: true }) }, 'أنا جديد هنا'),
+        el('button', { class: 'btn btn-outline', onclick: () => go('/login', { replace: true }) }, 'لدي حساب بالفعل'),
         appleAuthBlock(welcomeError),
         welcomeError,
         el('p', { class: 'welcome-legal' }, [
@@ -481,7 +488,7 @@
     const appleBlock = appleAuthBlock(error);
     if (appleBlock) root.appendChild(appleBlock);
     root.appendChild(el('div', { class: 'auth-actions text-center' }, [
-      el('p', { class: 'muted' }, [document.createTextNode('ليس لديك حساب؟ '), el('a', { class: 'auth-link', onclick: () => go('/register') }, 'إنشاء حساب')]),
+      el('p', { class: 'muted' }, [document.createTextNode('ليس لديك حساب؟ '), el('a', { class: 'auth-link', onclick: () => go('/register', { replace: true }) }, 'إنشاء حساب')]),
     ]));
     return root;
   };
@@ -581,7 +588,7 @@
       segs.push(sg);
       progress.appendChild(sg);
     }
-    root.appendChild(topBar({ title: 'إنشاء حساب', onBack: () => (step > 0 ? show(step - 1) : go('/welcome')) }));
+    root.appendChild(topBar({ title: 'إنشاء حساب', onBack: () => (step > 0 ? show(step - 1) : go('/welcome', { replace: true })) }));
     root.appendChild(progress);
 
     const body = el('div', { class: 'reg-body' });
@@ -831,7 +838,7 @@
             // session to write with until then.
             sessionStorage.setItem('tt-pending-profile', JSON.stringify({ birth_date: data.birth }));
             toast('تم إرسال رمز التحقق');
-            go('/otp');
+            go('/otp', { replace: true });
             return;
           }
         } catch (e) {
@@ -860,7 +867,13 @@
   V.otp = () => {
     hideNav();
     const root = el('section', { class: 'auth-screen' });
-    root.appendChild(topBar({ title: 'التحقق' }));
+    // The arrow goes where the "wrong email?" link goes. With the funnel
+    // replacing entries there is no history to walk back through, and the
+    // generic back() would have dropped a signed-out person on the feed.
+    root.appendChild(topBar({ title: 'التحقق', onBack: () => {
+      try { sessionStorage.removeItem('tt-pending-otp'); } catch (e) {}
+      go('/register', { replace: true });
+    } }));
     const wrap = el('div', { style: { padding: '14px 4px', textAlign: 'center' } });
     // No logo here. It pushed the code boxes down the screen for no purpose -
     // nobody reaching this point needs reminding which app they are in.
@@ -901,7 +914,7 @@
     wrap.appendChild(el('div', { class: 'otp-resend' }, [
       el('a', { class: 'auth-link', onclick: () => {
         try { sessionStorage.removeItem('tt-pending-otp'); } catch (e) {}
-        go('/register');
+        go('/register', { replace: true });
       } }, 'البريد غير صحيح؟ غيّره'),
     ]));
 

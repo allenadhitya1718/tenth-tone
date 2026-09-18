@@ -150,14 +150,20 @@
     return sessionProbe;
   }
 
+  // Screens that only make sense signed out.
+  const AUTH_SCREENS = ['/login', '/welcome', '/onboarding', '/register'];
+  // Someone already typing their credentials must not be yanked away
+  // mid-word, even though they are in fact signed in.
+  function authScreenTyping() {
+    return [].slice.call(document.querySelectorAll('#app input, #app textarea'))
+      .some(function (i) { return i.value; });
+  }
+
   // The session turned up after we had already painted as signed-out.
   function onLateSession() {
     const { path } = parseHash();
     const onAuthScreen = ['/', '/login', '/welcome', '/onboarding'].indexOf(path) > -1;
-    // Someone already typing their credentials must not be yanked away
-    // mid-word, even though they are in fact signed in.
-    const typing = [].slice.call(document.querySelectorAll('#app input, #app textarea'))
-      .some(function (i) { return i.value; });
+    const typing = authScreenTyping();
     // Replace the auth screen in history rather than stacking the feed on
     // top of it, or Android's back button walks straight back to "sign in".
     if (onAuthScreen && !typing) { history.replaceState(null, '', '#/home'); }
@@ -180,6 +186,17 @@
     if (!session && !isPublic(path)) {
       location.hash = '#/login';
       return;
+    }
+    // A signed-in person never sees a sign-in screen. One can still turn up
+    // from history on a phone whose back control walks the WebView's own
+    // history (18 Sep: back from the feed showed the login page on Android
+    // 1.4.12), so land on the feed instead - replacing the entry, so the
+    // next back cannot find it again. The tour stays reachable on purpose
+    // (#/onboarding?tour=1 from Settings), and someone mid-way through
+    // typing on one of these screens is not yanked away (as onLateSession).
+    if (session && AUTH_SCREENS.indexOf(path) > -1 && !(path === '/onboarding' && q.tour) && !authScreenTyping()) {
+      history.replaceState(null, '', '#/home');
+      return render();
     }
     // A signed-in person lands on their feed. A signed-out one falls through
     // to the route table, which shows the tour on a first visit and the
@@ -255,6 +272,24 @@
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && sess && window.Push) {
         window.Push.register();
       }
+      // What the last back press did, reported now that there is someone to
+      // report it as (backDecision below writes the receipt). The 18 Sep
+      // report could not be explained from a browser, so the phone keeps it.
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && sess && window.API && window.API.logClient) {
+        try {
+          const raw = localStorage.getItem('tt-back-last');
+          if (raw) {
+            localStorage.removeItem('tt-back-last');
+            const cap = window.Capacitor;
+            window.API.logClient('back_prev', Object.assign(JSON.parse(raw), {
+              event: event,
+              platform: cap && cap.getPlatform ? cap.getPlatform() : 'web',
+              plugin: !!window.__ttBackPlugin,
+              plugins: cap && cap.PluginHeaders ? cap.PluginHeaders.map(function (h) { return h.name; }).join(',') : '',
+            }));
+          }
+        } catch (e) {}
+      }
       // Signing in is the clearest possible statement that the account was
       // not meant to go away. Not awaited: it changes how OTHER people see
       // this account, so nothing on the screen we are about to render is
@@ -293,23 +328,42 @@
 
   window.addEventListener('hashchange', render);
 
-  // Android's back button. Capacitor delivers it here; without a listener
-  // the WebView walked its own history, and the entry under the feed was the
-  // login screen - so "back" from the feed asked a signed-in person to sign
-  // in again. On a root screen, back leaves the app, like every other app.
-  // Anywhere else it goes back one step. iOS has no such button; harmless.
+  // ── Android's back button ──
+  // On a root screen, back leaves the app, like every other app; anywhere
+  // else it goes back one step. Two routes reach the same decision:
+  //   1. MainActivity.java asks the page (window.__ttBack) and finishes the
+  //      activity on 'exit'. It registers after the plugins, so Android
+  //      consults it first.
+  //   2. The App plugin's backButton event - the 1.4.11 fix - kept as the
+  //      fallback for a shell that predates (1).
+  // 1.4.11 relied on (2) alone, and an Android phone on 1.4.12 still walked
+  // history from the feed to the login screen (18 Sep). In a browser the
+  // handler exits every time, so the decision moved out of the plugin's
+  // hands, and each press leaves a receipt that the next sign-in reports
+  // (see onAuthChange): which route ran and what it chose. iOS has no such
+  // button; all of this is inert there.
+  const ROOTS = ['/', '/home', '/discover', '/inbox', '/profile', '/login', '/welcome', '/onboarding'];
+  let lastBackAt = 0;
+  function backDecision(source) {
+    // One press, one step - even if both routes were ever to deliver it.
+    if (Date.now() - lastBackAt < 400) return 'handled';
+    lastBackAt = Date.now();
+    const { path } = parseHash();
+    const exit = ROOTS.indexOf(path) > -1 || history.length <= 1;
+    try {
+      localStorage.setItem('tt-back-last', JSON.stringify({ path: path, exit: exit, len: history.length, source: source, at: new Date().toISOString() }));
+    } catch (e) {}
+    if (!exit) history.back();
+    return exit ? 'exit' : 'handled';
+  }
+  window.__ttBack = function (source) { return backDecision(source || 'native'); };
   (function () {
     const cap = window.Capacitor;
     const App = cap && cap.Plugins && cap.Plugins.App;
-    if (!App || typeof App.addListener !== 'function') return;
-    const ROOTS = ['/', '/home', '/discover', '/inbox', '/profile', '/login', '/welcome', '/onboarding'];
+    window.__ttBackPlugin = !!(App && typeof App.addListener === 'function');
+    if (!window.__ttBackPlugin) return;
     App.addListener('backButton', function () {
-      const { path } = parseHash();
-      if (ROOTS.indexOf(path) > -1 || history.length <= 1) {
-        try { App.exitApp(); } catch (e) {}
-        return;
-      }
-      history.back();
+      if (backDecision('plugin') === 'exit') { try { App.exitApp(); } catch (e) {} }
     });
   })();
   // Language switch re-renders the current view from its Arabic source
