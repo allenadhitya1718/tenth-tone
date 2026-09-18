@@ -419,6 +419,17 @@
           if (cam) await cam.setEnabled(!!on);
           return !!(cam && cam.enabled);
         },
+        // Front/back. The live session had this; a video call did not.
+        // setDevice takes a deviceId, not a constraints object.
+        switchCamera: async () => {
+          if (!cam) return false;
+          const want = cam._mediaStreamTrack.getSettings().facingMode === 'user' ? 'environment' : 'user';
+          const cams = await AgoraRTC.getCameras();
+          const next = cams.find(d => (d.label || '').toLowerCase().includes(want === 'user' ? 'front' : 'back'));
+          if (!next) return false;
+          await cam.setDevice(next.deviceId);
+          return true;
+        },
 
         // Nothing to route until the other side is actually sending audio.
         canRouteAudio: () => remoteAudio.size > 0,

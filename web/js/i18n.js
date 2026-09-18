@@ -2070,8 +2070,11 @@
     // what the next tap will do, not what the control is called.
     // ('إلغاء الكتم' is already above, shared with the muted-accounts screen.)
     'سماعة الأذن': 'Earpiece',
-    'إيقاف الكاميرا': 'Turn camera off',
-    'تشغيل الكاميرا': 'Turn camera on',
+    'إيقاف الكاميرا': 'Camera off',     // short: under a 58px circle it wrapped onto two lines
+    'تشغيل الكاميرا': 'Camera on',
+    'قلب الكاميرا': 'Flip camera',
+    'تعذر تبديل الكاميرا': 'Could not switch camera',
+    'تصغير': 'Minimize',
     'تعذر تغيير حالة الميكروفون': 'Could not change the microphone',
     'تعذر تغيير مخرج الصوت': 'Could not change audio output',
     'تعذر تغيير حالة الكاميرا': 'Could not change the camera',
