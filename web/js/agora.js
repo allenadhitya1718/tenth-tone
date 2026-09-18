@@ -459,11 +459,21 @@
         // why it is not done for voice.
         enableVideo: async () => {
           if (web) return web.enableVideo();
-          const ws = await Agora.startCall({
-            channel: channel, withVideo: true,
-            localVideoEl: localEls.local, remoteVideoEl: localEls.remote,
-            onRemote: onRemote, onError: onError, onRouteChange: onRouteChange,
-          });
+          let ws;
+          try {
+            ws = await Agora.startCall({
+              channel: channel, withVideo: true,
+              localVideoEl: localEls.local, remoteVideoEl: localEls.remote,
+              onRemote: onRemote, onError: onError, onRouteChange: onRouteChange,
+            });
+          } catch (e) {
+            // takeCallSlot() inside startCall already evicted the native half,
+            // so a failure here leaves no call at all rather than the voice
+            // call we started with. Recorded, because the screen can only say
+            // "could not turn on video" and that would not explain the silence.
+            try { if (window.API && window.API.logClient) window.API.logClient('call_native_handover', { to: 'web', ok: false, why: String((e && e.message) || e).slice(0, 120) }); } catch (x) {}
+            throw e;
+          }
           // startCall took the call slot, which already stopped the native
           // half through slot.stop; this is belt and braces and is safe twice.
           dropSubs();
@@ -508,11 +518,18 @@
           try { return await p.stats(); } catch (e) { return null; }
         },
 
+        // `stopped` guards the NATIVE half only, and deliberately so.
+        // enableVideo() calls Agora.startCall, whose first act is
+        // takeCallSlot() - which evicts this session and calls this very
+        // function, setting stopped. If that flag also short-circuited the
+        // web branch, then after a video handover the hang-up would return
+        // here, do nothing, and leave the web session joined: a call nobody
+        // is in, still holding a microphone and still billing.
         stop: async () => {
+          dropSubs();
+          if (web) { const w = web; web = null; try { await w.stop(); } catch (e) {} return; }
           if (stopped) return;
           stopped = true;
-          dropSubs();
-          if (web) { try { await web.stop(); } catch (e) {} return; }
           try { await p.leave(); } catch (e) {}
         },
       };
