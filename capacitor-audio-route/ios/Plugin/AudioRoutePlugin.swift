@@ -183,10 +183,17 @@ public class AudioRoutePlugin: CAPPlugin {
 
         // Activating is idempotent and can legitimately fail while another app
         // holds the session; that is not a reason to skip the override below.
-        do {
-            try session.setActive(true, options: [])
-        } catch {
-            print("AudioRoute: setActive failed: \(error.localizedDescription)")
+        //
+        // Only on the way in, though. "Idempotent" here still means a round
+        // trip into the audio daemon, and this runs on every single route
+        // change - mid-call, over a live capture, for no gain once the session
+        // is already ours and active.
+        if !configured {
+            do {
+                try session.setActive(true, options: [])
+            } catch {
+                print("AudioRoute: setActive failed: \(error.localizedDescription)")
+            }
         }
 
         configured = true
@@ -224,8 +231,28 @@ public class AudioRoutePlugin: CAPPlugin {
     /// Forcing the input to the phone's own microphone is the documented way
     /// to route AWAY from a connected Bluetooth headset. Without it, "earpiece"
     /// with AirPods connected just stays on the AirPods.
+    ///
+    /// But setPreferredInput RESTARTS the audio I/O unit, and WKWebView's
+    /// WebRTC capture does not survive that: the microphone stops and the far
+    /// side goes silent in the same instant. That is "switching to the earpiece
+    /// breaks the whole call", reported three times.
+    ///
+    /// It is only ever NEEDED to walk off a Bluetooth headset - clearing the
+    /// output override alone will not leave one. With no headset in the picture
+    /// the input is already the built-in microphone, so setting it again buys
+    /// nothing and costs the call. The phone that reported this has no headset
+    /// at all: its own log says `"bt": false`, and iOS confirmed the output
+    /// really did reach `builtInReceiver` - the route moved, and the call died
+    /// moving it.
+    ///
+    /// So: only when it would actually change something.
     private func preferBuiltInMic() {
         let inputs = session.availableInputs ?? []
+        let activeIsBuiltIn = session.currentRoute.inputs.first?.portType == .builtInMic
+        let preferred = session.preferredInput
+        if activeIsBuiltIn && (preferred == nil || preferred?.portType == .builtInMic) {
+            return                       // already there; touching it would only break things
+        }
         if let builtIn = inputs.first(where: { $0.portType == .builtInMic }) {
             try? session.setPreferredInput(builtIn)
         } else {
@@ -236,6 +263,8 @@ public class AudioRoutePlugin: CAPPlugin {
     private func preferBluetoothInput() {
         let inputs = session.availableInputs ?? []
         if let bt = inputs.first(where: { isBluetooth($0.portType) }) {
+            // Same rule as above: already on it means leave it alone.
+            if session.preferredInput?.uid == bt.uid { return }
             try? session.setPreferredInput(bt)
         } else {
             // A listen-only A2DP device has no input port to prefer; clearing

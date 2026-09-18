@@ -5908,6 +5908,7 @@ function autoPlay(video) {
     let vnStream = null, vnRec = null, vnChunks = [], vnMime = '';
     let vnCtx = null, vnAnalyser = null, vnBuf = null, vnRaf = 0;
     let vnMeterTrack = null;      // the level meter's OWN copy of the microphone
+    let vnPcm = null;             // WebKit: the samples, read straight off the microphone
     // WebKit's MediaRecorder is a different animal and the iPhone logs say so.
     // Not a "browser sniff" for behaviour we could feature-detect: there is no
     // flag that reports "mp4 cannot be fragmented mid-recording", and the cost
@@ -6012,6 +6013,92 @@ function autoPlay(video) {
       }
     }
 
+    // ── Recording on WebKit without MediaRecorder ──
+    //
+    // Two rounds of fixes went into making MediaRecorder work on an iPhone -
+    // a 250 ms timeslice, then no timeslice; the level meter taking its own
+    // copy of the microphone instead of the recorder's - and the phone's own
+    // log says both failed the same way:
+    //
+    //   {"v":"1.4.14","mime":"audio/mp4","bytes":0,"chunks":0,"heldMs":7329,"webkit":true}
+    //
+    // Seven seconds of holding the button and not one byte. So MediaRecorder
+    // is not used on WebKit at all any more. These read the samples off the
+    // microphone through Web Audio - the same route the level meter has always
+    // used successfully on that phone, which is the proof that the microphone
+    // itself is fine - and write a WAV. There is no container to negotiate,
+    // no codec to support and nothing to hand back empty.
+    //
+    // WAV is uncompressed: about 32 KB a second at 16 kHz mono, so a ten
+    // second note is ~320 KB. Larger than AAC and worth it for a voice note
+    // that exists rather than one that does not.
+    function vnPcmStart(stream) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try {
+        const ctx = new AC();
+        if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} }
+        const src = ctx.createMediaStreamSource(stream);
+        const node = ctx.createScriptProcessor(4096, 1, 1);
+        const chunks = [];
+        node.onaudioprocess = (e) => {
+          // The buffer is reused between callbacks, so it has to be copied.
+          chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+        };
+        // A ScriptProcessor only runs while connected to the destination, and
+        // connecting the microphone to the speaker would put the caller's own
+        // voice in their ear. Through a silent gain: it runs, nothing is heard.
+        const mute = ctx.createGain();
+        mute.gain.value = 0;
+        src.connect(node); node.connect(mute); mute.connect(ctx.destination);
+        return { ctx, src, node, mute, chunks, rate: ctx.sampleRate };
+      } catch (e) { console.warn('vn: sample recorder failed to start:', e); return null; }
+    }
+
+    function vnPcmStop(p) {
+      if (!p) return null;
+      try { p.node.onaudioprocess = null; } catch (e) {}
+      try { p.src.disconnect(); p.node.disconnect(); p.mute.disconnect(); } catch (e) {}
+      try { p.ctx.close(); } catch (e) {}
+      return vnEncodeWav(p.chunks, p.rate);
+    }
+
+    function vnEncodeWav(chunks, sampleRate) {
+      let len = 0;
+      for (const c of chunks) len += c.length;
+      if (!len) return null;
+      const pcm = new Float32Array(len);
+      let o = 0;
+      for (const c of chunks) { pcm.set(c, o); o += c.length; }
+
+      // Speech does not need 48 kHz. 16 kHz is what every voice-note format
+      // uses and it is a third of the bytes.
+      const target = Math.min(16000, sampleRate || 16000);
+      const ratio = (sampleRate || target) / target;
+      const outLen = Math.max(1, Math.floor(pcm.length / ratio));
+      const out = new Int16Array(outLen);
+      for (let i = 0; i < outLen; i++) {
+        const v = Math.max(-1, Math.min(1, pcm[Math.floor(i * ratio)] || 0));
+        out[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
+      }
+
+      const bytes = out.length * 2;
+      const buf = new ArrayBuffer(44 + bytes);
+      const dv = new DataView(buf);
+      const str = (off, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i)); };
+      str(0, 'RIFF'); dv.setUint32(4, 36 + bytes, true); str(8, 'WAVE');
+      str(12, 'fmt '); dv.setUint32(16, 16, true);
+      dv.setUint16(20, 1, true);            // PCM
+      dv.setUint16(22, 1, true);            // mono
+      dv.setUint32(24, target, true);
+      dv.setUint32(28, target * 2, true);   // byte rate
+      dv.setUint16(32, 2, true);            // block align
+      dv.setUint16(34, 16, true);           // bits
+      str(36, 'data'); dv.setUint32(40, bytes, true);
+      new Int16Array(buf, 44).set(out);
+      return new Blob([buf], { type: 'audio/wav' });
+    }
+
     function vnPickMime() {
       // audio/mp4 FIRST. This list used to start with webm;codecs=opus, so
       // Android recorded WebM - which iOS cannot play at all, in Safari or in
@@ -6084,6 +6171,7 @@ function autoPlay(video) {
         } catch (e) {}
         vnRec = null;
       }
+      if (vnPcm) { try { vnPcmStop(vnPcm); } catch (e) {} vnPcm = null; }
       if (vnStream) {
         try { vnStream.getTracks().forEach(t => t.stop()); } catch (e) {}
         vnStream = null;
@@ -6179,16 +6267,25 @@ function autoPlay(video) {
       // hand the microphone straight back instead of opening one in silence.
       if (vnAbandon) { try { stream.getTracks().forEach(t => t.stop()); } catch (e) {} return; }
       vnStream = stream;
-      vnMime = vnPickMime();
-      try {
-        vnRec = new MediaRecorder(stream, vnMime ? { mimeType: vnMime, audioBitsPerSecond: 64000 } : undefined);
-      } catch (e) {
-        vnReleaseMic(); vnReset();
-        toast('المتصفح لا يدعم تسجيل الصوت'); return;
-      }
       vnChunks = []; vnPeaks = []; vnLive = []; vnDiscard = false;
-      vnRec.ondataavailable = (e) => { if (e.data && e.data.size) vnChunks.push(e.data); };
-      vnRec.onstop = vnOnStop;
+      if (VN_WEBKIT) {
+        // No MediaRecorder here. See vnPcmStart.
+        vnMime = 'audio/wav';
+        vnPcm = vnPcmStart(stream);
+        if (!vnPcm) { vnReleaseMic(); vnReset(); toast('تعذر بدء التسجيل'); return; }
+      } else {
+        vnMime = vnPickMime();
+        try {
+          vnRec = new MediaRecorder(stream, vnMime ? { mimeType: vnMime, audioBitsPerSecond: 64000 } : undefined);
+        } catch (e) {
+          vnReleaseMic(); vnReset();
+          toast('المتصفح لا يدعم تسجيل الصوت'); return;
+        }
+      }
+      if (vnRec) {
+        vnRec.ondataavailable = (e) => { if (e.data && e.data.size) vnChunks.push(e.data); };
+        vnRec.onstop = vnOnStop;
+      }
       // A timeslice on Chrome, none on WebKit.
       //
       // The previous comment here had this backwards. Chunking every 250 ms
@@ -6197,8 +6294,10 @@ function autoPlay(video) {
       // audio/mp4, and mp4 cannot be cut into playable fragments part-way
       // through, so there is nothing to hand over until the file is finalised
       // at stop(). Asking for slices there gets you no slices and no file.
-      try { vnRec.start(VN_WEBKIT ? undefined : 250); }
-      catch (e) { vnReleaseMic(); vnReset(); toast('تعذر بدء التسجيل'); return; }
+      if (vnRec) {
+        try { vnRec.start(250); }
+        catch (e) { vnReleaseMic(); vnReset(); toast('تعذر بدء التسجيل'); return; }
+      }
 
       vnStartAt = Date.now();
       vnRtl = vnAxis() < 0;
@@ -6223,6 +6322,17 @@ function autoPlay(video) {
       // it must not turn the discarded take back into a preview.
       if (vnDiscard) return;
       if (vnStarting) { vnAbandon = true; vnDiscard = true; vnReset(); return; }
+      // WebKit: there is no recorder to wait for. The samples are already in
+      // hand, so encode them and take the same ending as every other engine.
+      if (vnPcm) {
+        if (vnTick) { clearInterval(vnTick); vnTick = null; }
+        if (vnRaf) { cancelAnimationFrame(vnRaf); vnRaf = 0; }
+        const wav = vnPcmStop(vnPcm);
+        vnPcm = null;
+        if (wav) vnChunks = [wav];
+        vnOnStop();
+        return;
+      }
       if (!vnRec) { vnReset(); return; }
       // Only the timer and the meter stop here; the recorder still has to emit
       // its last chunk, so the microphone is released inside onstop.
@@ -6259,7 +6369,7 @@ function autoPlay(video) {
       // iPhone gets diagnosed from here instead of guessed at.
       const bytes = chunks.reduce((n, c) => n + (c.size || 0), 0);
       if (window.API && window.API.logClient) {
-        window.API.logClient('vn_stop', { chunks: chunks.length, bytes: bytes, mime, heldMs, discard: !!discard, webkit: VN_WEBKIT });
+        window.API.logClient('vn_stop', { chunks: chunks.length, bytes: bytes, mime, heldMs, discard: !!discard, webkit: VN_WEBKIT, via: VN_WEBKIT ? 'pcm' : 'mediarecorder' });
       }
       vnReleaseMic();
       if (discard) { vnReset(); return; }
