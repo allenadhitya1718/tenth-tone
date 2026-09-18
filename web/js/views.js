@@ -5016,6 +5016,9 @@ function autoPlay(video) {
     // for their realtime echo. Together these stop a sent message appearing
     // twice in the sender's own thread — see appendMessage.
     const renderedIds = new Set();
+    // Every message drawn, by id. Used to repair a reply that arrives live:
+    // see appendMessage.
+    const messagesById = new Map();
     // Cleared on EVERY outcome, including a send that succeeded but came back
     // without an id. A tracker left behind is not harmless: the next message
     // of the same type and text would have its echo adopt this dead node, and
@@ -5096,6 +5099,24 @@ function autoPlay(video) {
 
     function appendMessage(m) {
       const mine = m.from_user_id === myUserId;
+
+      // ── A reply that arrives live is not a reply to a deleted message ──
+      // fetchMessages JOINS the parent in as `reply_to`; a realtime INSERT
+      // carries the raw row, which has `reply_to_id` and nothing else. The
+      // renderer reads that as "the target was deleted" and draws
+      // "رسالة محذوفة" - until the thread is reloaded and the join comes
+      // back, which is exactly the reported shape: wrong at first, right
+      // after leaving and returning.
+      //
+      // The parent is nearly always already on screen - you just swiped on
+      // it - so use the copy we have rather than asking the server again.
+      // If it genuinely is not there, the "deleted" fallback still stands,
+      // which is what it is for.
+      if (m && m.reply_to_id && !m.reply_to) {
+        const parent = messagesById.get(m.reply_to_id);
+        if (parent) m = Object.assign({}, m, { reply_to: parent });
+      }
+      if (m && m.id) messagesById.set(m.id, m);
 
       // ── Send it once, show it once ──
       // Sending drew the bubble immediately (so it appears without waiting on
