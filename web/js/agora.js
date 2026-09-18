@@ -409,7 +409,10 @@
         subs.push(await p.addListener('remoteChanged', (ev) => {
           if (web) return;
           remotes = (ev && ev.remotes) || 0;
-          onRemote && onRemote({ remotes: remotes, hasRemoteVideo: false });
+          // The SAME shape the web session's state() reports - the call screen
+          // reads these names off it, and a native session inventing its own
+          // would leave the screen reading undefined and drawing nothing.
+          onRemote && onRemote({ hasRemoteAudio: remotes > 0, hasRemoteVideo: false, remoteCount: remotes });
         }));
         subs.push(await p.addListener('callError', (ev) => {
           if (web) return;
