@@ -1,3 +1,31 @@
+# FLYP handoff — 2026-09-18: v1.4.17, and the bug behind the bug
+
+> **Newest first. v1.4.17 is on TestFlight (build 1789755291) and the APK is
+> on the v1.4.17 Release.** Memory: `flyp-ios-signing-and-chat-history`.
+> - **LONG CHATS WERE HIDING EVERYTHING RECENT.** `fetchMessages` asked for the
+>   OLDEST hundred (`ascending: true` + limit). The reported chat holds 117, so
+>   opening it showed history to 17 Sep 23:13 and nothing after. Reported as "a
+>   voice note that never arrived"; it had been losing ordinary text the same
+>   way, and it disabled `catchUp()` (which re-reads the thread after a dropped
+>   websocket) because that re-read the same old hundred. Now newest-first,
+>   reversed for the caller. **Hours were spent proving the file, upload,
+>   content-type, RLS, push and playback were all fine - they were, and it was
+>   irrelevant. When a bug will not reproduce, compare the SIZE of the real
+>   data against the test data** (local chats: 12 and 59 messages).
+> - Also in 1.4.17: the earpiece repair can no longer hang the app (it was
+>   asking for a new microphone from inside the fault - that was MY bug from
+>   1.4.16); the voice bubble now carries the `.bubble.voice` class the
+>   stylesheet was always written for; a voice note that will not play logs why.
+> - **iOS signing, half solved.** A distribution `.p12` is now supplied and IS
+>   being used - but the ARCHIVE step signs with a DEVELOPMENT certificate by
+>   design (the export re-signs), so the 2-certificate cap still fills at one
+>   per build. The user revoked 3 on 18 Sep to unblock. **A development CSR is
+>   already generated** at scratchpad `signing/flyp-dev.certSigningRequest`;
+>   creating that cert and putting BOTH pairs in one .p12 ends it for good.
+> - Still unexplained: the user reported the whole app freezing on the earpiece
+>   switch. 1.4.16 logs showed my repair starting and never finishing, which is
+>   fixed - but if it recurs on 1.4.17 it is something else.
+
 # FLYP handoff — 2026-09-18: v1.4.16, and the earpiece finally explained
 
 > **Newest first. v1.4.16 is on TestFlight (build 1789748585) and the APK is
