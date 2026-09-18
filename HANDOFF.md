@@ -16,12 +16,15 @@
 >   asking for a new microphone from inside the fault - that was MY bug from
 >   1.4.16); the voice bubble now carries the `.bubble.voice` class the
 >   stylesheet was always written for; a voice note that will not play logs why.
-> - **iOS signing, half solved.** A distribution `.p12` is now supplied and IS
->   being used - but the ARCHIVE step signs with a DEVELOPMENT certificate by
->   design (the export re-signs), so the 2-certificate cap still fills at one
->   per build. The user revoked 3 on 18 Sep to unblock. **A development CSR is
->   already generated** at scratchpad `signing/flyp-dev.certSigningRequest`;
->   creating that cert and putting BOTH pairs in one .p12 ends it for good.
+> - **iOS signing, half solved.** A distribution `.p12` is supplied and IS being
+>   used - but the ARCHIVE step signs with a DEVELOPMENT certificate by design
+>   (the export re-signs), so the 2-certificate cap still fills at one per
+>   build. The user revoked 3 on 18 Sep to unblock; expect it to need doing
+>   again in about three iOS builds. Ending it for good needs a development
+>   cert too, both pairs in ONE .p12 under the existing secret. The CSR that
+>   was prepared for it is GONE - the signing folder was deleted (correctly,
+>   it held private keys) - so that starts from a fresh key. Recipe in
+>   `flyp-ios-signing-and-chat-history`.
 > - Still unexplained: the user reported the whole app freezing on the earpiece
 >   switch. 1.4.16 logs showed my repair starting and never finishing, which is
 >   fixed - but if it recurs on 1.4.17 it is something else.
