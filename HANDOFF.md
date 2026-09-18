@@ -1,3 +1,37 @@
+# FLYP handoff — 2026-09-18 (evening)
+
+> **Newest first (18 Sep, evening).** Commit `cb7a242` on
+> `fixes/apk-review-and-security`, pushed, **NOT tagged** (a tag is a build;
+> the user tags). Migration **0092 applied live**; `agora-token` redeployed.
+> Memory: `flyp-group-calls-and-call-screen-v3`.
+> - **Calls: switch to video mid-call.** "Video" on a voice call opens the
+>   camera, publishes, then flips the row's kind; the other side enters video
+>   mode from the row or from the picture arriving (either order), camera OFF
+>   until they choose. Session: `enableVideo`/`switchCamera`; remote tracks
+>   keyed by uid; `user-left` handled (a hung-up peer's picture used to stay).
+> - **Add people to a call (0092).** An invite is a `calls` row with `root_id`;
+>   `call_members` is kept by triggers on `calls`; `leave_call()` = "I left";
+>   the root ends by trigger when fewer than two remain joined; members may
+>   read/update the channel's calls rows. **`agora-token` took ONE row of the
+>   channel and refused an added person (403, silent in the channel)** - it now
+>   reads every row and confirms membership. The app's own limit of 10
+>   calls/hour to the same person applies to invites AND to test rows.
+> - **The screen, after the user's reference:** state line over a large name,
+>   a 3 x 2 grid (speaker · video/camera · mute / add · end · more; More holds
+>   Message and Flip), dark grey-to-black ground ("keep it black or grey"),
+>   the group's faces in the middle, one video tile per person; the incoming
+>   screen matches. **Sheets opened from the call screen were drawn UNDER it**
+>   (z 100 < 120) - last night's audio-output picker included; fixed.
+> - **Push tested on the real path:** `push_test` notifications to both phones
+>   at 14:42 IST; FCM and APNs both answered `200 {"sent":1}`. Whether the
+>   phones DISPLAYED it is the user's to confirm.
+> - Verified in the browser: `wk/upgrade_test.mjs` (17), `wk/group_test.mjs`
+>   (24, with extra tabs as the other people), `wk/callshot2.mjs` (the
+>   behaviours that were already right), 8-route smoke. Phone-only: the grid
+>   on a real phone, the route sheet, group audio between real phones; the
+>   Android Java (back button + AudioRoute) compiles for the first time on the
+>   next CI build.
+
 # FLYP handoff — 2026-09-18 (afternoon)
 
 > **Newest first (18 Sep, afternoon).** Three more commits on
