@@ -1,4 +1,42 @@
-# FLYP handoff — 2026-09-18
+# FLYP handoff — 2026-09-18 (afternoon)
+
+> **Newest first (18 Sep, afternoon).** Three more commits on
+> `fixes/apk-review-and-security`, pushed, **NOT tagged** (a tag is a build; the
+> user tags): `820154d` messaging like Instagram, `085edf0` back button,
+> `13f3c8f` call screen. Memory notes: `flyp-back-button-and-call-screen`,
+> `flyp-call-inbox-feed-batch`.
+> - **Messaging = Instagram (0091 applied live):** the 0089 default of
+>   'following' was the wrong lever — it refused strangers at the door. FLYP
+>   already trays them (Requests tab, `chat_request_flags()`, `accept_on_reply`);
+>   the default is back to 'everyone'. The dev account (`user_d6aceb49`) still
+>   has 'following' saved by hand — change it in Settings if "not accepting
+>   messages" shows for that account.
+> - **Back from the feed → login page (Android), reported a third time.** The
+>   sessions table caught it live on 1.4.12 (two sign-ins on the Android phone
+>   six minutes apart, 00:52 / 00:58 IST). The 1.4.11 JS listener is provably
+>   correct in a browser; why the phone walked history could not be found by
+>   reading, so the fix no longer depends on that path: the whole sign-in
+>   funnel now REPLACES history entries (one entry for tour → welcome → login
+>   → feed), `render()` bounces a signed-in person off any auth screen reached
+>   from history, and **MainActivity.java handles back natively** (registered
+>   after the plugins, so it outranks them; asks the page `window.__ttBack`).
+>   Every press leaves a receipt that the next sign-in logs to `client_logs` as
+>   `back_prev` — **read that first if the phone still misbehaves.** The Java is
+>   uncompiled here (no JDK): the next Android CI build compiles it AND the
+>   AudioRoute plugin for the first time. Watch both.
+> - **Call screen redesigned** ("looks bad, only 3 options"): blurred photo
+>   backdrop, top bar (minimise · kind · message on video), frosted dock:
+>   voice = Mute · Speaker · Message · End; video = Mute · Camera · Flip ·
+>   Speaker · End. Minimise/Message appear once connected (leaving a ringing
+>   call cancels it). `switchCamera` added to the call session. Screenshots in
+>   scratchpad `5fc2c807…/shots/call_*.png`.
+> - Whole-app smoke clean after all of it (8 routes, 0 console errors).
+> - Tooling: `graphify.exe` is blocked by Windows Application Control (same
+>   policy as WebKit) — try once, then read source. Playwright CDP: run scripts
+>   one at a time; stray pages from a crashed script wedge the attach
+>   (`/json/close/<id>`). Details in `flyp-playwright-testing`.
+
+# FLYP handoff — 2026-09-18 (morning)
 
 > **Newest first (18 Sep).** A large call/chat/feed/push batch is committed as
 > `da8c123` on `fixes/apk-review-and-security`, **NOT tagged** (a tag is a
@@ -9,7 +47,8 @@
 >   seconds, and Bluetooth routing + an output picker were added. The **Android
 >   call plugin has never compiled here (no JDK)** — the first CI Android build
 >   is its first compile; watch that step (AudioDeviceInfo APIs vs minSdk 22).
-> - **Chat:** who-can-message default is now 'following' (0089); the inbox
+> - **Chat:** who-can-message default was set to 'following' (0089) — **reverted
+>   to 'everyone' by 0091, see the afternoon block above**; the inbox
 >   preview, unread dot and Chat-tab badge update live without opening the chat.
 > - **Push actually works now:** the trigger had been calling the wrong schema's
 >   http_post, so EVERY push (and the hourly media-reconcile cron) silently made
