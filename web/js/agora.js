@@ -520,8 +520,21 @@
             speakerOn = !!(r && r.speakerOn);
           } catch (e) { onError && onError(e); }
           onRouteChange && onRouteChange(speakerOn);
+          // ── Read the route back only after it has moved ──
+          // An iOS route change is asynchronous: currentRoute immediately
+          // after the switch still describes the OLD route. Reading it too
+          // early is what produced "the first tap says speaker and nothing
+          // happens; the second tap works" - the tick in the sheet landed on
+          // the wrong row, so it took two taps to look right. The plugin
+          // allows 0.25 s for its own settle; this waits the same.
+          await new Promise(res => setTimeout(res, 300));
           const now = await readRoute();
-          return now || { route: speakerOn ? 'speaker' : 'earpiece', speakerOn: speakerOn };
+          // Agora's own answer is authoritative for speaker-vs-not; the read
+          // is only there to NAME the route (bluetooth, wired) for the sheet.
+          if (now && typeof now === 'object') {
+            return Object.assign({}, now, { speakerOn: speakerOn });
+          }
+          return { route: speakerOn ? 'speaker' : 'earpiece', speakerOn: speakerOn };
         },
         isSpeakerOn: () => web ? web.isSpeakerOn() : speakerOn,
         setSpeakerOn: (on) => {
