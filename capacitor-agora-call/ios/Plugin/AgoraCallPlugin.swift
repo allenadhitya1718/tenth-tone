@@ -55,6 +55,26 @@ public class AgoraCallPlugin: CAPPlugin {
     /// Rule for this file: never `q.sync` from inside `q`.
     private let q = DispatchQueue(label: "app.flyp.agoracall.state")
 
+    /// Creating and destroying the engine, in order, one at a time.
+    ///
+    /// AgoraRtcEngineKit is a SINGLETON: sharedEngine and destroy act on the
+    /// same object for the whole process. The teardown has to wait for
+    /// leaveChannel and must not run on a callback thread, so it is
+    /// asynchronous - which means a redial can reach sharedEngine while the
+    /// previous call's destroy is still pending, and that destroy then tears
+    /// down the engine the NEW call is using. The join never completes, the
+    /// 15 s timeout fires, and JS quietly falls back to the web SDK: the
+    /// earpiece silently stops working again, for a reason nobody could see.
+    ///
+    /// So every create and every destroy goes through here, and a queued
+    /// destroy is therefore always finished before the next create begins.
+    private let engineQ = DispatchQueue(label: "app.flyp.agoracall.engine")
+
+    /// Which join attempt is current. A timeout belongs to the attempt that
+    /// armed it and to no other - without this, an abandoned attempt's timer
+    /// fires 15 s later and aborts whatever join happens to be in flight.
+    private var joinGeneration = 0
+
     private var engine: AgoraRtcEngineKit?
 
     /// Held from joinChannel() until the SDK confirms through
@@ -118,18 +138,23 @@ public class AgoraCallPlugin: CAPPlugin {
         // audio session - the exact failure this plugin exists to end.
         teardownEngine()
 
-        let config = AgoraRtcEngineConfig()
-        config.appId = appId
-        // .communication, not .liveBroadcasting: it is the profile meant for
-        // two-way calls, and it matches the web side, which creates its client
-        // with mode 'rtc'. Both halves of one channel must agree.
-        config.channelProfile = .communication
-
-        let kit = AgoraRtcEngineKit.sharedEngine(with: config, delegate: self)
-        // Under the lock like everything else: sharedEngine has already been
-        // handed `self` as its delegate, so callbacks can begin arriving on
-        // Agora's thread from this line onwards.
-        q.sync { engine = kit }
+        // On engineQ, so any destroy still pending from the previous call has
+        // already run. Blocking the bridge queue here is deliberate and brief:
+        // in the ordinary case there is nothing queued and this is immediate.
+        let kit: AgoraRtcEngineKit = engineQ.sync {
+            let config = AgoraRtcEngineConfig()
+            config.appId = appId
+            // .communication, not .liveBroadcasting: it is the profile meant
+            // for two-way calls, and it matches the web side, which creates
+            // its client with mode 'rtc'. Both halves must agree.
+            config.channelProfile = .communication
+            let k = AgoraRtcEngineKit.sharedEngine(with: config, delegate: self)
+            // Under the lock like everything else: sharedEngine has already
+            // been handed `self` as its delegate, so callbacks can begin
+            // arriving on Agora's thread from this line onwards.
+            q.sync { engine = k }
+            return k
+        }
 
         // Audio only. Without this the SDK still prepares a video pipeline,
         // which costs start-up time and can light the camera indicator on a
@@ -149,11 +174,14 @@ public class AgoraCallPlugin: CAPPlugin {
         // builds. reportVad false: speech detection is not needed, only level.
         kit.enableAudioVolumeIndication(300, smooth: 3, reportVad: false)
 
+        var gen = 0
         q.sync {
             speakerOn = wantSpeaker
             micMuted = false
             remotes.removeAll()
             pendingJoin = call
+            joinGeneration += 1
+            gen = joinGeneration
         }
         call.keepAlive = true
 
@@ -174,8 +202,14 @@ public class AgoraCallPlugin: CAPPlugin {
         }
 
         DispatchQueue.main.asyncAfter(deadline: .now() + AgoraCallPlugin.joinTimeout) { [weak self] in
-            guard let self = self, self.pendingJoin != nil, !self.joined else { return }
-            self.finishJoin(error: "join timed out")
+            guard let self = self else { return }
+            var mine = false
+            self.q.sync { mine = (self.joinGeneration == gen && self.pendingJoin != nil && !self.joined) }
+            // Only the attempt that armed this timer may be aborted by it. A
+            // join rejected early (an Agora error, a hang-up while ringing)
+            // leaves this timer running; without the generation check it would
+            // come back and kill an unrelated join placed moments later.
+            if mine { self.finishJoin(error: "join timed out") }
         }
     }
 
@@ -212,8 +246,13 @@ public class AgoraCallPlugin: CAPPlugin {
     @objc func setMuted(_ call: CAPPluginCall) {
         let muted = call.getBool("muted") ?? false
         var kit: AgoraRtcEngineKit?
-        q.sync { kit = engine; micMuted = muted }
-        kit?.muteLocalAudioStream(muted)
+        q.sync { kit = engine }
+        // No engine means nothing was muted. Resolving anyway would have the
+        // call screen paint a muted microphone that is still recording, or an
+        // open one the person believes is off - the worse of the two.
+        guard let kit = kit else { call.reject("not in a call"); return }
+        kit.muteLocalAudioStream(muted)
+        q.sync { micMuted = muted }
         call.resolve(["muted": muted])
     }
 
@@ -323,7 +362,7 @@ public class AgoraCallPlugin: CAPPlugin {
         // off the callback thread, and only then destroy. The 2 s ceiling is
         // there because a dead network must not leak a thread; the audio
         // session still has to come back either way.
-        DispatchQueue.global(qos: .userInitiated).async {
+        engineQ.async {
             let done = DispatchSemaphore(value: 0)
             kit.leaveChannel { _ in done.signal() }
             _ = done.wait(timeout: .now() + 2.0)

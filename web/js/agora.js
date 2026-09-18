@@ -425,8 +425,46 @@
         subs.length = 0;
       };
 
+      // ── Becoming a web session ──
+      // Video needs the WebView: the camera and the video elements live
+      // there. withCamera distinguishes "I turned my camera on" from "they
+      // turned theirs on and I need to see it".
+      //
+      // The SDK is downloaded first, deliberately. Agora.startCall's very
+      // first act is takeCallSlot(), which evicts and stops THIS session -
+      // so from that moment a failure leaves no call at all. loadSdk() is the
+      // slowest and most failure-prone step (a jsDelivr fetch the native path
+      // never had to make), so it happens while the voice call is still up.
+      async function handover(withCamera) {
+        if (web) return true;
+        await loadSdk();
+        let ws;
+        try {
+          ws = await Agora.startCall({
+            channel: channel, withVideo: !!withCamera,
+            localVideoEl: localEls.local, remoteVideoEl: localEls.remote,
+            onRemote: onRemote, onError: onError, onRouteChange: onRouteChange,
+          });
+        } catch (e) {
+          // The native half is already gone (takeCallSlot evicted it), so
+          // there is no call left to return to. Recorded, because the screen
+          // can only say "could not turn on video" and that would not explain
+          // the silence that follows.
+          try { if (window.API && window.API.logClient) window.API.logClient('call_native_handover', { to: 'web', ok: false, why: String((e && e.message) || e).slice(0, 120) }); } catch (x) {}
+          throw e;
+        }
+        dropSubs();
+        try { await p.leave(); } catch (e) {}
+        web = ws;
+        try { if (window.API && window.API.logClient) window.API.logClient('call_native_handover', { to: 'web', ok: true, camera: !!withCamera }); } catch (e) {}
+        return true;
+      }
+
       const session = {
         native: true,
+        // The screen writes this into call_members.agora_uid; without it the
+        // write is a silent no-op on every native call.
+        userId: uid,
         isMuted: () => web ? web.isMuted() : muted,
         setMuted: async (on) => {
           if (web) return web.setMuted(on);
@@ -457,31 +495,14 @@
         // on the same channel, and only once it is up does the native one go.
         // Costs a few seconds of reconnect, which is the honest price and is
         // why it is not done for voice.
-        enableVideo: async () => {
-          if (web) return web.enableVideo();
-          let ws;
-          try {
-            ws = await Agora.startCall({
-              channel: channel, withVideo: true,
-              localVideoEl: localEls.local, remoteVideoEl: localEls.remote,
-              onRemote: onRemote, onError: onError, onRouteChange: onRouteChange,
-            });
-          } catch (e) {
-            // takeCallSlot() inside startCall already evicted the native half,
-            // so a failure here leaves no call at all rather than the voice
-            // call we started with. Recorded, because the screen can only say
-            // "could not turn on video" and that would not explain the silence.
-            try { if (window.API && window.API.logClient) window.API.logClient('call_native_handover', { to: 'web', ok: false, why: String((e && e.message) || e).slice(0, 120) }); } catch (x) {}
-            throw e;
-          }
-          // startCall took the call slot, which already stopped the native
-          // half through slot.stop; this is belt and braces and is safe twice.
-          dropSubs();
-          try { await p.leave(); } catch (e) {}
-          web = ws;
-          try { if (window.API && window.API.logClient) window.API.logClient('call_native_handover', { to: 'web' }); } catch (e) {}
-          return true;
-        },
+        enableVideo: async () => handover(true),
+        // The OTHER side turned their camera on. This session is audio-only -
+        // the native SDK never subscribed to video - so their picture can
+        // never arrive while it is running, and the screen would sit on an
+        // empty video stage. Handing over to the web session WITHOUT opening
+        // our own camera receives their video and leaves ours off, which is
+        // what the web path does for the same event.
+        receiveVideo: async () => handover(false),
 
         // Reading the route is safe while the SDK owns the session -
         // currentRoute is a read - so the picker still shows the truth,
@@ -560,9 +581,6 @@
       // so the worst case here is today's behaviour, never worse.
       if (!withVideo && nativeCallPlugin()) {
         const wn = takeWarm(channel);
-        // A prewarmed microphone is a WebView capture and must not be left
-        // open: two owners of one microphone is the fault this replaces.
-        if (wn && wn.micP) { wn.micP.then(t => { try { if (t) t.close(); } catch (e) {} }).catch(() => {}); }
         // Disarm the OLD route plugin before Agora takes the audio session.
         // It only acts while its own `configured` flag is set, and reset()
         // clears that - but a previous web call that ended abnormally could
@@ -574,6 +592,17 @@
         const nUid = uid || (wn && wn.uid) || newUid();
         let nToken = null;
         try {
+          // ── Close the prewarmed WebView microphone, and WAIT ──
+          // The caller's side warms a getUserMedia track while the phone
+          // rings. Closing it fire-and-forget let WKWebView finish tearing
+          // that capture down AFTER Agora had built its audio unit - and a
+          // WebView capture starting or stopping is precisely what
+          // reconfigures the audio session out from under whoever owns it.
+          // That is the same class of fault as the six earpiece builds, and
+          // it would show as the first second or two of every outgoing call
+          // being silent. Awaiting costs milliseconds: the track has almost
+          // always resolved already.
+          if (wn && wn.micP) { try { const t = await wn.micP; if (t) t.close(); } catch (e) {} }
           nToken = (wn && wn.uid === nUid && wn.tokenP) ? await wn.tokenP : null;
           if (!nToken) nToken = await fetchToken(channel, nUid, 'host');
           at('token');
@@ -686,6 +715,13 @@
         if (cam) { try { cam.close(); } catch (e2) {} }
         if (mic) { try { mic.close(); } catch (e2) {} }
         await client.leave().catch(() => {});
+        // routeAudio(true) above already armed AudioRoutePlugin - it set the
+        // session to call mode and left `configured` true. Leaving it armed
+        // means its route-change handler goes on correcting the audio session
+        // with no call running, and it would then be fighting the NATIVE
+        // engine on the next iPhone voice call. The successful path releases
+        // it in stop(); this one has to as well.
+        await releaseAudioRoute();
         releaseCallSlot(slot);
         throw e;
       }

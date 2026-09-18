@@ -13675,6 +13675,17 @@ function autoPlay(video) {
         media.attachVideo(localVideo, remoteVideo);
         if (media.hasRemoteVideo()) { remoteVideo.hidden = false; showStage(); root.classList.add('has-remote-video'); }
         if (media.hasCamera() && media.isCameraOn()) { localVideo.hidden = false; showStage(); }
+        // An iPhone voice call runs on the native audio-only SDK, which never
+        // subscribed to anybody's video - so when THEY turn a camera on, their
+        // picture cannot arrive and this screen would sit on an empty stage.
+        // Handing over to a web session receives it; the camera stays off,
+        // because they turned theirs on, not us.
+        if (fromRemote && media.native && typeof media.receiveVideo === 'function') {
+          media.receiveVideo().then(() => { paintMedia(); }).catch((e) => {
+            console.warn('receive video:', e);
+            toast('تعذر عرض فيديو الطرف الآخر');
+          });
+        }
       }
       if (fromRemote) toast('الطرف الآخر شغّل الكاميرا');
       paintMedia();
