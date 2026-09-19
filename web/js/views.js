@@ -9228,6 +9228,7 @@ function autoPlay(video) {
             channel: live.id,
             videoEl: previewVideo,
             withVideo: mode === 'camera',
+            facing: facing,          // the lens they framed with, not always the front
             onError: (e) => toast(friendlyError(e)),
           });
           window._ttAgoraHostSession = agoraSession;
@@ -9960,7 +9961,10 @@ function autoPlay(video) {
           // which still paints on top because it comes later in the DOM.
           if (hostSession && hostSession.cam) {
             try {
-              hostSession.cam.play(videoContainer);
+              // Same config as every other view of our own camera: the SDK
+              // must not apply its own mirror, because the class below is the
+              // single thing that decides it. See OWN_CAMERA in agora.js.
+              hostSession.cam.play(videoContainer, { mirror: false, fit: 'cover' });
               videoContainer.style.zIndex = '2';
               // Mirrored for the BROADCASTER only. This same element carries
               // the host's video here and another person's video on the

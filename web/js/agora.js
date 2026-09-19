@@ -13,6 +13,27 @@
   // is a 32-bit unsigned int, so use the range.
   function newUid() { return Math.floor(Math.random() * 2147483646) + 1; }
 
+  // ── Who owns the mirror ──
+  //
+  // Agora mirrors every LOCAL video by default - _getDefaultPlayerConfig()
+  // returns { mirror: true, fit: 'cover' } - and it applies it as an INLINE
+  // style.transform = 'rotateY(180deg)' on the <video> it creates. An inline
+  // style beats any stylesheet rule, so a CSS class can neither add nor
+  // remove that mirror.
+  //
+  // Worse, the SDK SKIPS its own mirror on Safari and on WebKit
+  // (`"Safari"===name && 15===version || wT() || !config.mirror`), which is
+  // precisely why the same video call looked correct on Android and reversed
+  // on the iPhone - the reported bug. And because its mirror is a constant,
+  // not a function of the lens, switching to the BACK camera on Android left
+  // the self-view flipped: hold up writing and it reads backwards to you.
+  //
+  // So the SDK is told never to mirror, and the app owns it in one place -
+  // the .mirror class - which behaves the same on every platform and can
+  // follow the camera. `fit` is restated because passing a config replaces
+  // the defaults, and 'cover' is what the layout has always assumed.
+  const OWN_CAMERA = { mirror: false, fit: 'cover' };
+
   // ── Real earpiece / loudspeaker routing ──
   // A WebView cannot do this: routing belongs to the OS. The call screen was
   // faking it by dropping the remote track's volume to 40% while the button
@@ -239,7 +260,7 @@
     dropWarm,
 
     // ─── HOST: publish your camera+mic to a channel ───
-    async startHost({ channel, uid, videoEl, withVideo = true, onError }) {
+    async startHost({ channel, uid, videoEl, withVideo = true, facing, onError }) {
       if (!AGORA_APP_ID) throw new Error('AGORA_APP_ID not configured');
       const AgoraRTC = await loadSdk();
       AgoraRTC.setLogLevel(2);
@@ -248,7 +269,13 @@
       // the self-view and only the self-view. Viewers must never be mirrored:
       // they are watching somebody else, and flipping that would put their
       // writing backwards.
-      let hostFacing = 'user';
+      //
+      // It comes from the go-live screen, which has a flip button and a live
+      // preview. That choice used to be thrown away here - the broadcast
+      // always opened the FRONT camera - so somebody who framed a shot with
+      // the rear lens and pressed Start broadcast their own face instead.
+      const wantFacing = (facing === 'environment') ? 'environment' : 'user';
+      let hostFacing = wantFacing;
       await client.setClientRole('host');
       // The uid is decided before the token is signed, because a token is
       // bound to one uid and Agora rejects any mismatch.
@@ -279,9 +306,9 @@
         // lens killed the entire stream.
         if (withVideo) {
           try {
-            cam = await AgoraRTC.createCameraVideoTrack({ encoderConfig: '480p_1', facingMode: 'user' });
-            hostFacing = 'user';
-            if (videoEl) cam.play(videoEl);
+            cam = await AgoraRTC.createCameraVideoTrack({ encoderConfig: '480p_1', facingMode: wantFacing });
+            hostFacing = wantFacing;
+            if (videoEl) cam.play(videoEl, OWN_CAMERA);
           } catch (e) { onError && onError(e); cam = null; }
         }
         await client.publish(cam ? [mic, cam] : [mic]);
@@ -705,7 +732,7 @@
           // no call at all, so this one failure is reported and swallowed.
           try {
             cam = await AgoraRTC.createCameraVideoTrack({ encoderConfig: '480p_1', facingMode: 'user' });
-            if (localVideoEl) cam.play(localVideoEl);
+            if (localVideoEl) cam.play(localVideoEl, OWN_CAMERA);
           } catch (e) { onError && onError(e); cam = null; }
         }
         await client.publish(cam ? [mic, cam] : [mic]);
@@ -1024,7 +1051,7 @@
           // through toggleMedia(), which repaints in its own `finally`.
           if (localVideoEl) {
             try { cam.stop(); } catch (e) {}
-            try { cam.play(localVideoEl); } catch (e) {}
+            try { cam.play(localVideoEl, OWN_CAMERA); } catch (e) {}
           }
           try { facing = cam._mediaStreamTrack.getSettings().facingMode || want; } catch (e) { facing = want; }
           return true;
@@ -1037,7 +1064,7 @@
         enableVideo: async () => {
           if (cam) { if (!cam.enabled) await cam.setEnabled(true); return true; }
           const track = await AgoraRTC.createCameraVideoTrack({ encoderConfig: '480p_1', facingMode: 'user' });
-          try { if (localVideoEl) track.play(localVideoEl); } catch (e) {}
+          try { if (localVideoEl) track.play(localVideoEl, OWN_CAMERA); } catch (e) {}
           await client.publish(track);
           cam = track;
           facing = 'user';
@@ -1081,7 +1108,7 @@
         // to draw again.
         attachVideo: (localEl, remoteEl) => {
           localVideoEl = localEl || null; remoteVideoEl = remoteEl || null;
-          try { if (cam && localVideoEl) cam.play(localVideoEl); } catch (e) {}
+          try { if (cam && localVideoEl) cam.play(localVideoEl, OWN_CAMERA); } catch (e) {}
           if (remoteVideoEl) {
             remoteVideoEl.querySelectorAll('.call-tile').forEach(t => t.remove());
             client.remoteUsers.forEach(u => { if (u.videoTrack) playRemoteVideo(u); });
