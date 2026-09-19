@@ -2076,8 +2076,19 @@
   API.inviteToCall = async ({ root, userId }) => {
     const c = await client(); const me = await uid();
     if (!me) throw new Error('not signed in');
+    // ── The invite belongs to a conversation ──
+    // record_call_in_chat (0045) refuses any call row with no chat_id - "a
+    // call placed outside a conversation has nowhere to go" - so an invite
+    // without one leaves the invitee no trace that they were ever called.
+    // Reported exactly that way: "i dont see anything new in his chat".
+    // The DM between the INVITER and the invitee is the right home: it is
+    // the conversation the person will look in, and it is the one whose
+    // membership the insert policy can check. Created if they have never
+    // spoken, which is what a direct call to a stranger does too.
+    let chatId = null;
+    try { if (API.openOrCreateDm) chatId = await API.openOrCreateDm(userId); } catch (e) { chatId = null; }
     const { data, error } = await c.from('calls')
-      .insert({ caller_id: me, callee_id: userId, kind: root.kind, channel: root.channel, root_id: root.id, status: 'ringing' })
+      .insert({ caller_id: me, callee_id: userId, kind: root.kind, channel: root.channel, root_id: root.id, status: 'ringing', chat_id: chatId })
       .select().single();
     if (error) throw error;
     return data;

@@ -13431,6 +13431,19 @@ function autoPlay(video) {
     // Everyone else in the channel: ringing (dimmed) or joined. More than one
     // other person makes it a group: their faces take the middle of the
     // screen and the name line lists them.
+    // ── Your own picture is a mirror ──
+    // The front camera is shown flipped, because that is the face people have
+    // checked in a mirror every morning of their lives; unflipped, moving left
+    // appears to move right and it reads as broken. Reported on iPhone as
+    // "the camera is reversed, moving left moves right". The recording screen
+    // has always done this (.camera-preview.mirror); the CALL screen never
+    // did. The back camera is not mirrored - there is nothing to mirror.
+    function paintMirror() {
+      let front = true;
+      try { front = !media || typeof media.cameraFacing !== 'function' || media.cameraFacing() === 'user'; } catch (e) { front = true; }
+      localVideo.classList.toggle('mirror', !!front);
+    }
+
     function paintPeople() {
       const others = (ActiveCall.members || []).filter(m => m.user_id !== me && (m.status === 'joined' || m.status === 'ringing'));
       const group = others.length > 1;
@@ -13563,6 +13576,7 @@ function autoPlay(video) {
 
     function paintMedia() {
       const live = !!media;
+      paintMirror();
       const muted = live && media.isMuted();
       mute.btn.disabled = !live;
       mute.btn.classList.toggle('on', muted);

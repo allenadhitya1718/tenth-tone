@@ -300,6 +300,10 @@
             const next = cams.find(d => (d.label || '').toLowerCase().includes(want === 'user' ? 'front' : 'back'));
             if (!next) return false;
             await cam.setDevice(next.deviceId);
+            // The host previews through `videoEl`, and the SDK keeps drawing
+            // it across a setDevice here because this track was never re-
+            // attached. The call screen is the one that needed a redraw; see
+            // switchCamera in startCall.
             return true;
           } catch (e) { onError && onError(e); return false; }
         },
@@ -487,6 +491,7 @@
         isCameraOn: () => web ? web.isCameraOn() : false,
         setCameraOn: async (on) => web ? web.setCameraOn(on) : false,
         switchCamera: async () => { if (web) return web.switchCamera(); },
+        cameraFacing: () => web ? web.cameraFacing() : 'user',
         hasRemoteVideo: () => web ? web.hasRemoteVideo() : false,
         canRouteAudio: () => web ? web.canRouteAudio() : remotes > 0,
         remoteCount: () => web ? web.remoteCount() : remotes,
@@ -672,6 +677,10 @@
       at('join');
 
       let mic = null, cam = null;
+      // Which way the camera points, for the self-view mirror. Read from the
+      // track rather than assumed after a switch, because getSettings() is
+      // the only thing that knows what the device actually gave us.
+      let facing = 'user';
       // Put the phone in call mode BEFORE the microphone opens, and wait for
       // it. Doing it afterwards made the OS switch audio mode underneath a
       // running capture - a couple of silent seconds at the start of every
@@ -996,8 +1005,25 @@
           const next = cams.find(d => (d.label || '').toLowerCase().includes(want === 'user' ? 'front' : 'back'));
           if (!next) return false;
           await cam.setDevice(next.deviceId);
+          // ── Re-draw our own preview ──
+          // setDevice swaps the MediaStreamTrack underneath the track object,
+          // and the <video> the SDK built on the OLD one keeps showing its
+          // last frame: "if i switch camera the video stucks for me but for
+          // him its visible". The far side was fine throughout, because
+          // publishing never stopped - only this phone's picture froze.
+          // Tearing the player down and playing again rebuilds it against the
+          // new track. No repaint call from here: the screen drives this
+          // through toggleMedia(), which repaints in its own `finally`.
+          if (localVideoEl) {
+            try { cam.stop(); } catch (e) {}
+            try { cam.play(localVideoEl); } catch (e) {}
+          }
+          try { facing = cam._mediaStreamTrack.getSettings().facingMode || want; } catch (e) { facing = want; }
           return true;
         },
+        // Front or back, for the self-view mirror. You expect to see yourself
+        // in a mirror; the back camera has nothing to mirror.
+        cameraFacing: () => facing,
         // A voice call turning into a video call: open the camera now and
         // publish it. On the far side this is an ordinary 'user-published'.
         enableVideo: async () => {
@@ -1006,6 +1032,7 @@
           try { if (localVideoEl) track.play(localVideoEl); } catch (e) {}
           await client.publish(track);
           cam = track;
+          facing = 'user';
           return true;
         },
 

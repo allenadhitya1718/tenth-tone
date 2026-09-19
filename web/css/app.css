@@ -4410,6 +4410,11 @@ button:focus-visible, a:focus-visible, [role="button"]:focus-visible,
   border: 1px solid rgba(255,255,255,.25);
 }
 .call-local video { width: 100%; height: 100%; object-fit: cover; }
+/* Your own picture in a call, mirrored like the recording screen's preview
+   (.camera-preview.mirror) - you compose in a mirror, everyone else sees you
+   the right way round. Toggled by paintMirror() in views.js, off for the back
+   camera because there is nothing to mirror. */
+.call-local.mirror video { transform: scaleX(-1); }
 /* Over their video: the ground goes black, the small face goes, the head
    becomes a caption at the top start (the self-view has the top end), the
    grid floats on a scrim. */
