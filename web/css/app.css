@@ -1271,7 +1271,18 @@ body.dark .see-more-link { color: var(--primary-2); }
 .live-selfview[hidden] { display: none; }
 /* Mirrored, because a preview of yourself that moves the wrong way is
    disorienting — the same thing every camera app does. */
-.live-setup .live-selfview { transform: scaleX(-1); }
+/* ── Your own camera is always shown as a mirror ──
+   Front camera only, and self-views only. The previous rule here was
+   `.live-setup .live-selfview`, which never matched: the video sits in
+   #agora-host-preview, a SIBLING of the .live-setup overlay rather than a
+   child, so the go-live preview and the live broadcast were both unmirrored
+   while the recording screen was not - reported as "the camera is reversed"
+   in several places at once.
+   #agora-viewer-video is mirrored ONLY when views.js puts .mirror on it,
+   which it does inside the isHost branch alone; a viewer watching somebody
+   else must never be flipped. */
+#agora-host-preview.mirror video,
+#agora-viewer-video.mirror video { transform: scaleX(-1); }
 /* A scrim so the controls stay readable over any camera image. */
 .live-setup::before {
   content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;

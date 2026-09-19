@@ -244,6 +244,11 @@
       const AgoraRTC = await loadSdk();
       AgoraRTC.setLogLevel(2);
       const client = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+      // Which way the broadcaster's camera points, so the screen can mirror
+      // the self-view and only the self-view. Viewers must never be mirrored:
+      // they are watching somebody else, and flipping that would put their
+      // writing backwards.
+      let hostFacing = 'user';
       await client.setClientRole('host');
       // The uid is decided before the token is signed, because a token is
       // bound to one uid and Agora rejects any mismatch.
@@ -275,6 +280,7 @@
         if (withVideo) {
           try {
             cam = await AgoraRTC.createCameraVideoTrack({ encoderConfig: '480p_1', facingMode: 'user' });
+            hostFacing = 'user';
             if (videoEl) cam.play(videoEl);
           } catch (e) { onError && onError(e); cam = null; }
         }
@@ -300,6 +306,7 @@
             const next = cams.find(d => (d.label || '').toLowerCase().includes(want === 'user' ? 'front' : 'back'));
             if (!next) return false;
             await cam.setDevice(next.deviceId);
+            try { hostFacing = cam._mediaStreamTrack.getSettings().facingMode || want; } catch (e) { hostFacing = want; }
             // The host previews through `videoEl`, and the SDK keeps drawing
             // it across a setDevice here because this track was never re-
             // attached. The call screen is the one that needed a redraw; see
@@ -307,6 +314,7 @@
             return true;
           } catch (e) { onError && onError(e); return false; }
         },
+        cameraFacing: () => hostFacing,
         stop: async () => {
           try { await client.unpublish(cam ? [mic, cam] : [mic]); } catch (e) {}
           if (mic) { try { mic.close(); } catch (e) {} }

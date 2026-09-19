@@ -9030,6 +9030,12 @@ function autoPlay(video) {
       try {
         previewStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
         selfView.srcObject = previewStream;
+        // Your own face is shown in a mirror, as the recording screen and the
+        // call screen do. The old rule for this (.live-setup .live-selfview)
+        // never matched anything: the video lives in previewVideo, which is a
+        // SIBLING of the .live-setup overlay, not a child of it - so the
+        // go-live preview has been unmirrored since it was written.
+        previewVideo.classList.toggle('mirror', facing === 'user');
         camWarn.hidden = true;
         setStartReady(true);
       } catch (e) {
@@ -9956,6 +9962,14 @@ function autoPlay(video) {
             try {
               hostSession.cam.play(videoContainer);
               videoContainer.style.zIndex = '2';
+              // Mirrored for the BROADCASTER only. This same element carries
+              // the host's video here and another person's video on the
+              // viewer path below, so the class goes on inside this isHost
+              // branch and nowhere else - mirroring a viewer would reverse
+              // the face and any writing they hold up.
+              let front = true;
+              try { front = typeof hostSession.cameraFacing !== 'function' || hostSession.cameraFacing() === 'user'; } catch (e) { front = true; }
+              videoContainer.classList.toggle('mirror', front);
             } catch (e) { console.warn('agora host re-attach:', e); }
           }
           // Going live is otherwise silent: the screen simply changes, with
