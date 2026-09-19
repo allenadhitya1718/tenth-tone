@@ -623,6 +623,14 @@
           if (stopped) return;
           stopped = true;
           try { await p.leave(); } catch (e) {}
+          // Belt and braces with handBackAudioSession() in the plugin. A call
+          // that leaves iOS in call mode does not just sound wrong afterwards
+          // - it stops VOICE NOTES recording entirely, silently: the phone
+          // logged vn_stop {bytes:0, chunks:0} five times in a row after a
+          // call, with the microphone open and WebKit's AudioContext claiming
+          // to be running. Restoring the session is cheap and doing it twice
+          // costs nothing, so it is not left to one layer.
+          try { await releaseAudioRoute(); } catch (e) {}
         },
       };
       return session;

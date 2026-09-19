@@ -1,5 +1,6 @@
 import Foundation
 import Capacitor
+import AVFoundation
 import AgoraRtcKit
 
 /**
@@ -367,7 +368,40 @@ public class AgoraCallPlugin: CAPPlugin {
             kit.leaveChannel { _ in done.signal() }
             _ = done.wait(timeout: .now() + 2.0)
             AgoraRtcEngineKit.destroy()
+            AgoraCallPlugin.handBackAudioSession()
         }
+    }
+
+    /**
+     * Give iOS its audio session back after a call.
+     *
+     * Destroying the engine releases Agora's hold, but it does NOT put the
+     * session back the way the rest of the app expects to find it: the
+     * category stays .playAndRecord in a voice-chat mode, configured for a
+     * call that is over. The measured consequence was that VOICE NOTES
+     * stopped recording on the iPhone - five attempts in a row logged
+     * `vn_stop {via:"pcm", bytes:0, chunks:0}` after holding the button for
+     * five seconds. The microphone opened and WebKit's AudioContext reported
+     * itself running; it simply received no samples, because the session
+     * underneath it still belonged to a finished call. The same four
+     * recordings on v1.4.17, before this plugin existed, all produced audio.
+     *
+     * This is the same restoration AudioRoutePlugin.reset() performs for the
+     * web call path, for the same reason. .playback is what WKWebView uses
+     * for ordinary media, and deactivating with notifyOthersOnDeactivation
+     * lets anything the call interrupted resume - and lets WebKit build a
+     * fresh capture from scratch the next time it wants the microphone.
+     *
+     * Every step is `try?`: a failure here must never take down a hang-up,
+     * and the app is in a worse state with a half-restored session than with
+     * an unreported error.
+     */
+    private static func handBackAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setPreferredInput(nil)
+        try? session.overrideOutputAudioPort(AVAudioSession.PortOverride.none)
+        try? session.setActive(false, options: [.notifyOthersOnDeactivation])
+        try? session.setCategory(.playback, mode: .default, options: [])
     }
 
     private func emitRemotes(_ n: Int) {
