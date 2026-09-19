@@ -8996,6 +8996,7 @@ function autoPlay(video) {
     // own framing. Every real broadcast app previews the camera first, which
     // is also where you notice the lighting is wrong or the lens is covered.
     let previewStream = null;
+    let previewAttempt = 0;         // see startPreview: flip twice quickly
     const selfView = el('video', { muted: true, playsInline: true, autoplay: true, class: 'live-selfview' });
     selfView.muted = true;
     selfView.setAttribute('playsinline', '');
@@ -9027,15 +9028,32 @@ function autoPlay(video) {
       setStartReady(false);
       selfView.hidden = false;
       stopPreview();
+      // Which attempt this is. Tapping flip twice quickly starts a second
+      // getUserMedia before the first resolves, and they can come back out of
+      // order - the later stream replaced by the earlier one, with the mirror
+      // set from whatever `facing` happened to hold by then. That is the
+      // "camera is reversed" complaint reappearing on the one screen this was
+      // meant to fix, so the stale attempt is dropped instead.
+      const attempt = ++previewAttempt;
+      const wanted = facing;
       try {
-        previewStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: wanted }, audio: false });
+        if (attempt !== previewAttempt) { try { stream.getTracks().forEach(t => t.stop()); } catch (e) {} return; }
+        previewStream = stream;
         selfView.srcObject = previewStream;
         // Your own face is shown in a mirror, as the recording screen and the
         // call screen do. The old rule for this (.live-setup .live-selfview)
         // never matched anything: the video lives in previewVideo, which is a
         // SIBLING of the .live-setup overlay, not a child of it - so the
         // go-live preview has been unmirrored since it was written.
-        previewVideo.classList.toggle('mirror', facing === 'user');
+        //
+        // Read from the track the device ACTUALLY gave us, not from what was
+        // asked for: a phone with only a front camera answers a request for
+        // 'environment' with the front one, and then an unmirrored face is
+        // exactly the bug again.
+        let got = wanted;
+        try { got = previewStream.getVideoTracks()[0].getSettings().facingMode || wanted; } catch (e) { got = wanted; }
+        previewVideo.classList.toggle('mirror', got === 'user');
         camWarn.hidden = true;
         setStartReady(true);
       } catch (e) {
