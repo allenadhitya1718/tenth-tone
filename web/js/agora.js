@@ -21,12 +21,23 @@
   // style beats any stylesheet rule, so a CSS class can neither add nor
   // remove that mirror.
   //
-  // Worse, the SDK SKIPS its own mirror on Safari and on WebKit
-  // (`"Safari"===name && 15===version || wT() || !config.mirror`), which is
-  // precisely why the same video call looked correct on Android and reversed
-  // on the iPhone - the reported bug. And because its mirror is a constant,
-  // not a function of the lens, switching to the BACK camera on Android left
-  // the self-view flipped: hold up writing and it reads backwards to you.
+  // The SDK does skip its own mirror on two old platforms
+  // (`"Safari"===name && 15===version || wT() || !config.mirror`), but wT()
+  // is iOS MAJOR VERSION 15 exactly:
+  //
+  //   function wT(){const e=pT();if(e.os!==aT.IOS||!e.osVersion)return!1;
+  //     const t=e.osVersion.split(".");return 15===Number(t[0])}
+  //
+  // so on iOS 18 it does NOT fire, and an Agora-rendered call self-view was
+  // already mirrored there. Do not repeat the earlier guess that this
+  // explained the iPhone report - it does not, and the reported symptom may
+  // be something else entirely.
+  //
+  // What IS certainly wrong: the SDK's mirror is a constant, not a function
+  // of the lens, so switching to the BACK camera left the self-view flipped
+  // on every platform. Hold writing up to the rear camera and it reads
+  // backwards to you. And a stylesheet can neither add nor remove the SDK's
+  // mirror, so the app could not own the decision at all.
   //
   // So the SDK is told never to mirror, and the app owns it in one place -
   // the .mirror class - which behaves the same on every platform and can
