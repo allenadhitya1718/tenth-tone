@@ -33,8 +33,10 @@ jobs:
     permissions:
       contents: write
     env:
-      # Gradle 8.2.1 (see gradle-wrapper.properties) supports Java 19 at most.
-      # On Java 21 it dies with "Unsupported class file major version 65".
+      # AGP 8.13.2 needs JDK 17 or newer, and Gradle 8.14.3 (see
+      # gradle-wrapper.properties) runs on 17 through 24. Every build so far has
+      # used 17. (The old Gradle 8.2.1 stopped at Java 19 and died on 21 with
+      # "Unsupported class file major version 65" - no longer the limit.)
       JAVA_VERSION: '17'
       NODE_VERSION: '20'
 

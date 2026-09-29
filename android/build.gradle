@@ -7,8 +7,13 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.1'
-        classpath 'com.google.gms:google-services:4.4.0'
+        // Google Play takes new apps only if they target API 36 (Android 16)
+        // from 31 Aug 2026, and 8.2.1 cannot compile against 36 - 8.9.1 is
+        // the floor. 8.13.2 + Gradle 8.14.3 is the pair Capacitor 8 itself
+        // ships for API 36. The plugins' own buildscript blocks still say
+        // 8.2.1; the version declared here is the one the whole build uses.
+        classpath 'com.android.tools.build:gradle:8.13.2'
+        classpath 'com.google.gms:google-services:4.4.4'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files

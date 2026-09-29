@@ -100,11 +100,15 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- Picking a clip or photo from the gallery. Android 13 split the old
-         single storage permission per media type; the legacy one is capped so
-         it is not requested on versions that no longer use it. -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!-- Picking a clip or photo from the gallery needs no media permission:
+         the page's <input type="file"> opens the system picker, which hands
+         back only the file the person chose. READ_MEDIA_IMAGES and
+         READ_MEDIA_VIDEO used to be declared here and no code ever used them.
+         Google Play allows those two only to apps that need broad access to
+         the whole library (a gallery, an editor); anyone else must use the
+         picker, and a Play submission holding them has to justify them in a
+         declaration it would fail. The legacy permission stays, capped at
+         Android 12, which that policy does not cover. -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
