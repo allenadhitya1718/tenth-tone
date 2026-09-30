@@ -106,7 +106,17 @@ jobs:
 
       - name: Patch app name, version, and permissions
         run: |
-          BUILD_NUM=$(date +%s | tail -c 8)
+          # versionCode = minutes since 1970. It was the last seven digits of
+          # the seconds (`date +%s | tail -c 8`), which failed twice over.
+          # From 22 Sep 2026 those digits began with 0 ("0709296"), and Gradle
+          # reads a leading 0 as OCTAL: "Invalid octal number" when an 8 or 9
+          # follows, a silently different number when none does. And the value
+          # wrapped back DOWN every ~116 days, which Play refuses outright and
+          # a phone refuses as a downgrade over the build it already has.
+          # Minutes never start with 0, only ever grow, sit above every code
+          # shipped so far (the highest was 9804751, v1.4.23), and stay under
+          # Play's 2,100,000,000 ceiling for thousands of years.
+          BUILD_NUM=$(( $(date +%s) / 60 ))
           echo "VERSION_CODE=$BUILD_NUM" >> $GITHUB_ENV
           # versionCode: the sed here matched the literal "versionCode 1", which
           # stopped matching the moment the file said 21 - and `|| true` hid
