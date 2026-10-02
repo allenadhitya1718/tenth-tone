@@ -4,7 +4,7 @@ android {
     namespace "com.flyp.app"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.flyp.app"
+        applicationId "com.flyp.social"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Play refuses any upload whose versionCode is not strictly higher than

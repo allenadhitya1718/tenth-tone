@@ -2,8 +2,8 @@
 <resources>
     <string name="app_name">FLYP</string>
     <string name="title_activity_main">FLYP</string>
-    <string name="package_name">com.flyp.app</string>
-    <string name="custom_url_scheme">com.flyp.app</string>
+    <string name="package_name">com.flyp.social</string>
+    <string name="custom_url_scheme">com.flyp.social</string>
     <string name="call_hang_up">Hang up</string>
     <string name="call_channel_name">Ongoing calls</string>
     <string name="call_channel_desc">Shows a call that is still running, so you can return to it or hang up.</string>

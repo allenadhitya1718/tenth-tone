@@ -100,8 +100,8 @@ jobs:
           d = json.load(open('android/app/google-services.json'))
           pkgs = [c['client_info']['android_client_info']['package_name'] for c in d.get('client', [])]
           print('google-services.json: project', d['project_info']['project_id'], 'packages', pkgs)
-          if 'com.flyp.app' not in pkgs:
-              raise SystemExit('::error::google-services.json is not for com.flyp.app')
+          if 'com.flyp.social' not in pkgs:
+              raise SystemExit('::error::google-services.json is not for com.flyp.social')
           PY
 
       - name: Patch app name, version, and permissions
