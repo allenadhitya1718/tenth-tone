@@ -469,11 +469,17 @@
       loginBtn.disabled = true;
       loginBtn.textContent = 'جاري تسجيل الدخول...';
       try {
-        const isEmail = /.+@.+\..+/.test(idIn.value);
-        const params = { password: passIn.value };
-        if (isEmail) params.email = idIn.value.trim();
-        else params.phone = idIn.value.replace(/\s/g, '');
-        await window.SB.signIn(params);
+        // Email is the only way in. A username used to be sent to Supabase as
+        // a phone number, which answered "Phone logins are disabled" - true,
+        // and no help to someone who typed the name they signed up with.
+        if (!/.+@.+\..+/.test(idIn.value.trim())) {
+          error.textContent = 'سجّل الدخول ببريدك الإلكتروني وليس باسم المستخدم';
+          error.hidden = false;
+          loginBtn.disabled = false;
+          loginBtn.textContent = 'تسجيل الدخول';
+          return;
+        }
+        await window.SB.signIn({ email: idIn.value.trim(), password: passIn.value });
         // Replace, not push: the login screen must not stay in the back
         // stack, or "back" from the feed asks a signed-in person to sign in.
         go('/home', { replace: true });
@@ -506,13 +512,26 @@
     const m = (e && e.message) || '';
     const wait = retryAfterSeconds(e);
     if (wait) return 'انتظر ' + wait + ' ثانية قبل طلب رمز جديد';
-    if (/Invalid login credentials/i.test(m)) return 'بيانات الدخول غير صحيحة';
+    const code = (e && e.code) || '';
+    if (/Invalid login credentials|User not found/i.test(m)) return 'بيانات الدخول غير صحيحة';
     if (/Email not confirmed/i.test(m)) return 'البريد لم يُفعَّل بعد — تحقق من بريدك';
     if (/User already registered/i.test(m)) return 'البريد مسجَّل مسبقًا';
-    if (/Password should be at least/i.test(m)) return 'كلمة المرور قصيرة جدًا';
+    if (code === 'same_password' || /should be different/i.test(m)) return 'اختر كلمة مرور مختلفة عن الحالية';
+    if (code === 'weak_password' || /Password should/i.test(m)) return 'كلمة المرور قصيرة جدًا';
+    if (code === 'otp_expired' || /expired or is invalid|otp.*(expired|invalid)/i.test(m)) return 'الرمز غير صحيح أو انتهت صلاحيته';
+    if (code === 'email_address_invalid' || /invalid format|Email address .* is invalid/i.test(m)) return 'البريد الإلكتروني غير صالح';
+    if (/phone (logins|signups|provider)/i.test(m)) return 'سجّل الدخول ببريدك الإلكتروني وليس باسم المستخدم';
+    if (code === 'signup_disabled' || /Signups not allowed/i.test(m)) return 'التسجيل غير متاح حاليًا';
+    if (/captcha/i.test(m)) return 'تعذّر التحقق الأمني، حاول مرة أخرى';
+    if (/session missing|JWT/i.test(m)) return 'انتهت الجلسة، سجّل الدخول مرة أخرى';
     if (/rate limit|too many/i.test(m)) return 'محاولات كثيرة — حاول لاحقًا';
-    if (/network|fetch/i.test(m)) return 'تعذر الاتصال — تحقق من الإنترنت';
-    return m || 'حدث خطأ، حاول مجددًا';
+    if (/network|fetch|SDK not loaded/i.test(m)) return 'تعذر الاتصال — تحقق من الإنترنت';
+    // Our own Arabic messages are written for the person; anything else is a
+    // server sentence in English ("Phone logins are disabled" reached a
+    // tester's screen this way), so it is logged rather than shown.
+    if (/[؀-ۿ]/.test(m)) return m;
+    if (m) { try { console.warn('unmapped auth error:', code, m); } catch (x) {} }
+    return 'حدث خطأ، حاول مجددًا';
   }
 
   // ===== Register =====
@@ -5725,6 +5744,14 @@ function autoPlay(video) {
     // Send any picked file, showing it optimistically first.
     async function sendPickedFile(f, type) {
       if (!f) return;
+      // HEIC goes out as JPEG. Only Apple's WebKit can draw HEIC, so a HEIC
+      // photo sent from an Android phone uploaded fine and then showed as a
+      // blank bubble and a black viewer for BOTH people.
+      if (looksHeic(f)) {
+        const jpeg = await heicToJpeg(f);
+        if (!jpeg) { toast('تعذّر تجهيز هذه الصورة، جرّب صورة أخرى'); return; }
+        f = jpeg; type = 'image';
+      }
       // `accept` only filters what the picker SHOWS: the OS dialog offers "All
       // files" and a drag-and-drop ignores it outright. This is the rule, and
       // it is the one place every attachment path converges on.
@@ -5761,6 +5788,38 @@ function autoPlay(video) {
         }
         catch (e) { untrackSend(tracked); undoOptimistic(tempNode); toast(sendFailMessage(e)); }
       }
+    }
+
+    function looksHeic(f) {
+      return /^image\/hei[cf]/i.test(f.type || '') || /\.hei[cf]$/i.test(f.name || '');
+    }
+    // Apple's WebKit decodes HEIC natively, so try that first; elsewhere load
+    // a decoder (3 MB, fetched only the first time someone picks a HEIC).
+    async function heicToJpeg(f) {
+      const name = String(f.name || 'photo').replace(/\.[^.]*$/, '') + '.jpg';
+      let bmp = null;
+      try { bmp = await createImageBitmap(f); } catch (e) {}
+      if (!bmp) {
+        try {
+          if (!window.HeicTo) {
+            await new Promise((res, rej) => {
+              const s = document.createElement('script');
+              s.src = 'https://cdn.jsdelivr.net/npm/heic-to@1.6.5/dist/iife/heic-to.js';
+              s.onload = res; s.onerror = rej;
+              document.head.appendChild(s);
+            });
+          }
+          bmp = await window.HeicTo({ blob: f, type: 'bitmap' });
+        } catch (e) { console.warn('heic decode:', e); return null; }
+      }
+      // A long side of 2560 keeps a 48 MP photo well under the 20 MB limit.
+      const k = Math.min(1, 2560 / Math.max(bmp.width, bmp.height));
+      const c = Object.assign(document.createElement('canvas'), {
+        width: Math.round(bmp.width * k), height: Math.round(bmp.height * k) });
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      try { bmp.close && bmp.close(); } catch (e) {}
+      const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
+      return blob ? new File([blob], name, { type: 'image/jpeg' }) : null;
     }
 
     cameraInput.addEventListener('change', () => { sendPickedFile(cameraInput.files[0], 'image'); cameraInput.value = ''; });
@@ -10935,7 +10994,9 @@ function autoPlay(video) {
     // ---- Step 1: the code ----
     const step1 = el('div');
     step1.appendChild(el('h2', { class: 'auth-title' }, 'أدخل رمز التحقق'));
-    step1.appendChild(el('p', { class: 'auth-subtitle' }, 'أرسلنا رمز التحقق إلى'));
+    // "If", because the server answers the same for an address with no
+    // account and sends nothing - it will not say which addresses exist.
+    step1.appendChild(el('p', { class: 'auth-subtitle' }, 'إن كان لهذا البريد حساب، فقد أرسلنا رمز التحقق إلى'));
     step1.appendChild(el('p', { class: 'reset-email' }, email));
 
     const inputs = [];

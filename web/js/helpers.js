@@ -653,6 +653,12 @@ window.H = (function () {
     if (/not signed in|JWT|not authenticated/i.test(raw)) {
       return 'سجّل الدخول للمتابعة';
     }
+    if (/exceeded the maximum allowed size|payload too large/i.test(raw)) {
+      return 'الملف كبير جدًا';
+    }
+    if (/mime type .* is not supported|invalid_mime_type/i.test(raw)) {
+      return 'نوع الملف غير مدعوم';
+    }
     if (/Failed to fetch|NetworkError|network/i.test(raw)) {
       return 'تحقق من اتصالك بالإنترنت';
     }

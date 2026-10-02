@@ -35,6 +35,17 @@
     'البريد لم يُفعَّل بعد — تحقق من بريدك': 'Email not verified yet — check your inbox',
     'الرجاء إدخال جميع الحقول': 'Please fill in all fields',
     'البريد الإلكتروني': 'Email',
+    'سجّل الدخول ببريدك الإلكتروني وليس باسم المستخدم': 'Sign in with your email address, not your username',
+    'اختر كلمة مرور مختلفة عن الحالية': 'Choose a password different from your current one',
+    'الرمز غير صحيح أو انتهت صلاحيته': 'The code is wrong or has expired',
+    'البريد الإلكتروني غير صالح': 'That email address is not valid',
+    'التسجيل غير متاح حاليًا': 'Sign-up is not available right now',
+    'تعذّر التحقق الأمني، حاول مرة أخرى': 'Security check failed, please try again',
+    'انتهت الجلسة، سجّل الدخول مرة أخرى': 'Your session ended, please sign in again',
+    'إن كان لهذا البريد حساب، فقد أرسلنا رمز التحقق إلى': 'If this email has an account, we sent a verification code to',
+    'تعذّر تجهيز هذه الصورة، جرّب صورة أخرى': 'Could not prepare this photo, try another one',
+    'الملف كبير جدًا': 'This file is too large',
+    'نوع الملف غير مدعوم': 'This file type is not supported',
     'رقم الهاتف': 'Phone number',
     'تأكيد كلمة المرور': 'Confirm password',
     'كلمة المرور 8 أحرف على الأقل': 'Password must be at least 8 characters',
@@ -1620,6 +1631,31 @@
     'تحديات الأسبوع': "This week's challenges",
     'هدية ترحيبية': 'Welcome gift',
     'صيانة مجدولة الليلة': 'Scheduled maintenance tonight',
+
+    // ── Admin panel strings that were still Arabic in English mode ──
+    // Found by translating every string admin.js can render through this
+    // dictionary and the rules below; these 18 were the ones that came back
+    // unchanged. The concatenated ones live in RULES, not here, because
+    // translate() matches a whole text node and a name or number is glued on.
+    'فتح': 'Open',                                   // 'تنزيل' was already here; its twin was not
+    'التنقل': 'Navigation',                          // aria-label on the mobile bar
+    'الرد:': 'Reply:',
+    'مقطع': 'clip',                                  // unit beside the daily upload limit
+    'حذف الفيديو': 'Delete video',
+    'إغلاق البلاغ': 'Close report',
+    'الإجراء المتخذ': 'Action taken',
+    'أقصى حجم للملف': 'Max file size',
+    'حد الرفع اليومي للمستخدم': 'Daily uploads per user',
+    'حد الحجم اليومي للمستخدم': 'Daily size per user',
+    'سقف التخزين الكلي': 'Total storage cap',
+    'تعيين دور المشرف': 'Grant admin role',
+    'إزالة دور المشرف': 'Remove admin role',
+    'بحث، تعديل البروفايل، الصلاحيات، الحظر، الحذف': 'Search, edit profile, roles, bans, deletion',
+    'سيتوقف البث المباشر فورًا لكل المشاهدين.': 'The stream will stop immediately for every viewer.',
+    'هذا البث منتهٍ بالفعل': 'This stream has already ended',
+    'سيُحذف المقطع نهائيًا ولا يمكن التراجع.': 'The clip will be permanently deleted. This cannot be undone.',
+    'سيُحذف التعليق نهائيًا ولا يمكن التراجع.': 'The comment will be permanently deleted. This cannot be undone.',
+    'عدد أيام الحظر (اتركه فارغًا للحظر الدائم)': 'Ban length in days (leave empty to ban permanently)',
   });
 
   // ── User-generated dummy data strings (Names, Bios, Comments, etc.) ──
@@ -2139,6 +2175,18 @@
     [/^طلب بيانات بانتظار المعالجة: (\d+)$/, (m) => `Data requests pending: ${m[1]}`],
     [/^بلاغ بانتظار المراجعة: (\d+)$/, (m) => `Reports awaiting review: ${m[1]}`],
     [/^بلاغ دعم مفتوح: (\d+)$/, (m) => `Open support tickets: ${m[1]}`],
+    // Admin queue badges and confirmations that glue a count or a name on, so
+    // no fixed key can ever match the finished text node.
+    [/^منها من الفحص التلقائي: (\d+)$/, (m) => `of those, from the automatic scan: ${m[1]}`],
+    [/^نُشر دون فحص تلقائي خلال ٢٤ ساعة: (\d+) — تحقق من مفتاح Gemini أو الحصة اليومية$/,
+      (m) => `Published without an automatic scan in 24h: ${m[1]} — check the Gemini key or the daily quota`],
+    [/^سيُحذف حساب (.+) وكل فيديوهاته وتعليقاته\. لا يمكن التراجع عن هذا\.$/,
+      (m) => `${m[1]}'s account and all their videos and comments will be deleted. This cannot be undone.`],
+    [/^سيُستعاد حساب (.+) ويعود ظاهرًا للجميع\. افعل ذلك فقط بناءً على طلب صاحب الحساب\.$/,
+      (m) => `${m[1]}'s account will be restored and visible to everyone again. Only do this at the account owner's request.`],
+    [/^عرض 1-(\d+) من (\d+)$/, (m) => `Showing 1-${m[1]} of ${m[2]}`],
+    // A timestamp with the stale marker appended by the location table.
+    [/^(.+) — منتهية$/, (m) => `${m[1]} — expired`],
     [/^كتم (.+)$/, (m) => `Mute ${DICT[m[1]] || m[1]}`],
     [/^تقييد (.+)$/, (m) => `Restrict ${DICT[m[1]] || m[1]}`],
     [/^تبقّى (\d+) يومًا\. يمكنك إلغاء الحذف الآن والاحتفاظ بكل شيء\.$/, (m) => `${m[1]} days left. You can cancel the deletion now and keep everything.`],
