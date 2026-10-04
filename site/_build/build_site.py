@@ -2,7 +2,7 @@
 """Writes the Tenth Tone marketing site. Each output file is standalone HTML."""
 import io, os, re
 
-OUT = r'C:\Users\admin\OneDrive\Desktop\TenthTone-source-v1.1\Tiktok\site'
+OUT = os.environ.get('TT_SITE_OUT', r'C:\Users\admin\OneDrive\Desktop\TenthTone-source-v1.1\Tiktok\site')
 CSSV = 8
 JSV = 3
 IMGV = 2  # bump whenever a photo in assets/ is replaced
@@ -25,6 +25,7 @@ FOOT_COLS = [
         ('about.html', 'من نحن', 'About us'),
         ('guidelines.html', 'إرشادات المجتمع', 'Community guidelines'),
         ('safety.html', 'مركز الأمان', 'Safety centre'),
+        ('child-safety.html', 'معايير سلامة الأطفال', 'Child safety standards'),
         ('contact.html', 'تواصل معنا', 'Contact us'),
     ]),
     ('قانوني', 'Legal', [
