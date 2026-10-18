@@ -31,18 +31,17 @@ Claude fixes them afterwards.
 
 ## 2. Get the app
 
-Download the latest **flyp-dev-apk** artifact from GitHub → Actions →
-"Android dev build" (branch above):
+Download the latest **flyp-test-apk** artifact from GitHub → Actions →
+"Android test build" (branch above):
 
 ```bash
-gh run download --repo allenadhitya1718/tenth-tone -n flyp-dev-apk
+gh run download --repo allenadhitya1718/tenth-tone -n flyp-test-apk
 ```
 
 - The APK contains **x86_64 and arm64**, so it runs on a standard x86_64
   emulator and on real phones.
-- It's a development build. Just open FLYP: it runs standalone. If it shows
-  the Expo dev launcher, pick the bundled app or follow the on-screen option;
-  you don't need Metro.
+- It's a standalone test ("preview") build: install and open, no computer
+  or Metro server needed.
 - Package `com.flyp.app`, version 2.0.0.
 
 ## 3. Emulator set-up
@@ -52,7 +51,7 @@ gh run download --repo allenadhitya1718/tenth-tone -n flyp-dev-apk
 - **Image:** Android 14 (API 34) **"Google Play"** x86_64 system images, so
   Google Play services (push notifications) and the Play Store (purchases)
   exist. Give each 4 GB RAM.
-- **Install:** `adb -s emulator-5554 install flyp-dev.apk` (and 5556 for B).
+- **Install:** `adb -s emulator-5554 install flyp-test.apk` (and 5556 for B).
 - **Camera:** set the AVD's back camera to **VirtualScene** or **Webcam0**
   so recording works.
 - **Microphone:** enable the host mic in the emulator's extended controls,

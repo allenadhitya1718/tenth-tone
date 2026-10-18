@@ -1,12 +1,13 @@
-# Android development build of the FLYP app (mobile/), run on GitHub's
+# Android test build of the FLYP app (mobile/): the standalone "preview"
+# APK (JavaScript bundled in, no Metro needed), for phones and emulators, run on GitHub's
 # runners instead of EAS's: public-repo runners have 16 GB of RAM, which the
 # native libraries (Skia, vision-camera, reanimated) need to compile.
 # The APK is attached to the run as an artifact.
 #
 # Needs the repository secret EXPO_TOKEN (expo.dev → Access tokens). EAS
 # supplies the signing key and the environment variables, including the
-# google-services.json file variable, for the "development" environment.
-name: Android dev build
+# google-services.json file variable, for the "preview" environment.
+name: Android test build
 
 on:
   workflow_dispatch:
@@ -67,10 +68,10 @@ jobs:
         env:
           GOOGLE_SERVICES_JSON: ${{ runner.temp }}/google-services.json
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" -Dorg.gradle.daemon=false
-        run: eas build --local --profile development --platform android --non-interactive --output ${{ github.workspace }}/flyp-dev.apk
+        run: eas build --local --profile preview --platform android --non-interactive --output ${{ github.workspace }}/flyp-test.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: flyp-dev-apk
-          path: flyp-dev.apk
+          name: flyp-test-apk
+          path: flyp-test.apk
           retention-days: 14
