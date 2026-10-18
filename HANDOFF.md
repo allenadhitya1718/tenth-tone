@@ -13,14 +13,18 @@ Claude fixes them afterwards.
 
 ## 1. What to test against
 
-**Test plan and results page:** https://claude.ai/artifact/PNwrbXALa9DTBtgE7FWNGz
-- About 190 checks in 20 sections. Each has *what to do* and *what should
-  happen*.
-- Mark each one **Pass / Fail / Blocked** and write a note for every Fail or
-  Blocked. Results save live and Allen sees them.
-- Your account needs **Contributor** access (Allen shares it).
-- If you can't click the page yourself, keep the same IDs (e.g. `FEED-04`) in
-  a results file and give it to the human to enter.
+**Test plan: [TEST_PLAN.md](TEST_PLAN.md) in this repo.**
+- 183 checks in 20 sections. Each has an ID (e.g. `FEED-04`), *what to do*
+  and *what should happen*.
+- Record results in the file itself: tick the box, set **PASS / FAIL /
+  BLOCKED**, and write a note for every FAIL or BLOCKED. Fill in the summary
+  table at the top.
+- Put screenshots in `test-results/`, named by check ID.
+- Commit your results to a new branch `test-results/<date>` and open a pull
+  request into `feat/rn-phase1-foundation`, so Allen can review them.
+- The same checklist also exists as a live page
+  (https://claude.ai/artifact/PNwrbXALa9DTBtgE7FWNGz). Use the repo file as
+  the main record.
 
 **Repo:** https://github.com/allenadhitya1718/tenth-tone, branch
 `feat/rn-phase1-foundation`. Useful when a result is unclear:
