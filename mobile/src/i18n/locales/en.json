@@ -1,0 +1,167 @@
+{
+  "common": {
+    "back": "Back",
+    "next": "Next",
+    "cancel": "Cancel",
+    "save": "Save",
+    "or": "or"
+  },
+  "welcome": {
+    "tagline": "Share your moment with the world",
+    "new": "I'm new here",
+    "existing": "I already have an account",
+    "agreePrefix": "By continuing you agree to the"
+  },
+  "login": {
+    "title": "Welcome back",
+    "subtitle": "Sign in to continue",
+    "idPlaceholder": "Email or phone number",
+    "password": "Password",
+    "forgot": "Forgot password?",
+    "submit": "Log in",
+    "submitting": "Signing in...",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign up",
+    "fillAll": "Please fill in all fields"
+  },
+  "register": {
+    "title": "Sign up",
+    "step1Title": "Tell us about you",
+    "step1Sub": "Your name as others will see it, and your username",
+    "name": "Name",
+    "birthLabel": "Date of birth (optional)",
+    "birthPick": "Choose your date of birth",
+    "birthHint": "You can skip this. Your birthday is never shown to anyone, and cannot be changed later.",
+    "enterName": "Enter your name",
+    "enterBirth": "Enter your date of birth",
+    "badBirth": "Invalid date of birth",
+    "step2Title": "What's your email?",
+    "step2Sub": "We'll send a six-digit code to make sure it's you",
+    "email": "Email",
+    "badEmail": "Invalid email address",
+    "step3Title": "Choose a password",
+    "step3Sub": "Strong, and easy for you alone to remember",
+    "confirm": "Confirm password",
+    "confirmPlaceholder": "Type the password again",
+    "create": "Create account",
+    "creating": "Creating account...",
+    "handle": "Username",
+    "handleRule": "Letters, numbers, _ and . only",
+    "handleShort": "At least three characters",
+    "handleChecking": "Checking...",
+    "handleFree": "Available",
+    "handleTaken": "Username is taken",
+    "handleTakenPick": "That username is taken, pick another",
+    "enterHandle": "Enter a username of at least three characters",
+    "agreePrefix": "I confirm I am 13 or older, and I agree to the",
+    "agreeSuffix": ", and I will not post objectionable content or abuse any user. There is zero tolerance for objectionable content.",
+    "alreadyRegistered": "This email already has an account. Sign in instead.",
+    "nameRequired": "Name is required"
+  },
+  "otp": {
+    "title": "Verification",
+    "heading": "Enter verification code",
+    "sentTo": "We sent you a verification code",
+    "didntGet": "Didn't get the code?",
+    "resend": "Resend",
+    "resendIn": "Resend ({{seconds}})",
+    "resent": "Code sent again",
+    "verify": "Verify & continue",
+    "verifying": "Verifying...",
+    "sessionExpired": "Session expired",
+    "startOver": "Start again to get a new code",
+    "wrongEmail": "Wrong email? Change it"
+  },
+  "forgot": {
+    "title": "Reset password",
+    "heading": "Forgot password?",
+    "sub": "We'll send a verification code to your email",
+    "send": "Send code",
+    "sending": "Sending..."
+  },
+  "reset": {
+    "title": "Reset password",
+    "verify": "Verify",
+    "newHeading": "New password",
+    "newSub": "Choose a password you haven't used before",
+    "newPlaceholder": "New password",
+    "save": "Save password",
+    "saving": "Saving...",
+    "changed": "Password changed"
+  },
+  "password": {
+    "ruleLength": "At least 10 characters",
+    "ruleLetter": "At least one letter",
+    "ruleDigit": "At least one number",
+    "ruleSymbol": "At least one symbol (!@#$...)",
+    "mismatch": "Passwords do not match",
+    "common": "That password is too common, choose another",
+    "show": "Show password",
+    "hide": "Hide password"
+  },
+  "errors": {
+    "invalidLogin": "Invalid login details",
+    "emailNotConfirmed": "Email not verified yet — check your inbox",
+    "emailTaken": "Email is already registered",
+    "passwordTooShort": "Password is too short",
+    "badCode": "The code is wrong or has expired",
+    "tooYoung": "You must be at least 13 years old",
+    "rateLimited": "Too many attempts — try again later",
+    "network": "Connection failed — check your internet",
+    "waitSeconds": "Wait {{seconds}} seconds before asking for a new code",
+    "generic": "Something went wrong, try again"
+  },
+  "tabs": {
+    "home": "Home",
+    "discover": "Discover",
+    "create": "Create",
+    "inbox": "Chat",
+    "profile": "Profile"
+  },
+  "home": {
+    "following": "Following",
+    "forYou": "For You",
+    "live": "Live"
+  },
+  "placeholder": {
+    "later": "This screen is built in a later phase"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "appearance": "Appearance",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark",
+    "logout": "Log out",
+    "restartNote": "The app restarts to change the layout direction"
+  },
+  "onboarding": {
+    "skip": "Skip",
+    "start": "Get started",
+    "watchTitle": "Watch short videos",
+    "watchSub": "An endless feed that learns what you love with every watch",
+    "createTitle": "Create and share",
+    "createSub": "Record, trim, and add original sounds right in the app",
+    "liveTitle": "Start a live stream",
+    "liveSub": "Share your moments live and talk with your followers as it happens",
+    "chatTitle": "Stay close to your friends",
+    "chatSub": "Messages, groups, and a map that keeps you together",
+    "mockFollowing": "Following",
+    "mockForYou": "For You",
+    "mockCaption": "Today's sunset 🌅 #photography",
+    "mockSound": "Original sound",
+    "mockLive": "LIVE",
+    "mockMsg1": "Amazing 🔥",
+    "mockMsg2": "Watching from Riyadh 👋",
+    "mockChat1": "Where are you today? 😄",
+    "mockChat2": "Check the map 📍",
+    "mockMap": "Friends map"
+  },
+  "legal": {
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "close": "Close",
+    "termsAndPrivacy": "Terms & Privacy Policy"
+  }
+}
