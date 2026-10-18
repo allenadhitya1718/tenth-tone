@@ -12,7 +12,7 @@
       },
       "node": "24.22.0",
       "env": {
-        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a",
+        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a,x86_64",
         "GRADLE_OPTS": "-Dorg.gradle.jvmargs=\"-Xmx3g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8\" -Dorg.gradle.parallel=false -Dorg.gradle.workers.max=2 -Dorg.gradle.daemon=false",
         "EXPO_PUBLIC_SUPABASE_URL": "https://vfkwipvinmnybilcrdzr.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_dgWbaJlmKOgP3VDEriA7Lg_LDHOiomD"

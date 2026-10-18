@@ -1,89 +1,120 @@
-# FLYP: handover for the tester's Claude
+# FLYP: handover for the testing Claude
 
-You're helping test **FLYP**, a TikTok-style social app for Saudi users
-(short videos, audio live rooms, chat, calls, stories, gifts). It was just
-rebuilt from an old Capacitor web app into **React Native (Expo SDK 58,
-RN 0.88)** with a new **Supabase** backend. Your job is to help a human
-tester run the manual test plan, record results, and turn failures into clear
-bug reports. **Don't change code, the database or any settings unless the
-owner (Allen) asks you to.**
+You are the **tester** for **FLYP**, a TikTok-style social app for Saudi users
+(short videos, audio live rooms, chat, calls, walkie-talkie, stories, gifts,
+friends map). It was just rebuilt from an old Capacitor web app into **React
+Native (Expo SDK 58, RN 0.88)** on a new **Supabase** backend.
 
-## Where things are
+**Your job:** install the app on Android emulators, then go through the whole
+test plan **yourself, the way a real person would**: tap, type, swipe, record,
+wait, read the screen. Record every result in the checklist page. Don't change
+the app's code, the database or any service settings. Report bugs; Allen's own
+Claude fixes them afterwards.
 
-- **Repo:** https://github.com/allenadhitya1718/tenth-tone, branch
-  `feat/rn-phase1-foundation` (public repo).
-  - `mobile/`: the app (Expo Router, TypeScript, TanStack Query, i18next).
-  - `supabase/migrations/0001–0125`: database schema, RLS, RPCs.
-  - `supabase/functions/`: Edge Functions (agora-token, media-upload,
-    send-push, moderate-content, suggest-tags, verify-purchase,
-    media-delete-queue, storage-alert).
-  - `web/`: the old app. Not used any more.
-- **Docs to read first:**
-  - `mobile/BUILD_GUIDE.md`: builds, store setup, release test list.
-  - `SECURITY_AUDIT.md`: 27 security findings, all fixed and applied.
-  - `supabase/PHASE4_APPLY.md`: what's applied to the database.
-  - `CLIENT_NOTES_STATUS.md`: the client's 31 change requests.
-- **Test checklist (record results here):**
-  https://claude.ai/artifact/PNwrbXALa9DTBtgE7FWNGz. About 190 checks in 20
-  sections. Each one is Pass / Fail / Blocked with a note, and results save
-  live. The tester needs Contributor access (Allen shares it).
+## 1. What to test against
 
-## The app build
+**Test plan and results page:** https://claude.ai/artifact/PNwrbXALa9DTBtgE7FWNGz
+- About 190 checks in 20 sections. Each has *what to do* and *what should
+  happen*.
+- Mark each one **Pass / Fail / Blocked** and write a note for every Fail or
+  Blocked. Results save live and Allen sees them.
+- Your account needs **Contributor** access (Allen shares it).
+- If you can't click the page yourself, keep the same IDs (e.g. `FEED-04`) in
+  a results file and give it to the human to enter.
 
-- Android development APK, built by GitHub Actions: workflow "Android dev
-  build" on the branch above. Download it from the run's **flyp-dev-apk**
-  artifact.
-- It's a **development build**. It runs standalone, but for live code changes
-  it can connect to a Metro server (`cd mobile && npx expo start --dev-client`).
-  For normal testing just open the app.
-- Package `com.flyp.app`, app name FLYP, version 2.0.0.
+**Repo:** https://github.com/allenadhitya1718/tenth-tone, branch
+`feat/rn-phase1-foundation`. Useful when a result is unclear:
+- `mobile/src/app/`: one file per screen.
+- `mobile/src/features/`: the feature code.
+- `mobile/BUILD_GUIDE.md` and `SECURITY_AUDIT.md`: intended behaviour and
+  deliberate restrictions.
 
-## Backend
+## 2. Get the app
 
-- **New Supabase project "Mumbai":** `vfkwipvinmnybilcrdzr`
-  (https://vfkwipvinmnybilcrdzr.supabase.co). It's fresh and has **no users
-  yet**: every tester signs up a new account. Sign-up codes come from
-  `no-reply@notify.flyp-sa.com` (Resend); check Spam.
-- **The old project `qnzgxihlrwanywndcmpf` must never be touched.** Moving
-  its real users to Mumbai is a separate step planned just before the public
-  release.
-- **Third-party services:** Agora (live, calls, walkie-talkie), Cloudflare R2
-  (videos/photos, bucket `flyp-media` shared with the old app), Gemini
-  (moderation, AI hashtags), Firebase FCM (Android push).
-- **Media sweeper:** the `media-reconcile` job is deliberately **off**. It
-  would delete the old app's videos from the shared bucket.
+Download the latest **flyp-dev-apk** artifact from GitHub → Actions →
+"Android dev build" (branch above):
 
-## What a tester needs
+```bash
+gh run download --repo allenadhitya1718/tenth-tone -n flyp-dev-apk
+```
 
-- Two Android phones (calls, walkie-talkie, live guests, chat ticks all need
-  two accounts).
-- Real email addresses for sign-up codes.
-- Both accounts 18+ for the friends map (location sharing is 18+).
-- Wallet / coin purchases only work once the coin products exist in Google
-  Play Console and the tester is a license tester. Until then, mark those
-  checks Blocked.
+- The APK contains **x86_64 and arm64**, so it runs on a standard x86_64
+  emulator and on real phones.
+- It's a development build. Just open FLYP: it runs standalone. If it shows
+  the Expo dev launcher, pick the bundled app or follow the on-screen option;
+  you don't need Metro.
+- Package `com.flyp.app`, version 2.0.0.
 
-## Known limits (not bugs)
+## 3. Emulator set-up
 
-- **Stories:** there's currently **no button to post a story**. The story
-  tray was removed from the feed on request. Record it in the checklist
-  (Stories, check 1); Allen will choose where the entry point goes.
+- **Two emulators (A and B):** many checks need two users (chat, ticks, calls,
+  walkie-talkie, live guests, follows, push). Run two AVDs side by side.
+- **Image:** Android 14 (API 34) **"Google Play"** x86_64 system images, so
+  Google Play services (push notifications) and the Play Store (purchases)
+  exist. Give each 4 GB RAM.
+- **Install:** `adb -s emulator-5554 install flyp-dev.apk` (and 5556 for B).
+- **Camera:** set the AVD's back camera to **VirtualScene** or **Webcam0**
+  so recording works.
+- **Microphone:** enable the host mic in the emulator's extended controls,
+  for voice notes, calls and live.
+- **Location:** use the emulator's extended controls → Location (e.g.
+  Riyadh 24.7136, 46.6753) for the friends map; give A and B different
+  points.
+- **Ways to act like a human:**
+  - `adb shell input tap/swipe/text/keyevent`
+  - `adb exec-out screencap -p > s.png` to see the screen
+  - `adb shell uiautomator dump` to find elements
+  - Or computer-use / Maestro if you have them.
+
+  Always look at the screen after each action and judge it as a person
+  would: is it readable, does it respond, does it look right?
+- **Accounts:** sign up two **new** accounts with real inboxes you can read
+  for the 6-digit codes (sender `no-reply@notify.flyp-sa.com`; check Spam).
+  Both 18+ (location sharing is 18+). The backend is brand new, so no old
+  accounts exist.
+
+## 4. What emulators can't fully do
+
+Mark these **Blocked** with the reason rather than Fail:
+- **Real lock-screen ringing:** you can test it by locking the emulator
+  (`adb shell input keyevent 26`), but full-screen intent behaviour can differ
+  from real phones.
+- **Coin purchases:** need the coin products in Google Play Console and the
+  emulator's Google account added as a license tester. Until Allen confirms
+  that, Blocked.
+- **Realistic camera quality, battery, heat:** note "emulator" in the result.
+- **iPhone-only checks** (Sign in with Apple): Blocked (Android only).
+
+## 5. Backend and services (read-only for you)
+
+- Supabase project "Mumbai" `vfkwipvinmnybilcrdzr`. Don't use any
+  admin/service keys and don't change data except through the app.
+- The old project `qnzgxihlrwanywndcmpf` is off-limits.
+- Agora (live, calls, walkie-talkie), Cloudflare R2 (media), Gemini
+  (moderation, AI hashtags), Firebase (push), Resend (emails).
+
+## 6. Known behaviour (not bugs)
+
+- **Stories:** there's **no button to post a story** right now (the feed's
+  story tray was removed on request). Record this in Stories, check 1; the
+  rest of Stories is Blocked unless you find an entry point.
 - **Calls:** a first call to a stranger is refused (security). Calls need an
-  existing relationship such as a chat or follow.
+  existing relationship such as a chat or a follow.
 - **"Friends" means a mutual follow:** that applies to location, friends-only
   lives and privacy settings.
-- **Locked phone:** on a locked Android phone, Accept on an incoming call asks
-  to unlock first.
-- **iPhone:** calls show as time-sensitive notifications (no CallKit yet).
+- **Rate limits:** messages, comments, follows and uploads have per-user
+  limits. If you hit one while testing fast, note it; that's expected.
 - **Languages:** 9 languages (ar, en, zh, hi, ur, fr, es, tr, id). Arabic and
-  Urdu switch the layout to right-to-left after a restart.
+  Urdu restart the app into right-to-left.
 
-## How to write a bug report
+## 7. Bug notes
 
-For every Fail, write in the checklist note: **steps → expected → actual →
-phone model / Android version → account used**. Include a screenshot or
-screen recording if possible. Crashes: say what screen and what tap. If it's
-reproducible, say how often (e.g. 3/3).
+For every Fail, the note must contain: **steps → expected → actual →
+emulator A/B + API level → account → how often (e.g. 3/3)**. Save a
+screenshot for each Fail with its check ID in the filename (e.g.
+`CHAT-07.png`) and mention it in the note. For crashes, include
+`adb logcat -d | grep -E "ReactNativeJS|AndroidRuntime" | tail -50`.
 
-When testing is done, Allen will ask his own Claude to read the checklist
-results and fix every Fail.
+Work section by section in the page's order. At the end, write a short
+summary: totals, the worst problems first, and anything you couldn't test and
+why.
