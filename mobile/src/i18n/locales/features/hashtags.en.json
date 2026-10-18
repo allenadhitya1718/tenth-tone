@@ -1,0 +1,12 @@
+{
+  "hashtags": {
+    "suggested": "Suggested hashtags",
+    "loading": "Finding hashtags for your post",
+    "add": "Add #{{tag}} to the caption",
+    "added": "#{{tag}} is in the caption",
+    "noRoom": "#{{tag}}: no room left in the caption",
+    "place": "Place",
+    "rateLimited": "No more suggestions for now. Try again in a little while.",
+    "hint": "Tap a hashtag to add it to your caption"
+  }
+}

@@ -1,8 +1,5 @@
-import { useTranslation } from 'react-i18next';
+import { Discover } from '@/features/discover/Discover';
 
-import { Placeholder } from '@/components/Placeholder';
-
-export default function Discover() {
-  const { t } = useTranslation();
-  return <Placeholder title={t('tabs.discover')} />;
+export default function DiscoverTab() {
+  return <Discover />;
 }

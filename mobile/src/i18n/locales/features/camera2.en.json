@@ -1,0 +1,24 @@
+{
+  "camera2": {
+    "filters": "Filters",
+    "beauty": "Beauty",
+    "applying": "Applying filter…",
+    "applyFailed": "Couldn't apply the filter",
+    "postWithout": "Post without filter",
+    "cancel": "Cancel",
+    "filter": {
+      "normal": "Normal",
+      "crisp": "Crisp",
+      "golden": "Golden Hour",
+      "breeze": "Breeze",
+      "film": "Faded Film",
+      "dusk": "Dusk",
+      "pastel": "Pastel",
+      "retro": "Retro",
+      "cinema": "Cinema",
+      "vivid": "Vivid",
+      "silver": "Silver",
+      "ink": "Ink"
+    }
+  }
+}

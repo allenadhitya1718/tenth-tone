@@ -10,8 +10,12 @@
 //   AGORA_APP_CERTIFICATE  the primary certificate. Never ships to a browser.
 //
 // The caller must be a signed-in user. A host token (publisher) is only
-// issued to the account that actually owns the live stream, so nobody can
-// take over someone else's channel.
+// issued to the account that actually owns the live stream, or to a guest
+// the host accepted on stage (live_guests, 0103), so nobody can take over
+// someone else's channel.
+//
+// Walkie-talkie channels ('walkie_<chat id>', client note 26) are private to
+// the chat: any token, listener or talker, needs walkie_allowed (0106).
 // =============================================================
 import { RtcTokenBuilder, RtcRole } from 'npm:agora-token@2.0.5';
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -92,6 +96,34 @@ Deno.serve(async (req) => {
   // stream" before a microphone or camera was ever opened. The call screen,
   // its timer and answered_at all worked, because signalling is pure Supabase
   // and never needed the token - which is exactly why this survived testing.
+  // Walkie-talkie (client note 26): 'walkie_<chat id>', one audio channel per
+  // chat. Listening in on a chat is as private as reading it, so BOTH roles
+  // need membership here, not only the publisher. walkie_allowed (0106) also
+  // refuses an unanswered message request and a blocked DM. Before 0106 is
+  // applied the RPC does not exist; fall back to plain membership
+  // (is_chat_member, 0018) rather than refusing everybody. Any other error is
+  // a refusal. Members get a publisher token when they ask for 'host': the
+  // app joins as audience and only switches role while the button is held.
+  if (channel.startsWith('walkie_')) {
+    const chatId = channel.slice('walkie_'.length);
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chatId);
+    if (!isUuid) return json({ error: 'unknown channel' }, 403);
+
+    let { data: allowed, error: allowErr } = await supabase.rpc('walkie_allowed', { p_chat_id: chatId });
+    if (allowErr && (allowErr.code === 'PGRST202' || allowErr.code === '42883')) {
+      ({ data: allowed, error: allowErr } = await supabase.rpc('is_chat_member', { p_chat_id: chatId }));
+    }
+    if (allowErr) return json({ error: 'could not check the chat' }, 500);
+    if (allowed !== true) return json({ error: 'you are not a member of this chat' }, 403);
+
+    const expireAt = Math.floor(Date.now() / 1000) + TTL_SECONDS;
+    const token = RtcTokenBuilder.buildTokenWithUid(
+      APP_ID, APP_CERT, channel, uid, wantsHost ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER, expireAt, expireAt,
+    );
+    return json({ token, uid, channel, expiresAt: expireAt, role: wantsHost ? 'host' : 'audience' });
+  }
+
   let role = RtcRole.SUBSCRIBER;
   if (wantsHost) {
     // RLS on `calls` returns the rows of this channel the requester may see:
@@ -134,8 +166,26 @@ Deno.serve(async (req) => {
         .eq('id', channel)
         .maybeSingle();
 
-      if (!stream || stream.host_id !== userId) {
-        return json({ error: 'you are not the host of this stream' }, 403);
+      if (!stream) return json({ error: 'you are not the host of this stream' }, 403);
+
+      if (stream.host_id !== userId) {
+        // Client note 6 (migration 0103): a guest the host brought on stage
+        // speaks in the same channel, so they need a publisher token too.
+        // Only status 'accepted' qualifies, and only while the stream is live;
+        // RPCs are the only writers of live_guests, so a viewer cannot promote
+        // themselves. Any error (for example 0103 not applied yet) counts as
+        // "not a guest" and keeps the old 403.
+        let isGuest = false;
+        if (stream.status === 'live') {
+          const { data: guest, error: guestErr } = await supabase
+            .from('live_guests')
+            .select('status')
+            .eq('live_id', channel)
+            .eq('user_id', userId)
+            .maybeSingle();
+          isGuest = !guestErr && guest?.status === 'accepted';
+        }
+        if (!isGuest) return json({ error: 'you are not the host of this stream' }, 403);
       }
       role = RtcRole.PUBLISHER;
     }

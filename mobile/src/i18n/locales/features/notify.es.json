@@ -1,0 +1,14 @@
+{
+  "notify": {
+    "call": {
+      "accept": "Aceptar",
+      "decline": "Rechazar"
+    },
+    "fsi": {
+      "title": "Muestra las llamadas en la pantalla de bloqueo",
+      "body": "Para mostrar las llamadas entrantes en pantalla completa, incluso con el teléfono bloqueado, permite que FLYP use notificaciones de pantalla completa en Ajustes.",
+      "open": "Abrir Ajustes",
+      "later": "Ahora no"
+    }
+  }
+}

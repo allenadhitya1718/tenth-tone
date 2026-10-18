@@ -1,0 +1,151 @@
+{
+  "discover": {
+    "title": "Jelajahi",
+    "trendingRank": "Trending nomor {{rank}}, #{{tag}}, {{count}}",
+    "common": {
+      "loading": "Memuat",
+      "errorTitle": "Tidak dapat memuat ini",
+      "errorSub": "Periksa koneksimu dan coba lagi.",
+      "retry": "Coba lagi",
+      "seeAll": "Lihat semua",
+      "followers": "{{n}} pengikut",
+      "video": "Video",
+      "plays": "{{n}} kali diputar",
+      "share": "Bagikan",
+      "videosCount_other": "{{n}} video"
+    },
+    "follow": {
+      "follow": "Ikuti",
+      "following": "Mengikuti",
+      "requested": "Diminta",
+      "failed": "Tidak dapat memperbarui. Coba lagi."
+    },
+    "search": {
+      "placeholder": "Cari orang, video, suara",
+      "openHint": "Membuka pencarian",
+      "clearText": "Hapus pencarian",
+      "tab_top": "Teratas",
+      "tab_people": "Orang",
+      "tab_videos": "Video",
+      "tab_sounds": "Suara",
+      "tab_hashtags": "Hashtag",
+      "noResults": "Tidak ada hasil",
+      "noResultsSub": "Coba ejaan lain atau kata yang lebih pendek.",
+      "hintTitle": "Cari di FLYP",
+      "hintSub": "Awali dengan @ untuk mencari orang, atau # untuk hashtag.",
+      "recent": "Terbaru",
+      "clearAll": "Hapus semua",
+      "recentHint": "Cari lagi",
+      "removeRecent": "Hapus {{q}} dari pencarian terbaru"
+    },
+    "sections": {
+      "trending": "Hashtag trending",
+      "people": "Disarankan untukmu",
+      "popular": "Video populer"
+    },
+    "empty": {
+      "title": "Belum ada yang bisa dijelajahi",
+      "sub": "Saat orang-orang memposting video, tren dan kreator akan muncul di sini.",
+      "create": "Buat video"
+    },
+    "hashtag": {
+      "empty": "Belum ada video dengan hashtag ini",
+      "emptySub": "Jadilah yang pertama memposting."
+    },
+    "sound": {
+      "title": "Suara",
+      "untitled": "Suara asli",
+      "notFound": "Suara ini sudah tidak tersedia",
+      "empty": "Belum ada video yang memakai suara ini",
+      "emptySub": "Jadilah yang pertama: ketuk Gunakan suara ini.",
+      "use": "Gunakan suara ini",
+      "favorite": "Favorit",
+      "unfavorite": "Hapus dari favorit",
+      "favorited": "Disimpan",
+      "favoriteFailed": "Tidak dapat memperbarui favorit. Coba lagi.",
+      "uses_other": "{{n}} video"
+    },
+    "lists": {
+      "followers": "Pengikut",
+      "following": "Mengikuti",
+      "filter": "Cari",
+      "emptyFollowers": "Belum ada pengikut",
+      "emptyFollowing": "Belum mengikuti siapa pun"
+    },
+    "notif": {
+      "title": "Notifikasi",
+      "bellUnread": "Notifikasi, {{n}} belum dibaca",
+      "empty": "Belum ada notifikasi",
+      "emptySub": "Suka, komentar, dan pengikut baru akan muncul di sini.",
+      "bucket_today": "Hari ini",
+      "bucket_week": "Minggu ini",
+      "bucket_earlier": "Sebelumnya",
+      "someone": "Seseorang",
+      "unread": "belum dibaca",
+      "openProfile": "Buka profil {{name}}",
+      "permitAllow": "Izinkan",
+      "permitDeny": "Tolak",
+      "permitAllowA11y": "Izinkan {{name}} melihat lokasimu",
+      "permitDenyA11y": "Tolak permintaan lokasi dari {{name}}",
+      "permitAllowed": "Diizinkan",
+      "permitDenied": "Ditolak",
+      "permitFailed": "Tidak dapat menjawab permintaan. Coba lagi.",
+      "text": {
+        "likedComment": "menyukai komentarmu: \"{{text}}\"",
+        "likedCommentPlain": "menyukai komentarmu",
+        "likedVideo": "menyukai videomu",
+        "replied": "membalas komentarmu: \"{{text}}\"",
+        "commented": "berkomentar: \"{{text}}\"",
+        "tagged": "menandaimu di postingan",
+        "mentioned": "menyebutmu di komentar",
+        "followed": "mulai mengikutimu",
+        "requested": "ingin mengikutimu",
+        "liveTitled": "memulai LIVE: {{title}}",
+        "live": "sedang LIVE",
+        "giftAmount": "mengirimimu hadiah senilai {{n}} koin",
+        "gift": "mengirimimu hadiah",
+        "message": "mengirimimu pesan",
+        "followAccepted": "menerima permintaan mengikutimu",
+        "liveStarted": "LIVE kamu sudah dimulai",
+        "liveEnded": "LIVE kamu berakhir · {{duration}} · puncak {{peak}} penonton",
+        "storage": "Penyimpanan sudah terisi {{pct}}%. Unggahan berhenti saat mencapai batas.",
+        "locationRequest": "meminta untuk melihat lokasimu",
+        "locationApproved": "menyetujui permintaan lokasimu",
+        "locationDenied": "menolak permintaan lokasimu",
+        "newLogin": "Login baru ke akunmu dari {{device}}",
+        "newLoginPlain": "Login baru ke akunmu",
+        "liveJoinRequest": "meminta bergabung ke LIVE kamu",
+        "liveInvite": "mengundangmu bergabung ke LIVE-nya",
+        "liveGuestAccepted": "bergabung ke LIVE kamu sebagai tamu",
+        "liveGuestApproved": "menyetujui permintaanmu untuk bergabung ke LIVE",
+        "liveGuestRemoved": "mengeluarkanmu dari LIVE",
+        "raw": "{{text}}",
+        "update": "Pembaruan baru"
+      }
+    },
+    "requests": {
+      "title": "Permintaan mengikuti",
+      "entrySubMany": "{{name}} dan {{n}} lainnya",
+      "empty": "Tidak ada permintaan mengikuti",
+      "emptySub": "Saat seseorang meminta mengikuti akun privatmu, mereka akan muncul di sini.",
+      "approve": "Setujui",
+      "decline": "Tolak",
+      "approveA11y": "Setujui permintaan mengikuti dari {{name}}",
+      "declineA11y": "Tolak permintaan mengikuti dari {{name}}",
+      "approved": "Disetujui",
+      "declined": "Ditolak",
+      "failed": "Tidak dapat memperbarui permintaan. Mungkin sudah ditangani."
+    },
+    "push": {
+      "ch_messages": "Pesan",
+      "ch_messagesDesc": "Pesan chat baru",
+      "ch_calls": "Panggilan",
+      "ch_callsDesc": "Panggilan suara dan video masuk",
+      "ch_social": "Suka, komentar, dan pengikut",
+      "ch_socialDesc": "Aktivitas di postingan dan profilmu, dikirim tanpa suara",
+      "ch_live": "LIVE",
+      "ch_liveDesc": "Saat orang yang kamu ikuti mulai LIVE",
+      "ch_other": "Lainnya"
+    }
+  }
+}

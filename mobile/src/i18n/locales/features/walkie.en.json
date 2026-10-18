@@ -1,0 +1,34 @@
+{
+  "walkie": {
+    "title": "Walkie-talkie",
+    "toggle": "Walkie-talkie",
+    "toggleHint": "Talk live to everyone who has this chat open. Nothing is recorded.",
+    "holdToTalk": "Hold to talk",
+    "stopTalking": "Stop talking",
+    "talkHint": "Hold to talk and release to stop, or tap once to keep talking and tap again to stop.",
+    "connecting": "Connecting…",
+    "reconnecting": "Reconnecting…",
+    "youAreLive": "You're live. Release or tap to stop.",
+    "listening_one": "{{count}} other person is listening. Hold the button to talk.",
+    "listening_other": "{{count}} others are listening. Hold the button to talk.",
+    "nobodyListening": "On. Others hear you when they have this chat open with walkie-talkie on.",
+    "someone": "Someone",
+    "isTalking": "{{name}} is talking",
+    "manyTalking_one": "{{name}} and {{count}} other are talking",
+    "manyTalking_other": "{{name}} and {{count}} others are talking",
+    "listen": "Listen",
+    "listenHint": "Turns on walkie-talkie to hear them live",
+    "turnOff": "Turn off walkie-talkie",
+    "retry": "Retry",
+    "openSettings": "Settings",
+    "errors": {
+      "busy": "A call or live room is using audio. Try again when it ends.",
+      "forbidden": "Walkie-talkie isn't available in this chat.",
+      "unavailable": "Couldn't connect. Check your connection and try again.",
+      "not_installed": "Walkie-talkie needs the latest version of the app.",
+      "join_failed": "Couldn't join the walkie-talkie channel.",
+      "same_uid": "Walkie-talkie was opened on another device.",
+      "mic_denied": "Allow microphone access to talk."
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "hashtags": {
+    "suggested": "Hashtags sugeridos",
+    "loading": "Buscando hashtags para tu publicación",
+    "add": "Añadir #{{tag}} a la descripción",
+    "added": "#{{tag}} ya está en la descripción",
+    "noRoom": "#{{tag}}: no queda espacio en la descripción",
+    "place": "Lugar",
+    "rateLimited": "No hay más sugerencias por ahora. Vuelve a intentarlo en un rato.",
+    "hint": "Toca un hashtag para añadirlo a tu descripción"
+  }
+}

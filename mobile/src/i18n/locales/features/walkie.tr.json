@@ -1,0 +1,34 @@
+{
+  "walkie": {
+    "title": "Telsiz",
+    "toggle": "Telsiz",
+    "toggleHint": "Bu sohbeti açık tutan herkesle canlı konuş. Hiçbir şey kaydedilmez.",
+    "holdToTalk": "Konuşmak için basılı tut",
+    "stopTalking": "Konuşmayı bitir",
+    "talkHint": "Konuşmak için basılı tut, bitirmek için bırak; ya da sürekli konuşmak için bir kez dokun, bitirmek için tekrar dokun.",
+    "connecting": "Bağlanıyor…",
+    "reconnecting": "Yeniden bağlanıyor…",
+    "youAreLive": "Yayındasın. Bitirmek için bırak ya da dokun.",
+    "listening_one": "{{count}} kişi daha dinliyor. Konuşmak için düğmeyi basılı tut.",
+    "listening_other": "{{count}} kişi daha dinliyor. Konuşmak için düğmeyi basılı tut.",
+    "nobodyListening": "Açık. Diğerleri bu sohbeti telsiz açıkken açtığında seni duyar.",
+    "someone": "Biri",
+    "isTalking": "{{name}} konuşuyor",
+    "manyTalking_one": "{{name}} ve {{count}} kişi daha konuşuyor",
+    "manyTalking_other": "{{name}} ve {{count}} kişi daha konuşuyor",
+    "listen": "Dinle",
+    "listenHint": "Onları canlı duymak için telsizi açar",
+    "turnOff": "Telsizi kapat",
+    "retry": "Tekrar dene",
+    "openSettings": "Ayarlar",
+    "errors": {
+      "busy": "Bir arama ya da canlı yayın odası sesi kullanıyor. Bittiğinde tekrar dene.",
+      "forbidden": "Telsiz bu sohbette kullanılamıyor.",
+      "unavailable": "Bağlanılamadı. Bağlantını kontrol edip tekrar dene.",
+      "not_installed": "Telsiz için uygulamanın en son sürümü gerekli.",
+      "join_failed": "Telsiz kanalına katılınamadı.",
+      "same_uid": "Telsiz başka bir cihazda açıldı.",
+      "mic_denied": "Konuşmak için mikrofon erişimine izin ver."
+    }
+  }
+}

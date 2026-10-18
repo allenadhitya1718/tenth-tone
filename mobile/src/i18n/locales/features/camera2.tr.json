@@ -1,0 +1,24 @@
+{
+  "camera2": {
+    "filters": "Filtreler",
+    "beauty": "Güzellik",
+    "applying": "Filtre uygulanıyor…",
+    "applyFailed": "Filtre uygulanamadı",
+    "postWithout": "Filtresiz paylaş",
+    "cancel": "İptal",
+    "filter": {
+      "normal": "Normal",
+      "crisp": "Net",
+      "golden": "Altın Saat",
+      "breeze": "Esinti",
+      "film": "Soluk Film",
+      "dusk": "Alacakaranlık",
+      "pastel": "Pastel",
+      "retro": "Retro",
+      "cinema": "Sinema",
+      "vivid": "Canlı",
+      "silver": "Gümüş",
+      "ink": "Mürekkep"
+    }
+  }
+}

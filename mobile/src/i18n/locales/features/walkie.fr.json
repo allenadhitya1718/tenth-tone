@@ -1,0 +1,36 @@
+{
+  "walkie": {
+    "title": "Talkie-walkie",
+    "toggle": "Talkie-walkie",
+    "toggleHint": "Parlez en direct à tous ceux qui ont cette discussion ouverte. Rien n'est enregistré.",
+    "holdToTalk": "Maintenir pour parler",
+    "stopTalking": "Arrêter de parler",
+    "talkHint": "Maintenez pour parler et relâchez pour arrêter, ou touchez une fois pour parler en continu et touchez à nouveau pour arrêter.",
+    "connecting": "Connexion…",
+    "reconnecting": "Reconnexion…",
+    "youAreLive": "Vous êtes en direct. Relâchez ou touchez pour arrêter.",
+    "listening_one": "{{count}} autre personne écoute. Maintenez le bouton pour parler.",
+    "listening_many": "{{count}} autres personnes écoutent. Maintenez le bouton pour parler.",
+    "listening_other": "{{count}} autres personnes écoutent. Maintenez le bouton pour parler.",
+    "nobodyListening": "Activé. Les autres vous entendent quand ils ont cette discussion ouverte avec le talkie-walkie activé.",
+    "someone": "Quelqu'un",
+    "isTalking": "{{name}} parle",
+    "manyTalking_one": "{{name}} et {{count}} autre personne parlent",
+    "manyTalking_many": "{{name}} et {{count}} autres personnes parlent",
+    "manyTalking_other": "{{name}} et {{count}} autres personnes parlent",
+    "listen": "Écouter",
+    "listenHint": "Active le talkie-walkie pour les entendre en direct",
+    "turnOff": "Désactiver le talkie-walkie",
+    "retry": "Réessayer",
+    "openSettings": "Réglages",
+    "errors": {
+      "busy": "Un appel ou un LIVE utilise déjà l'audio. Réessayez quand il sera terminé.",
+      "forbidden": "Le talkie-walkie n'est pas disponible dans cette discussion.",
+      "unavailable": "Connexion impossible. Vérifiez votre connexion et réessayez.",
+      "not_installed": "Le talkie-walkie nécessite la dernière version de l'application.",
+      "join_failed": "Impossible de rejoindre le canal du talkie-walkie.",
+      "same_uid": "Le talkie-walkie a été ouvert sur un autre appareil.",
+      "mic_denied": "Autorisez l'accès au micro pour parler."
+    }
+  }
+}

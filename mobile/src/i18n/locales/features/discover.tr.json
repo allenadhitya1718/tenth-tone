@@ -1,0 +1,153 @@
+{
+  "discover": {
+    "title": "Keşfet",
+    "trendingRank": "Trendlerde {{rank}}. sıra, #{{tag}}, {{count}}",
+    "common": {
+      "loading": "Yükleniyor",
+      "errorTitle": "Yüklenemedi",
+      "errorSub": "Bağlantını kontrol edip tekrar dene.",
+      "retry": "Tekrar dene",
+      "seeAll": "Tümünü gör",
+      "followers": "{{n}} takipçi",
+      "video": "Video",
+      "plays": "{{n}} oynatma",
+      "share": "Paylaş",
+      "videosCount_one": "{{n}} video",
+      "videosCount_other": "{{n}} video"
+    },
+    "follow": {
+      "follow": "Takip et",
+      "following": "Takip ediliyor",
+      "requested": "İstek gönderildi",
+      "failed": "Güncellenemedi. Tekrar dene."
+    },
+    "search": {
+      "placeholder": "Kişi, video, ses ara",
+      "openHint": "Aramayı açar",
+      "clearText": "Aramayı temizle",
+      "tab_top": "Öne çıkanlar",
+      "tab_people": "Kişiler",
+      "tab_videos": "Videolar",
+      "tab_sounds": "Sesler",
+      "tab_hashtags": "Hashtag'ler",
+      "noResults": "Sonuç yok",
+      "noResultsSub": "Farklı bir yazım veya daha kısa bir kelime dene.",
+      "hintTitle": "FLYP'ta ara",
+      "hintSub": "Kişileri bulmak için @, hashtag'ler için # ile başla.",
+      "recent": "Son aramalar",
+      "clearAll": "Tümünü temizle",
+      "recentHint": "Tekrar arar",
+      "removeRecent": "Son aramalardan kaldır: {{q}}"
+    },
+    "sections": {
+      "trending": "Trend hashtag'ler",
+      "people": "Senin için öneriler",
+      "popular": "Popüler videolar"
+    },
+    "empty": {
+      "title": "Henüz keşfedilecek bir şey yok",
+      "sub": "Kişiler video paylaştıkça trendler ve içerik üreticileri burada görünür.",
+      "create": "Video oluştur"
+    },
+    "hashtag": {
+      "empty": "Bu hashtag ile henüz video yok",
+      "emptySub": "İlk paylaşan sen ol."
+    },
+    "sound": {
+      "title": "Ses",
+      "untitled": "Orijinal ses",
+      "notFound": "Bu ses artık kullanılamıyor",
+      "empty": "Bu sesi kullanan henüz video yok",
+      "emptySub": "İlk sen ol: Bu sesi kullan'a dokun.",
+      "use": "Bu sesi kullan",
+      "favorite": "Favorilere ekle",
+      "unfavorite": "Favorilerden kaldır",
+      "favorited": "Kaydedildi",
+      "favoriteFailed": "Favoriler güncellenemedi. Tekrar dene.",
+      "uses_one": "{{n}} video",
+      "uses_other": "{{n}} video"
+    },
+    "lists": {
+      "followers": "Takipçiler",
+      "following": "Takip edilenler",
+      "filter": "Ara",
+      "emptyFollowers": "Henüz takipçi yok",
+      "emptyFollowing": "Henüz kimse takip edilmiyor"
+    },
+    "notif": {
+      "title": "Bildirimler",
+      "bellUnread": "Bildirimler, {{n}} okunmamış",
+      "empty": "Henüz bildirim yok",
+      "emptySub": "Beğeniler, yorumlar ve yeni takipçiler burada görünür.",
+      "bucket_today": "Bugün",
+      "bucket_week": "Bu hafta",
+      "bucket_earlier": "Daha önce",
+      "someone": "Biri",
+      "unread": "okunmamış",
+      "openProfile": "Profili aç: {{name}}",
+      "permitAllow": "İzin ver",
+      "permitDeny": "Reddet",
+      "permitAllowA11y": "Konumunu görmesine izin ver: {{name}}",
+      "permitDenyA11y": "Konum isteğini reddet: {{name}}",
+      "permitAllowed": "İzin verildi",
+      "permitDenied": "Reddedildi",
+      "permitFailed": "İsteğe yanıt verilemedi. Tekrar dene.",
+      "text": {
+        "likedComment": "yorumunu beğendi: \"{{text}}\"",
+        "likedCommentPlain": "yorumunu beğendi",
+        "likedVideo": "videonu beğendi",
+        "replied": "yorumuna yanıt verdi: \"{{text}}\"",
+        "commented": "yorum yaptı: \"{{text}}\"",
+        "tagged": "seni bir gönderide etiketledi",
+        "mentioned": "bir yorumda senden bahsetti",
+        "followed": "seni takip etmeye başladı",
+        "requested": "seni takip etmek istiyor",
+        "liveTitled": "canlı yayın başlattı: {{title}}",
+        "live": "şu anda canlı yayında",
+        "giftAmount": "sana {{n}} jeton değerinde hediye gönderdi",
+        "gift": "sana hediye gönderdi",
+        "message": "sana mesaj gönderdi",
+        "followAccepted": "takip isteğini kabul etti",
+        "liveStarted": "Canlı yayının başladı",
+        "liveEnded": "Canlı yayının sona erdi · {{duration}} · en yüksek {{peak}} izleyici",
+        "storage": "Depolama alanı %{{pct}} dolu. Sınıra ulaşıldığında yüklemeler durur.",
+        "locationRequest": "konumunu görmek istedi",
+        "locationApproved": "konum isteğini onayladı",
+        "locationDenied": "konum isteğini reddetti",
+        "newLogin": "Hesabına yeni giriş yapıldı: {{device}}",
+        "newLoginPlain": "Hesabına yeni giriş yapıldı",
+        "liveJoinRequest": "canlı yayınına katılmak istedi",
+        "liveInvite": "seni canlı yayınına davet etti",
+        "liveGuestAccepted": "canlı yayınına konuk olarak katıldı",
+        "liveGuestApproved": "canlı yayına katılma isteğini onayladı",
+        "liveGuestRemoved": "seni canlı yayından çıkardı",
+        "raw": "{{text}}",
+        "update": "Yeni güncelleme"
+      }
+    },
+    "requests": {
+      "title": "Takip istekleri",
+      "entrySubMany": "{{name}} ve {{n}} kişi daha",
+      "empty": "Takip isteği yok",
+      "emptySub": "Biri gizli hesabını takip etmek istediğinde burada görünür.",
+      "approve": "Onayla",
+      "decline": "Reddet",
+      "approveA11y": "Takip isteğini onayla: {{name}}",
+      "declineA11y": "Takip isteğini reddet: {{name}}",
+      "approved": "Onaylandı",
+      "declined": "Reddedildi",
+      "failed": "İstek güncellenemedi. Zaten işlenmiş olabilir."
+    },
+    "push": {
+      "ch_messages": "Mesajlar",
+      "ch_messagesDesc": "Yeni sohbet mesajları",
+      "ch_calls": "Aramalar",
+      "ch_callsDesc": "Gelen sesli ve görüntülü aramalar",
+      "ch_social": "Beğeniler, yorumlar ve takipler",
+      "ch_socialDesc": "Gönderilerindeki ve profilindeki etkinlikler, sessizce iletilir",
+      "ch_live": "Canlı",
+      "ch_liveDesc": "Takip ettiğin kişiler canlı yayına başladığında",
+      "ch_other": "Diğer"
+    }
+  }
+}

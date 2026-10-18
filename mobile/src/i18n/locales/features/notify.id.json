@@ -1,0 +1,14 @@
+{
+  "notify": {
+    "call": {
+      "accept": "Terima",
+      "decline": "Tolak"
+    },
+    "fsi": {
+      "title": "Tampilkan panggilan di layar kunci",
+      "body": "Agar panggilan masuk tampil layar penuh, bahkan saat ponsel terkunci, izinkan FLYP menggunakan notifikasi layar penuh di Setelan.",
+      "open": "Buka Setelan",
+      "later": "Nanti saja"
+    }
+  }
+}

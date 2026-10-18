@@ -1,0 +1,151 @@
+{
+  "discover": {
+    "title": "استكشف",
+    "trendingRank": "الرائج رقم {{rank}}، #{{tag}}، {{count}}",
+    "common": {
+      "loading": "جارٍ التحميل",
+      "errorTitle": "تعذّر التحميل",
+      "errorSub": "تحقق من اتصالك وحاول مرة أخرى.",
+      "retry": "حاول مرة أخرى",
+      "seeAll": "عرض الكل",
+      "followers": "{{n}} متابِع",
+      "video": "فيديو",
+      "plays": "{{n}} مشاهدة",
+      "videosCount": "{{n}} فيديو",
+      "share": "مشاركة"
+    },
+    "follow": {
+      "follow": "متابعة",
+      "following": "متابَع",
+      "requested": "تم الطلب",
+      "failed": "تعذّر التحديث. حاول مرة أخرى."
+    },
+    "search": {
+      "placeholder": "ابحث عن أشخاص، فيديوهات، أصوات",
+      "openHint": "يفتح البحث",
+      "clearText": "مسح البحث",
+      "tab_top": "الأبرز",
+      "tab_people": "أشخاص",
+      "tab_videos": "فيديوهات",
+      "tab_sounds": "أصوات",
+      "tab_hashtags": "هاشتاجات",
+      "noResults": "لا توجد نتائج",
+      "noResultsSub": "جرّب تهجئة أخرى أو كلمة أقصر.",
+      "hintTitle": "ابحث في FLYP",
+      "hintSub": "ابدأ بـ @ للبحث عن أشخاص، أو # للهاشتاجات.",
+      "recent": "عمليات البحث الأخيرة",
+      "clearAll": "مسح الكل",
+      "recentHint": "يعيد البحث",
+      "removeRecent": "إزالة {{q}} من عمليات البحث الأخيرة"
+    },
+    "sections": {
+      "trending": "هاشتاجات رائجة",
+      "people": "مقترحون لك",
+      "popular": "فيديوهات شائعة"
+    },
+    "empty": {
+      "title": "لا يوجد محتوى للاستكشاف بعد",
+      "sub": "عندما ينشر المستخدمون فيديوهات، ستظهر الاتجاهات وصُنّاع المحتوى هنا.",
+      "create": "إنشاء فيديو"
+    },
+    "hashtag": {
+      "empty": "لا توجد فيديوهات بهذا الهاشتاج بعد",
+      "emptySub": "كن أول من ينشر واحدًا."
+    },
+    "sound": {
+      "title": "الصوت",
+      "uses": "{{n}} فيديو",
+      "untitled": "صوت أصلي",
+      "notFound": "هذا الصوت لم يعد متاحًا",
+      "empty": "لا توجد فيديوهات تستخدم هذا الصوت بعد",
+      "emptySub": "كن الأول: اضغط على استخدام هذا الصوت.",
+      "use": "استخدام هذا الصوت",
+      "favorite": "المفضلة",
+      "unfavorite": "إزالة من المفضلة",
+      "favorited": "محفوظ",
+      "favoriteFailed": "تعذّر تحديث المفضلة. حاول مرة أخرى."
+    },
+    "lists": {
+      "followers": "المتابِعون",
+      "following": "المتابَعون",
+      "filter": "بحث",
+      "emptyFollowers": "لا يوجد متابِعون بعد",
+      "emptyFollowing": "لا يتابع أحدًا بعد"
+    },
+    "notif": {
+      "title": "الإشعارات",
+      "bellUnread": "الإشعارات، {{n}} غير مقروءة",
+      "empty": "لا توجد إشعارات بعد",
+      "emptySub": "ستظهر هنا الإعجابات والتعليقات والمتابِعون الجدد.",
+      "bucket_today": "اليوم",
+      "bucket_week": "هذا الأسبوع",
+      "bucket_earlier": "أقدم",
+      "someone": "شخص ما",
+      "unread": "غير مقروء",
+      "openProfile": "فتح الملف الشخصي لـ {{name}}",
+      "permitAllow": "سماح",
+      "permitDeny": "رفض",
+      "permitAllowA11y": "السماح لـ {{name}} برؤية موقعك",
+      "permitDenyA11y": "رفض طلب {{name}} لرؤية موقعك",
+      "permitAllowed": "تم السماح",
+      "permitDenied": "تم الرفض",
+      "permitFailed": "تعذّر الرد على الطلب. حاول مرة أخرى.",
+      "text": {
+        "likedComment": "أعجبه تعليقك: \"{{text}}\"",
+        "likedCommentPlain": "أعجبه تعليقك",
+        "likedVideo": "أعجبه الفيديو الخاص بك",
+        "replied": "رد على تعليقك: \"{{text}}\"",
+        "commented": "علّق: \"{{text}}\"",
+        "tagged": "أشار إليك في منشور",
+        "mentioned": "ذكرك في تعليق",
+        "followed": "بدأ بمتابعتك",
+        "requested": "يريد متابعتك",
+        "liveTitled": "بدأ بثًا مباشرًا: {{title}}",
+        "live": "يبث مباشرة الآن",
+        "giftAmount": "أرسل لك هدية بقيمة {{n}} عملة",
+        "gift": "أرسل لك هدية",
+        "message": "أرسل لك رسالة",
+        "followAccepted": "قبل طلب المتابعة",
+        "liveStarted": "بدأ بثك المباشر",
+        "liveEnded": "انتهى بثك · {{duration}} · أعلى عدد مشاهدين {{peak}}",
+        "storage": "التخزين ممتلئ بنسبة {{pct}}% — سيتوقف الرفع عند بلوغ السقف",
+        "locationRequest": "طلب رؤية موقعك",
+        "locationApproved": "وافق على طلب تتبع موقعه",
+        "locationDenied": "رفض طلب تتبع موقعه",
+        "newLogin": "تسجيل دخول جديد إلى حسابك من {{device}}",
+        "newLoginPlain": "تسجيل دخول جديد إلى حسابك",
+        "liveJoinRequest": "طلب الانضمام إلى بثك المباشر",
+        "liveInvite": "دعاك للانضمام إلى بثه المباشر",
+        "liveGuestAccepted": "انضم إلى بثك المباشر كضيف",
+        "liveGuestApproved": "وافق على طلبك للانضمام إلى البث",
+        "liveGuestRemoved": "أزالك من البث المباشر",
+        "raw": "{{text}}",
+        "update": "تحديث جديد"
+      }
+    },
+    "requests": {
+      "title": "طلبات المتابعة",
+      "entrySubMany": "{{name}} و{{n}} آخرون",
+      "empty": "لا توجد طلبات متابعة",
+      "emptySub": "عندما يطلب أحد متابعة حسابك الخاص، سيظهر هنا.",
+      "approve": "قبول",
+      "decline": "رفض",
+      "approveA11y": "قبول طلب متابعة {{name}}",
+      "declineA11y": "رفض طلب متابعة {{name}}",
+      "approved": "تم القبول",
+      "declined": "تم الرفض",
+      "failed": "تعذّر تحديث الطلب. ربما تمت معالجته بالفعل."
+    },
+    "push": {
+      "ch_messages": "الرسائل",
+      "ch_messagesDesc": "رسائل الدردشة الجديدة",
+      "ch_calls": "المكالمات",
+      "ch_callsDesc": "المكالمات الصوتية والمرئية الواردة",
+      "ch_social": "الإعجابات والتعليقات والمتابعات",
+      "ch_socialDesc": "النشاط على منشوراتك وملفك الشخصي، بهدوء ودون صوت",
+      "ch_live": "البث المباشر",
+      "ch_liveDesc": "عندما يبدأ من تتابعهم بثًا مباشرًا",
+      "ch_other": "أخرى"
+    }
+  }
+}

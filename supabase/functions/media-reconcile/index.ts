@@ -104,6 +104,22 @@ function parseList(xml: string) {
   return { items, truncated, token };
 }
 
+// Constant-time secret comparison (F19). Both sides are hashed first so the
+// comparison always walks 32 bytes, whatever the lengths, and a plain `===`
+// cannot leak how many leading characters matched through its timing.
+async function safeEqual(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const [ha, hb] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(a)),
+    crypto.subtle.digest('SHA-256', enc.encode(b)),
+  ]);
+  const x = new Uint8Array(ha);
+  const y = new Uint8Array(hb);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
 // The hourly caller presents the secret stored on this job's own row in
 // job_endpoints, which was regenerated at some point and has not matched the
 // RECONCILE_SECRET env var since. Every run for months answered 401 and swept
@@ -112,10 +128,10 @@ function parseList(xml: string) {
 async function callerAllowed(req: Request, db: ReturnType<typeof createClient>): Promise<boolean> {
   const given = req.headers.get('x-reconcile-secret') ?? '';
   if (!given) return false;
-  if (RECONCILE_SECRET && given === RECONCILE_SECRET) return true;
+  if (RECONCILE_SECRET && (await safeEqual(given, RECONCILE_SECRET))) return true;
   const { data } = await db.from('job_endpoints').select('headers').eq('name', 'media-reconcile').maybeSingle();
   const want = data && data.headers && (data.headers['x-reconcile-secret'] || data.headers['X-Reconcile-Secret']);
-  return !!want && given === String(want);
+  return !!want && (await safeEqual(given, String(want)));
 }
 
 Deno.serve(async (req) => {

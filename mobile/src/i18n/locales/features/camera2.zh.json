@@ -1,0 +1,24 @@
+{
+  "camera2": {
+    "filters": "滤镜",
+    "beauty": "美颜",
+    "applying": "正在应用滤镜…",
+    "applyFailed": "无法应用滤镜",
+    "postWithout": "不加滤镜直接发布",
+    "cancel": "取消",
+    "filter": {
+      "normal": "原图",
+      "crisp": "清晰",
+      "golden": "黄金时刻",
+      "breeze": "微风",
+      "film": "褪色胶片",
+      "dusk": "黄昏",
+      "pastel": "粉彩",
+      "retro": "复古",
+      "cinema": "电影",
+      "vivid": "鲜艳",
+      "silver": "银色",
+      "ink": "水墨"
+    }
+  }
+}

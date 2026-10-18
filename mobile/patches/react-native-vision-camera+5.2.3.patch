@@ -1,0 +1,31 @@
+diff --git a/node_modules/react-native-vision-camera/android/src/main/java/com/margelo/nitro/camera/hybrids/outputs/HybridPreviewOutput.kt b/node_modules/react-native-vision-camera/android/src/main/java/com/margelo/nitro/camera/hybrids/outputs/HybridPreviewOutput.kt
+index 7960056..12af730 100644
+--- a/node_modules/react-native-vision-camera/android/src/main/java/com/margelo/nitro/camera/hybrids/outputs/HybridPreviewOutput.kt
++++ b/node_modules/react-native-vision-camera/android/src/main/java/com/margelo/nitro/camera/hybrids/outputs/HybridPreviewOutput.kt
+@@ -1,6 +1,8 @@
+ package com.margelo.nitro.camera.hybrids.outputs
+ 
+ import androidx.camera.core.Preview
++import androidx.camera.core.resolutionselector.AspectRatioStrategy
++import androidx.camera.core.resolutionselector.ResolutionSelector
+ import com.margelo.nitro.camera.CameraOrientation
+ import com.margelo.nitro.camera.HybridCameraPreviewOutputSpec
+ import com.margelo.nitro.camera.MediaType
+@@ -58,6 +60,17 @@ class HybridPreviewOutput :
+           // isMirrored={...}
+           setMirrorMode(mirrorMode.toMirrorMode())
+ 
++          // FLYP patch: ask for a 16:9 preview. Without a ResolutionSelector
++          // CameraX defaults to 4:3 (1600x1200 on a Redmi 9 Power), which a
++          // tall full-screen view crops and upscales about 2x, so the preview
++          // looked far softer than the 1080p 16:9 recording.
++          setResolutionSelector(
++            ResolutionSelector
++              .Builder()
++              .setAspectRatioStrategy(AspectRatioStrategy.RATIO_16_9_FALLBACK_AUTO_STRATEGY)
++              .build(),
++          )
++
+           // stabilizationMode={...}
+           when (config.previewStabilizationMode) {
+             TargetStabilizationMode.OFF -> {

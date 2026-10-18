@@ -1,0 +1,32 @@
+{
+  "walkie": {
+    "title": "Walkie-talkie",
+    "toggle": "Walkie-talkie",
+    "toggleHint": "Bicara langsung dengan semua orang yang sedang membuka chat ini. Tidak ada yang direkam.",
+    "holdToTalk": "Tahan untuk bicara",
+    "stopTalking": "Berhenti bicara",
+    "talkHint": "Tahan untuk bicara dan lepas untuk berhenti, atau ketuk sekali untuk terus bicara dan ketuk lagi untuk berhenti.",
+    "connecting": "Menghubungkan…",
+    "reconnecting": "Menghubungkan ulang…",
+    "youAreLive": "Suaramu sedang tersiar. Lepas atau ketuk untuk berhenti.",
+    "listening_other": "{{count}} orang lain sedang mendengarkan. Tahan tombol untuk bicara.",
+    "nobodyListening": "Aktif. Orang lain bisa mendengarmu saat mereka membuka chat ini dengan walkie-talkie aktif.",
+    "someone": "Seseorang",
+    "isTalking": "{{name}} sedang bicara",
+    "manyTalking_other": "{{name}} dan {{count}} lainnya sedang bicara",
+    "listen": "Dengarkan",
+    "listenHint": "Mengaktifkan walkie-talkie untuk mendengar mereka secara langsung",
+    "turnOff": "Matikan walkie-talkie",
+    "retry": "Coba lagi",
+    "openSettings": "Pengaturan",
+    "errors": {
+      "busy": "Panggilan atau ruang LIVE sedang memakai audio. Coba lagi setelah selesai.",
+      "forbidden": "Walkie-talkie tidak tersedia di chat ini.",
+      "unavailable": "Tidak dapat terhubung. Periksa koneksimu dan coba lagi.",
+      "not_installed": "Walkie-talkie memerlukan versi terbaru aplikasi.",
+      "join_failed": "Tidak dapat bergabung ke saluran walkie-talkie.",
+      "same_uid": "Walkie-talkie dibuka di perangkat lain.",
+      "mic_denied": "Izinkan akses mikrofon untuk bicara."
+    }
+  }
+}

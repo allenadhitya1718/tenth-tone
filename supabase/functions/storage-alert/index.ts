@@ -67,16 +67,32 @@ const BAND_LABEL: Record<number, string> = {
   3: 'critical',
 };
 
+// Constant-time secret comparison (F19). Both sides are hashed first so the
+// comparison always walks 32 bytes, whatever the lengths, and a plain `===`
+// cannot leak how many leading characters matched through its timing.
+async function safeEqual(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const [ha, hb] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(a)),
+    crypto.subtle.digest('SHA-256', enc.encode(b)),
+  ]);
+  const x = new Uint8Array(ha);
+  const y = new Uint8Array(hb);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
 function mb(bytes: number) {
   return (bytes / 1048576).toFixed(0) + ' MB';
 }
 
 Deno.serve(async (req) => {
   // A shared secret rather than a JWT: the caller is a scheduler, not a
-  // person. Compared with a constant-time-ish check to avoid leaking length
-  // through timing, which matters little here but costs nothing.
+  // person. Compared in constant time (safeEqual), so neither the length nor
+  // a matching prefix leaks through timing.
   const given = req.headers.get('x-alert-secret') ?? '';
-  if (!ALERT_SECRET || given.length !== ALERT_SECRET.length || given !== ALERT_SECRET) {
+  if (!ALERT_SECRET || !given || !(await safeEqual(given, ALERT_SECRET))) {
     return json({ error: 'unauthorized' }, 401);
   }
 

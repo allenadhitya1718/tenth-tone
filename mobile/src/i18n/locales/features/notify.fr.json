@@ -1,0 +1,14 @@
+{
+  "notify": {
+    "call": {
+      "accept": "Accepter",
+      "decline": "Refuser"
+    },
+    "fsi": {
+      "title": "Afficher les appels sur l'écran verrouillé",
+      "body": "Pour afficher les appels entrants en plein écran, même téléphone verrouillé, autorisez FLYP à utiliser les notifications plein écran dans les Réglages.",
+      "open": "Ouvrir les Réglages",
+      "later": "Plus tard"
+    }
+  }
+}

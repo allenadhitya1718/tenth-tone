@@ -1,8 +1,5 @@
-import { useTranslation } from 'react-i18next';
+import { Inbox } from '@/features/chat/Inbox';
 
-import { Placeholder } from '@/components/Placeholder';
-
-export default function Inbox() {
-  const { t } = useTranslation();
-  return <Placeholder title={t('tabs.inbox')} />;
+export default function InboxTab() {
+  return <Inbox />;
 }

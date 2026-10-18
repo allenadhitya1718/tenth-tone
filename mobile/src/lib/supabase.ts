@@ -1,14 +1,14 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import { AppState, Platform } from 'react-native';
 
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from './config';
+import { largeSecureStorage } from './secureStorage';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    // AsyncStorage is undefined during web static rendering; supabase-js
-    // falls back to localStorage there.
-    storage: Platform.OS === 'web' ? undefined : AsyncStorage,
+    // Encrypted at rest on the phone (see secureStorage.ts). On web there is
+    // no keychain; supabase-js falls back to localStorage.
+    storage: Platform.OS === 'web' ? undefined : largeSecureStorage,
     storageKey: 'tt-auth',
     autoRefreshToken: true,
     persistSession: true,

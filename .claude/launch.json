@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "mobile-web",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "export PATH=$HOME/.nvm/versions/node/v24.22.0/bin:$PATH && cd mobile && npx expo start --web --port 8081"],
+      "port": 8081
+    }
+  ]
+}

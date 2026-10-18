@@ -1,0 +1,32 @@
+{
+  "walkie": {
+    "title": "对讲机",
+    "toggle": "对讲机",
+    "toggleHint": "与所有打开此聊天的人实时通话。不会录音。",
+    "holdToTalk": "按住说话",
+    "stopTalking": "停止说话",
+    "talkHint": "按住说话，松开结束；或点按一次持续说话，再点一次结束。",
+    "connecting": "正在连接…",
+    "reconnecting": "正在重新连接…",
+    "youAreLive": "你正在说话。松开或点按即可结束。",
+    "listening_other": "{{count}} 人正在收听。按住按钮即可说话。",
+    "nobodyListening": "已开启。其他人打开此聊天并开启对讲机后即可听到你。",
+    "someone": "某人",
+    "isTalking": "{{name}} 正在说话",
+    "manyTalking_other": "{{name}} 和另外 {{count}} 人正在说话",
+    "listen": "收听",
+    "listenHint": "开启对讲机，实时收听他们说话",
+    "turnOff": "关闭对讲机",
+    "retry": "重试",
+    "openSettings": "设置",
+    "errors": {
+      "busy": "通话或直播间正在使用音频，结束后再试。",
+      "forbidden": "此聊天不支持对讲机。",
+      "unavailable": "无法连接，请检查网络后重试。",
+      "not_installed": "对讲机需要最新版本的应用。",
+      "join_failed": "无法加入对讲频道。",
+      "same_uid": "对讲机已在另一台设备上打开。",
+      "mic_denied": "请允许使用麦克风以便说话。"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "notify": {
+    "call": {
+      "accept": "Kabul et",
+      "decline": "Reddet"
+    },
+    "fsi": {
+      "title": "Aramalar kilit ekranında görünsün",
+      "body": "Gelen aramaları telefonun kilitliyken bile tam ekran göstermek için Ayarlar'da FLYP'ye tam ekran bildirim izni verin.",
+      "open": "Ayarları aç",
+      "later": "Şimdi değil"
+    }
+  }
+}

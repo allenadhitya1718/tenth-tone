@@ -1,0 +1,12 @@
+{
+  "hashtags": {
+    "suggested": "Hashtags suggérés",
+    "loading": "Recherche de hashtags pour votre publication",
+    "add": "Ajouter #{{tag}} à la légende",
+    "added": "#{{tag}} est dans la légende",
+    "noRoom": "#{{tag}} : plus de place dans la légende",
+    "place": "Lieu",
+    "rateLimited": "Plus de suggestions pour le moment. Réessayez dans un petit moment.",
+    "hint": "Touchez un hashtag pour l'ajouter à votre légende"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "camera2": {
+    "filters": "Filtres",
+    "beauty": "Beauté",
+    "applying": "Application du filtre…",
+    "applyFailed": "Impossible d'appliquer le filtre",
+    "postWithout": "Publier sans filtre",
+    "cancel": "Annuler",
+    "filter": {
+      "normal": "Normal",
+      "crisp": "Net",
+      "golden": "Heure dorée",
+      "breeze": "Brise",
+      "film": "Film délavé",
+      "dusk": "Crépuscule",
+      "pastel": "Pastel",
+      "retro": "Rétro",
+      "cinema": "Cinéma",
+      "vivid": "Éclatant",
+      "silver": "Argent",
+      "ink": "Encre"
+    }
+  }
+}

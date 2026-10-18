@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Firebase app config: supplied to builds as an EAS file variable / CI secret, not committed.
+google-services.json
+GoogleService-Info.plist

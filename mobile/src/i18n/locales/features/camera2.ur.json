@@ -1,0 +1,24 @@
+{
+  "camera2": {
+    "filters": "فلٹرز",
+    "beauty": "بیوٹی",
+    "applying": "فلٹر لگایا جا رہا ہے…",
+    "applyFailed": "فلٹر نہیں لگ سکا",
+    "postWithout": "فلٹر کے بغیر پوسٹ کریں",
+    "cancel": "منسوخ کریں",
+    "filter": {
+      "normal": "نارمل",
+      "crisp": "کرسپ",
+      "golden": "گولڈن آور",
+      "breeze": "بریز",
+      "film": "پرانی فلم",
+      "dusk": "شام",
+      "pastel": "پیسٹل",
+      "retro": "ریٹرو",
+      "cinema": "سنیما",
+      "vivid": "شوخ",
+      "silver": "سلور",
+      "ink": "انک"
+    }
+  }
+}

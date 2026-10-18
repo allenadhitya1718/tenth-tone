@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import { router, Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { chatKeys, countUnreadChats } from '@/api/chat';
 import { useTheme } from '@/providers/ThemeProvider';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -11,6 +13,7 @@ type IconName = keyof typeof Ionicons.glyphMap;
 export default function TabsLayout() {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const unread = useQuery({ queryKey: chatKeys.unreadCount(), queryFn: countUnreadChats });
 
   const icon = (on: IconName, off: IconName) =>
     function TabIcon({ focused, size }: { focused: boolean; size: number }) {
@@ -31,6 +34,13 @@ export default function TabsLayout() {
       <Tabs.Screen name="discover" options={{ title: t('tabs.discover'), tabBarIcon: icon('search', 'search-outline') }} />
       <Tabs.Screen
         name="create"
+        // The + opens the camera full screen instead of switching tabs.
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            router.push('/camera');
+          },
+        }}
         options={{
           title: t('tabs.create'),
           tabBarShowLabel: false,
@@ -51,7 +61,14 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen name="inbox" options={{ title: t('tabs.inbox'), tabBarIcon: icon('chatbubbles', 'chatbubbles-outline') }} />
+      <Tabs.Screen
+        name="inbox"
+        options={{
+          title: t('tabs.inbox'),
+          tabBarIcon: icon('chatbubbles', 'chatbubbles-outline'),
+          tabBarBadge: unread.data ? (unread.data > 99 ? '99+' : unread.data) : undefined,
+        }}
+      />
       <Tabs.Screen name="profile" options={{ title: t('tabs.profile'), tabBarIcon: icon('person', 'person-outline') }} />
     </Tabs>
   );

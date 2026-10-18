@@ -107,6 +107,11 @@ const BUCKETS: Record<string, { exts: string[]; types: string[]; max: number }> 
   },
 };
 
+// Signed upload URLs per person per UTC day, whatever became of them. See the
+// sign action. A post is two (clip + poster); stories and live covers add a
+// few more. Deliberately generous: it exists to stop a loop, not a person.
+const MAX_SIGNS_PER_DAY = 200;
+
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -151,6 +156,13 @@ const REFERENCED_BY: { table: string; column: string }[] = [
   { table: 'sounds',       column: 'audio_url' },
   { table: 'sounds',       column: 'cover_url' },
   { table: 'live_streams', column: 'thumbnail' },
+  // Stories (0102). A story can reuse a file that a video also points at, so
+  // deleting one must not take the bytes from the other. Deploy this together
+  // with 0102: on a database without the stories table the check errors, and
+  // an unanswered check keeps the object (reference_check_failed), so the
+  // failure mode is "nothing deleted", never "wrong thing deleted".
+  { table: 'stories',      column: 'media_url' },
+  { table: 'stories',      column: 'poster_url' },
 ];
 
 Deno.serve(async (req) => {
@@ -282,6 +294,26 @@ Deno.serve(async (req) => {
     if (inflightErr) return json({ error: 'inflight_check_failed', detail: inflightErr.message }, 500);
     if ((inflight ?? 0) >= 4) {
       return json({ error: 'too_many_pending' }, 429);
+    }
+
+    // ── Cap how many URLs one person can be handed per day (F08) ──
+    // Every signed URL is a chance to put bytes in a PUBLIC bucket, and a
+    // pending row whose upload was never confirmed is only ever counted at its
+    // declared size. Counting every ledger row created today - whatever its
+    // status, including abandoned 'pending' ones - bounds that. 0118 makes
+    // user_uploads_today() count stale pending rows as well, so the quota and
+    // this cap now agree that an unconfirmed upload still used a slot.
+    // Far above a real day (a post is two signs: the clip and its poster).
+    const dayStart = new Date();
+    dayStart.setUTCHours(0, 0, 0, 0);
+    const { count: signedToday, error: signedErr } = await db
+      .from('media_objects')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', dayStart.toISOString());
+    if (signedErr) return json({ error: 'inflight_check_failed', detail: signedErr.message }, 500);
+    if ((signedToday ?? 0) >= MAX_SIGNS_PER_DAY) {
+      return json({ error: 'too_many_uploads_today' }, 429);
     }
 
     // Recorded BEFORE the URL is handed out. A pending row counts toward usage
@@ -547,7 +579,7 @@ Deno.serve(async (req) => {
       return { ref, count: count ?? 0, error };
     }));
 
-    // An unanswered question is not a "no". If any of the five could not be
+    // An unanswered question is not a "no". If any of them could not be
     // asked, the object keeps its bytes and somebody gets to look at why.
     const unchecked = checks.filter((c) => c.error);
     if (unchecked.length) {

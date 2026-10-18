@@ -1,0 +1,14 @@
+{
+  "notify": {
+    "call": {
+      "accept": "Accept",
+      "decline": "Decline"
+    },
+    "fsi": {
+      "title": "Let calls ring on your lock screen",
+      "body": "To show incoming calls full screen, even when your phone is locked, allow FLYP to use full-screen notifications in Settings.",
+      "open": "Open Settings",
+      "later": "Not now"
+    }
+  }
+}

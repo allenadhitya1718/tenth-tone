@@ -1,0 +1,153 @@
+{
+  "discover": {
+    "title": "Discover",
+    "trendingRank": "Trending number {{rank}}, #{{tag}}, {{count}}",
+    "common": {
+      "loading": "Loading",
+      "errorTitle": "Couldn't load this",
+      "errorSub": "Check your connection and try again.",
+      "retry": "Try again",
+      "seeAll": "See all",
+      "followers": "{{n}} followers",
+      "video": "Video",
+      "plays": "{{n}} plays",
+      "share": "Share",
+      "videosCount_one": "{{n}} video",
+      "videosCount_other": "{{n}} videos"
+    },
+    "follow": {
+      "follow": "Follow",
+      "following": "Following",
+      "requested": "Requested",
+      "failed": "Couldn't update. Try again."
+    },
+    "search": {
+      "placeholder": "Search people, videos, sounds",
+      "openHint": "Opens search",
+      "clearText": "Clear search",
+      "tab_top": "Top",
+      "tab_people": "People",
+      "tab_videos": "Videos",
+      "tab_sounds": "Sounds",
+      "tab_hashtags": "Hashtags",
+      "noResults": "No results",
+      "noResultsSub": "Try a different spelling or a shorter word.",
+      "hintTitle": "Search FLYP",
+      "hintSub": "Start with @ to find people, or # for hashtags.",
+      "recent": "Recent",
+      "clearAll": "Clear all",
+      "recentHint": "Searches again",
+      "removeRecent": "Remove {{q}} from recent searches"
+    },
+    "sections": {
+      "trending": "Trending hashtags",
+      "people": "Suggested for you",
+      "popular": "Popular videos"
+    },
+    "empty": {
+      "title": "Nothing to discover yet",
+      "sub": "When people post videos, trends and creators show up here.",
+      "create": "Create a video"
+    },
+    "hashtag": {
+      "empty": "No videos with this hashtag yet",
+      "emptySub": "Be the first to post one."
+    },
+    "sound": {
+      "title": "Sound",
+      "untitled": "Original sound",
+      "notFound": "This sound is no longer available",
+      "empty": "No videos use this sound yet",
+      "emptySub": "Be the first: tap Use this sound.",
+      "use": "Use this sound",
+      "favorite": "Favourite",
+      "unfavorite": "Remove from favourites",
+      "favorited": "Saved",
+      "favoriteFailed": "Couldn't update favourites. Try again.",
+      "uses_one": "{{n}} video",
+      "uses_other": "{{n}} videos"
+    },
+    "lists": {
+      "followers": "Followers",
+      "following": "Following",
+      "filter": "Search",
+      "emptyFollowers": "No followers yet",
+      "emptyFollowing": "Not following anyone yet"
+    },
+    "notif": {
+      "title": "Notifications",
+      "bellUnread": "Notifications, {{n}} unread",
+      "empty": "No notifications yet",
+      "emptySub": "Likes, comments and new followers will show up here.",
+      "bucket_today": "Today",
+      "bucket_week": "This week",
+      "bucket_earlier": "Earlier",
+      "someone": "Someone",
+      "unread": "unread",
+      "openProfile": "Open {{name}}'s profile",
+      "permitAllow": "Allow",
+      "permitDeny": "Deny",
+      "permitAllowA11y": "Allow {{name}} to see your location",
+      "permitDenyA11y": "Deny {{name}}'s location request",
+      "permitAllowed": "Allowed",
+      "permitDenied": "Denied",
+      "permitFailed": "Couldn't answer the request. Try again.",
+      "text": {
+        "likedComment": "liked your comment: \"{{text}}\"",
+        "likedCommentPlain": "liked your comment",
+        "likedVideo": "liked your video",
+        "replied": "replied to your comment: \"{{text}}\"",
+        "commented": "commented: \"{{text}}\"",
+        "tagged": "tagged you in a post",
+        "mentioned": "mentioned you in a comment",
+        "followed": "started following you",
+        "requested": "wants to follow you",
+        "liveTitled": "started a live: {{title}}",
+        "live": "is live now",
+        "giftAmount": "sent you a gift worth {{n}} coins",
+        "gift": "sent you a gift",
+        "message": "sent you a message",
+        "followAccepted": "accepted your follow request",
+        "liveStarted": "Your live has started",
+        "liveEnded": "Your live ended · {{duration}} · peak of {{peak}} viewers",
+        "storage": "Storage is {{pct}}% full. Uploads stop when it reaches the cap.",
+        "locationRequest": "asked to see your location",
+        "locationApproved": "approved your location request",
+        "locationDenied": "declined your location request",
+        "newLogin": "New sign-in to your account from {{device}}",
+        "newLoginPlain": "New sign-in to your account",
+        "liveJoinRequest": "asked to join your live",
+        "liveInvite": "invited you to join their live",
+        "liveGuestAccepted": "joined your live as a guest",
+        "liveGuestApproved": "approved your request to join the live",
+        "liveGuestRemoved": "removed you from the live",
+        "raw": "{{text}}",
+        "update": "New update"
+      }
+    },
+    "requests": {
+      "title": "Follow requests",
+      "entrySubMany": "{{name}} and {{n}} others",
+      "empty": "No follow requests",
+      "emptySub": "When someone asks to follow your private account, they appear here.",
+      "approve": "Approve",
+      "decline": "Decline",
+      "approveA11y": "Approve {{name}}'s follow request",
+      "declineA11y": "Decline {{name}}'s follow request",
+      "approved": "Approved",
+      "declined": "Declined",
+      "failed": "Couldn't update the request. It may have been handled already."
+    },
+    "push": {
+      "ch_messages": "Messages",
+      "ch_messagesDesc": "New chat messages",
+      "ch_calls": "Calls",
+      "ch_callsDesc": "Incoming voice and video calls",
+      "ch_social": "Likes, comments and follows",
+      "ch_socialDesc": "Activity on your posts and profile, delivered quietly",
+      "ch_live": "Live",
+      "ch_liveDesc": "When people you follow go live",
+      "ch_other": "Other"
+    }
+  }
+}

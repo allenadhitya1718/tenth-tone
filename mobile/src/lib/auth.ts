@@ -1,5 +1,7 @@
 // Port of the auth half of web/js/supabase.js. Every call throws the raw
 // Supabase error; screens turn it into words with authErrorKey().
+import { unregisterPush } from '@/features/notifications/push';
+
 import { probeClient, supabase } from './supabase';
 
 export async function signUp(p: { email: string; password: string; name: string; handle: string }) {
@@ -102,6 +104,9 @@ export async function signInWithApple(token: string, nonce?: string) {
 }
 
 export async function signOut() {
+  // The token is removed while the session can still authorise the delete;
+  // otherwise the next account on this phone gets the previous one's pushes.
+  await unregisterPush().catch(() => {});
   await supabase.auth.signOut();
 }
 

@@ -1,0 +1,151 @@
+{
+  "discover": {
+    "title": "发现",
+    "trendingRank": "热门第 {{rank}} 名，#{{tag}}，{{count}}",
+    "common": {
+      "loading": "加载中",
+      "errorTitle": "加载失败",
+      "errorSub": "请检查网络后重试。",
+      "retry": "重试",
+      "seeAll": "查看全部",
+      "followers": "{{n}} 粉丝",
+      "video": "视频",
+      "plays": "{{n}} 次播放",
+      "share": "分享",
+      "videosCount_other": "{{n}} 个视频"
+    },
+    "follow": {
+      "follow": "关注",
+      "following": "已关注",
+      "requested": "已申请",
+      "failed": "更新失败，请重试。"
+    },
+    "search": {
+      "placeholder": "搜索用户、视频、声音",
+      "openHint": "打开搜索",
+      "clearText": "清除搜索",
+      "tab_top": "综合",
+      "tab_people": "用户",
+      "tab_videos": "视频",
+      "tab_sounds": "声音",
+      "tab_hashtags": "话题",
+      "noResults": "无结果",
+      "noResultsSub": "换个拼写或更短的词试试。",
+      "hintTitle": "搜索 FLYP",
+      "hintSub": "以 @ 开头查找用户，以 # 开头查找话题。",
+      "recent": "最近搜索",
+      "clearAll": "全部清除",
+      "recentHint": "再次搜索",
+      "removeRecent": "从最近搜索中移除 {{q}}"
+    },
+    "sections": {
+      "trending": "热门话题",
+      "people": "为你推荐",
+      "popular": "热门视频"
+    },
+    "empty": {
+      "title": "暂无可发现的内容",
+      "sub": "当有人发布视频后，热门趋势和创作者会显示在这里。",
+      "create": "创作视频"
+    },
+    "hashtag": {
+      "empty": "该话题下暂无视频",
+      "emptySub": "来发布第一条吧。"
+    },
+    "sound": {
+      "title": "声音",
+      "untitled": "原声",
+      "notFound": "该声音已不可用",
+      "empty": "暂无视频使用此声音",
+      "emptySub": "来做第一个吧：轻点“使用此声音”。",
+      "use": "使用此声音",
+      "favorite": "收藏",
+      "unfavorite": "取消收藏",
+      "favorited": "已收藏",
+      "favoriteFailed": "无法更新收藏，请重试。",
+      "uses_other": "{{n}} 个视频"
+    },
+    "lists": {
+      "followers": "粉丝",
+      "following": "关注",
+      "filter": "搜索",
+      "emptyFollowers": "暂无粉丝",
+      "emptyFollowing": "还没有关注任何人"
+    },
+    "notif": {
+      "title": "通知",
+      "bellUnread": "通知，{{n}} 条未读",
+      "empty": "暂无通知",
+      "emptySub": "点赞、评论和新粉丝会显示在这里。",
+      "bucket_today": "今天",
+      "bucket_week": "本周",
+      "bucket_earlier": "更早",
+      "someone": "某人",
+      "unread": "未读",
+      "openProfile": "打开 {{name}} 的主页",
+      "permitAllow": "允许",
+      "permitDeny": "拒绝",
+      "permitAllowA11y": "允许 {{name}} 查看你的位置",
+      "permitDenyA11y": "拒绝 {{name}} 的位置请求",
+      "permitAllowed": "已允许",
+      "permitDenied": "已拒绝",
+      "permitFailed": "无法回应该请求，请重试。",
+      "text": {
+        "likedComment": "赞了你的评论：“{{text}}”",
+        "likedCommentPlain": "赞了你的评论",
+        "likedVideo": "赞了你的视频",
+        "replied": "回复了你的评论：“{{text}}”",
+        "commented": "评论了：“{{text}}”",
+        "tagged": "在作品中标记了你",
+        "mentioned": "在评论中提到了你",
+        "followed": "关注了你",
+        "requested": "请求关注你",
+        "liveTitled": "开始了直播：{{title}}",
+        "live": "正在直播",
+        "giftAmount": "送了你价值 {{n}} 金币的礼物",
+        "gift": "送了你一份礼物",
+        "message": "给你发了一条消息",
+        "followAccepted": "通过了你的关注请求",
+        "liveStarted": "你的直播已开始",
+        "liveEnded": "你的直播已结束 · {{duration}} · 最高 {{peak}} 人观看",
+        "storage": "存储空间已用 {{pct}}%。达到上限后将无法上传。",
+        "locationRequest": "请求查看你的位置",
+        "locationApproved": "同意了你的位置请求",
+        "locationDenied": "拒绝了你的位置请求",
+        "newLogin": "你的账号在 {{device}} 上有新的登录",
+        "newLoginPlain": "你的账号有新的登录",
+        "liveJoinRequest": "申请加入你的直播",
+        "liveInvite": "邀请你加入 TA 的直播",
+        "liveGuestAccepted": "以嘉宾身份加入了你的直播",
+        "liveGuestApproved": "同意了你加入直播的申请",
+        "liveGuestRemoved": "将你移出了直播",
+        "raw": "{{text}}",
+        "update": "新动态"
+      }
+    },
+    "requests": {
+      "title": "关注请求",
+      "entrySubMany": "{{name}} 等 {{n}} 人",
+      "empty": "暂无关注请求",
+      "emptySub": "有人申请关注你的私密账号时，会显示在这里。",
+      "approve": "通过",
+      "decline": "拒绝",
+      "approveA11y": "通过 {{name}} 的关注请求",
+      "declineA11y": "拒绝 {{name}} 的关注请求",
+      "approved": "已通过",
+      "declined": "已拒绝",
+      "failed": "无法更新该请求，可能已被处理。"
+    },
+    "push": {
+      "ch_messages": "消息",
+      "ch_messagesDesc": "新的聊天消息",
+      "ch_calls": "通话",
+      "ch_callsDesc": "语音和视频来电",
+      "ch_social": "点赞、评论和关注",
+      "ch_socialDesc": "你的作品和主页动态，静默推送",
+      "ch_live": "直播",
+      "ch_liveDesc": "你关注的人开播时",
+      "ch_other": "其他"
+    }
+  }
+}

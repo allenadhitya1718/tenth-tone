@@ -1,0 +1,36 @@
+{
+  "walkie": {
+    "title": "Walkie-talkie",
+    "toggle": "Walkie-talkie",
+    "toggleHint": "Habla en vivo con todos los que tienen este chat abierto. No se graba nada.",
+    "holdToTalk": "Mantén pulsado para hablar",
+    "stopTalking": "Dejar de hablar",
+    "talkHint": "Mantén pulsado para hablar y suelta para parar, o toca una vez para seguir hablando y vuelve a tocar para parar.",
+    "connecting": "Conectando…",
+    "reconnecting": "Reconectando…",
+    "youAreLive": "Estás al aire. Suelta o toca para parar.",
+    "listening_one": "{{count}} persona más está escuchando. Mantén pulsado el botón para hablar.",
+    "listening_many": "{{count}} personas más están escuchando. Mantén pulsado el botón para hablar.",
+    "listening_other": "{{count}} personas más están escuchando. Mantén pulsado el botón para hablar.",
+    "nobodyListening": "Activado. Los demás te oirán cuando tengan este chat abierto con el walkie-talkie activado.",
+    "someone": "Alguien",
+    "isTalking": "{{name}} está hablando",
+    "manyTalking_one": "{{name}} y {{count}} persona más están hablando",
+    "manyTalking_many": "{{name}} y {{count}} personas más están hablando",
+    "manyTalking_other": "{{name}} y {{count}} personas más están hablando",
+    "listen": "Escuchar",
+    "listenHint": "Activa el walkie-talkie para oírlos en vivo",
+    "turnOff": "Desactivar walkie-talkie",
+    "retry": "Reintentar",
+    "openSettings": "Ajustes",
+    "errors": {
+      "busy": "Una llamada o un directo está usando el audio. Inténtalo de nuevo cuando termine.",
+      "forbidden": "El walkie-talkie no está disponible en este chat.",
+      "unavailable": "No se pudo conectar. Revisa tu conexión e inténtalo de nuevo.",
+      "not_installed": "El walkie-talkie necesita la última versión de la app.",
+      "join_failed": "No se pudo unir al canal del walkie-talkie.",
+      "same_uid": "El walkie-talkie se abrió en otro dispositivo.",
+      "mic_denied": "Permite el acceso al micrófono para hablar."
+    }
+  }
+}

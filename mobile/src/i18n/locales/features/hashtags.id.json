@@ -1,0 +1,12 @@
+{
+  "hashtags": {
+    "suggested": "Hashtag yang disarankan",
+    "loading": "Mencari hashtag untuk postinganmu",
+    "add": "Tambahkan #{{tag}} ke keterangan",
+    "added": "#{{tag}} sudah ada di keterangan",
+    "noRoom": "#{{tag}}: keterangan sudah penuh",
+    "place": "Tempat",
+    "rateLimited": "Belum ada saran lagi untuk saat ini. Coba lagi sebentar lagi.",
+    "hint": "Ketuk hashtag untuk menambahkannya ke keteranganmu"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "camera2": {
+    "filters": "الفلاتر",
+    "beauty": "تجميل",
+    "applying": "جارٍ تطبيق الفلتر…",
+    "applyFailed": "تعذّر تطبيق الفلتر",
+    "postWithout": "النشر بدون فلتر",
+    "cancel": "إلغاء",
+    "filter": {
+      "normal": "عادي",
+      "crisp": "صافٍ",
+      "golden": "ساعة ذهبية",
+      "breeze": "نسيم",
+      "film": "فيلم قديم",
+      "dusk": "غسق",
+      "pastel": "باستيل",
+      "retro": "زمن جميل",
+      "cinema": "سينما",
+      "vivid": "زاهٍ",
+      "silver": "فضّي",
+      "ink": "حبر"
+    }
+  }
+}

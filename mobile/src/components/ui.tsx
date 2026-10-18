@@ -113,8 +113,11 @@ export function Button({
   variant?: 'primary' | 'secondary' | 'ghost';
   style?: StyleProp<ViewStyle>;
 }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const off = disabled || loading;
+  // Brand blue as text on navy is too dark to read; the lighter tone is used
+  // for text on the secondary and ghost buttons in dark mode.
+  const tint = isDark ? colors.primary2 : colors.primary;
   return (
     <Pressable
       onPress={onPress}
@@ -130,11 +133,11 @@ export function Button({
         style,
       ]}
     >
-      {loading ? <ActivityIndicator color={variant === 'primary' ? colors.onPrimary : colors.primary} /> : null}
+      {loading ? <ActivityIndicator color={variant === 'primary' ? colors.onPrimary : tint} /> : null}
       <Text
         style={[
           styles.buttonText,
-          { color: variant === 'primary' ? colors.onPrimary : colors.primary },
+          { color: variant === 'primary' ? colors.onPrimary : tint },
         ]}
       >
         {title}

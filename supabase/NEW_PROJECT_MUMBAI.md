@@ -63,7 +63,7 @@ Database → Extensions, toggle on:
 
 ## 3. Apply the migrations **[CLI]**
 
-Run `supabase/migrations/0001` → `0096` in numeric order (there is no 0078),
+Run `supabase/migrations/0001` → `0105` in numeric order (there is no 0078; 0097–0105 are the Phase 4 files, see `PHASE4_APPLY.md`),
 with these exceptions:
 
 | File | What to do |

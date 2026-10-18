@@ -1,0 +1,24 @@
+{
+  "camera2": {
+    "filters": "Filter",
+    "beauty": "Kecantikan",
+    "applying": "Menerapkan filter…",
+    "applyFailed": "Tidak dapat menerapkan filter",
+    "postWithout": "Posting tanpa filter",
+    "cancel": "Batal",
+    "filter": {
+      "normal": "Normal",
+      "crisp": "Tajam",
+      "golden": "Golden Hour",
+      "breeze": "Semilir",
+      "film": "Film Pudar",
+      "dusk": "Senja",
+      "pastel": "Pastel",
+      "retro": "Retro",
+      "cinema": "Sinema",
+      "vivid": "Cerah",
+      "silver": "Perak",
+      "ink": "Tinta"
+    }
+  }
+}

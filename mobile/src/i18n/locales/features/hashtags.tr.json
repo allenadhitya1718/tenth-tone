@@ -1,0 +1,12 @@
+{
+  "hashtags": {
+    "suggested": "Önerilen hashtag'ler",
+    "loading": "Gönderin için hashtag'ler aranıyor",
+    "add": "#{{tag}} etiketini açıklamaya ekle",
+    "added": "#{{tag}} açıklamada",
+    "noRoom": "#{{tag}}: açıklamada yer kalmadı",
+    "place": "Yer",
+    "rateLimited": "Şimdilik başka öneri yok. Biraz sonra tekrar dene.",
+    "hint": "Açıklamana eklemek için bir hashtag'e dokun"
+  }
+}

@@ -21,6 +21,8 @@ export const light = {
   dangerSoft: '#FDECEC',
   warn: '#F59E0B',
   success: '#16A34A',
+  // Read ticks sit on the brand-blue bubble in both themes.
+  tickRead: '#9EE7FF',
   tabBar: '#FFFFFF',
   overlay: 'rgba(0,0,0,0.45)',
 };
@@ -48,6 +50,7 @@ export const dark: Colors = {
   dangerSoft: '#3A1426',
   warn: '#FBBF24',
   success: '#22C55E',
+  tickRead: '#9EE7FF',
   tabBar: '#000421',
   overlay: 'rgba(0,2,16,0.65)',
 };
