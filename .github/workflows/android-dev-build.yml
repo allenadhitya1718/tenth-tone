@@ -1,0 +1,65 @@
+# Android development build of the FLYP app (mobile/), run on GitHub's
+# runners instead of EAS's: public-repo runners have 16 GB of RAM, which the
+# native libraries (Skia, vision-camera, reanimated) need to compile.
+# The APK is attached to the run as an artifact.
+#
+# Needs the repository secret EXPO_TOKEN (expo.dev → Access tokens). EAS
+# supplies the signing key and the environment variables, including the
+# google-services.json file variable, for the "development" environment.
+name: Android dev build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/rn-phase1-foundation]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/android-dev-build.yml'
+
+concurrency:
+  group: android-dev-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Free disk space
+        working-directory: .
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.0
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build APK
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" -Dorg.gradle.daemon=false
+        run: eas build --local --profile development --platform android --non-interactive --output ${{ github.workspace }}/flyp-dev.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flyp-dev-apk
+          path: flyp-dev.apk
+          retention-days: 14
