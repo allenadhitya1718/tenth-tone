@@ -53,17 +53,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Not committed (public repo); a local EAS build doesn't receive EAS
-      # file variables, so the file comes from this repository secret.
+      # Not committed (public repo), and a local EAS build copies the project
+      # without git-ignored files, so it is written outside the project and
+      # app.config.js reads its path from GOOGLE_SERVICES_JSON.
       - name: Write google-services.json
         env:
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          CONTENT: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          test -n "$GOOGLE_SERVICES_JSON" || { echo "Repository secret GOOGLE_SERVICES_JSON is missing"; exit 1; }
-          printf '%s' "$GOOGLE_SERVICES_JSON" > google-services.json
+          test -n "$CONTENT" || { echo "Repository secret GOOGLE_SERVICES_JSON is missing"; exit 1; }
+          printf '%s' "$CONTENT" > "$RUNNER_TEMP/google-services.json"
 
       - name: Build APK
         env:
+          GOOGLE_SERVICES_JSON: ${{ runner.temp }}/google-services.json
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" -Dorg.gradle.daemon=false
         run: eas build --local --profile development --platform android --non-interactive --output ${{ github.workspace }}/flyp-dev.apk
 
