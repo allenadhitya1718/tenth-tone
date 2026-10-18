@@ -104,6 +104,7 @@
     "errSelf": "Kendine mesaj gönderemezsin.",
     "errOpen": "Sohbet açılamadı.",
     "errCreateGroup": "Grup oluşturulamadı.",
+    "membersSkipped": "Seçtiğin kişilerden {{count}} tanesi gizlilik ayarları nedeniyle eklenemedi.",
     "errGroupName": "Bir grup adı gir.",
     "errGroupMembers": "En az bir kişi seç.",
     "notFoundTitle": "Sohbet",

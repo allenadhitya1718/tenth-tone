@@ -10,10 +10,14 @@
 //                 gets 'audience'
 //   1:1 call    : channel is calls.channel ('call_<random>'); every party
 //                 and call member gets a publisher token
-// A token is bound to one uid and Agora rejects a mismatch, so pick the uid
-// BEFORE asking and join with the same one. Pick it at random across the
-// 32-bit range (1..2147483646): Agora ejects the earlier client when two
-// share a uid, and a viewer who draws the host's number ends the broadcast.
+// A token is bound to one uid and Agora rejects a mismatch. The server signs
+// every token for the ACCOUNT's own uid (agoraUidFor in features/live/config,
+// the same hash) and ignores the uid sent here, so nobody can borrow someone
+// else's uid and eject them. Join with the `uid` in the answer. The uid
+// parameter is still sent for older servers.
+//
+// 429 (too many token requests) and 503 (rate limit could not be checked)
+// arrive as agora_unavailable.
 //
 // Client note 6: an accepted guest asks for role 'host' with the stream id
 // as the channel, exactly as the host does; nothing else changes here. Ask

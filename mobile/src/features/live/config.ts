@@ -31,6 +31,8 @@ export const MAX_COMMENTS_SHOWN = 100;
 //
 // Streams started from the web app use a random host uid; the stage falls
 // back to crediting an unknown speaker to the host tile.
+// supabase/functions/agora-token's uidFor() is the same function and the
+// server signs every token for it, so the two must stay identical.
 export function agoraUidFor(userId: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < userId.length; i++) {

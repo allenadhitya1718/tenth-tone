@@ -548,7 +548,7 @@ export async function createGroup({
   name: string;
   memberIds: Uuid[];
   photo?: LocalMedia | null;
-}): Promise<Uuid> {
+}): Promise<{ chatId: Uuid; skipped: Uuid[] }> {
   const me = await requireUid();
 
   let photo_url: string | null = null;
@@ -565,17 +565,34 @@ export async function createGroup({
   if (e1) throw e1;
   const chatId = (chat as { id: Uuid }).id;
 
-  const ids = Array.from(new Set([me, ...memberIds]));
-  const rows = ids.map((u) => ({ chat_id: chatId, user_id: u, role: u === me ? 'owner' : 'member' }));
-  const { error: e2 } = await supabase.from('chat_members').insert(rows);
+  const { error: e2 } = await supabase.from('chat_members').insert({ chat_id: chatId, user_id: me, role: 'owner' });
   if (e2) throw e2;
-  return chatId;
+  const skipped = await addGroupMembers(
+    chatId,
+    memberIds.filter((u) => u !== me),
+  );
+  return { chatId, skipped };
 }
 
-export async function addGroupMembers(chatId: Uuid, userIds: Uuid[]): Promise<void> {
-  const rows = userIds.map((u) => ({ chat_id: chatId, user_id: u, role: 'member' }));
+// Since 0116 the database only lets you add someone who would accept a DM
+// from you (blocks, restrict list, "who can message me"). One person who
+// would not used to fail the whole batch, so: the batch first, and if the
+// policy refuses it (42501), one at a time. Returns the ids that could not be
+// added, for the screen to mention; someone already in the group (23505)
+// counts as added.
+export async function addGroupMembers(chatId: Uuid, userIds: Uuid[]): Promise<Uuid[]> {
+  const ids = Array.from(new Set(userIds));
+  if (!ids.length) return [];
+  const rows = ids.map((u) => ({ chat_id: chatId, user_id: u, role: 'member' }));
   const { error } = await supabase.from('chat_members').insert(rows);
-  if (error) throw error;
+  if (!error) return [];
+  if (error.code !== '42501' && error.code !== '23505') throw error;
+  const skipped: Uuid[] = [];
+  for (const row of rows) {
+    const { error: e } = await supabase.from('chat_members').insert(row);
+    if (e && e.code !== '23505') skipped.push(row.user_id);
+  }
+  return skipped;
 }
 
 export async function removeGroupMember(chatId: Uuid, userId: Uuid): Promise<void> {

@@ -43,6 +43,8 @@
     "cantCallTitle": "تعذر بدء المكالمة",
     "startVoice": "مكالمة صوتية",
     "startVideo": "مكالمة فيديو",
+    "confirmTitle": "الاتصال بـ {{name}}؟",
+    "confirmBody": "بدأ هذا الاتصال من رابط. اتصل فقط بأشخاص تعرفهم.",
     "busyDeclined": "تم رفض مكالمة واردة لأنك في مكالمة",
     "pillA11y": "مكالمة مع {{name}}، {{status}}",
     "a11y": {

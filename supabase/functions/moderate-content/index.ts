@@ -756,6 +756,31 @@ Deno.serve(async (req) => {
     return json({ decision: 'allow', eventId: null, attach: false, disabled: true });
   }
 
+  // ── Per-account rate limit (0120, security review F11) ──
+  // Every call here spends the shared Gemini free-tier quota, and this
+  // function fails OPEN when that quota runs out - so a loop from one account
+  // could switch screening off for everybody. edge_rate_take() meters each
+  // account (150 an hour, 1000 a day: above the comment, upload and live
+  // limits combined, so a person never meets it).
+  //   over the limit      -> 429 { error: 'rate_limited' }. Nothing is sent to
+  //                          Gemini and NOTHING is logged, so a loop cannot
+  //                          fill moderation_events either.
+  //   limit not checkable -> 503 { error: 'unavailable' } (0120 missing or
+  //                          database trouble). Fails closed: no unmetered
+  //                          Gemini call.
+  // The app treats both like any other screening outage (see
+  // mobile/src/api/moderation.ts); a 429 does not trip its circuit breaker.
+  {
+    const { error: rateErr } = await db.rpc('edge_rate_take', {
+      p_user_id: user.id, p_bucket: 'moderate_content', p_per_hour: 150, p_per_day: 1000,
+    });
+    if (rateErr) {
+      if (rateErr.code === '23514') return json({ error: 'rate_limited' }, 429);
+      console.error('[moderate-content] rate limit unavailable:', rateErr.code, rateErr.message);
+      return json({ error: 'unavailable', reason: 'rate_limit_unavailable' }, 503);
+    }
+  }
+
   if (!GEMINI_API_KEY) {
     const eventId = await log('unavailable');
     return json({

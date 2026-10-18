@@ -204,7 +204,9 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking }: Options
       }
       const tok = await fetchAgoraToken(channel, uid, joinAs);
       if (cancelled) return;
-      const rc = engine.joinChannel(tok.token, channel, uid, {
+      // agora-token signs for the account's own uid (agoraUidFor, same hash);
+      // join with the uid the token was signed for.
+      const rc = engine.joinChannel(tok.token, channel, tok.uid || uid, {
         channelProfile: ChannelProfileType.ChannelProfileLiveBroadcasting,
         clientRoleType: joinAs === 'host' ? ClientRoleType.ClientRoleBroadcaster : ClientRoleType.ClientRoleAudience,
         audienceLatencyLevel: AudienceLatencyLevelType.AudienceLatencyLevelLowLatency,

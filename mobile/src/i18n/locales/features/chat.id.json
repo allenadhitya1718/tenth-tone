@@ -101,6 +101,7 @@
     "errSelf": "Kamu tidak bisa mengirim pesan ke diri sendiri.",
     "errOpen": "Tidak dapat membuka percakapan.",
     "errCreateGroup": "Tidak dapat membuat grup.",
+    "membersSkipped": "{{count}} orang yang kamu pilih tidak dapat ditambahkan karena pengaturan privasi mereka.",
     "errGroupName": "Masukkan nama grup.",
     "errGroupMembers": "Pilih minimal satu orang.",
     "notFoundTitle": "Percakapan",

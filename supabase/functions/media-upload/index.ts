@@ -530,16 +530,13 @@ Deno.serve(async (req) => {
     // service role can see every profile, including a flag that is not the
     // caller's.
     //
-    // The profiles column rather than the is_admin() RPC. Both are correct;
-    // this one is the path API.isAdmin() in db.js already uses on every admin
-    // screen, so it is known to be exposed and known to work here. 0074 revoked
-    // SELECT on this column from `anon` only, and an anonymous caller was
-    // turned away with a 401 long before this line.
+    // The is_admin() RPC (SECURITY DEFINER, answers for auth.uid() only).
+    // Since 0124 profiles.is_admin is no longer readable by `authenticated`,
+    // so the column cannot be selected directly any more.
     if (row.user_id !== user.id) {
-      const { data: me, error: adminErr } = await asUser
-        .from('profiles').select('is_admin').eq('id', user.id).maybeSingle();
+      const { data: isAdmin, error: adminErr } = await asUser.rpc('is_admin');
       if (adminErr) return json({ error: 'admin_check_failed', detail: adminErr.message }, 500);
-      if (!me || me.is_admin !== true) return json({ error: 'forbidden' }, 403);
+      if (isAdmin !== true) return json({ error: 'forbidden' }, 403);
     }
 
     // Idempotent for the same reason confirm is: a phone retrying after a

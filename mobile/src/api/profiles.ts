@@ -68,9 +68,16 @@ export type FollowResult = 'following' | 'requested';
 
 // ---------- Profile by id / edit ----------
 
+// Every column a client may read (0124). is_admin, banned_until,
+// deactivated_at and deletion_scheduled_at are not readable by the app any
+// more; your own account state comes from my_account_status() and is_admin().
+// select('*') would now be refused outright, so list the columns.
+export const PROFILE_COLUMNS =
+  'id, handle, name, bio, avatar_url, verified, followers_count, following_count, likes_count, created_at, updated_at, guidelines_accepted_at, is_private, link';
+
 export async function fetchProfile(userId: Uuid | null | undefined): Promise<Profile | null> {
   if (!userId) return null;
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+  const { data, error } = await supabase.from('profiles').select(PROFILE_COLUMNS).eq('id', userId).single();
   if (error && !isNoRows(error)) throw error;
   return (data as Profile | null) ?? null;
 }
@@ -87,7 +94,7 @@ export async function updateProfile(userId: Uuid, fields: ProfilePatch): Promise
   const verdict = words ? await checkText('profile', words) : null;
   if (verdict?.blocked) throw new ApiError('content_blocked', verdict.message ?? undefined);
 
-  const res = await supabase.from('profiles').update(fields).eq('id', userId).select().single();
+  const res = await supabase.from('profiles').update(fields).eq('id', userId).select(PROFILE_COLUMNS).single();
   const saved = must(res) as Profile;
   if (verdict) void attach(verdict, 'user', userId);
   return saved;

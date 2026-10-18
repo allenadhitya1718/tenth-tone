@@ -80,7 +80,10 @@ export async function startCall({
 }): Promise<Call> {
   const me = await requireUid();
   if (calleeId === me) throw new ApiError('cannot_call_yourself');
-  // Both sides need the same channel name, so settle it up front.
+  // Since 0114 the server replaces this with a channel of its own (a client
+  // could otherwise name someone else's channel and land in their call), and
+  // forces status 'ringing'. The row read back below is the truth; this value
+  // is only sent so a database without 0114 still gets a channel.
   const channel = 'call_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
   const { data, error } = await supabase
     .from('calls')

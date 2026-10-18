@@ -132,6 +132,13 @@ async function ask(kind: ModerationKind, text: string, images: string[] = []): P
     clearTimeout(timer);
 
     if (error || !data) {
+      // 429: this account is over its screening allowance (0120). The server
+      // made no decision and logged nothing; treat it as an outage for this
+      // one write, but not as the service being down.
+      if ((error as { context?: Response } | null)?.context?.status === 429) {
+        console.warn('[Moderation] rate limited, allowing');
+        return PASS;
+      }
       noteFailure();
       console.warn('[Moderation] unavailable, allowing:', error?.message);
       return PASS;

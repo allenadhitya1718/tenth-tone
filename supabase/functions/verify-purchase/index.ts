@@ -29,7 +29,8 @@
 //        claimed this transaction). alreadyGranted = true means that account
 //        has its coins, so the app may finish it.
 //   { status: 'test_account_restricted' }
-//        a sandbox / test purchase while IAP_ALLOW_SANDBOX is not 'true' (the default).
+//        a sandbox / test purchase while IAP_ALLOW_SANDBOX is not 'true' (the
+//        default) or from an account not listed in IAP_SANDBOX_USER_IDS.
 //   { status: 'invalid', reason }
 //        refunded, cancelled, wrong app, wrong product... never credited.
 //   { status: 'verification_delayed', retryAfterMs }
@@ -64,6 +65,17 @@
 //                              unset secret must never mean "free coins":
 //                              anyone with a sandbox tester account could
 //                              otherwise mint real balance.
+//   IAP_SANDBOX_USER_IDS       optional, comma-separated FLYP user ids (uuids).
+//                              A sandbox purchase credits coins ONLY when
+//                              IAP_ALLOW_SANDBOX is 'true' AND the buyer is in
+//                              this list. Empty = no sandbox purchase is ever
+//                              credited. For App Review: create the demo
+//                              account you give Apple / Google, put its user
+//                              id here (Supabase -> Authentication -> Users),
+//                              set IAP_ALLOW_SANDBOX=true while the build is in
+//                              review, and set it back to 'false' (and remove
+//                              the id) once it is approved. Your own test
+//                              accounts can be listed the same way.
 // SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are injected.
 //
 // Deploy normally (JWT verified). Never --no-verify-jwt: crediting is per
@@ -96,6 +108,12 @@ const GOOGLE_SA_JSON = env('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON');
 const GOOGLE_PACKAGE = env('GOOGLE_PLAY_PACKAGE_NAME') || 'com.flyp.app';
 
 const ALLOW_SANDBOX = env('IAP_ALLOW_SANDBOX').trim().toLowerCase() === 'true';
+const SANDBOX_USER_IDS = new Set(
+  env('IAP_SANDBOX_USER_IDS')
+    .split(',')
+    .map((v) => v.trim().toLowerCase())
+    .filter((v) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(v)),
+);
 
 const PRODUCT_PREFIX = 'flyp.coins.';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -435,7 +453,11 @@ Deno.serve(async (req) => {
       console.error('verify-purchase: quantity', p.quantity, p.storeTransactionId);
       return json(delayed(60 * 60_000));
     }
-    if (p.environment === 'sandbox' && !ALLOW_SANDBOX) return json({ status: 'test_account_restricted' });
+    // Sandbox money is not money: only listed test / review accounts, and only
+    // while sandbox crediting is switched on.
+    if (p.environment === 'sandbox' && !(ALLOW_SANDBOX && SANDBOX_USER_IDS.has(me))) {
+      return json({ status: 'test_account_restricted' });
+    }
 
     // ---- the package ----
     // Deactivated packages are still honoured: the purchase was paid for.
@@ -458,6 +480,13 @@ Deno.serve(async (req) => {
       const { data: prof } = await db.from('profiles').select('id').eq('id', p.accountId).maybeSingle();
       if (!prof) return json({ status: 'ownership_conflict', alreadyGranted: false });
       owner = p.accountId;
+    }
+    // A sandbox purchase is only credited to the listed account that is
+    // signed in now. appAccountToken / obfuscatedAccountId are set by the
+    // client, so without this a listed tester could direct sandbox coins to
+    // any other account.
+    if (p.environment === 'sandbox' && owner !== me) {
+      return json({ status: 'test_account_restricted' });
     }
 
     const { data: existing, error: exErr } = await db

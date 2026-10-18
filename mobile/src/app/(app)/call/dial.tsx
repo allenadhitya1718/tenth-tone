@@ -1,33 +1,37 @@
 import { useLocalSearchParams } from 'expo-router';
 
 import { CallScreen } from '@/features/call/CallScreen';
+import { DialConfirm } from '@/features/call/DialConfirm';
+import { dialIntent } from '@/features/call/nav';
 
-// Placing a call: /call/dial?to=<userId>&kind=audio|video&n=<nonce>
-// [&chat=<chatId>&name=&handle=&avatar=]. Build the link with dialPath() in
-// features/call/nav.ts. The screen shows "Calling…" at once and writes the
-// calls row behind it.
+// Placing a call: /call/dial?to=<userId>&kind=audio|video&n=<nonce>. Build
+// the link with dialPath() in features/call/nav.ts, which files the rest of
+// the request (chat, name, photo) in memory under the nonce.
+//
+// The same route opens from a deep link (flyp://call/dial?...). Only a nonce
+// dialPath() handed out in this app session dials at once; anything else
+// asks first, showing the person as the server knows them (DialConfirm) and
+// ignoring any name / photo in the link.
 export default function DialRoute() {
-  const p = useLocalSearchParams<{
-    to: string;
-    kind?: string;
-    n?: string;
-    chat?: string;
-    name?: string;
-    handle?: string;
-    avatar?: string;
-  }>();
-  const nonce = String(p.n ?? p.to);
+  const p = useLocalSearchParams<{ to: string; kind?: string; n?: string }>();
+  const to = String(p.to ?? '');
+  const kind = p.kind === 'video' ? 'video' : 'audio';
+  const nonce = p.n ? String(p.n) : undefined;
+  const intent = dialIntent(nonce, to);
+
+  if (!intent || !nonce) return <DialConfirm to={to} kind={kind} />;
+
   return (
     <CallScreen
       key={nonce}
       dial={{
         nonce,
-        to: String(p.to),
-        kind: p.kind === 'video' ? 'video' : 'audio',
-        chat: p.chat || null,
-        name: p.name || null,
-        handle: p.handle || null,
-        avatar: p.avatar || null,
+        to: intent.to,
+        kind: intent.kind,
+        chat: intent.chat ?? null,
+        name: intent.name ?? null,
+        handle: intent.handle ?? null,
+        avatar: intent.avatar ?? null,
       }}
     />
   );

@@ -107,6 +107,7 @@
     "errSelf": "No puedes enviarte mensajes a ti mismo.",
     "errOpen": "No se pudo abrir la conversación.",
     "errCreateGroup": "No se pudo crear el grupo.",
+    "membersSkipped": "No se pudo añadir a {{count}} de las personas elegidas por su configuración de privacidad.",
     "errGroupName": "Escribe un nombre para el grupo.",
     "errGroupMembers": "Elige al menos una persona.",
     "notFoundTitle": "Conversación",

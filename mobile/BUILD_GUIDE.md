@@ -40,7 +40,9 @@ All three must be clean.
 ## 2. Environment variables (point the app at Mumbai)
 
 `src/lib/config.ts` reads `EXPO_PUBLIC_SUPABASE_URL` and
-`EXPO_PUBLIC_SUPABASE_ANON_KEY`, falling back to the old project. Set them
+`EXPO_PUBLIC_SUPABASE_ANON_KEY`, falling back to Mumbai's public URL and
+publishable key (never the old project; a malformed value stops the app at
+startup). `eas.json` sets both for every build profile. To override them
 per EAS environment (the anon/publishable key is public, safe in the app):
 
 ```bash
@@ -161,6 +163,16 @@ testing track); after that `submit` works with a Play service account key.
 - Push: APNs key (`.p8`) → `APNS_*` secrets; turn on Time Sensitive
   Notifications for `com.flyp.social`.
 - In-App Purchase key → `APPLE_IAP_*` secrets.
+- **Sandbox purchases during review** (verify-purchase secrets). Reviewers
+  and TestFlight buy in the store sandbox, and a sandbox purchase credits
+  coins only when BOTH `IAP_ALLOW_SANDBOX=true` AND the buyer's FLYP user id
+  is in `IAP_SANDBOX_USER_IDS` (comma-separated uuids). Before submitting:
+  create the demo account you give Apple/Google, copy its id from Supabase →
+  Authentication → Users, set
+  `npx supabase secrets set IAP_ALLOW_SANDBOX=true IAP_SANDBOX_USER_IDS=<uuid>[,<uuid>]`.
+  After approval set `IAP_ALLOW_SANDBOX=false` and clear the list. With the
+  secrets unset, sandbox purchases are answered `test_account_restricted` and
+  nothing is credited.
 - Sign in with Apple is enabled in the app; configure it per
   `../APPLE_SIGNIN_SETUP.md`.
 

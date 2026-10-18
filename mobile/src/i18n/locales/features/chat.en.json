@@ -104,6 +104,7 @@
     "errSelf": "You can't message yourself.",
     "errOpen": "Couldn't open the conversation.",
     "errCreateGroup": "Couldn't create the group.",
+    "membersSkipped": "{{count}} of the people you chose couldn't be added because of their privacy settings.",
     "errGroupName": "Enter a group name.",
     "errGroupMembers": "Choose at least one person.",
     "notFoundTitle": "Conversation",

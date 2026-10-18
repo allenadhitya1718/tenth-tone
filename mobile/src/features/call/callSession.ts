@@ -52,7 +52,7 @@ import { ApiError, uid as currentUid } from '@/api/client';
 import type { Unsubscribe, UserSummary, Uuid } from '@/api/types';
 import { claimAgora } from '@/api/walkie';
 import type { ErrorMsg } from '@/components/ui';
-import { AGORA_APP_ID } from '@/features/live/config';
+import { AGORA_APP_ID, agoraUidFor } from '@/features/live/config';
 
 import { otherAgoraSessionActive } from './agoraGuard';
 import { dismissIncomingCall, markCallOver } from './callNotification';
@@ -226,9 +226,13 @@ function clearTimer(name: string) {
   timers.delete(name);
 }
 
-// A uid is bound into the token, so it is chosen first. Random across
-// 1..2147483646 like agora.js: two clients with one uid eject each other.
+// A uid is bound into the token. agora-token derives it from the account
+// (agoraUidFor, the same hash the server uses) and ignores any other value,
+// so the call asks with that one and joins with whatever uid the token was
+// signed for. Random only before we know who we are, which the server then
+// corrects.
 const randomUid = () => Math.floor(Math.random() * 2147483645) + 1;
+const myUid = () => (state.me ? agoraUidFor(state.me) : randomUid());
 
 function prewarmToken(channel: string, uid: number) {
   if (tokenFor && tokenFor.channel === channel && tokenFor.uid === uid) return;
@@ -433,7 +437,7 @@ export async function openCall(callId: Uuid): Promise<void> {
     watchRows(row, root);
 
     if (row.status === 'ringing' && !isCaller) {
-      set({ phase: 'incoming', localUid: randomUid() });
+      set({ phase: 'incoming', localUid: myUid() });
       // The screen rings now; the ringing notification (if the app was
       // opened from it) would only ring on top of it.
       void dismissIncomingCall(row.id);
@@ -735,7 +739,7 @@ async function joinMedia(g: number) {
   if (engine || g !== gen) return;
   const channel = state.channel ?? state.call?.channel;
   if (!channel) return;
-  const localUid = state.localUid ?? randomUid();
+  let localUid = state.localUid ?? myUid();
   set({ localUid, media: 'joining' });
   prewarmToken(channel, localUid);
 
@@ -869,6 +873,11 @@ async function joinMedia(g: number) {
   try {
     const tok = await takeToken(channel, localUid);
     if (g !== gen || engine !== e) return;
+    // The token is signed for the server's uid; join with exactly that one.
+    if (tok.uid && tok.uid !== localUid) {
+      localUid = tok.uid;
+      set({ localUid });
+    }
     const rc = e.joinChannel(tok.token, channel, localUid, {
       channelProfile: ChannelProfileType.ChannelProfileCommunication,
       clientRoleType: ClientRoleType.ClientRoleBroadcaster,

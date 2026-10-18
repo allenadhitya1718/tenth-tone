@@ -43,6 +43,8 @@
     "cantCallTitle": "Impossible de lancer l'appel",
     "startVoice": "Appel vocal",
     "startVideo": "Appel vidéo",
+    "confirmTitle": "Appeler {{name}} ?",
+    "confirmBody": "Cet appel a été lancé depuis un lien. N'appelez que des personnes que vous connaissez.",
     "busyDeclined": "Un appel entrant a été refusé car vous êtes déjà en ligne",
     "pillA11y": "Appel avec {{name}}, {{status}}",
     "a11y": {

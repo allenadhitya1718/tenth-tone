@@ -43,6 +43,8 @@
     "cantCallTitle": "无法发起通话",
     "startVoice": "语音通话",
     "startVideo": "视频通话",
+    "confirmTitle": "呼叫 {{name}}？",
+    "confirmBody": "此通话是通过链接发起的。只呼叫你认识的人。",
     "busyDeclined": "你正在通话中，一个来电已被自动拒绝",
     "pillA11y": "与 {{name}} 通话，{{status}}",
     "a11y": {

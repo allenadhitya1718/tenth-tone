@@ -107,6 +107,7 @@
     "errSelf": "Vous ne pouvez pas vous envoyer de message.",
     "errOpen": "Impossible d'ouvrir la discussion.",
     "errCreateGroup": "Impossible de créer le groupe.",
+    "membersSkipped": "{{count}} des personnes choisies n'ont pas pu être ajoutées à cause de leurs paramètres de confidentialité.",
     "errGroupName": "Saisissez un nom de groupe.",
     "errGroupMembers": "Choisissez au moins une personne.",
     "notFoundTitle": "Discussion",

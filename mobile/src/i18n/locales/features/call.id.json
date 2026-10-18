@@ -43,6 +43,8 @@
     "cantCallTitle": "Tidak dapat memulai panggilan",
     "startVoice": "Panggilan suara",
     "startVideo": "Panggilan video",
+    "confirmTitle": "Telepon {{name}}?",
+    "confirmBody": "Panggilan ini dimulai dari tautan. Hanya telepon orang yang kamu kenal.",
     "busyDeclined": "Panggilan masuk ditolak karena kamu sedang dalam panggilan",
     "pillA11y": "Panggilan dengan {{name}}, {{status}}",
     "a11y": {

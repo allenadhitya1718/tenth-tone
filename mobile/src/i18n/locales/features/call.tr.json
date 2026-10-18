@@ -43,6 +43,8 @@
     "cantCallTitle": "Arama başlatılamıyor",
     "startVoice": "Sesli arama",
     "startVideo": "Görüntülü arama",
+    "confirmTitle": "{{name}} aransın mı?",
+    "confirmBody": "Bu arama bir bağlantıdan başlatıldı. Yalnızca tanıdığın kişileri ara.",
     "busyDeclined": "Zaten bir aramada olduğun için gelen bir arama reddedildi",
     "pillA11y": "{{name}} ile arama, {{status}}",
     "a11y": {

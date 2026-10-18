@@ -43,6 +43,8 @@
     "cantCallTitle": "Can't start the call",
     "startVoice": "Voice call",
     "startVideo": "Video call",
+    "confirmTitle": "Call {{name}}?",
+    "confirmBody": "This call was started from a link. Only call people you know.",
     "busyDeclined": "An incoming call was declined because you're already in a call",
     "pillA11y": "Call with {{name}}, {{status}}",
     "a11y": {

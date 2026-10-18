@@ -20,6 +20,7 @@ import { chatKeys, createGroup, openOrCreateDm } from '@/api/chat';
 import { ApiError } from '@/api/client';
 import { fetchFollowing, profileKeys, searchProfiles } from '@/api/profiles';
 import type { UserSummary } from '@/api/types';
+import { showToast } from '@/components/Toast';
 import { Button, ErrorBox, type ErrorMsg, Screen, TextField, TopBar } from '@/components/ui';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -77,8 +78,10 @@ export function NewChat({ initialGroup = false }: { initialGroup?: boolean }) {
 
   const make = useMutation({
     mutationFn: () => createGroup({ name: name.trim(), memberIds: Array.from(selected.keys()) }),
-    onSuccess: (chatId) => {
+    onSuccess: ({ chatId, skipped }) => {
       void qc.invalidateQueries({ queryKey: chatKeys.chats(), exact: true });
+      // People whose privacy settings do not allow you to add them (0116).
+      if (skipped.length) showToast(t('chat.membersSkipped', { count: skipped.length }), 'information-circle');
       router.replace(`/chat/${chatId}`);
     },
     onError: () => setError({ key: 'chat.errCreateGroup' }),

@@ -505,8 +505,11 @@ export async function cancelAccountDeletion(): Promise<void> {
   if (error) throw error;
 }
 
+// self_delete_account() has been service-role only since 0073, so calling it
+// from the app always failed. Deleting your account from the app is
+// schedule_account_deletion() (0034): deactivated at once, removed for good by
+// purge_scheduled_deletions() after the grace period, and only ever about
+// auth.uid(). Kept under this name for any caller that still uses it.
 export async function selfDeleteAccount(pushToken?: string | null): Promise<void> {
-  const { error } = await supabase.rpc('self_delete_account');
-  if (error) throw error;
-  await signOutQuietly(pushToken);
+  await scheduleAccountDeletion(pushToken);
 }

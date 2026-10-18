@@ -418,7 +418,7 @@ export function useWalkie({ chatId, me, myName, others, allowed }: Options): Wal
         if (cancelled) return;
         // A publisher token, joined as audience: the microphone stays closed
         // until the button is held, and holding needs no second request.
-        const rc = eng.joinChannel(tok.token, channel, agoraUid, {
+        const rc = eng.joinChannel(tok.token, channel, tok.uid || agoraUid, {
           channelProfile: ChannelProfileType.ChannelProfileLiveBroadcasting,
           clientRoleType: ClientRoleType.ClientRoleAudience,
           audienceLatencyLevel: AudienceLatencyLevelType.AudienceLatencyLevelLowLatency,

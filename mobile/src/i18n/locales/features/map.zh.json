@@ -12,7 +12,7 @@
     "consentFooter": "你可以通过地图上的设置按钮更改谁能看到你，或停止共享。",
     "whoCanSee": "谁可以看到你",
     "visibility_friends": "好友",
-    "visibility_friends_hint": "关注你的人",
+    "visibility_friends_hint": "你关注且也关注了你的人",
     "visibility_public": "所有人",
     "visibility_public_hint": "FLYP 上所有能看到你主页的人",
     "shareMyLocation": "共享我的位置",

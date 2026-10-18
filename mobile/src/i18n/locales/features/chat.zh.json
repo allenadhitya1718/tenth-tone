@@ -101,6 +101,7 @@
     "errSelf": "你不能给自己发消息。",
     "errOpen": "无法打开聊天。",
     "errCreateGroup": "无法创建群聊。",
+    "membersSkipped": "你选择的人中有 {{count}} 位因隐私设置无法加入。",
     "errGroupName": "请输入群名称。",
     "errGroupMembers": "请至少选择一人。",
     "notFoundTitle": "聊天",

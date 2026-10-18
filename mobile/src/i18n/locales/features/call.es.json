@@ -43,6 +43,8 @@
     "cantCallTitle": "No se puede iniciar la llamada",
     "startVoice": "Llamada de voz",
     "startVideo": "Videollamada",
+    "confirmTitle": "¿Llamar a {{name}}?",
+    "confirmBody": "Esta llamada se inició desde un enlace. Llama solo a personas que conozcas.",
     "busyDeclined": "Se rechazó una llamada entrante porque ya estás en una llamada",
     "pillA11y": "Llamada con {{name}}, {{status}}",
     "a11y": {

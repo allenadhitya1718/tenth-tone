@@ -12,7 +12,7 @@
     "consentFooter": "Vous pouvez choisir qui vous voit ou arrêter le partage depuis le bouton des paramètres sur la carte.",
     "whoCanSee": "Qui peut vous voir",
     "visibility_friends": "Amis",
-    "visibility_friends_hint": "Les personnes qui vous suivent",
+    "visibility_friends_hint": "Les personnes que vous suivez et qui vous suivent en retour",
     "visibility_public": "Tout le monde",
     "visibility_public_hint": "Toute personne sur FLYP pouvant voir votre profil",
     "shareMyLocation": "Partager ma position",

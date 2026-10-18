@@ -12,7 +12,7 @@
     "consentFooter": "You can change who sees you or stop sharing from the settings button on the map.",
     "whoCanSee": "Who can see you",
     "visibility_friends": "Friends",
-    "visibility_friends_hint": "People who follow you",
+    "visibility_friends_hint": "People you follow who follow you back",
     "visibility_public": "Everyone",
     "visibility_public_hint": "Anyone on FLYP who can see your profile",
     "shareMyLocation": "Share my location",
