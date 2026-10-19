@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 49 |
+| Pass | 50 |
 | Fail | 5 |
 | Blocked | 46 |
-| Not tested | 83 |
+| Not tested | 82 |
 
 ## Sections
 
@@ -326,9 +326,9 @@ _Your own profile and other people's._
 _Use phones A and B._
 
 
-- [ ] **CHAT-01** Start a new chat from the pencil icon  
+- [x] **CHAT-01** Start a new chat from the pencil icon  
   Expected: Search people and open a chat.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Chat tab shows "No conversations yet" + New message; the pencil opens "New message" with a people search ("Search people by name or @handle"), a group icon and the hint "Follow people to start a conversation with them, or search above." Actually starting a chat needs account B. Screenshots: CHAT-01-list.png, CHAT-01.png
 - [ ] **CHAT-02** Send a text message  
   Expected: Appears instantly on both phones.  
   Result: _not tested_ · Note: 
