@@ -1,0 +1,31 @@
+-- Row counts of every table the FLYP backend tests touch. Run before and after the test files;
+-- the two outputs must be identical. Read-only.
+select jsonb_build_object(
+  'auth.users', (select count(*) from auth.users),
+  'profiles', (select count(*) from public.profiles),
+  'user_private', (select count(*) from public.user_private),
+  'appeals', (select count(*) from public.appeals),
+  'creator_earnings', (select count(*) from public.creator_earnings),
+  'creator_withdrawals', (select count(*) from public.creator_withdrawals),
+  'creator_kyc', (select count(*) from public.creator_kyc),
+  'creator_payout_holds', (select count(*) from public.creator_payout_holds),
+  'notifications', (select count(*) from public.notifications),
+  'admin_logs', (select count(*) from public.admin_logs),
+  'gift_transactions', (select count(*) from public.gift_transactions),
+  'wallets', (select count(*) from public.wallets),
+  'wallet_balance_sum', (select coalesce(sum(balance),0) from public.wallets),
+  'wallet_transactions', (select count(*) from public.wallet_transactions),
+  'wallet_topups', (select count(*) from public.wallet_topups),
+  'wallet_flags', (select count(*) from public.wallet_flags),
+  'iap_refunds', (select count(*) from public.iap_refunds),
+  'videos', (select count(*) from public.videos),
+  'comments', (select count(*) from public.comments),
+  'live_comments', (select count(*) from public.live_comments),
+  'live_streams', (select count(*) from public.live_streams),
+  'sounds', (select count(*) from public.sounds),
+  'sounds_usage_sum', (select coalesce(sum(usage_count),0) from public.sounds),
+  'storage.objects', (select count(*) from storage.objects),
+  'blocked_words', (select count(*) from public.blocked_words),
+  'payout_config', (select to_jsonb(c) - 'updated_at' from public.payout_config c),
+  'payout_config_updated_at', (select updated_at from public.payout_config)
+) as snapshot;
