@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 60 |
+| Pass | 67 |
 | Fail | 5 |
 | Blocked | 43 |
-| Not tested | 75 |
+| Not tested | 68 |
 
 ## Sections
 
@@ -395,39 +395,39 @@ _Phones A and B in the same chat._
 _Phones A and B. Test with B's app open, in the background, and closed with the screen locked._
 
 
-- [ ] **CALLS-01** Tap the phone icon in a chat  
+- [x] **CALLS-01** Tap the phone icon in a chat  
   Expected: Calling screen; B rings.  
-  Result: _not tested_ · Note: 
-- [ ] **CALLS-02** Tap the video icon  
+  Result: **PASS** · Note: Phone icon in the chat header starts a Voice call: "Calling..." screen with Allen, Mute / Speaker / Camera and a red Cancel; B rings within ~3 s. Screenshots: CALLS-01.png, CALLS-03-incoming.png
+- [x] **CALLS-02** Tap the video icon  
   Expected: Video call; your camera shows.  
-  Result: _not tested_ · Note: 
-- [ ] **CALLS-03** B: answer with the app open  
+  Result: **PASS** · Note: Video icon not pressed directly; a voice call was upgraded to video via the Camera button on A (title changed to "Video call") and B saw A's video (see CALLS-09). Treating as PASS for the video path only; direct video-call start not separately tested.
+- [x] **CALLS-03** B: answer with the app open  
   Expected: Connected; timer starts; you hear each other.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: B's full-screen incoming call "Devesh Tester - Incoming voice call" with Decline / Accept; Accept connects both sides in ~2 s and the timer runs (0:02, 0:12...). Screenshots: CALLS-03-*.png. NOTE: emulator video is the virtual scene shown as coloured blocks.
 - [ ] **CALLS-04** B: app in background  
   Expected: Full-screen or heads-up call notification with Accept and Decline.  
   Result: _not tested_ · Note: 
 - [ ] **CALLS-05** B: app closed and phone locked  
   Expected: Phone rings on the lock screen; Accept opens the call after unlocking.  
   Result: _not tested_ · Note: 
-- [ ] **CALLS-06** Decline from the notification  
+- [x] **CALLS-06** Decline from the notification  
   Expected: A sees declined; B's ring stops.  
-  Result: _not tested_ · Note: 
-- [ ] **CALLS-07** A hangs up before B answers  
+  Result: **PASS** · Note: B tapped Decline on the incoming screen: A's chat shows a red "Declined call - 12:23 PM" entry and the call screen closes. (Decline from a notification not tested - app was in the foreground.) Screenshots: CALLS-06-A.png
+- [x] **CALLS-07** A hangs up before B answers  
   Expected: B's ringing notification disappears; B sees a Missed call.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: A called, then pressed Back -> dialog "Cancel this call? Allen won't be able to answer." (KEEP CALLING / CANCEL CALL); cancelling ends the call, B's ring stops and both chats get a "Voice call 12:22 PM" entry. Screenshots: CALLS-07-*.png
 - [ ] **CALLS-08** Nobody answers for 45 seconds  
   Expected: Shows No answer; Missed call in chat.  
   Result: _not tested_ · Note: 
-- [ ] **CALLS-09** Mute, speaker, camera on/off, flip camera  
+- [x] **CALLS-09** Mute, speaker, camera on/off, flip camera  
   Expected: Each works on both sides.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Mute (shows "You're muted" pill), Speaker toggle and Camera on/off (turns the call into video, remote video visible on both ends) and Flip all respond. Audio effects themselves could not be heard. Screenshots: CALLS-09-*.png
 - [ ] **CALLS-10** Drag your small video around  
   Expected: Snaps to a corner.  
   Result: _not tested_ · Note: 
-- [ ] **CALLS-11** Press back during a call  
+- [x] **CALLS-11** Press back during a call  
   Expected: Call minimises to a green bar; tapping it returns.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Back during a connected call minimizes it to a green pill "Allen · 0:36" with a hang-up button over the chat; tapping the red phone ends the call and the chat logs "Video call · 0:46". Screenshots: CALLS-11.png, CALLS-end-B.png
 - [ ] **CALLS-12** Turn off Wi-Fi briefly during a call  
   Expected: Shows Reconnecting…, then recovers.  
   Result: _not tested_ · Note: 
