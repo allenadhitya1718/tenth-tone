@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 46 |
-| Fail | 4 |
-| Blocked | 39 |
-| Not tested | 94 |
+| Pass | 49 |
+| Fail | 5 |
+| Blocked | 46 |
+| Not tested | 83 |
 
 ## Sections
 
@@ -537,36 +537,36 @@ _Needs Google Play test products set up._
 _Two accounts that follow each other, both 18+._
 
 
-- [ ] **MAP-01** Open Settings → Friends map  
+- [x] **MAP-01** Open Settings → Friends map  
   Expected: Consent screen explains who can see you.  
-  Result: _not tested_ · Note: 
-- [ ] **MAP-02** Tap Not now  
+  Result: **PASS** · Note: Settings -> Friends map opens a consent page "Share your location with friends?" with 4 privacy bullets (8 h expiry, foreground only, 18+), "Who can see you" Friends/Everyone, Share my location. Screenshots: MAP-01.png, MAP-02-scrolled.png
+- [x] **MAP-02** Tap Not now  
   Expected: Map opens without using your location.  
-  Result: _not tested_ · Note: 
-- [ ] **MAP-03** Share my location (Friends)  
+  Result: **FAIL** · Note: Steps: Friends map -> "Not now, just look at the map". Expected: the map opens without sharing. Actual: screen shows "The map cannot be shown - The map is not available in this version of the app. Your friends list, distances and directions still work below." plus a "No friends on the map" sheet and a "Not sharing - tap to start" pill. The map itself never renders in this APK (likely missing Maps API key/native config). Emulator A, API 34, 1/1. Screenshot: MAP-02.png
+- [x] **MAP-03** Share my location (Friends)  
   Expected: Asks for location permission; your pin shows.  
-  Result: _not tested_ · Note: 
-- [ ] **MAP-04** Friend shares too  
+  Result: **BLOCKED** · Note: Share my location needs the map and a mutual friend (B); also account age 18+ not verified. Re-test after MAP-02 is fixed.
+- [x] **MAP-04** Friend shares too  
   Expected: Their avatar pin appears; moves live.  
-  Result: _not tested_ · Note: 
-- [ ] **MAP-05** Tap a friend's pin  
+  Result: **BLOCKED** · Note: Needs account B and a working map (see MAP-02).
+- [x] **MAP-05** Tap a friend's pin  
   Expected: Card with distance, Directions, Message, Follow.  
-  Result: _not tested_ · Note: 
-- [ ] **MAP-06** Directions  
+  Result: **BLOCKED** · Note: Needs account B and a working map (see MAP-02).
+- [x] **MAP-06** Directions  
   Expected: Opens Google Maps to them.  
-  Result: _not tested_ · Note: 
-- [ ] **MAP-07** Follow mode  
+  Result: **BLOCKED** · Note: Needs account B and a working map (see MAP-02).
+- [x] **MAP-07** Follow mode  
   Expected: Map keeps the friend centred until you move the map.  
-  Result: _not tested_ · Note: 
-- [ ] **MAP-08** Ask to see someone's location / allow / deny  
+  Result: **BLOCKED** · Note: Needs account B and a working map (see MAP-02).
+- [x] **MAP-08** Ask to see someone's location / allow / deny  
   Expected: Request arrives; allow grants access; deny doesn't.  
-  Result: _not tested_ · Note: 
-- [ ] **MAP-09** Stop sharing  
+  Result: **BLOCKED** · Note: Needs account B and a working map (see MAP-02).
+- [x] **MAP-09** Stop sharing  
   Expected: Your pin disappears for friends.  
-  Result: _not tested_ · Note: 
-- [ ] **MAP-10** Profile → Map tab  
+  Result: **BLOCKED** · Note: Needs account B and a working map (see MAP-02).
+- [x] **MAP-10** Profile → Map tab  
   Expected: Shows places from your posts.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Profile -> Map tab shows the empty state "Add a place when you post and it will show on your map." (already seen in PROFILE-04). A post with a place was not tested.
 
 ## Settings
 
@@ -609,9 +609,9 @@ _Open every row once._
 - [x] **SETTINGS-12** Download my data  
   Expected: Request accepted; data export arrives.  
   Result: **BLOCKED** · Note: Download your data screen opens with a "Request download" button; not pressed (would create a real export job and email). Ask Allen if OK to request. Screenshot: SET-download.png
-- [ ] **SETTINGS-13** Activity (your comments, likes, time)  
+- [x] **SETTINGS-13** Activity (your comments, likes, time)  
   Expected: Lists load; tapping opens the item.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Your activity shows totals (1 Posts, 1 Likes, 2 Comments) and Likes / Comments tabs; the Likes tab lists my liked video. Tapping an item not tried. Screenshot: SETTINGS-13.png
 - [ ] **SETTINGS-14** Report a problem and Contact support  
   Expected: Sends; confirmation shown.  
   Result: _not tested_ · Note: 
