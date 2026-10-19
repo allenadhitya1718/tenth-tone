@@ -9,7 +9,7 @@ import Animated, { FadeIn, FadeInDown, useAnimatedStyle, withTiming } from 'reac
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LanguageSwitch } from '@/components/LanguageSwitch';
-import { OnboardingArt, type ArtKind } from '@/components/OnboardingArt';
+import { ART_H, ART_W, OnboardingArt, type ArtKind } from '@/components/OnboardingArt';
 import { markOnboarded } from '@/lib/onboarding';
 
 // Dark-first tour. The ambient glow behind the mock-up changes colour per
@@ -44,12 +44,15 @@ function Dot({ active }: { active: boolean }) {
 export default function Onboarding() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const [idx, setIdx] = useState(0);
   const touchX = useRef<number | null>(null);
 
-  // Short screens shrink the mock-up so the dots and button stay visible.
-  const scale = height <= 640 ? 0.62 : height <= 740 ? 0.8 : height <= 820 ? 0.92 : 1;
+  // The frame is oversized: ~76% of the width and up to 58% of the height. On
+  // short screens it shrinks so the title, dots and button always fit below.
+  const DOCK = 232 - 28; // title block + dots + button, minus the overlap
+  const room = height - insets.top - insets.bottom - 50 - 24 - DOCK;
+  const scale = Math.min(Math.min(width * 0.76, ART_W) / ART_W, (height * 0.58) / ART_H, room / ART_H);
   const last = idx === SLIDES.length - 1;
   const rtl = I18nManager.isRTL;
 
@@ -123,8 +126,9 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: BG, paddingHorizontal: 22 },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 50 },
   skip: { color: '#94A3B8', fontSize: 15, fontWeight: '600', padding: 8 },
-  stage: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  dock: { alignItems: 'center' },
+  stage: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 12 },
+  // Pulled up over the faded bottom edge of the frame.
+  dock: { alignItems: 'center', marginTop: -28 },
   title: { color: '#fff', fontSize: 28, fontWeight: '800', letterSpacing: -0.5, textAlign: 'center', marginBottom: 8 },
   sub: { color: '#94A3B8', fontSize: 15, lineHeight: 22, textAlign: 'center', maxWidth: '88%' },
   dots: { flexDirection: 'row', gap: 7, marginTop: 20, marginBottom: 20, alignItems: 'center' },

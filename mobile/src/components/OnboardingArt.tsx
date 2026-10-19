@@ -16,48 +16,49 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-// Onboarding v1b: real screenshots of the app inside a slim phone frame, with
-// a few glass pieces breaking out past the frame edge. The screenshots are
-// English-only captures; the title, subtitle and chips are translated.
-// Placement uses start/end so Arabic and Urdu mirror cleanly.
+// Onboarding v1b: real app screenshots in an oversized frame that melts into
+// the background (bottom fade), one translated pill breaking out past the
+// frame edge, and a little live simulation drawn over the still picture.
+//
+// Screenshots: English and Arabic sets (the app's two main languages). Every
+// other language shows the English set; the title, subtitle and pill are
+// translated for all nine. Placement uses start/end so Arabic and Urdu mirror.
 
 export type ArtKind = 'watch' | 'create' | 'live' | 'chat';
 
-export const FRAME_W = 188;
-export const FRAME_H = 392;
+/** Design size; the screen scales the frame down on small phones. */
+export const ART_W = 310;
+export const ART_H = 490;
 
-const SHOTS: Record<ArtKind, ImageSourcePropType> = {
-  watch: require('../../assets/onboarding/watch.jpg'),
-  create: require('../../assets/onboarding/create.jpg'),
-  live: require('../../assets/onboarding/live.jpg'),
-  chat: require('../../assets/onboarding/chat.jpg'),
+const SHOTS: Record<'en' | 'ar', Record<ArtKind, ImageSourcePropType>> = {
+  en: {
+    watch: require('../../assets/onboarding/en/watch.jpg'),
+    create: require('../../assets/onboarding/en/create.jpg'),
+    live: require('../../assets/onboarding/en/live.jpg'),
+    chat: require('../../assets/onboarding/en/chat.jpg'),
+  },
+  ar: {
+    watch: require('../../assets/onboarding/ar/watch.jpg'),
+    create: require('../../assets/onboarding/ar/create.jpg'),
+    live: require('../../assets/onboarding/ar/live.jpg'),
+    chat: require('../../assets/onboarding/ar/chat.jpg'),
+  },
 };
 
 const GLASS = {
-  backgroundColor: 'rgba(22,25,38,0.88)',
+  backgroundColor: 'rgba(20,24,38,0.92)',
   borderWidth: 1,
-  borderColor: 'rgba(255,255,255,0.15)',
+  borderColor: 'rgba(255,255,255,0.2)',
 } as const;
 
-/** Gentle up/down drift for the pieces that float outside the frame. */
-function Float({ children, style, delay = 0, amp = 5 }: { children: React.ReactNode; style?: ViewStyle; delay?: number; amp?: number }) {
+/** Gentle up/down drift for the pill that floats outside the frame. */
+function Float({ children, style, amp = 6 }: { children: React.ReactNode; style?: ViewStyle; amp?: number }) {
   const y = useSharedValue(-amp);
   useEffect(() => {
-    y.value = withDelay(delay, withRepeat(withTiming(amp, { duration: 2500, easing: Easing.inOut(Easing.sin) }), -1, true));
-  }, [y, amp, delay]);
+    y.value = withRepeat(withTiming(amp, { duration: 2500, easing: Easing.inOut(Easing.sin) }), -1, true);
+  }, [y, amp]);
   const a = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
   return <Animated.View style={[style, a]}>{children}</Animated.View>;
-}
-
-function Chip({ icon, color, text, style, delay }: { icon: React.ComponentProps<typeof Ionicons>['name']; color: string; text: string; style: ViewStyle; delay?: number }) {
-  return (
-    <Float style={style} delay={delay}>
-      <View style={[styles.chip, GLASS]}>
-        <Ionicons name={icon} size={14} color={color} />
-        <Text style={styles.chipTxt}>{text}</Text>
-      </View>
-    </Float>
-  );
 }
 
 // ---- live simulation drawn over the still screenshots ------------------------
@@ -70,22 +71,22 @@ function RisingHeart({ emoji, delay, dur, drift, size }: { emoji: string; delay:
   }, [p, delay, dur]);
   const a = useAnimatedStyle(() => ({
     opacity: p.value < 0.12 ? p.value / 0.12 : 1 - (p.value - 0.12) / 0.88,
-    transform: [{ translateY: -190 * p.value }, { translateX: Math.sin(p.value * Math.PI * 3) * drift }, { scale: 0.6 + 0.55 * p.value }],
+    transform: [{ translateY: -250 * p.value }, { translateX: Math.sin(p.value * Math.PI * 3) * drift }, { scale: 0.6 + 0.55 * p.value }],
   }));
   return <Animated.Text style={[{ position: 'absolute', bottom: 0, fontSize: size }, a]}>{emoji}</Animated.Text>;
 }
 
 function RisingHearts({ style }: { style: ViewStyle }) {
   const set: [string, number, number, number, number][] = [
-    ['❤️', 0, 3600, 9, 20],
-    ['💜', 700, 4000, 12, 17],
-    ['💙', 1500, 3400, 8, 18],
-    ['❤️', 2200, 3800, 11, 22],
-    ['🔥', 2900, 3600, 7, 16],
-    ['💖', 3300, 4200, 10, 19],
+    ['❤️', 0, 3600, 12, 30],
+    ['💜', 700, 4000, 16, 26],
+    ['💙', 1500, 3400, 11, 28],
+    ['❤️', 2200, 3800, 14, 34],
+    ['🔥', 2900, 3600, 10, 24],
+    ['💖', 3300, 4200, 13, 29],
   ];
   return (
-    <View pointerEvents="none" style={[{ position: 'absolute', width: 40, height: 200 }, style]}>
+    <View pointerEvents="none" style={[{ position: 'absolute', width: 50, height: 260 }, style]}>
       {set.map(([e, d, du, dr, sz], i) => (
         <RisingHeart key={i} emoji={e} delay={d} dur={du} drift={dr} size={sz} />
       ))}
@@ -106,7 +107,7 @@ function CommentFeed({ lines, style }: { lines: { who: string; tone: [string, st
       {shown.map((l) => (
         <Animated.View key={l.i} entering={FadeInDown.duration(380)} exiting={FadeOut.duration(250)} layout={LinearTransition} style={styles.bub}>
           <LinearGradient colors={l.tone} style={styles.bubAv}>
-            <Text style={{ color: '#fff', fontSize: 8, fontWeight: '800' }}>{l.who}</Text>
+            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{l.who}</Text>
           </LinearGradient>
           <Text style={styles.bubTxt} numberOfLines={1}>
             {l.text}
@@ -128,7 +129,7 @@ function HeartBurst() {
   }, [s]);
   const a = useAnimatedStyle(() => ({ opacity: Math.min(1, s.value * 1.5), transform: [{ scale: s.value }] }));
   return (
-    <Animated.Text pointerEvents="none" style={[{ position: 'absolute', alignSelf: 'center', top: 130, fontSize: 64 }, a]}>
+    <Animated.Text pointerEvents="none" style={[{ position: 'absolute', alignSelf: 'center', top: 170, fontSize: 92 }, a]}>
       ❤️
     </Animated.Text>
   );
@@ -142,15 +143,6 @@ function useTick(start: number, step: number, ms: number) {
     return () => clearInterval(id);
   }, [step, ms]);
   return v;
-}
-
-function Ring({ style, size }: { style: ViewStyle; size: number }) {
-  const s = useSharedValue(0);
-  useEffect(() => {
-    s.value = withRepeat(withTiming(1, { duration: 1300, easing: Easing.out(Easing.quad) }), -1);
-  }, [s]);
-  const a = useAnimatedStyle(() => ({ opacity: 0.8 * (1 - s.value), transform: [{ scale: 1 + 0.55 * s.value }] }));
-  return <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: size, height: size, borderRadius: size / 2, borderWidth: 2, borderColor: '#F43F5E' }, style, a]} />;
 }
 
 function RecTimer() {
@@ -178,12 +170,12 @@ function WaveBar({ h, delay, color }: { h: number; delay: number; color: string 
     s.value = withDelay(delay, withRepeat(withSequence(withTiming(1, { duration: 320 }), withTiming(0.3, { duration: 320 })), -1));
   }, [s, delay]);
   const a = useAnimatedStyle(() => ({ transform: [{ scaleY: s.value }] }));
-  return <Animated.View style={[{ width: 2.5, height: 16 * h, borderRadius: 2, backgroundColor: color }, a]} />;
+  return <Animated.View style={[{ width: 3.5, height: 24 * h, borderRadius: 2, backgroundColor: color }, a]} />;
 }
 
 function Wave({ color }: { color: string }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, height: 16 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, height: 24 }}>
       {[0.5, 0.9, 0.6, 1, 0.7, 0.85, 0.45].map((h, i) => (
         <WaveBar key={i} h={h} delay={i * 90} color={color} />
       ))}
@@ -194,10 +186,10 @@ function Wave({ color }: { color: string }) {
 function WaveDot({ delay }: { delay: number }) {
   const s = useSharedValue(0);
   useEffect(() => {
-    s.value = withDelay(delay, withRepeat(withSequence(withTiming(-4, { duration: 300 }), withTiming(0, { duration: 300 })), -1));
+    s.value = withDelay(delay, withRepeat(withSequence(withTiming(-5, { duration: 300 }), withTiming(0, { duration: 300 })), -1));
   }, [s, delay]);
   const a = useAnimatedStyle(() => ({ transform: [{ translateY: s.value }] }));
-  return <Animated.View style={[{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#fff' }, a]} />;
+  return <Animated.View style={[{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#fff' }, a]} />;
 }
 
 function Typing() {
@@ -219,27 +211,21 @@ function Sim({ kind }: { kind: ArtKind }) {
       return (
         <>
           <HeartBurst />
-          <RisingHearts style={{ end: 8, bottom: 70 }} />
+          <RisingHearts style={{ end: 22, bottom: 120 }} />
           <View pointerEvents="none" style={[styles.likeCount, GLASS]}>
-            <Ionicons name="heart" size={11} color="#F43F5E" />
+            <Ionicons name="heart" size={15} color="#F43F5E" />
             <Text style={styles.chipTxt}>{(likes / 1000).toFixed(1)}K</Text>
           </View>
         </>
       );
     case 'create':
-      return (
-        <>
-          <Ring size={32} style={{ start: 75, bottom: 36 }} />
-          <RecTimer />
-        </>
-      );
+      return <RecTimer />;
     case 'live':
       return (
         <>
-          <View pointerEvents="none" style={styles.cover} />
-          <RisingHearts style={{ end: 12, bottom: 34 }} />
+          <RisingHearts style={{ end: 22, bottom: 100 }} />
           <CommentFeed
-            style={{ start: 8, end: 30, bottom: 28 }}
+            style={{ start: 16, end: 70, bottom: 92 }}
             lines={[
               { who: 'ع', tone: ['#0284C7', '#38BDF8'], text: t('onboarding.mockMsg1') },
               { who: 'س', tone: ['#3B82F6', '#6366F1'], text: t('onboarding.mockMsg2') },
@@ -261,52 +247,38 @@ function Sim({ kind }: { kind: ArtKind }) {
   }
 }
 
-function Breakout({ kind }: { kind: ArtKind }) {
+const PILL: Record<ArtKind, { text: string; side: 'start' | 'end'; top: number }> = {
+  watch: { text: 'onboarding.pillWatch', side: 'end', top: 150 },
+  create: { text: 'onboarding.pillCreate', side: 'start', top: 190 },
+  live: { text: 'onboarding.pillLive', side: 'start', top: 230 },
+  chat: { text: 'onboarding.pillChat', side: 'end', top: 170 },
+};
+
+/** The one translated pill per slide that breaks out past the frame edge. */
+function Pill({ kind }: { kind: ArtKind }) {
   const { t } = useTranslation();
-  switch (kind) {
-    case 'watch':
-      return (
-        <>
-          <Chip icon="musical-notes" color="#38BDF8" text={t('onboarding.mockSound')} style={{ position: 'absolute', start: -34, bottom: 120 }} delay={600} />
-        </>
-      );
-    case 'create':
-      return (
-        <>
-          <Chip icon="sparkles" color="#38BDF8" text="Neon" style={{ position: 'absolute', start: -30, top: 150 }} />
-        </>
-      );
-    case 'live':
-      return (
-        <>
-          <Float style={{ position: 'absolute', start: -38, bottom: 96 }}>
-            <LinearGradient colors={['#F59E0B', '#8B5CF6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.gift}>
-              <Text style={{ fontSize: 15 }}>🦅</Text>
-              <Text style={styles.chipTxt}>{t('onboarding.mockGift')}</Text>
-            </LinearGradient>
-          </Float>
-          <Chip icon="eye" color="#fff" text="1.2K" style={{ position: 'absolute', end: -22, top: 70 }} delay={600} />
-        </>
-      );
-    case 'chat':
-      return (
-        <>
-          <Chip icon="location" color="#34D399" text={t('onboarding.mockAway')} style={{ position: 'absolute', end: -34, top: 90 }} />
-          <Chip icon="mic" color="#60A5FA" text={t('onboarding.mockHold')} style={{ position: 'absolute', start: -30, bottom: 100 }} delay={600} />
-        </>
-      );
-  }
+  const p = PILL[kind];
+  return (
+    <Float style={{ position: 'absolute', [p.side]: -26, top: p.top, maxWidth: 230 }}>
+      <View style={[styles.pill, GLASS]}>
+        <Text style={styles.pillTxt}>{t(p.text)}</Text>
+      </View>
+    </Float>
+  );
 }
 
 export function OnboardingArt({ kind, scale = 1 }: { kind: ArtKind; scale?: number }) {
+  const { i18n } = useTranslation();
+  const set = i18n.language === 'ar' ? SHOTS.ar : SHOTS.en;
   return (
-    <View style={{ width: FRAME_W * scale, height: FRAME_H * scale }}>
+    <View style={{ width: ART_W * scale, height: ART_H * scale }}>
       <View style={[styles.frame, { transform: [{ scale }], transformOrigin: 'top left' }]}>
         <View style={styles.clip}>
-          <Image source={SHOTS[kind]} style={[StyleSheet.absoluteFill, { width: '100%', height: '100%', objectFit: 'cover' }]} accessibilityIgnoresInvertColors />
+          <Image source={set[kind]} style={[StyleSheet.absoluteFill, { width: '100%', height: '100%', objectFit: 'cover' }]} accessibilityIgnoresInvertColors />
+          <LinearGradient colors={['rgba(7,8,13,0)', 'rgba(7,8,13,0.85)', '#07080D']} style={styles.fade} pointerEvents="none" />
+          <Sim kind={kind} />
         </View>
-        <Sim kind={kind} />
-        <Breakout kind={kind} />
+        <Pill kind={kind} />
       </View>
     </View>
   );
@@ -314,30 +286,30 @@ export function OnboardingArt({ kind, scale = 1 }: { kind: ArtKind; scale?: numb
 
 const styles = StyleSheet.create({
   frame: {
-    width: FRAME_W,
-    height: FRAME_H,
-    borderRadius: 30,
-    backgroundColor: '#0B0C12',
-    borderWidth: 3,
-    borderColor: 'rgba(255,255,255,0.2)',
+    width: ART_W,
+    height: ART_H,
+    borderRadius: 38,
+    backgroundColor: '#11131F',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.18)',
     shadowColor: '#6366F1',
     shadowOpacity: 0.45,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 14 },
+    shadowRadius: 34,
+    shadowOffset: { width: 0, height: 16 },
     elevation: 14,
   },
-  clip: { flex: 1, borderRadius: 27, overflow: 'hidden' },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 7 },
-  chipTxt: { color: '#fff', fontSize: 10.5, fontWeight: '800' },
-  bub: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 999, paddingVertical: 3, paddingStart: 3, paddingEnd: 9, alignSelf: 'flex-start', marginTop: 4 },
-  bubAv: { width: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  bubTxt: { color: '#fff', fontSize: 9.5 },
-  cover: { position: 'absolute', start: 0, end: 0, bottom: 24, height: 42, backgroundColor: '#04091F' },
-  likeCount: { position: 'absolute', alignSelf: 'center', bottom: 66, flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4 },
-  rec: { position: 'absolute', alignSelf: 'center', top: 10, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F43F5E', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  recBlip: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
-  recTxt: { color: '#fff', fontSize: 11, fontWeight: '800' },
-  typing: { position: 'absolute', start: 10, bottom: 54, flexDirection: 'row', gap: 4, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 9 },
-  talk: { position: 'absolute', end: 10, bottom: 54, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  gift: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8, shadowColor: '#F59E0B', shadowOpacity: 0.7, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
+  clip: { flex: 1, borderRadius: 36, overflow: 'hidden' },
+  fade: { position: 'absolute', start: 0, end: 0, bottom: 0, height: '35%' },
+  pill: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
+  pillTxt: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  chipTxt: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  bub: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingVertical: 4, paddingStart: 4, paddingEnd: 12, alignSelf: 'flex-start', marginTop: 6 },
+  bubAv: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  bubTxt: { color: '#fff', fontSize: 13 },
+  likeCount: { position: 'absolute', alignSelf: 'center', bottom: 112, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 6 },
+  rec: { position: 'absolute', alignSelf: 'center', top: 16, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#F43F5E', borderRadius: 999, paddingHorizontal: 15, paddingVertical: 7 },
+  recBlip: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
+  recTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  typing: { position: 'absolute', start: 16, bottom: 96, flexDirection: 'row', gap: 5, borderRadius: 999, paddingHorizontal: 15, paddingVertical: 13 },
+  talk: { position: 'absolute', end: 16, bottom: 96, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 },
 });
