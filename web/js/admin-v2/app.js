@@ -133,6 +133,7 @@
     idcard: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 16a3.2 3.2 0 0 1 6 0M14 10h4M14 13.5h3"/>',
     sliders: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
     copy: '<rect x="8.5" y="8.5" width="11.5" height="11.5" rx="2.5"/><path d="M15.5 8.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2h2.5"/>',
+    scale: '<path d="M12 4v16M7 20h10M5 7.5h14"/><path d="M5 7.5 2.5 14a3 3 0 0 0 5 0zM19 7.5 16.5 14a3 3 0 0 0 5 0z"/>',
     pause: '<circle cx="12" cy="12" r="8.5"/><path d="M10 9v6M14 9v6"/>',
     diamond: '<path d="M6.5 4.5h11L21 9.5l-9 10-9-10z"/><path d="M3 9.5h18M9.5 4.5 8 9.5l4 10 4-10-1.5-5"/>',
   };
@@ -312,6 +313,7 @@
     ] },
     { sec: () => L('Moderation', 'الإشراف'), items: [
       { k: 'reports', i: 'flag', l: () => L('Reports', 'البلاغات'), badge: 'open_reports' },
+      { k: 'appeals', i: 'scale', l: () => L('Appeals', 'الاعتراضات'), badge: 'appeals_open' },
       { k: 'moderation', i: 'scan', l: () => L('AI screening log', 'سجل الفحص الآلي') },
       { k: 'videos', i: 'film', l: () => L('Videos', 'الفيديوهات') },
       { k: 'stories', i: 'story', l: () => L('Stories', 'القصص'), badge: 'reported_stories' },
@@ -365,6 +367,7 @@
       { n: c.reported_live, l: L('Live reports', 'بلاغات البث'), href: '#/reports?type=live', i: 'live' },
       { n: (USAGE_OPEN || []).filter((a) => Number(a.pct) >= 70).length, l: L('Usage alerts', 'تنبيهات الاستخدام'), href: '#/usage', i: 'gauge', tone: 'bad' },
       { n: c.scans_unavailable_24h, l: L('Unscanned uploads (24 h)', 'محتوى لم يُفحص (24 س)'), href: '#/moderation', i: 'eyeOff', tone: 'bad' },
+      { n: c.appeals_open, l: L('Appeals waiting', 'اعتراضات بانتظار المراجعة'), href: '#/appeals', i: 'scale' },
       { n: c.payouts_waiting, l: L('Withdrawals waiting', 'طلبات سحب بانتظار المعالجة'), href: '#/payouts', i: 'bank' },
       { n: c.kyc_pending, l: L('Identity checks waiting', 'تحقق هوية بانتظار المراجعة'), href: '#/kyc', i: 'idcard' },
       { n: extra && extra.refundFlags, l: L('Refund flags to review', 'استردادات بانتظار المراجعة'), href: '#/wallet', i: 'coins' },
@@ -376,7 +379,7 @@
   function bellCount() {
     const c = COUNTS || {};
     return Number(c.open_reports || 0) + Number(c.usage_open || 0) + Number(c.open_tickets || 0)
-      + Number(c.payouts_waiting || 0) + Number(c.kyc_pending || 0);
+      + Number(c.payouts_waiting || 0) + Number(c.kyc_pending || 0) + Number(c.appeals_open || 0);
   }
   function drawBell(b) {
     const n = bellCount();
@@ -543,8 +546,8 @@
     return w;
   }
   async function refreshCounts() {
-    const [c, u, pc] = await Promise.all([API.counts().catch(() => ({})), API.usageOpenAlerts(), API.payoutCounts()]);
-    COUNTS = Object.assign(c || {}, pc);
+    const [c, u, pc, ac] = await Promise.all([API.counts().catch(() => ({})), API.usageOpenAlerts(), API.payoutCounts(), API.appealBadge()]);
+    COUNTS = Object.assign(c || {}, pc, ac);
     USAGE_OPEN = u;
     COUNTS.usage_open = u.length;
     document.querySelectorAll('.ubanner-slot').forEach(drawUsageBanner);
@@ -666,15 +669,16 @@
       try {
         const c = await API.counts();
         COUNTS = Object.assign(c || {}, { usage_open: USAGE_OPEN.length });
-        const [g, s, u, flags, pc] = await Promise.all([
+        const [g, s, u, flags, pc, ac] = await Promise.all([
           API.growth(14).catch(() => []),
           API.storage().catch(() => null),
           API.usageOpenAlerts(),
           API.walletFlags().catch(() => null),
           API.payoutCounts(),
+          API.appealBadge(),
         ]);
         USAGE_OPEN = u; COUNTS.usage_open = u.length;
-        Object.assign(COUNTS, pc);
+        Object.assign(COUNTS, pc, ac);
         body.innerHTML = '';
 
         // ---- hero: users + sign-ups, and what needs attention ----
@@ -2395,12 +2399,269 @@
     return [header(L('Payout settings', 'إعدادات الأرباح'), L('Rates and rules for creator withdrawals. Every change is logged with the old and new values.', 'أسعار وقواعد سحب صناع المحتوى. يُسجَّل كل تغيير بالقيم القديمة والجديدة.')), body];
   }
 
+  // ---------- appeals (0132) ----------
+  // A user's appeal against a ban or a moderation action on their content.
+  // admin_v2_decide_appeal does the restoring (unban / unhide / un-ban the
+  // live), closes the appeal, logs it and notifies the user.
+  const MIG0132 = () => h('div', { class: 'notice bad', role: 'alert' }, [icon('warn'), h('span', { text: L('The database is missing migration 0132_appeals.sql. Apply it in the Supabase SQL editor (Mumbai project).', 'قاعدة البيانات تفتقد الترحيل 0132_appeals.sql. طبّقه في محرر SQL لمشروع Mumbai.') })]);
+  const appealErrBox = (e) => (e && e.message === 'MIGRATION_MISSING' ? MIG0132() : errorBox(e));
+  function appealErrText(e) {
+    const m = (e && e.message) || '';
+    const AR = {
+      'not found': 'الاعتراض غير موجود', 'appeal already decided': 'تم البتّ في هذا الاعتراض بالفعل',
+      'a note is required to reject an appeal': 'الملاحظة مطلوبة لرفض الاعتراض', 'note too long (max 1000)': 'الملاحظة طويلة جدًا (الحد 1000)',
+    };
+    if (LANG === 'ar' && AR[m]) return AR[m];
+    return errText(e);
+  }
+  const A_TONE = { open: 'warn', accepted: 'ok', rejected: 'bad' };
+  const A_WORDS = () => ({ open: L('open', 'مفتوح'), accepted: L('accepted', 'مقبول'), rejected: L('rejected', 'مرفوض') });
+  const aBadge = (st) => h('span', { class: 'badge ' + (A_TONE[st] || '') }, A_WORDS()[st] || st);
+  const A_STALE_MS = 48 * 3600 * 1000;
+  const appealStale = (a) => a.status === 'open' && Date.now() - new Date(a.created_at).getTime() > A_STALE_MS;
+  const APPEAL_NOUN = () => ({
+    user: L('account', 'حساب'), video: L('video', 'فيديو'), comment: L('comment', 'تعليق'), story: L('story', 'قصة'),
+    live_comment: L('live comment', 'تعليق بث'), live_stream: L('live stream', 'بث مباشر'),
+  });
+  const appealGone = (a) => !!(a.target && a.target.exists === false);
+  // "Account ban", "Hidden video", "Deleted story", ...
+  function appealWhat(a) {
+    const t = a.target_type;
+    if (t === 'user' || a.kind === 'ban') return L('Account ban', 'حظر الحساب');
+    const noun = APPEAL_NOUN()[t] || t || '-';
+    const f = t === 'story' ? 'ة' : '';
+    if (appealGone(a)) return L('Deleted ' + noun, noun + ' محذوف' + f);
+    if (t === 'video' || t === 'comment') return L('Hidden ' + noun, noun + ' مخفي' + f);
+    if (t === 'live_stream') return L('Force-ended ' + noun, noun + ' أُنهي إداريًا');
+    return LANG === 'ar' ? noun : noun.charAt(0).toUpperCase() + noun.slice(1);
+  }
+  // What accepting will do, from the target as it is now (spec: say so before accepting).
+  function appealEffect(a) {
+    const tg = a.target || {};
+    const t = a.target_type;
+    const noun = APPEAL_NOUN()[t] || '';
+    if (appealGone(a) || t === 'story' || t === 'live_comment') {
+      return { restores: false, bad: true, text: L('Nothing can be restored (the ' + noun + ' was deleted). The user is only notified.', 'لا يمكن استعادة أي شيء (حُذف المحتوى). يُبلَّغ المستخدم فقط.') };
+    }
+    if (tg.still_actioned === false) {
+      return { restores: false, text: L('The restriction was already lifted. Accepting changes nothing, it closes the appeal and notifies the user.', 'رُفع التقييد بالفعل. القبول لا يغيّر شيئًا، بل يغلق الاعتراض ويُبلغ المستخدم.') };
+    }
+    if (t === 'user') return { restores: true, text: L('This will lift the ban and notify the user.', 'سيُرفع الحظر ويُبلَّغ المستخدم.') };
+    if (t === 'video') return { restores: true, text: L('This will unhide the video and notify the user.', 'سيُعاد إظهار الفيديو ويُبلَّغ المستخدم.') };
+    if (t === 'comment') return { restores: true, text: L('This will unhide the comment and notify the user.', 'سيُعاد إظهار التعليق ويُبلَّغ المستخدم.') };
+    if (t === 'live_stream') return { restores: true, text: L('This will lift the force-end: the live goes back to the host\'s history as ended. The user is notified.', 'سيُلغى الإنهاء الإداري: يعود البث إلى سجل المضيف كمنتهٍ، ويُبلَّغ المستخدم.') };
+    return { restores: false, text: L('Nothing will change. The user is notified.', 'لن يتغيّر شيء. يُبلَّغ المستخدم.') };
+  }
+  const APPEAL_RESTORED = () => ({
+    unbanned: L('The ban was lifted.', 'رُفع الحظر.'), unhidden: L('The content is visible again.', 'عاد المحتوى ظاهرًا.'),
+    live_unbanned: L('The live was moved back to ended.', 'أُعيد البث إلى حالة منتهٍ.'),
+    deleted_cannot_restore: L('Nothing could be restored (deleted). The user was notified.', 'تعذّرت الاستعادة (محذوف). أُبلغ المستخدم.'), none: L('Nothing needed restoring.', 'لا حاجة للاستعادة.'),
+  });
+
+  function viewAppeals(q) {
+    const TABS = ['open', 'accepted', 'rejected'];
+    const PAGE = 50;
+    let status = TABS.includes(q.status) ? q.status : 'open';
+    let counts = null;
+    let rows = [];
+    let more = false;
+    let seq = 0;
+    const table = h('div', { class: 'table-wrap' });
+    const moreBox = h('div', { class: 'more-row' });
+    const stTabs = h('div');
+    function drawTabs() {
+      const c = counts || {};
+      const lab = (t, en, ar) => L(en, ar) + (counts ? ' (' + num(c[t]) + ')' : '');
+      put(stTabs, tabs([['open', lab('open', 'Open', 'مفتوحة')], ['accepted', lab('accepted', 'Accepted', 'مقبولة')], ['rejected', lab('rejected', 'Rejected', 'مرفوضة')]], status, (v) => { status = v; drawTabs(); load(); }));
+    }
+    async function loadCounts() {
+      try { counts = await API.appealCounts(); } catch (e) { counts = null; }
+      drawTabs();
+    }
+    function drawRows() {
+      if (!rows.length) {
+        put(table, empty(status === 'open' ? L('No appeals waiting. Nice.', 'لا توجد اعتراضات بانتظار المراجعة.') : L('Nothing here.', 'لا يوجد شيء هنا.')));
+        put(moreBox);
+        return;
+      }
+      const decided = status !== 'open';
+      const reload = () => { load(); refreshCounts(); };
+      const tb = h('tbody');
+      rows.forEach((a) => {
+        const stale = appealStale(a);
+        const banned = a.user_banned_until && new Date(a.user_banned_until) > new Date();
+        const open = () => openAppeal(a, reload);
+        const first = String(a.reason || '').split('\n')[0];
+        tb.appendChild(h('tr', { class: 'click' + (stale ? ' risk' : ''), tabindex: '0', onclick: open, onkeydown: (e) => { if (e.key === 'Enter' && e.target === e.currentTarget) open(); } }, [
+          h('td', { 'data-l': L('Submitted', 'أُرسل'), class: 'dim nowrap', title: when(a.created_at) }, [ago(a.created_at), stale ? h('div', {}, badge(L('over 48 h', 'أكثر من 48 س'), 'bad')) : null]),
+          h('td', { 'data-l': L('User', 'المستخدم') }, h('div', { class: 'ucell' }, [avatar(a.user_avatar_url, a.user_name || a.user_handle), h('div', { class: 'u2' }, [
+            h('div', { class: 'p1', text: a.user_name || '-' }),
+            h('div', { class: 'p2', text: a.user_handle ? '@' + a.user_handle : L('(deleted)', '(محذوف)') }),
+            banned ? h('div', {}, badge(L('banned until ', 'محظور حتى ') + when(a.user_banned_until), 'bad')) : null,
+          ])])),
+          h('td', { 'data-l': L('What', 'الموضوع'), class: 'chips-td' }, [badge(appealWhat(a), a.kind === 'ban' ? 'bad' : 'type'), appealGone(a) ? badge(L('deleted', 'محذوف'), 'warn') : null]),
+          h('td', { 'data-l': L('Reason', 'السبب'), class: 'clip-td', title: a.reason || '' }, first || '-'),
+          decided ? h('td', { 'data-l': L('Decided', 'البتّ'), class: 'dim nowrap', title: when(a.decided_at) }, [aBadge(a.status), h('div', { class: 'p2', text: (a.decided_by_handle ? '@' + a.decided_by_handle + ' · ' : '') + ago(a.decided_at) })]) : null,
+          h('td', { class: 'row-go', 'aria-hidden': 'true' }, icon('chevR')),
+        ]));
+      });
+      put(table, h('table', { class: 'table dense' }, [
+        h('thead', {}, h('tr', {}, [L('Submitted', 'أُرسل'), L('User', 'المستخدم'), L('What', 'الموضوع'), L('Reason', 'السبب'), decided ? L('Decided', 'البتّ') : null, ''].filter((x) => x != null).map((x) => h('th', { text: x })))),
+        tb,
+      ]));
+      put(moreBox, more ? btn(L('Load more', 'عرض المزيد'), async () => {
+        const my = seq;
+        const r = await API.listAppeals(status, PAGE, rows.length);
+        if (my !== seq) return;
+        rows = rows.concat(r || []); more = (r || []).length >= PAGE; setCount(ph.count, rows.length); drawRows();
+      }) : null);
+    }
+    async function load() {
+      const my = ++seq;
+      put(table, loading()); put(moreBox);
+      try {
+        const r = await API.listAppeals(status, PAGE, 0);
+        if (my !== seq) return;
+        rows = r || []; more = rows.length >= PAGE;
+        setCount(ph.count, rows.length);
+        drawRows();
+        loadCounts();
+      } catch (e) { if (my === seq) { put(table, appealErrBox(e)); put(moreBox); } }
+    }
+    const ph = header(L('Appeals', 'الاعتراضات'), L('Users can appeal a ban or a decision on their content. Read the case, then accept (restores it) or reject with a note. The note is shown to the user.', 'يستطيع المستخدمون الاعتراض على الحظر أو على قرار يخص محتواهم. اقرأ الحالة ثم اقبل (تُستعاد) أو ارفض بملاحظة تظهر للمستخدم.'),
+      btn([icon('refresh'), L('Refresh', 'تحديث')], () => { load(); refreshCounts(); }), true);
+    drawTabs(); load();
+    return [ph, h('section', { class: 'panel' }, [h('div', { class: 'filterbar in' }, stTabs), table, moreBox])];
+  }
+
+  function appealTarget(a) {
+    const t = a.target_type;
+    const tg = a.target || {};
+    const kids = [];
+    if (appealGone(a)) {
+      kids.push(h('div', { class: 'notice bad' }, [icon('trash'), h('span', { text: L('This content was deleted' + (tg.deleted_at ? ' on ' + when(tg.deleted_at) : '') + '. It cannot be restored.', 'حُذف هذا المحتوى' + (tg.deleted_at ? ' في ' + when(tg.deleted_at) : '') + '، ولا يمكن استعادته.') })]));
+    } else if (tg.still_actioned === false) {
+      kids.push(h('div', { class: 'notice warn' }, [icon('check'), h('span', { text: L('Already lifted: the restriction was undone some other way.', 'رُفع بالفعل: أُلغي التقييد بطريقة أخرى.') })]));
+    }
+    if (!appealGone(a)) {
+      if (t === 'video') {
+        const v = safeUrl(tg.video_url);
+        kids.push(h('div', { class: 'ap-media' }, [
+          media(tg.thumbnail, 'image'),
+          h('div', {}, [
+            h('p', { class: 'ap-text', text: tg.description || L('(no description)', '(بلا وصف)') }),
+            v ? h('a', { href: v, target: '_blank', rel: 'noopener noreferrer', class: 'ulink' }, [L('Open the video', 'افتح الفيديو'), ' ', icon('up')]) : null,
+          ]),
+        ]));
+      } else if (t === 'live_stream') {
+        kids.push(h('div', { class: 'ap-media' }, [media(tg.thumbnail, 'image'), h('div', {}, [
+          h('p', { class: 'ap-text', text: tg.title || L('(untitled)', '(بلا عنوان)') }),
+          h('p', { class: 'muted small', text: L('Started ', 'بدأ ') + when(tg.started_at) + (tg.ended_at ? L(' · ended ', ' · انتهى ') + when(tg.ended_at) : '') }),
+        ])]));
+      } else if (t === 'comment' || t === 'live_comment') {
+        kids.push(h('blockquote', { class: 'ap-quote', text: tg.text || '-' }));
+        if (tg.video_id) kids.push(h('p', { class: 'muted small' }, [L('On video ', 'على الفيديو '), h('code', { class: 'tag-code', text: String(tg.video_id) })]));
+      } else if (t === 'story') {
+        kids.push(tg.media_url || tg.thumbnail ? media(tg.media_url || tg.thumbnail, tg.media_kind) : null);
+        if (tg.caption) kids.push(h('p', { class: 'ap-text', text: tg.caption }));
+      }
+    }
+    const pairs = [];
+    if (t === 'user') {
+      pairs.push([L('Banned until', 'محظور حتى'), tg.banned_until ? when(tg.banned_until) : '-']);
+      pairs.push([L('Ban reason', 'سبب الحظر'), tg.ban_reason]);
+      pairs.push([L('Banned at', 'تاريخ الحظر'), tg.banned_at ? when(tg.banned_at) : null]);
+    } else if (appealGone(a)) {
+      pairs.push([L('Deleted', 'حُذف'), tg.deleted_at ? when(tg.deleted_at) : null]);
+      pairs.push([L('Reason', 'السبب'), tg.delete_reason]);
+    } else if (t === 'video' || t === 'comment') {
+      pairs.push([L('Hidden', 'أُخفي'), tg.hidden_at ? when(tg.hidden_at) : null]);
+      pairs.push([L('Reason', 'السبب'), tg.hidden_reason]);
+    } else if (t === 'live_stream') {
+      pairs.push([L('Live status', 'حالة البث'), tg.status ? badge(tg.status, tg.status === 'banned' ? 'bad' : '') : null]);
+    }
+    if (tg.created_at) pairs.push([L('Posted', 'نُشر'), when(tg.created_at)]);
+    kids.push(kvList(pairs));
+    return kids;
+  }
+
+  async function openAppeal(a, reload) {
+    const decided = a.status !== 'open';
+    const eff = appealEffect(a);
+    const note = h('textarea', { rows: 4, class: 'input', maxlength: '1000', 'aria-label': L('Note to the user', 'ملاحظة للمستخدم'), placeholder: L('Shown to the user. Required to reject.', 'تظهر للمستخدم. مطلوبة عند الرفض.') });
+    const err = h('div', { class: 'notice bad', role: 'alert', hidden: true });
+    note.addEventListener('input', () => { note.classList.remove('invalid'); err.hidden = true; });
+    const showErr = (msg) => { err.replaceChildren(icon('warn'), h('span', { text: msg })); err.hidden = false; };
+    const section = (title, kids) => h('section', { class: 'ap-sec' }, [h('h4', { text: title }), ...[].concat(kids)]);
+    let body;
+    const closeDrawer = () => { const bd = body.closest('.backdrop'); const x = bd && bd.querySelector('.m-head .x'); if (x) x.click(); };
+    async function decide(accept) {
+      err.hidden = true;
+      const n = note.value.trim();
+      if (!accept && !n) { note.classList.add('invalid'); note.focus(); showErr(L('A note is required to reject an appeal. The user will read it.', 'الملاحظة مطلوبة لرفض الاعتراض، وسيقرؤها المستخدم.')); return; }
+      if (accept) {
+        const ok = await modal(L('Accept this appeal?', 'قبول هذا الاعتراض؟'), [
+          h('p', { text: appealWhat(a) + ' · ' + (a.user_handle ? '@' + a.user_handle : '')  }),
+          h('div', { class: 'notice ' + (eff.bad ? 'warn' : 'info') }, [icon(eff.restores ? 'check' : 'warn'), h('span', { text: eff.text })]),
+          n ? h('p', { class: 'muted small', text: L('Your note: ', 'ملاحظتك: ') + n }) : null,
+        ], [{ label: L('Cancel', 'إلغاء'), value: false }, { label: L('Accept', 'قبول'), value: true, kind: 'primary' }]);
+        if (!ok) return;
+      }
+      try {
+        const r = await API.decideAppeal(a.id, accept, n || null);
+        const done = accept ? L('Appeal accepted. ', 'تم قبول الاعتراض. ') + ((APPEAL_RESTORED()[r && r.restored]) || '') : L('Appeal rejected. The user was notified.', 'تم رفض الاعتراض وأُبلغ المستخدم.');
+        toast(done);
+        closeDrawer();
+        if (reload) reload();
+      } catch (e) {
+        showErr(appealErrText(e));
+        if (e && e.message === 'appeal already decided' && reload) reload();
+      }
+    }
+    body = h('div', { class: 'udetail' }, [
+      h('div', { class: 'chips' }, [aBadge(a.status), badge(appealWhat(a), a.kind === 'ban' ? 'bad' : 'type'), appealStale(a) ? badge(L('over 48 h', 'أكثر من 48 س'), 'bad') : null]),
+      section(L('Target', 'الهدف'), appealTarget(a)),
+      section(L('User', 'المستخدم'), [
+        h('div', { class: 'ucell' }, [avatar(a.user_avatar_url, a.user_name || a.user_handle), h('div', { class: 'u2' }, [
+          h('div', { class: 'p1', text: a.user_name || '-' }),
+          h('div', { class: 'p2' }, a.user_id ? h('a', { href: '#/users?id=' + encodeURIComponent(a.user_id), class: 'ulink', onclick: () => closeDrawer() }, a.user_handle ? '@' + a.user_handle : (a.user_name || String(a.user_id).slice(0, 8))) : L('(deleted)', '(محذوف)')),
+        ])]),
+        kvList([
+          [L('Current ban', 'الحظر الحالي'), a.user_banned_until && new Date(a.user_banned_until) > new Date() ? badge(L('until ', 'حتى ') + when(a.user_banned_until), 'bad') : L('none', 'لا يوجد')],
+          [L('Appeals so far', 'عدد اعتراضاته'), num(a.user_appeals_total)],
+        ]),
+      ]),
+      section(L('Appeal', 'الاعتراض'), [
+        h('blockquote', { class: 'ap-quote', text: a.reason || '-' }),
+        kvList([
+          [L('Submitted', 'أُرسل'), when(a.created_at)],
+          decided ? [L('Outcome', 'النتيجة'), aBadge(a.status)] : null,
+          decided ? [L('Note to the user', 'الملاحظة للمستخدم'), a.admin_note || '-'] : null,
+          decided ? [L('Decided by', 'قرّره'), a.decided_by_handle ? '@' + a.decided_by_handle : '-'] : null,
+          decided ? [L('Decided', 'وقت القرار'), when(a.decided_at)] : null,
+        ]),
+      ]),
+      decided ? null : section(L('Decision', 'القرار'), [
+        h('div', { class: 'notice ' + (eff.bad ? 'warn' : 'info') }, [icon(eff.restores ? 'check' : 'warn'), h('span', { text: L('If you accept: ', 'عند القبول: ') + eff.text })]),
+        h('label', { class: 'lbl' }, [L('Note to the user (optional for Accept, required for Reject)', 'ملاحظة للمستخدم (اختيارية عند القبول، مطلوبة عند الرفض)'), note]),
+        err,
+        h('div', { class: 'actions' }, [
+          btn([icon('check'), L('Accept', 'قبول')], () => decide(true), 'primary'),
+          btn([icon('x'), L('Reject', 'رفض')], () => decide(false), 'danger'),
+        ]),
+      ]),
+    ]);
+    // modal() focuses the note box, which scrolls the drawer to the bottom; start at the top.
+    setTimeout(() => { const mb = body.closest('.m-body'); if (mb) mb.scrollTop = 0; }, 0);
+    await modal(L('Appeal', 'الاعتراض'), body, [{ label: L('Close', 'إغلاق'), value: null }], { drawer: true });
+  }
+
   // ---------- router ----------
   const ROUTES = {
     dashboard: viewDashboard, reports: viewReports, users: viewUsers, videos: viewVideos,
     stories: viewStories, live: viewLive, moderation: viewModeration, tickets: viewTickets,
     deletions: viewDeletions, exports: viewExports, wallet: viewWallet, storage: viewStorage, logs: viewLogs,
-    usage: viewUsage, payouts: viewPayouts, kyc: viewKyc, 'payout-settings': viewPayoutSettings,
+    usage: viewUsage, payouts: viewPayouts, kyc: viewKyc, appeals: viewAppeals, 'payout-settings': viewPayoutSettings,
   };
   function parseHash() {
     const raw = (location.hash || '#/dashboard').slice(2);

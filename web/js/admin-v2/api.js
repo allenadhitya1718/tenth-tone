@@ -264,6 +264,23 @@
     setEarning: (earningId, action, reason) => rpc('admin_v2_payout_set_earning', { p_earning_id: earningId, p_action: action, p_reason: reason || null }),
     payoutBackfill: (sinceIso) => rpc('admin_v2_payout_backfill', { p_since: sinceIso }),
 
+    // ---------- appeals (0132) ----------
+    // Counts for the tabs, the sidebar badge, the bell and the dashboard.
+    appealCounts: () => rpc('admin_v2_appeal_counts'),
+    // {} whenever 0132 is not applied (or the network fails), so it never
+    // breaks a page.
+    async appealBadge() {
+      try {
+        const o = await rpc('admin_v2_appeal_counts');
+        return o ? { appeals_open: Number(o.open || 0) } : {};
+      } catch (e) { return {}; }
+    },
+    // status: open | accepted | rejected | all (the RPC caps the limit at 200).
+    listAppeals: (status, limit, offset) =>
+      rpc('admin_v2_list_appeals', { p_status: status || 'open', p_limit: limit || 50, p_offset: offset || 0 }),
+    decideAppeal: (id, accept, note) =>
+      rpc('admin_v2_decide_appeal', { p_appeal: id, p_accept: !!accept, p_note: note || null }),
+
     // ---------- audit log ----------
     async logs(limit) {
       const { data, error } = await sb.from('admin_logs')

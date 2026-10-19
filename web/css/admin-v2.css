@@ -801,6 +801,18 @@ details.fold:not([open]) > summary.card-head { padding-bottom: 20px; }
   .lang-pill { display: none; }
 }
 
+/* appeals */
+.nav[href="#/appeals"] .nb { background: var(--bad-dot); }
+.ap-sec { margin: 0 0 22px; }
+.ap-sec h4 { margin: 0 0 10px; font-size: 13px; letter-spacing: .02em; color: var(--muted); font-weight: 650; }
+.ap-media { display: flex; gap: 14px; align-items: flex-start; margin: 8px 0; }
+.ap-media .media { width: 112px; }
+.ap-media > div { min-width: 0; flex: 1; }
+.ap-text { margin: 0 0 8px; overflow-wrap: anywhere; }
+.ap-quote { margin: 8px 0; padding: 12px 14px; background: var(--band); border-radius: 12px; border-inline-start: 3px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+.more-row { display: flex; justify-content: center; padding: 14px 0 4px; }
+.more-row:empty { display: none; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
   .sk { animation: none; }
