@@ -671,10 +671,262 @@ function judge(scores: Record<string, number>, block: Record<string, number>, re
 
 const BLOCK_MESSAGE = 'لا يمكن نشر هذا المحتوى لأنه يخالف إرشادات المجتمع';
 
+// Calls Gemini once for a piece of content. Shared by the live client path
+// and the server-side target path (screen-by-id), so both apply the same model
+// choice, prompt, timeouts and answer parsing.
+async function askGemini(text: string, images: string[]): Promise<{ answer: Answer; model: string | null; early?: 'no_parts' | 'no_model' }> {
+  const parts = buildParts(text, images);
+  // Every image was rejected by the data-URI check and there was no text. There
+  // is nothing to send, and sending an empty parts array would be a 400.
+  if (!parts.length) return { answer: { kind: 'fail', reason: 'no_parts' } as Answer, model: null, early: 'no_parts' as const };
+
+  // Images make this slower and there is a person watching a spinner at the
+  // other end. Past the timeout the upload proceeds unscanned rather than
+  // stalling; that is the fail-open promise being kept literally. The budgets
+  // sit inside moderation.js's own 12s/25s, so a slow-but-successful scan is
+  // never thrown away by the browser a moment before it lands.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), images.length ? 20_000 : 8_000);
+
+  let answer: Answer = { kind: 'fail', reason: 'unknown' };
+  const model = await resolveModel();
+  if (!model) {
+    clearTimeout(timeout);
+    return { answer, model: null, early: 'no_model' as const };
+  }
+  // A model that does not think by default cannot spend the output budget
+  // reasoning. One that does can, and returns nothing with finishReason
+  // MAX_TOKENS - so give the non-lite fallbacks room rather than have them
+  // fail silently.
+  const outputCap = model.includes('lite') ? 1024 : 2048;
+  try {
+    const res = await fetch(endpointFor(model), {
+      method: 'POST',
+      headers: {
+        // The header form, not ?key= in the URL. A key in a query string ends
+        // up in every proxy and access log between here and Google.
+        'x-goog-api-key': GEMINI_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+        contents: [{ role: 'user', parts }],
+        // Every category set to BLOCK_NONE. Not carelessness — the opposite.
+        // We need Gemini to LOOK at unpleasant content and describe it, and a
+        // model that refuses the input returns nothing to classify. Turning the
+        // four adjustable filters off also sharpens the refusal path in
+        // readAnswer(): with these silent, anything that still refuses is
+        // Google's non-adjustable core protection, which is a signal worth
+        // blocking on. These settings never reach a user — the only thing
+        // generated here is a JSON list of scores.
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+        ],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: RESPONSE_SCHEMA,
+          // The same post must get the same answer twice. A moderation decision
+          // that changes on a retry is one nobody can argue with afterwards.
+          temperature: 0,
+          // Thirteen findings is about 260 tokens and the usual answer is five.
+          // The cap exists so a model that starts rambling cannot eat the daily
+          // token allowance on one post.
+          //
+          // BEFORE CHANGING MODEL, READ THIS. Thinking tokens are charged
+          // against maxOutputTokens, so a model that thinks by default —
+          // gemini-2.5-flash does, flash-lite does not — can spend this entire
+          // budget reasoning and return an empty answer with finishReason
+          // MAX_TOKENS. That reaches the log as `finish_max_tokens` and
+          // everything is allowed through until someone notices. Switching to a
+          // thinking model means turning thinking off in generationConfig, or
+          // raising this a great deal.
+          maxOutputTokens: outputCap,
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const detail = (await res.text()).slice(0, 400);
+      // 429 is the free tier's per-minute or per-day cap and is the failure most
+      // likely to be seen in practice. Named separately so "we outgrew the free
+      // tier" is distinguishable from "Google was down".
+      //
+      // A wrong or unset key is the other one, and Google answers it with 400
+      // INVALID_ARGUMENT — indistinguishable from a malformed request unless the
+      // body is read. Naming it `bad_key` is what turns a puzzling afternoon
+      // into a thirty-second fix.
+      // Google's own words, carried back on the degraded reply. "model not
+      // found" and "API not enabled" are both 404s and are fixed in completely
+      // different places, so the status alone is not enough to act on.
+      discovery.detail = detail.slice(0, 300);
+      if (res.status === 429) answer = { kind: 'fail', reason: 'rate_limited' };
+      else if (/API[_ ]?key/i.test(detail)) answer = { kind: 'fail', reason: 'bad_key' };
+      else answer = { kind: 'fail', reason: `http_${res.status}` };
+      // A model that resolved once and now 404s has been retired underneath us,
+      // or was never callable by this key in the first place. Retiring the NAME
+      // (not just the cache) is what matters: clearing the cache alone would
+      // re-resolve to the same dead name on the next request and 404 forever.
+      if (res.status === 404) {
+        deadModels.add(model);
+        resolvedModel = null;
+      }
+      console.warn('[moderate-content] Gemini', res.status, detail);
+    } else {
+      answer = readAnswer(await res.json());
+    }
+  } catch (e) {
+    const reason = (e as Error)?.name === 'AbortError' ? 'timeout' : 'network';
+    answer = { kind: 'fail', reason };
+    console.warn('[moderate-content] call failed:', reason, e instanceof Error ? e.message : e);
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  return { answer, model };
+}
+
+// ── Server-side screening of a stored row (F11, migration 0140) ──
+// A database trigger hides every new video / story / comment as
+// 'pending_review' and calls this function with the row's screening id. The
+// caller is the database (pg_net), authenticated by the shared secret in
+// x-reconcile-secret, not a user: the owner's id comes from the row. The same
+// per-user limits (edge_rate_take 'moderate_content', 150/h, 1000/day), the
+// same model, prompt and thresholds as the app-initiated path apply.
+//
+//   allow       -> row released (visible)
+//   review      -> row released and put in the admin queue (reports)
+//   block       -> row stays hidden ('moderation_block') and is queued
+//   unavailable -> row stays hidden; the sweeper retries, then releases it with
+//                  an admin queue entry after screening_config.timeout_minutes
+//                  (so Gemini being down never blocks users for long)
+async function safeEqual(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const [ha, hb] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(a)),
+    crypto.subtle.digest('SHA-256', enc.encode(b)),
+  ]);
+  const x = new Uint8Array(ha), y = new Uint8Array(hb);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
+// deno-lint-ignore no-explicit-any
+async function serverCallerAllowed(db: any, given: string): Promise<boolean> {
+  const envSecret = env('RECONCILE_SECRET');
+  if (envSecret && (await safeEqual(given, envSecret))) return true;
+  const { data } = await db.from('job_endpoints').select('headers').eq('name', 'send-push').maybeSingle();
+  const want = data?.headers?.['x-reconcile-secret'] || data?.headers?.['X-Reconcile-Secret'];
+  return !!want && (await safeEqual(given, String(want)));
+}
+
+// Only our own public media origins are fetched (no SSRF through a row value).
+function allowedImageUrl(u: string): boolean {
+  const bases = [env('R2_PUBLIC_BASE'), ...env('R2_PUBLIC_BASE_ALIASES').split(','), `${SUPABASE_URL}/storage/v1/object/public/`]
+    .map((b) => b.trim().replace(/\/+$/, '')).filter(Boolean);
+  return bases.some((b) => u.startsWith(b + '/'));
+}
+
+async function fetchAsDataUri(u: string): Promise<string | null> {
+  if (!allowedImageUrl(u)) return null;
+  try {
+    const res = await fetch(u, { signal: AbortSignal.timeout(8_000) });
+    if (!res.ok) return null;
+    const type = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'].includes(type)) return null;
+    const buf = new Uint8Array(await res.arrayBuffer());
+    if (buf.length === 0 || buf.length > 1_100_000) return null;
+    let bin = '';
+    for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    const uri = `data:${type};base64,${btoa(bin)}`;
+    return uri.length <= MAX_IMAGE_CHARS ? uri : null;
+  } catch {
+    return null;
+  }
+}
+
+// deno-lint-ignore no-explicit-any
+async function screenTarget(db: any, screeningId: string): Promise<Response> {
+  const { data: item, error: itemErr } = await db.rpc('screening_get', { p_id: screeningId });
+  if (itemErr || !item) return json({ error: 'not_found', detail: itemErr?.message }, 404);
+  if (item.status !== 'pending' && item.status !== 'unavailable') return json({ ok: true, skipped: item.status });
+
+  const finish = async (outcome: string, eventId: string | null, reason: string | null, category: string | null, score: number | null) => {
+    const { error } = await db.rpc('screening_finish', {
+      p_id: screeningId, p_outcome: outcome, p_event_id: eventId, p_reason: reason,
+      p_category: category, p_score: score,
+    });
+    if (error) console.error('[moderate-content] screening_finish failed:', error.message);
+    return json({ ok: !error, outcome, reason });
+  };
+  const logEvent = async (outcome: string, v?: Verdict, hadImage = false): Promise<string | null> => {
+    const { data } = await db.rpc('moderation_log_event', {
+      p_user_id: item.user_id, p_kind: item.kind === 'story' ? 'story' : item.kind, p_outcome: outcome,
+      p_categories: v?.categories ?? {}, p_top_category: v?.topCategory ?? null,
+      p_top_score: v?.topScore ?? null, p_had_image: hadImage,
+    });
+    return (data as string) ?? null;
+  };
+
+  const text = String(item.text ?? '').slice(0, MAX_TEXT_CHARS).trim();
+  const images: string[] = [];
+  for (const u of (Array.isArray(item.image_urls) ? item.image_urls : []).slice(0, MAX_IMAGES)) {
+    const d = await fetchAsDataUri(String(u));
+    if (d) images.push(d);
+  }
+  if (!text && !images.length) return await finish('skipped', null, 'nothing_to_screen', null, null);
+
+  const settings = await loadSettings(db);
+  if (!settings.enabled) return await finish('skipped', null, 'screening_disabled', null, null);
+
+  {
+    const { error: rateErr } = await db.rpc('edge_rate_take', {
+      p_user_id: item.user_id, p_bucket: 'moderate_content', p_per_hour: 150, p_per_day: 1000,
+    });
+    if (rateErr) {
+      const reason = rateErr.code === '23514' ? 'rate_limited' : 'rate_limit_unavailable';
+      return await finish('unavailable', null, reason, null, null);
+    }
+  }
+
+  if (!GEMINI_API_KEY) return await finish('unavailable', await logEvent('unavailable', undefined, images.length > 0), 'no_key', null, null);
+
+  const g = await askGemini(text, images);
+  if (g.early === 'no_parts') return await finish('skipped', null, 'nothing_to_screen', null, null);
+  if (g.early === 'no_model') return await finish('unavailable', await logEvent('unavailable', undefined, images.length > 0), 'no_model', null, null);
+  const answer = g.answer;
+  if (answer.kind === 'fail') {
+    return await finish('unavailable', await logEvent('unavailable', undefined, images.length > 0), answer.reason, null, null);
+  }
+
+  const verdict: Verdict = answer.kind === 'refused'
+    ? { outcome: 'block', categories: { [answer.category]: REFUSAL_SCORE }, topCategory: answer.category, topScore: REFUSAL_SCORE }
+    : judge(answer.scores, settings.block, settings.review);
+
+  if (verdict.outcome === 'allow') return await finish('allow', null, null, null, null);
+  const eventId = await logEvent(verdict.outcome, verdict, images.length > 0);
+  return await finish(verdict.outcome, eventId, null, verdict.topCategory, verdict.topScore);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   if (!SUPABASE_URL || !SERVICE_KEY) return json({ error: 'not_configured' }, 500);
+
+  // Server-side screening of a stored row: the caller is the database, with
+  // the shared secret (see screenTarget).
+  const serverSecret = req.headers.get('x-reconcile-secret') ?? '';
+  if (serverSecret) {
+    const sdb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+    if (!(await serverCallerAllowed(sdb, serverSecret))) return json({ error: 'unauthorized' }, 401);
+    let sb: Record<string, unknown> = {};
+    try { sb = await req.json(); } catch { return json({ error: 'bad_request' }, 400); }
+    return await screenTarget(sdb, String(sb.screening_id ?? ''));
+  }
 
   // ── Who is asking ──
   // The caller's own token. moderation_log_event() records the user id, and the
@@ -789,23 +1041,9 @@ Deno.serve(async (req) => {
     });
   }
 
-  const parts = buildParts(text, images);
-  // Every image was rejected by the data-URI check and there was no text. There
-  // is nothing to send, and sending an empty parts array would be a 400.
-  if (!parts.length) return json({ decision: 'allow', eventId: null, attach: false });
-
-  // Images make this slower and there is a person watching a spinner at the
-  // other end. Past the timeout the upload proceeds unscanned rather than
-  // stalling; that is the fail-open promise being kept literally. The budgets
-  // sit inside moderation.js's own 12s/25s, so a slow-but-successful scan is
-  // never thrown away by the browser a moment before it lands.
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), images.length ? 20_000 : 8_000);
-
-  let answer: Answer = { kind: 'fail', reason: 'unknown' };
-  const model = await resolveModel();
-  if (!model) {
-    clearTimeout(timeout);
+  const g = await askGemini(text, images);
+  if (g.early === 'no_parts') return json({ decision: 'allow', eventId: null, attach: false });
+  if (g.early === 'no_model') {
     const eventId = await log('unavailable');
     return json({
       decision: 'allow', eventId, attach: surface.queue && !!eventId,
@@ -813,97 +1051,8 @@ Deno.serve(async (req) => {
       diag: discovery,
     });
   }
-  // A model that does not think by default cannot spend the output budget
-  // reasoning. One that does can, and returns nothing with finishReason
-  // MAX_TOKENS - so give the non-lite fallbacks room rather than have them
-  // fail silently.
-  const outputCap = model.includes('lite') ? 1024 : 2048;
-  try {
-    const res = await fetch(endpointFor(model), {
-      method: 'POST',
-      headers: {
-        // The header form, not ?key= in the URL. A key in a query string ends
-        // up in every proxy and access log between here and Google.
-        'x-goog-api-key': GEMINI_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
-        contents: [{ role: 'user', parts }],
-        // Every category set to BLOCK_NONE. Not carelessness — the opposite.
-        // We need Gemini to LOOK at unpleasant content and describe it, and a
-        // model that refuses the input returns nothing to classify. Turning the
-        // four adjustable filters off also sharpens the refusal path in
-        // readAnswer(): with these silent, anything that still refuses is
-        // Google's non-adjustable core protection, which is a signal worth
-        // blocking on. These settings never reach a user — the only thing
-        // generated here is a JSON list of scores.
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-        ],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: RESPONSE_SCHEMA,
-          // The same post must get the same answer twice. A moderation decision
-          // that changes on a retry is one nobody can argue with afterwards.
-          temperature: 0,
-          // Thirteen findings is about 260 tokens and the usual answer is five.
-          // The cap exists so a model that starts rambling cannot eat the daily
-          // token allowance on one post.
-          //
-          // BEFORE CHANGING MODEL, READ THIS. Thinking tokens are charged
-          // against maxOutputTokens, so a model that thinks by default —
-          // gemini-2.5-flash does, flash-lite does not — can spend this entire
-          // budget reasoning and return an empty answer with finishReason
-          // MAX_TOKENS. That reaches the log as `finish_max_tokens` and
-          // everything is allowed through until someone notices. Switching to a
-          // thinking model means turning thinking off in generationConfig, or
-          // raising this a great deal.
-          maxOutputTokens: outputCap,
-        },
-      }),
-      signal: controller.signal,
-    });
-
-    if (!res.ok) {
-      const detail = (await res.text()).slice(0, 400);
-      // 429 is the free tier's per-minute or per-day cap and is the failure most
-      // likely to be seen in practice. Named separately so "we outgrew the free
-      // tier" is distinguishable from "Google was down".
-      //
-      // A wrong or unset key is the other one, and Google answers it with 400
-      // INVALID_ARGUMENT — indistinguishable from a malformed request unless the
-      // body is read. Naming it `bad_key` is what turns a puzzling afternoon
-      // into a thirty-second fix.
-      // Google's own words, carried back on the degraded reply. "model not
-      // found" and "API not enabled" are both 404s and are fixed in completely
-      // different places, so the status alone is not enough to act on.
-      discovery.detail = detail.slice(0, 300);
-      if (res.status === 429) answer = { kind: 'fail', reason: 'rate_limited' };
-      else if (/API[_ ]?key/i.test(detail)) answer = { kind: 'fail', reason: 'bad_key' };
-      else answer = { kind: 'fail', reason: `http_${res.status}` };
-      // A model that resolved once and now 404s has been retired underneath us,
-      // or was never callable by this key in the first place. Retiring the NAME
-      // (not just the cache) is what matters: clearing the cache alone would
-      // re-resolve to the same dead name on the next request and 404 forever.
-      if (res.status === 404) {
-        deadModels.add(model);
-        resolvedModel = null;
-      }
-      console.warn('[moderate-content] Gemini', res.status, detail);
-    } else {
-      answer = readAnswer(await res.json());
-    }
-  } catch (e) {
-    const reason = (e as Error)?.name === 'AbortError' ? 'timeout' : 'network';
-    answer = { kind: 'fail', reason };
-    console.warn('[moderate-content] call failed:', reason, e instanceof Error ? e.message : e);
-  } finally {
-    clearTimeout(timeout);
-  }
+  const answer = g.answer;
+  const model = g.model;
 
   // ── Unreachable: allow, and make the gap visible ──
   if (answer.kind === 'fail') {

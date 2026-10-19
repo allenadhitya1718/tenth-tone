@@ -1,51 +1,38 @@
 // =============================================================
-// media-reconcile
+// media-reconcile  (rewritten, F08)
 //
-// Deletes bytes nobody is paying attention to.
+// Deletes the bytes of uploads that were signed but never confirmed - and
+// NOTHING else.
 //
-// ── Why this is not optional ──
-// media-upload records a ledger row BEFORE it hands out a signed URL, so in
-// the normal case every object in R2 has a row and the quota can see it. Two
-// things break that, and both cost money on a metered store:
+// ── The bucket is SHARED with the old project ──
+// So this function NEVER lists the bucket and never deletes a key it did not
+// read from THIS project's own ledger (public.media_objects). An object with
+// no ledger row is not ours to judge and is left alone. (The previous version
+// listed the bucket and deleted unledgered objects; that would have destroyed
+// the other project's files, which is why it was never deployed.)
 //
-//   1. A phone uploads successfully and then dies — lost signal, app killed,
-//      battery — before calling confirm. The bytes are real and in the bucket;
-//      the row says 'pending' for ever and stops counting toward usage after
-//      15 minutes (0062). Storage you are billed for and cannot see.
+// A key is deleted only if ALL hold (enforced in SQL by migration 0138 and
+// re-checked atomically when the row is claimed):
+//   * the ledger row is status 'pending' and older than min_age_hours (>= 24)
+//   * the key has exactly the shape media-upload generates
+//     (<bucket>/<2 hex>/<32 hex>.<ext>) and its prefix matches the row's bucket
+//   * no URL column anywhere points at it (videos incl. drafts, stories,
+//     sounds, avatars, messages, chats, lives, ads, gifts, delete queue)
 //
-//   2. Anything that puts an object in the bucket without a row at all. There
-//      should be no such path, which is exactly why it is worth checking: the
-//      day there is one, this is what notices.
+// ── Controls (table public.reconcile_config) ──
+//   enabled=false  kill switch: the function does nothing
+//   live=false     DEFAULT. Dry run: counts and a sample, nothing deleted.
+//                  Deletion happens only when live=true AND ?dry=1 is absent.
+//   batch_limit    at most this many objects per run (<= 500)
+//   ?dry=1         forces a dry run even when live=true
+//   env RECONCILE_KILL=1 also stops it.
 //
-// Both are invisible to storage_used_bytes(), so neither would ever trip the
-// ceiling or the alert. That is the failure mode this whole R2 design exists
-// to prevent, so it gets its own sweeper rather than being trusted away.
+// Every run (dry or live) writes one admin_logs row, action 'media_reconcile'.
 //
-// ── What it does NOT do ──
-// It never deletes an object that has a 'stored' row. Those are counted, and
-// something in the app is presumed to reference them. It reports how many are
-// stored-but-apparently-unreferenced so a human can look, but does not act on
-// that: video_url and thumbnail are only two of several places a URL can be
-// held, and deleting on an incomplete search would destroy live content.
-//
-// ── Secrets ──
-// The same five R2 values as media-upload, plus:
-//
-//   RECONCILE_SECRET   REQUIRED. Any long random string. The caller presents
-//                      it in x-reconcile-secret. Without it, a stranger who
-//                      found the URL could make you delete your own bucket.
-//
-// DEPLOY WITH --no-verify-jwt:
-//
-//   npx supabase functions deploy media-reconcile --no-verify-jwt
-//
-// Like storage-alert and unlike media-upload, the caller here is a scheduler
-// with no user token. The shared secret replaces JWT verification.
-//
-// ── Schedule ──
-// Hourly. That interval is the exposure window: it is the longest an
-// unaccounted object can sit in the bucket. Add to the GitHub Actions workflow
-// alongside storage-alert, or call it from pg_cron once pg_net is enabled.
+// ── Secrets / deploy ──
+// Same R2_* values as media-upload and RECONCILE_SECRET (the job_endpoints row
+// secret is accepted as well). Deploy with --no-verify-jwt; the caller is
+// pg_cron (public.run_media_reconcile(), daily 04:10 UTC).
 // =============================================================
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { AwsClient } from 'npm:aws4fetch@1.0.20';
@@ -61,16 +48,6 @@ const RECONCILE_SECRET = env('RECONCILE_SECRET');
 const SUPABASE_URL = env('SUPABASE_URL');
 const SERVICE_KEY = env('SUPABASE_SERVICE_ROLE_KEY');
 
-// An object must be this old before it can be deleted for having no ledger
-// row. Without the grace period a sweep running at the wrong moment could
-// delete an upload that is mid-flight.
-const GRACE_MS = 2 * 60 * 60 * 1000;   // 2 hours
-
-// A LIST returns up to 1000 keys and costs one Class A operation. The cap
-// bounds a single run rather than the bucket: 50 pages is 50,000 objects, far
-// more than an 8 GB ceiling can hold, and stops a bug turning into a bill.
-const MAX_PAGES = 50;
-
 const r2 = new AwsClient({
   accessKeyId: env('R2_ACCESS_KEY_ID'),
   secretAccessKey: env('R2_SECRET_ACCESS_KEY'),
@@ -84,24 +61,6 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status, headers: { 'Content-Type': 'application/json' },
   });
-}
-
-// S3 ListObjectsV2 answers in XML and Deno has no built-in parser. The shape
-// is rigid and machine-generated, so pulling the three fields out with a
-// regex over each <Contents> block is safe here in a way that parsing
-// arbitrary XML would not be.
-function parseList(xml: string) {
-  const items: { key: string; size: number; modified: number }[] = [];
-  for (const m of xml.matchAll(/<Contents>([\s\S]*?)<\/Contents>/g)) {
-    const block = m[1];
-    const key = block.match(/<Key>([\s\S]*?)<\/Key>/)?.[1] ?? '';
-    const size = Number(block.match(/<Size>(\d+)<\/Size>/)?.[1] ?? 0);
-    const mod = block.match(/<LastModified>([\s\S]*?)<\/LastModified>/)?.[1] ?? '';
-    if (key) items.push({ key, size, modified: Date.parse(mod) || 0 });
-  }
-  const truncated = /<IsTruncated>true<\/IsTruncated>/.test(xml);
-  const token = xml.match(/<NextContinuationToken>([\s\S]*?)<\/NextContinuationToken>/)?.[1] ?? '';
-  return { items, truncated, token };
 }
 
 // Constant-time secret comparison (F19). Both sides are hashed first so the
@@ -142,127 +101,82 @@ Deno.serve(async (req) => {
   const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
   if (!(await callerAllowed(req, db))) return json({ error: 'unauthorized' }, 401);
 
-  // ── Report-only ──
-  // ?dry=1 walks exactly the same ground and deletes nothing, so the first
-  // run after a long silence can be READ before it is trusted. It also skips
-  // expire_pending_media, which writes.
-  const DRY = new URL(req.url).searchParams.get('dry') === '1';
-  const wouldDelete: { key: string; bytes: number }[] = [];
+  if (env('RECONCILE_KILL') === '1') return json({ ok: true, disabled: true, by: 'env' });
+
+  const { data: cfg, error: cfgErr } = await db.from('reconcile_config').select('*').eq('id', true).maybeSingle();
+  if (cfgErr || !cfg) return json({ error: 'config_unavailable', detail: cfgErr?.message }, 500);
+  if (!cfg.enabled) return json({ ok: true, disabled: true, by: 'reconcile_config.enabled' });
+
+  const url = new URL(req.url);
+  const forcedDry = url.searchParams.get('dry') === '1';
+  const live = cfg.live === true && !forcedDry;
+  const minAge = Math.max(Number(cfg.min_age_hours) || 24, 24);
+  const reqLimit = Number(url.searchParams.get('limit')) || Infinity;
+  const limit = Math.min(Math.max(Number(cfg.batch_limit) || 100, 1), 500, reqLimit);
+
+  const { data: scan, error: scanErr } = await db.rpc('media_orphan_scan', {
+    p_limit: limit, p_min_age_hours: minAge,
+  });
+  if (scanErr || !scan) return json({ error: 'scan_failed', detail: scanErr?.message }, 500);
+
+  const cands = (scan.candidates ?? []) as { id: string; bucket: string; key: string; size_bytes: number }[];
   const deleted: string[] = [];
   const failures: string[] = [];
+  let deletedBytes = 0;
 
-  const drop = async (key: string, bytes = 0) => {
-    if (DRY) { wouldDelete.push({ key, bytes }); return; }
-    try {
-      const res = await r2.fetch(`${base()}/${key}`, { method: 'DELETE' });
-      // S3 DELETE is idempotent and answers 204 whether or not the object was
-      // there, so "already gone" is a success, not something to retry.
-      if (res.ok || res.status === 404) deleted.push(key);
-      else failures.push(`${key}:${res.status}`);
-    } catch (e) {
-      failures.push(`${key}:${(e as Error).message}`);
-    }
-  };
-
-  // ── 1. Authorisations that never became files ──
-  // Clears the rows, and hands back the keys because some of them DID become
-  // files — that is case 1 above, and those bytes have to go.
-  let expiredCount = 0;
-  if (DRY) {
-    // expire_pending_media CLEARS rows, so it is not run here. Count the same
-    // set instead: authorisations older than an hour that never confirmed.
-    const cutoff = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { data: pend, error: pendErr } = await db
-      .from('media_objects')
-      .select('key, size_bytes')
-      .eq('status', 'pending')
-      .lt('created_at', cutoff);
-    if (pendErr) return json({ error: 'pending_read_failed', detail: pendErr.message }, 500);
-    expiredCount = (pend ?? []).length;
-    for (const row of (pend ?? []) as { key: string; size_bytes: number }[]) {
-      await drop(row.key, Number(row.size_bytes) || 0);
-    }
-  } else {
-    const { data: expired, error: expErr } = await db.rpc('expire_pending_media', {
-      p_older_than: '01:00:00',
+  if (live && cands.length) {
+    // Claim first (pending -> deleted, atomic, conditions re-checked in SQL),
+    // then remove the bytes; hand the claim back for anything R2 refused.
+    const { data: claimed, error: claimErr } = await db.rpc('media_orphan_claim', {
+      p_ids: cands.map((c) => c.id), p_min_age_hours: minAge,
     });
-    if (expErr) return json({ error: 'expire_failed', detail: expErr.message }, 500);
-    for (const row of (expired ?? []) as { out_bucket: string; out_key: string }[]) {
-      await drop(row.out_key);
-    }
-    expiredCount = (expired ?? []).length;
-  }
-
-  // ── 2. Objects in the bucket with no ledger row at all ──
-  let token = '';
-  let pages = 0;
-  let scanned = 0;
-  let orphaned = 0;
-  let truncatedEarly = false;
-
-  while (pages < MAX_PAGES) {
-    const url = new URL(base());
-    url.searchParams.set('list-type', '2');
-    url.searchParams.set('max-keys', '1000');
-    if (token) url.searchParams.set('continuation-token', token);
-
-    const res = await r2.fetch(url.toString(), { method: 'GET' });
-    if (!res.ok) return json({ error: 'list_failed', status: res.status }, 502);
-
-    const { items, truncated, token: next } = parseList(await res.text());
-    pages++;
-    scanned += items.length;
-
-    // Only objects old enough that no upload could still be in flight.
-    const candidates = items.filter(i => Date.now() - i.modified > GRACE_MS);
-
-    if (candidates.length) {
-      // Ask in one query rather than per key. `in` on up to 1000 keys is well
-      // within what Postgres and PostgREST handle.
-      const { data: known, error: knownErr } = await db
-        .from('media_objects')
-        .select('key')
-        .in('key', candidates.map(c => c.key));
-      if (knownErr) return json({ error: 'ledger_read_failed', detail: knownErr.message }, 500);
-
-      const seen = new Set((known ?? []).map(k => k.key));
-      for (const c of candidates) {
-        if (!seen.has(c.key)) { orphaned++; await drop(c.key, c.size); }
+    if (claimErr) return json({ error: 'claim_failed', detail: claimErr.message }, 500);
+    const failedIds: string[] = [];
+    for (const c of (claimed ?? []) as { out_id: string; out_bucket: string; out_key: string; out_size: number }[]) {
+      // Last line of defence, independent of the SQL: only our own key shape.
+      if (!/^(videos|chat-media|avatars|group-photos)\/[0-9a-f]{2}\/[0-9a-f]{32}\.[a-z0-9]{1,6}$/.test(c.out_key)
+          || c.out_key.split('/')[0] !== c.out_bucket) {
+        failedIds.push(c.out_id); failures.push(`${c.out_id}:bad_key`); continue;
+      }
+      try {
+        const res = await r2.fetch(`${base()}/${c.out_key}`, { method: 'DELETE' });
+        // S3 DELETE answers 204 whether or not the object existed.
+        if (res.ok || res.status === 404) { deleted.push(c.out_key); deletedBytes += Number(c.out_size) || 0; }
+        else { failedIds.push(c.out_id); failures.push(`${c.out_id}:${res.status}`); }
+      } catch (e) {
+        failedIds.push(c.out_id); failures.push(`${c.out_id}:${(e as Error).message}`);
       }
     }
-
-    if (!truncated || !next) break;
-    token = next;
-    if (pages >= MAX_PAGES) truncatedEarly = true;
+    if (failedIds.length) await db.rpc('media_orphan_release', { p_ids: failedIds });
   }
 
-  // ── 3. Look, but do not touch ──
-  // Counted as stored, so the ceiling knows about them, but nothing obvious
-  // points at them. Reported rather than deleted: a URL can be held in more
-  // places than this checks, and being wrong here destroys someone's video.
-  const { count: storedRows } = await db
-    .from('media_objects')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'stored');
-
-  const wouldBytes = wouldDelete.reduce((n, w) => n + (w.bytes || 0), 0);
-  return json({
-    ok: true,
-    dry_run: DRY,
-    // Only in a dry run: what a real run WOULD remove, with a sample so a
-    // person can recognise the keys before agreeing to any of it.
-    would_delete_count: DRY ? wouldDelete.length : undefined,
-    would_delete_bytes: DRY ? wouldBytes : undefined,
-    would_delete_mb: DRY ? Math.round((wouldBytes / 1048576) * 10) / 10 : undefined,
-    would_delete_sample: DRY ? wouldDelete.slice(0, 15).map(w => w.key) : undefined,
-    expired_pending: expiredCount,
-    scanned,
-    orphaned,
+  const summary = {
+    dry_run: !live,
+    live_flag: cfg.live === true,
+    min_age_hours: minAge,
+    batch_limit: limit,
+    pending_total: scan.pending_total,
+    pending_older_than_min_age: scan.pending_older_than_min_age,
+    eligible_orphans: scan.eligible,
+    eligible_bytes: scan.eligible_bytes,
+    skipped_referenced: scan.skipped_referenced,
+    skipped_unrecognised_key: scan.skipped_unrecognised_key,
+    this_batch: cands.length,
     deleted: deleted.length,
-    failures,
-    stored_rows: storedRows ?? 0,
-    // A red flag rather than a statistic: it means the bucket holds more than
-    // this run could walk, so some orphans were not looked at.
-    list_truncated: truncatedEarly,
+    deleted_bytes: deletedBytes,
+    failures: failures.length,
+  };
+
+  try {
+    await db.from('admin_logs').insert({
+      action: 'media_reconcile', target_type: 'system', payload: summary,
+    });
+  } catch (_e) { /* best effort */ }
+
+  return json({
+    ok: true, ...summary,
+    // A dry run shows enough to recognise the keys, never more than 15.
+    sample: !live ? cands.slice(0, 15).map((c) => c.key) : undefined,
+    failure_detail: failures.slice(0, 10),
   });
 });

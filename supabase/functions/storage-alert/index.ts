@@ -75,6 +75,22 @@ function json(body: unknown, status = 200) {
   });
 }
 
+
+// Hard daily cap on Resend sends (0139). Reserved BEFORE the call, so a failed
+// send still counts; an unreachable counter means NO email (fails closed). The
+// in-app notification and admin banner are written regardless.
+// deno-lint-ignore no-explicit-any
+async function mayEmail(db: any, sender: string, n: number): Promise<boolean> {
+  const { data, error } = await db.rpc('email_send_take', { p_sender: sender, p_count: n });
+  if (error) { console.error('[storage-alert] email cap check failed:', error.message); return false; }
+  return data === true;
+}
+
+function capped(kind: string | null) {
+  return json({ ...(kind ? { kind } : {}), sent: false, reason: 'email_daily_cap', alert: true,
+    note: 'in-app notification and admin banner were still written' });
+}
+
 const BAND_LABEL: Record<number, string> = {
   1: 'filling up',
   2: 'nearly full',
@@ -241,6 +257,7 @@ async function usageAlert(db: any): Promise<Response> {
     `a metric stays at 85% or more.`,
   ].join('\n');
 
+  if (!(await mayEmail(db, 'usage_alert', recipients.length))) return capped('usage_alert');
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -344,6 +361,7 @@ Deno.serve(async (req) => {
     `empty bucket while R2 fills toward the 10 GB where billing begins.`,
   ].join('\n');
 
+  if (!(await mayEmail(db, 'storage_alert', recipients.length))) return capped(null);
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {

@@ -28,6 +28,8 @@ exception when others then
   res := res || jsonb_build_object('t', '5. user posts ONE published public video with the sound (via RLS)', 'pass', false, 'ev', 'UNEXPECTED ERROR ' || sqlstate || ' ' || left(sqlerrm, 220));
 end;
 reset role; perform set_config('request.jwt.claims','',true);
+res := res || jsonb_build_object('t', '5. (0140) a new user post is pending review, so it does not count yet', 'pass', coalesce(((select usage_count from public.sounds where id = s1) = 0)::boolean,false), 'ev', ((select usage_count from public.sounds where id = s1)::text)::text);
+  perform public.screening_finish((select id from public.content_screening where kind = 'video' and target_id = v1), 'allow');
 res := res || jsonb_build_object('t', '5. posting one video with a sound counts exactly 1 (not 2)', 'pass', coalesce(((select usage_count from public.sounds where id = s1) = 1)::boolean,false), 'ev', ((select usage_count from public.sounds where id = s1)::text)::text);
   insert into public.videos (user_id, description, video_url, thumbnail, privacy, is_draft, sound_id) values (u_a, 'tt sv2', 'https://example.invalid/s2.mp4', 'https://example.invalid/s2.jpg', 'public', false, s1) returning id into v2;
 res := res || jsonb_build_object('t', '5. second published video -> 2', 'pass', coalesce(((select usage_count from public.sounds where id = s1) = 2)::boolean,false), 'ev', ((select usage_count from public.sounds where id = s1)::text)::text);

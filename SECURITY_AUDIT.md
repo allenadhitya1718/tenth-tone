@@ -37,10 +37,10 @@ uncommitted in the working tree.
 | F05 | High | Messaging | A blocked user, or someone you limited, could add you to a group and message and push you. A 3-member "dm" passed the DM checks. | **Fixed** 0116 + `api/chat.ts` |
 | F06 | High | Moderation / fan-out | Owners could un-hide moderated videos and fake counters. Hosts could un-ban lives. ended→live flips re-notified every follower, and lives sent duplicate notifications. | **Fixed** 0117 |
 | F07 | High | Agora | The token function issued tokens for any channel and accepted client-chosen uids (eavesdrop, kick the host, billing). No throttle. | **Fixed** agora-token + 0120. The uid is always derived on the server. Calls need membership. Lives need a visible stream with status 'live'. 600 tokens/hour and 3000/day, fails closed. 1h TTL kept. |
-| F08 | Med-High | R2 cost | Uploads signed but never confirmed escaped the quota and were never cleaned up (about 23 GB/day per account). | **Partial** 0118 + media-upload. Pending uploads count for the whole day, max 200 signed URLs/day. **Needs user:** R2 cleanup (below). |
+| F08 | Med-High | R2 cost | Uploads signed but never confirmed escaped the quota and were never cleaned up (about 23 GB/day per account). | **Fixed** 0118 + 0138 + media-reconcile (rewritten). Pending uploads count for the whole day, max 200 signed URLs/day. Cleanup never lists the shared bucket: it deletes only keys in this project's `media_objects` ledger that are `pending`, >= 24 h old, well-formed and unreferenced. Daily dry run is scheduled; **deletion is OFF until the owner sets `reconcile_config.live = true`** (`supabase/RUN_NOW_schedule_reconcile.sql`). |
 | F09 | Medium | Calls | Anyone could ring anyone with a full-screen push, and could insert a call as 'accepted'. | **Fixed** 0114 (`may_ring`: needs an existing relationship, server forces 'ringing'). Behaviour change: a first call to a stranger is refused. |
 | F10 | Medium | IAP | Sandbox and TestFlight purchases credited real coins by default. | **Fixed** verify-purchase. Sandbox credits need `IAP_ALLOW_SANDBOX=true`, the buyer in `IAP_SANDBOX_USER_IDS`, and owner = buyer. |
-| F11 | Medium | Gemini | No per-user limit. Screening is optional for the client. | **Partial** moderate-content + 0120. 150/hour and 1000/day, fails closed, nothing logged when over the limit. Accepted risk: a modified client can skip screening. |
+| F11 | Medium | Gemini | No per-user limit. Screening is optional for the client. | **Fixed** moderate-content + 0120 + 0140. 150/hour and 1000/day, fails closed. New videos, stories and comments are stored hidden (`pending_review`) by a database trigger and screened by the server, so a modified client cannot skip it. Gemini down or over limit: released after 5 minutes with an admin queue entry. Still client-only: live titles/covers and profile text/avatars. |
 | F12 | Medium | Data leak | Comments, likes, live chat and live viewers of private or friends-only content were readable with the anon key. | **Fixed** 0119 |
 | F13 | Medium | Config | Builds without EAS env vars silently used the OLD project. | **Fixed** `lib/config.ts`, `eas.json` (public Mumbai URL and publishable key) |
 | F14 | Medium | Deep link | `flyp://call/dial?to=…&name=Mom` placed a call at once, with a spoofed name. | **Fixed** `dial.tsx` + new `DialConfirm.tsx` |
@@ -52,7 +52,7 @@ uncommitted in the working tree.
 | F20 | Low | Storage | Public buckets had no MIME allow-list (HTML/SVG hosting). | **Fixed** 0118 |
 | F21 | Low | Push | Any token string could be registered under your own account. | **Accepted risk**: it only redirects your own notifications. |
 | F22 | Low | DB bloat | client_logs, saves, reactions and engagement had no rate limit. | **Fixed** 0115, 0121. The story_views claim was a false positive (already gated by stories RLS). |
-| F23 | Low | npm | 24 High, 0 Critical. All in build-time deps (node-forge 1.4.0, braces 3.0.3). npm's suggested fix is a bogus `expo@44` downgrade. | **Accepted / needs user**: package.json untouched. Add `overrides` once patched versions are compatible. |
+| F23 | Low | npm | 25 High, 0 Critical (`npm audit --omit=dev`; 27 with dev deps). All build-time. | **Not fixable with overrides**: the High findings are node-forge <= 1.4.0 and braces <= 3.0.3, and the registry's latest versions are 1.4.0 and 3.0.3 (no patched release exists). The rest cascade from those. An `xcode -> uuid ^11.1.1` override clears the 9 moderates only, so it was not applied. package.json untouched. |
 | F24 | Low | Keys | The Firebase client key in `mobile/google-services.json` is unrestricted. It's not a secret, but it's not gitignored either. | **Needs user** (restrict the key) |
 | N1 | Bug | Account deletion | The app called `self_delete_account`, which is service-role only, so in-app deletion failed (App Store 5.1.1(v)). | **Fixed** `api/settings.ts` → `schedule_account_deletion`. The purge cron is ensured in 0121. |
 | R1 | Medium | Follow requests | (found in round 2) request → cancel → request sent unlimited pushes to private accounts. | **Fixed** 0125 |
@@ -126,20 +126,19 @@ npx supabase functions deploy send-push storage-alert media-delete-queue --no-ve
 
 - **Agora:** set a usage alert and a monthly cap in the Agora console. Tokens still
   last 1h.
-- **Cloudflare R2:** set a billing alert. Add a lifecycle rule (or deploy
-  media-reconcile once the bucket is no longer shared) so signed but never
-  confirmed uploads get deleted. Until then, orphans are bounded by the daily
-  quota but persist.
+- **Cloudflare R2:** set a billing alert. media-reconcile is deployed and runs a
+  daily DRY RUN (0138); review `admin_logs` and then enable deletion with
+  `supabase/RUN_NOW_schedule_reconcile.sql`. It only touches this project's own
+  ledger keys, so the shared bucket is safe.
 - **Google / Gemini:** set a quota cap and budget alert on the Gemini key. Restrict
   the Firebase/Android API key to package `com.flyp.app` plus the release and
   upload SHA-1s. Restrict any Maps key the same way.
-- **Resend:** set a daily send limit or alert.
+- **Resend:** a hard server-side cap of 50 emails/day (0139, `email_config.daily_cap`) now guards storage-alert, the only code that calls Resend; refusals are logged to `admin_logs` (`email_cap_hit`). Also set a limit in the Resend dashboard. Auth emails use Supabase Auth SMTP and are outside this cap.
 - **Supabase:** set a spend cap or usage alerts. Enable Auth CAPTCHA (hCaptcha or
   Turnstile) on sign-up and OTP to stop mass account creation, since every per-user
   limit multiplies by the number of accounts.
 - **Optional hardening:** Play Integrity / App Attest on verify-purchase and
-  agora-token. Server-side moderation (trigger or webhook) instead of
-  client-optional screening (F11). A content hash to stop re-posting removed media.
+  agora-token. Moderation of live titles/covers and profile text/avatars on the server. A content hash to stop re-posting removed media.
 - **Accepted behaviour changes:** a first call to a stranger is refused (F09).
   Groups skip members who don't accept DMs from you (a toast tells the creator).
   Friends-only location and lives now mean a mutual follow. The same account on two
