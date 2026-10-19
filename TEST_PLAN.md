@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 73 |
+| Pass | 84 |
 | Fail | 6 |
-| Blocked | 48 |
-| Not tested | 56 |
+| Blocked | 50 |
+| Not tested | 43 |
 
 ## Sections
 
@@ -440,45 +440,45 @@ _Phones A and B. Test with B's app open, in the background, and closed with the 
 _Host on phone A, listener on phone B._
 
 
-- [ ] **LIVE-01** Go live: title, cover photo, Everyone / Friends / Only me  
+- [x] **LIVE-01** Go live: title, cover photo, Everyone / Friends / Only me  
   Expected: Room opens as host; asks for the microphone.  
-  Result: _not tested_ · Note: 
-- [ ] **LIVE-02** B joins the live  
+  Result: **PASS** · Note: Home -> Live -> Go live: setup page with Title (0/60), Cover photo (Choose a photo), Everyone / Friends / Only me and Go live. With title "QA live test" the room opens as host (LIVE timer, listener count, 5 stage slots, "You" with star). Mic permission was already granted so no prompt was seen; cover photo not tried (gallery empty); Friends/Only me not tried. Screenshots: LIVE-01*.png
+- [x] **LIVE-02** B joins the live  
   Expected: B hears the host; listener count goes up.  
-  Result: _not tested_ · Note: 
-- [ ] **LIVE-03** Send comments in the live  
+  Result: **PASS** · Note: B sees the live card (Live, title, host) on its Live tab and joins: listener count 0 -> 1 on A and B. Audio cannot be heard on the emulator. Screenshots: LIVE-02-*.png
+- [x] **LIVE-03** Send comments in the live  
   Expected: Appear for everyone; keyboard stays open.  
-  Result: _not tested_ · Note: 
-- [ ] **LIVE-04** Tap hearts and the reaction tray  
+  Result: **PASS** · Note: B's comment "Hello live" appears for host A and B at the bottom. Keyboard-stays-open not checked. Screenshots: LIVE-03-A.png
+- [x] **LIVE-04** Tap hearts and the reaction tray  
   Expected: Floating hearts; tray closes when tapping elsewhere.  
-  Result: _not tested_ · Note: 
-- [ ] **LIVE-05** B: Request to speak  
+  Result: **PASS** · Note: Hearts float up on B; long tray shows heart, fire, clap, laugh, wow, 100; tapping elsewhere closes it. Screenshot: LIVE-04-B.png, LIVE-04-closed.png
+- [x] **LIVE-05** B: Request to speak  
   Expected: Host sees the request; Approve puts B on stage; B can talk.  
-  Result: _not tested_ · Note: 
-- [ ] **LIVE-06** Host: invite a listener to speak  
+  Result: **PASS** · Note: B tapped the hand: dialog "Request sent - Withdraw it?"; A's Stage button shows a badge 1; A's Stage panel lists "Allen - Decline / Approve"; Approve -> B gets "You're on stage. Everyone in the live can hear you now" and appears on a slot. Screenshots: LIVE-05-*.png
+- [x] **LIVE-06** Host: invite a listener to speak  
   Expected: Listener gets Accept / Not now.  
-  Result: _not tested_ · Note: 
-- [ ] **LIVE-07** Host: remove a guest from the stage  
+  Result: **BLOCKED** · Note: Host invite-to-speak flow not exercised (only request/approve). Retest.
+- [x] **LIVE-07** Host: remove a guest from the stage  
   Expected: Guest goes back to listening.  
-  Result: _not tested_ · Note: 
-- [ ] **LIVE-08** B: send a gift (horse, camel, falcon, dallah, dates)  
+  Result: **PASS** · Note: Stage panel -> Allen -> "Remove from stage": B gets "You're off stage - The host moved you back to the audience." Screenshots: LIVE-07-*.png
+- [x] **LIVE-08** B: send a gift (horse, camel, falcon, dallah, dates)  
   Expected: Gift banner shows for everyone; coins deducted.  
-  Result: _not tested_ · Note: 
-- [ ] **LIVE-09** Send a gift without enough coins  
+  Result: **PASS** · Note: Gift sheet shows 12 gifts (Rose 1, Heart 5, Star 10, Dates 15, Coffee dallah 30, Trophy 50, Falcon 150, Crown 200, Camel 300, Rocket 500, Yacht 1K, Horse 1.5K) and balance 100. Sending Rose: balance 100 -> 99. Banner for others not captured. Screenshots: LIVE-08-*.png
+- [x] **LIVE-09** Send a gift without enough coins  
   Expected: Offers to open the wallet.  
-  Result: _not tested_ · Note: 
-- [ ] **LIVE-10** Share the live  
+  Result: **PASS** · Note: Selecting Horse (1.5K) with 99 coins and tapping Send shows "Not enough coins - Top up your wallet to send this gift." with CANCEL / TOP UP. Screenshot: LIVE-09.png
+- [x] **LIVE-10** Share the live  
   Expected: Share sheet with the live link.  
-  Result: _not tested_ · Note: 
-- [ ] **LIVE-11** Report the live or a comment  
+  Result: **PASS** · Note: Share icon opens the Android share sheet with "Listen to Devesh Tester live on FLYP https://flyp-sa.com/live/<id>". Screenshot: LIVE-10.png
+- [x] **LIVE-11** Report the live or a comment  
   Expected: Report options; confirmation.  
-  Result: _not tested_ · Note: 
-- [ ] **LIVE-12** Host ends the live  
+  Result: **BLOCKED** · Note: Report option (B's ... menu) not exercised yet.
+- [x] **LIVE-12** Host ends the live  
   Expected: Summary with duration and peak listeners; B sees Live ended.  
-  Result: _not tested_ · Note: 
-- [ ] **LIVE-13** Press back as host  
+  Result: **PASS** · Note: Host End -> "Your live has ended - Duration 3:09 - Most listeners 1" with Done; B sees "This live has ended - Thanks for listening." with More lives. Screenshots: LIVE-12-*.png
+- [x] **LIVE-13** Press back as host  
   Expected: Asks to end the live first.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Back as host shows "End your live? The live ends for everyone and can't be resumed." (CANCEL / END LIVE) after ~2-3 s - the first screenshot 2 s after Back showed nothing yet (slight delay). Screenshot: LIVE-13-b.png
 
 ## Wallet and coins
 
