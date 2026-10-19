@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 36 |
+| Pass | 37 |
 | Fail | 3 |
-| Blocked | 16 |
-| Not tested | 128 |
+| Blocked | 22 |
+| Not tested | 121 |
 
 ## Sections
 
@@ -252,12 +252,12 @@ _Your own profile and other people's._
 - [x] **PROFILE-01** Open your profile tab  
   Expected: Photo, name, username, following / followers / likes, bio.  
   Result: **PASS** · Note: Profile tab shows avatar (initial letter), name "Devesh", @devesh19, Following/Followers/Likes counts, Edit/Share buttons and 5 content tabs. No bio set so none shown. Screenshot: PROFILE-01.png
-- [ ] **PROFILE-02** Edit profile: change photo, name, username, bio, link, gender, country  
+- [x] **PROFILE-02** Edit profile: change photo, name, username, bio, link, gender, country  
   Expected: Saved and shown everywhere.  
-  Result: _not tested_ · Note: 
-- [ ] **PROFILE-03** Set an inappropriate profile photo  
+  Result: **PASS** · Note: Edit profile screen has photo, name, username, bio, link, gender, country. Changed name -> "Devesh Tester" and bio -> text; Save shows a spinner, returns to the profile which now shows the new name and bio. NOT exercised: photo upload, username change, link (my link text went into Bio because the keyboard shifted the layout - test error), gender, country. Gender/Country still read "Choose" (profile set-up from AUTH-03 was not shown after login). Screenshots: PROFILE-02*.png
+- [x] **PROFILE-03** Set an inappropriate profile photo  
   Expected: Rejected by moderation.  
-  Result: _not tested_ · Note: 
+  Result: **BLOCKED** · Note: Would need an inappropriate image on the emulator gallery; not sourcing one. Needs a manual check by Allen or a safe test image from moderation team.
 - [x] **PROFILE-04** Open each tab: Videos, Audio, Map, Saved, Drafts  
   Expected: Each shows its content or a friendly empty message.  
   Result: **PASS** · Note: Videos (my post), Audio, Map ("Add a place when you post and it will show on your map."), Saved (shows the video I bookmarked, confirming FEED-07) and Drafts ("Clips you save as drafts appear here before you post them.") all show content or a friendly empty state. OBSERVATION: Audio tab lists the original sound as "Used 2 times" although I posted exactly 1 video (possible off-by-one count). Screenshots: PROFILE-04-tab*.png
@@ -270,21 +270,21 @@ _Your own profile and other people's._
 - [x] **PROFILE-07** Tap Followers and Following  
   Expected: Lists open; you can follow or remove from there.  
   Result: **PASS** · Note: Tapping Followers opens a Followers screen with a Search box and the empty state "No followers yet". Follow/remove actions need account B. Screenshot: PROFILE-07.png
-- [ ] **PROFILE-08** Open someone else's profile  
+- [x] **PROFILE-08** Open someone else's profile  
   Expected: Follow, Message buttons; their videos.  
-  Result: _not tested_ · Note: 
-- [ ] **PROFILE-09** Follow and unfollow them  
+  Result: **BLOCKED** · Note: Needs account B (someone else profile).
+- [x] **PROFILE-09** Follow and unfollow them  
   Expected: Counts update on both sides.  
-  Result: _not tested_ · Note: 
-- [ ] **PROFILE-10** Follow a private account  
+  Result: **BLOCKED** · Note: Needs account B.
+- [x] **PROFILE-10** Follow a private account  
   Expected: Shows Requested; they get a follow request.  
-  Result: _not tested_ · Note: 
-- [ ] **PROFILE-11** Block a user from their profile  
+  Result: **BLOCKED** · Note: Needs account B set to a private account.
+- [x] **PROFILE-11** Block a user from their profile  
   Expected: They disappear from your feed and can't message you.  
-  Result: _not tested_ · Note: 
-- [ ] **PROFILE-12** Report a user  
+  Result: **BLOCKED** · Note: Needs account B.
+- [x] **PROFILE-12** Report a user  
   Expected: Report options and confirmation.  
-  Result: _not tested_ · Note: 
+  Result: **BLOCKED** · Note: Needs account B.
 
 ## Discover and search
 
