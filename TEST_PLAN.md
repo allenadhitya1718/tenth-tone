@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 27 |
-| Fail | 2 |
-| Blocked | 12 |
-| Not tested | 142 |
+| Pass | 31 |
+| Fail | 3 |
+| Blocked | 16 |
+| Not tested | 133 |
 
 ## Sections
 
@@ -147,33 +147,33 @@ _Following, For You and Live tabs._
 ## Comments
 
 
-- [ ] **COMMENTS-01** Open comments on a video  
+- [x] **COMMENTS-01** Open comments on a video  
   Expected: Sheet slides up over the video; composer visible above the keyboard.  
-  Result: _not tested_ · Note: 
-- [ ] **COMMENTS-02** Post a comment  
+  Result: **PASS** · Note: Comment icon opens a bottom sheet over the video: "Comments (0)", empty state "No comments yet. Be the first!", emoji quick-reactions row and composer. Screenshot: COMMENTS-01.png
+- [x] **COMMENTS-02** Post a comment  
   Expected: Appears at once; keyboard stays open for the next one.  
-  Result: _not tested_ · Note: 
-- [ ] **COMMENTS-03** Reply to a comment  
+  Result: **PASS** · Note: Typed "Nice one" and sent: it appears at once, count becomes Comments (1), composer clears. The soft keyboard was not visible in the screenshot right after sending (adb Enter key), so "keyboard stays open" is unverified. Screenshot: COMMENTS-02.png
+- [x] **COMMENTS-03** Reply to a comment  
   Expected: Reply shows under it.  
-  Result: _not tested_ · Note: 
-- [ ] **COMMENTS-04** Like a comment  
+  Result: **BLOCKED** · Note: No Reply control is visible on my own comment (tap does nothing, long-press only offers Delete). Replies probably only show on others comments; retest with account B.
+- [x] **COMMENTS-04** Like a comment  
   Expected: Heart fills; count changes.  
-  Result: _not tested_ · Note: 
-- [ ] **COMMENTS-05** @mention someone in a comment  
+  Result: **PASS** · Note: Tapping the comment heart fills it red and the count goes 0 -> 1. Screenshot: COMMENTS-04.png
+- [x] **COMMENTS-05** @mention someone in a comment  
   Expected: Suggestion list appears; they get a notification.  
-  Result: _not tested_ · Note: 
-- [ ] **COMMENTS-06** Delete your own comment  
+  Result: **BLOCKED** · Note: Needs a second user (B) to mention and to receive the notification.
+- [x] **COMMENTS-06** Delete your own comment  
   Expected: Removed after confirming.  
-  Result: _not tested_ · Note: 
-- [ ] **COMMENTS-07** Report someone's comment  
+  Result: **PASS** · Note: Long-press on my own comment shows a "Delete this comment?" dialog with CANCEL / DELETE; DELETE removes it (count back to 0). Screenshots: COMMENTS-06-long.png, COMMENTS-06.png
+- [x] **COMMENTS-07** Report someone's comment  
   Expected: Report options; confirmation shown.  
-  Result: _not tested_ · Note: 
-- [ ] **COMMENTS-08** Open comments on a video with comments turned off  
+  Result: **BLOCKED** · Note: Needs a comment from another account (B) to report.
+- [x] **COMMENTS-08** Open comments on a video with comments turned off  
   Expected: Clear message that comments are off.  
-  Result: _not tested_ · Note: 
-- [ ] **COMMENTS-09** Post a comment with a banned or rude word  
+  Result: **BLOCKED** · Note: Needs a video posted with Allow comments off and opened from B. Retest later.
+- [x] **COMMENTS-09** Post a comment with a banned or rude word  
   Expected: Blocked or hidden by moderation.  
-  Result: _not tested_ · Note: 
+  Result: **FAIL** · Note: Steps: post comment "fuck you bitch" (and earlier "you are a stupid idiot") on my video. Expected: blocked or hidden by moderation. Actual: both posted and stayed visible after 14 s, no warning. Possible: flagged comments are hidden only for other viewers; check from B. Emulator A, API 34, account A, 2/2. Screenshots: COMMENTS-09*.png
 
 ## Camera and posting
 
