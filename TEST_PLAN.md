@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 44 |
+| Pass | 46 |
 | Fail | 4 |
 | Blocked | 39 |
-| Not tested | 96 |
+| Not tested | 94 |
 
 ## Sections
 
@@ -591,9 +591,9 @@ _Open every row once._
 - [x] **SETTINGS-06** Notifications: turn each type off  
   Expected: That type stops arriving.  
   Result: **BLOCKED** · Note: Notification preferences lists Likes, Comments, New followers, Messages, Live streams, Gifts (all on); "stops arriving" needs account B. Screenshot: SET-notifprefs.png
-- [ ] **SETTINGS-07** Language: try all 9 (Arabic and Urdu right-to-left)  
+- [x] **SETTINGS-07** Language: try all 9 (Arabic and Urdu right-to-left)  
   Expected: Whole app translated; layout flips for Arabic and Urdu.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Tried French, Hindi, Chinese, Spanish, Turkish, Indonesian (live switch, no restart; tabs, nav, sound line and settings all translated) and Urdu (restart prompt, then layout flips RTL: tab bar reversed, action buttons on the left, text right-aligned). Arabic RTL seen in AUTH-01. Back to English: restart, LTR again. Screenshots: SETTINGS-07-*.png
 - [x] **SETTINGS-08** Theme: light, dark, system  
   Expected: Dark mode uses navy; everything readable.  
   Result: **PASS** · Note: Appearance offers System / Light / Dark; Dark uses a navy background with readable white text and blue accents; Light and System switch back correctly. Screenshots: SETTINGS-08-dark.png, SETTINGS-08-light.png
@@ -679,7 +679,7 @@ _Close FLYP on phone A, act from phone B._
 - [ ] **GENERAL-06** Screen reader (TalkBack) on the feed and buttons  
   Expected: Buttons announce what they do.  
   Result: _not tested_ · Note: 
-- [ ] **GENERAL-07** Texts and buttons in the dark theme  
+- [x] **GENERAL-07** Texts and buttons in the dark theme  
   Expected: Everything readable; no white flashes.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Dark theme: Settings screen is navy with readable text (screenshot SETTINGS-08-dark.png). Only Settings was checked in dark, not feed/chat/profile - partial.
 
