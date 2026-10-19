@@ -182,7 +182,9 @@
     "goLive": "开直播",
     "notFound": "该视频不可用",
     "addComment": "添加评论…",
-    "originalSound": "原声 · @{{handle}}"
+    "originalSound": "原声 · @{{handle}}",
+    "seeMore": "查看更多",
+    "seeLess": "收起"
   },
   "comments": {
     "title": "评论（{{count}}）",

@@ -182,7 +182,9 @@
     "goLive": "ابدأ بثًا مباشرًا",
     "notFound": "هذا الفيديو غير متاح",
     "addComment": "أضف تعليقًا…",
-    "originalSound": "الصوت الأصلي · @{{handle}}"
+    "originalSound": "الصوت الأصلي · @{{handle}}",
+    "seeMore": "عرض المزيد",
+    "seeLess": "عرض أقل"
   },
   "comments": {
     "title": "التعليقات ({{count}})",

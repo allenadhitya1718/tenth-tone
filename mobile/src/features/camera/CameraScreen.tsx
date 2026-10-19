@@ -65,14 +65,15 @@ const BEAUTY_DEFAULT = 0.6;
 const SLIDER_WIDTH = 180;
 
 type StripItem = { key: string; kind: 'none' } | { key: string; kind: 'fx'; id: FaceFxId; index: number } | { key: string; kind: 'look'; id: LookId };
+type Panel = 'filters' | 'effects';
 
-// One strip: None, then the face effects (when this build can put them in the
-// file), then the colour looks.
-const STRIP: StripItem[] = [
-  { key: 'none', kind: 'none' },
-  ...(faceFxAvailable || fxCameraAvailable ? FACE_FX_IDS.map((id, index): StripItem => ({ key: `fx:${id}`, kind: 'fx', id, index })) : []),
-  ...LOOK_IDS.filter((id) => id !== 'normal').map((id): StripItem => ({ key: `look:${id}`, kind: 'look', id })),
-];
+// Two separate strips, like Instagram: Filters (None + the colour looks) and
+// Effects (None + the face effects, when this build can put them in the file).
+// Each None clears only its own kind.
+const NONE_ITEM: StripItem = { key: 'none', kind: 'none' };
+const FILTER_STRIP: StripItem[] = [NONE_ITEM, ...LOOK_IDS.filter((id) => id !== 'normal').map((id): StripItem => ({ key: `look:${id}`, kind: 'look', id }))];
+const FX_STRIP: StripItem[] = [NONE_ITEM, ...FACE_FX_IDS.map((id, index): StripItem => ({ key: `fx:${id}`, kind: 'fx', id, index }))];
+const FX_SUPPORTED = faceFxAvailable || fxCameraAvailable;
 
 // The recording screen. Client notes covered here:
 //   3  zoom (pinch and 1x/2x chips) and 1080p at a real bitrate instead of
@@ -109,7 +110,8 @@ export function CameraScreen() {
   const [beautyOn, setBeautyOn] = useState(false);
   const [beautyAmt, setBeautyAmt] = useState(BEAUTY_DEFAULT);
   const beauty = beautyOn ? beautyAmt : 0;
-  const [showFilters, setShowFilters] = useState(false);
+  // Which strip is open (only one at a time), or none.
+  const [panel, setPanel] = useState<Panel | null>(null);
   const [baking, setBaking] = useState(false);
   const strip = useRef<FlatList<StripItem>>(null);
   // The look's / effect's name fades in at the centre for a moment when it
@@ -128,6 +130,9 @@ export function CameraScreen() {
   const [nativeInfo, setNativeInfo] = useState<FxCameraReady | null>(null);
   const nativeRef = useRef<FxCameraHandle | null>(null);
   const nativeFirstFrame = useRef(false);
+  // Remount key + retry budget: a fatal CameraX error after a good start (another app grabbed the camera) gets re-bound before we give up on the native path.
+  const [nativeKey, setNativeKey] = useState(0);
+  const nativeRetries = useRef(0);
   const nativeRec = useRef(false);
   const nativeLook = useRef<{ look: LookId; beauty: number; fx: FaceFxId | null } | null>(null);
   const useNative = fxCameraAvailable && !nativeFailed;
@@ -245,12 +250,13 @@ export function CameraScreen() {
     return () => clearInterval(id);
   }, [recording]);
 
-  // Strip thumbnails: drawn once, one per tick so the UI never stalls.
-  const thumbsStarted = useRef(false);
+  // Strip thumbnails: drawn lazily the first time a strip is opened (cached in
+  // state afterwards), one per tick so the UI never stalls.
+  const thumbsStarted = useRef<Record<Panel, boolean>>({ filters: false, effects: false });
   useEffect(() => {
-    if (!showFilters || thumbsStarted.current || !Thumbs) return;
-    thumbsStarted.current = true;
-    const items = STRIP.filter((i) => i.kind !== 'none');
+    if (!panel || thumbsStarted.current[panel] || !Thumbs) return;
+    thumbsStarted.current[panel] = true;
+    const items = (panel === 'filters' ? FILTER_STRIP : FX_STRIP).filter((i) => i.kind !== 'none');
     let n = 0;
     let handle: ReturnType<typeof setTimeout>;
     const next = () => {
@@ -261,8 +267,12 @@ export function CameraScreen() {
       handle = setTimeout(next, 16);
     };
     handle = setTimeout(next, 60);
-    return () => clearTimeout(handle);
-  }, [showFilters]);
+    return () => {
+      clearTimeout(handle);
+      // Closed or switched mid-way: let the next open finish the rest.
+      if (n < items.length) thumbsStarted.current[panel] = false;
+    };
+  }, [panel]);
 
   const minZoom = (useNative ? nativeInfo?.minZoom : device?.minZoom) ?? 1;
   const maxZoom = Math.min((useNative ? nativeInfo?.maxZoom : device?.maxZoom) ?? 8, 10);
@@ -305,13 +315,19 @@ export function CameraScreen() {
     [fx, announce, t],
   );
 
+  // Each kind is independent: None clears only its own strip's kind, and
+  // picking never touches the other kinds or beauty.
   const pick = useCallback(
     (item: StripItem) => {
       if (recording || baking) return;
       if (item.kind === 'none') {
-        if (look !== 'normal' || fx != null) void Haptics.selectionAsync();
-        setLook('normal');
-        setFx(null);
+        if (panel === 'effects') {
+          if (fx != null) void Haptics.selectionAsync();
+          setFx(null);
+        } else {
+          if (look !== 'normal') void Haptics.selectionAsync();
+          setLook('normal');
+        }
       } else if (item.kind === 'look') {
         // Tapping the active look again switches it off.
         if (item.id === look) {
@@ -321,16 +337,17 @@ export function CameraScreen() {
       } else if (item.id === fx) selectFx(null);
       else selectFx(item.id);
     },
-    [recording, baking, look, fx, selectLook, selectFx],
+    [recording, baking, panel, look, fx, selectLook, selectFx],
   );
 
-  // Keep the last picked thumbnail centred in the strip.
-  const stripFocus = fx && !recording ? `fx:${fx}` : look !== 'normal' ? `look:${look}` : 'none';
+  // Keep the active thumbnail of the open strip centred in it.
+  const stripFocus = panel === 'effects' ? (fx ? `fx:${fx}` : 'none') : look !== 'normal' ? `look:${look}` : 'none';
   useEffect(() => {
-    if (!showFilters) return;
-    const i = STRIP.findIndex((s) => s.key === stripFocus);
-    if (i >= 0) strip.current?.scrollToIndex({ index: Math.min(i, STRIP.length - 1), viewPosition: 0.5, animated: true });
-  }, [stripFocus, showFilters]);
+    if (!panel) return;
+    const list = panel === 'effects' ? FX_STRIP : FILTER_STRIP;
+    const i = list.findIndex((s) => s.key === stripFocus);
+    if (i >= 0) strip.current?.scrollToIndex({ index: Math.min(i, list.length - 1), viewPosition: 0.5, animated: true });
+  }, [stripFocus, panel]);
 
   // Swipe left for the next look, right for the previous (mirrored in RTL,
   // where the strip runs the other way). Stops at either end like Instagram.
@@ -534,7 +551,13 @@ export function CameraScreen() {
     );
   }
 
-  const stripItems = faceFailed || skiaFailed ? STRIP.filter((i) => i.kind !== 'fx') : STRIP;
+  const fxOffered = FX_SUPPORTED && !faceFailed && !skiaFailed;
+  const openPanel = panel === 'effects' && !fxOffered ? null : panel;
+  const stripItems = openPanel === 'effects' ? FX_STRIP : FILTER_STRIP;
+  const togglePanel = (p: Panel) => {
+    void Haptics.selectionAsync();
+    setPanel((cur) => (cur === p ? null : p));
+  };
   const chips = [minZoom < 1 ? 0.5 : null, 1, 2].filter((z): z is number => z != null && z <= maxZoom);
   const Cam = useFace ? FaceCamera : FilteredCamera;
   const fxIndex = fx ? FACE_FX_IDS.indexOf(fx) : -1;
@@ -545,6 +568,7 @@ export function CameraScreen() {
         <View style={StyleSheet.absoluteFill}>
           {useNative ? (
             <FxCamera
+              key={nativeKey}
               ref={nativeRef}
               style={StyleSheet.absoluteFill}
               facing={position}
@@ -563,7 +587,10 @@ export function CameraScreen() {
                 console.warn('fx camera:', e.code, e.message);
                 // The face detector failing only costs the face effects; anything else is the camera itself.
                 if (e.code === 'FACE') dropFx();
-                else nativeFailedNow(`${e.code}: ${e.message}`);
+                else if (e.code === 'CAMERA_STATE' && nativeFirstFrame.current && !nativeRec.current && nativeRetries.current < 2) {
+                  nativeRetries.current += 1;
+                  setNativeKey((k) => k + 1);
+                } else nativeFailedNow(`${e.code}: ${e.message}`);
               }}
               onRecordingFinished={onNativeFinished}
             />
@@ -645,11 +672,23 @@ export function CameraScreen() {
         {FilteredCamera ? (
           <>
             <Tool
-              icon={showFilters ? 'color-filter' : 'color-filter-outline'}
-              label={t('camera2.effects')}
-              onPress={() => setShowFilters((v) => !v)}
+              icon={look !== 'normal' || panel === 'filters' ? 'color-filter' : 'color-filter-outline'}
+              label={t('camera2.filters')}
+              onPress={() => togglePanel('filters')}
               disabled={recording}
+              active={look !== 'normal'}
+              selected={openPanel === 'filters'}
             />
+            {fxOffered ? (
+              <Tool
+                icon={fx != null || panel === 'effects' ? 'happy' : 'happy-outline'}
+                label={t('camera2.effects')}
+                onPress={() => togglePanel('effects')}
+                disabled={recording}
+                active={fx != null}
+                selected={openPanel === 'effects'}
+              />
+            ) : null}
             <Tool
               icon={beautyOn ? 'sparkles' : 'sparkles-outline'}
               label={t('camera2.beauty')}
@@ -658,6 +697,8 @@ export function CameraScreen() {
                 setBeautyOn((v) => !v);
               }}
               disabled={recording}
+              active={beautyOn}
+              selected={beautyOn}
             />
           </>
         ) : null}
@@ -665,7 +706,7 @@ export function CameraScreen() {
 
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 18 }]}>
         {FilteredCamera && beautyOn && !recording ? <BeautySlider value={beautyAmt} onChange={setBeautyAmt} label={t('camera2.beautyAmount')} /> : null}
-        {FilteredCamera && showFilters && !recording ? (
+        {FilteredCamera && openPanel && !recording ? (
           <FlatList
             ref={strip}
             data={stripItems}
@@ -674,12 +715,13 @@ export function CameraScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.strip}
             style={styles.stripWrap}
+            key={openPanel}
             extraData={stripFocus + look + String(fx) + Object.keys(thumbs).length}
             getItemLayout={(_, index) => ({ length: ITEM_WIDTH + ITEM_GAP, offset: 16 + index * (ITEM_WIDTH + ITEM_GAP), index })}
             onScrollToIndexFailed={() => {}}
             ItemSeparatorComponent={StripGap}
             renderItem={({ item }) => {
-              const on = item.kind === 'none' ? look === 'normal' && fx == null : item.kind === 'fx' ? item.id === fx : item.id === look;
+              const on = item.kind === 'none' ? (openPanel === 'effects' ? fx == null : look === 'normal') : item.kind === 'fx' ? item.id === fx : item.id === look;
               const name = item.kind === 'none' ? t('camera2.none') : item.kind === 'fx' ? t(`camera2.fx.${item.id}`) : t(`camera2.filter.${item.id}`);
               const uri = thumbs[item.key];
               return (
@@ -820,10 +862,32 @@ function CloseButton({ top, disabled }: { top: number; disabled?: boolean }) {
   );
 }
 
-function Tool({ icon, label, onPress, disabled }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; disabled?: boolean }) {
+function Tool({
+  icon,
+  label,
+  onPress,
+  disabled,
+  active,
+  selected,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  active?: boolean;
+  selected?: boolean;
+}) {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={styles.tool} accessibilityRole="button" accessibilityLabel={label}>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={styles.tool}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={selected == null ? undefined : { selected, disabled: !!disabled }}
+    >
       <Ionicons name={icon} size={28} color="#fff" style={{ opacity: disabled ? 0.3 : 1 }} />
+      {active ? <View style={styles.toolDot} /> : null}
       <Text style={styles.toolText}>{label}</Text>
     </Pressable>
   );
@@ -842,6 +906,7 @@ const styles = StyleSheet.create({
   timerText: { color: '#fff', fontWeight: '800', fontSize: 15, fontVariant: ['tabular-nums'] },
   sideTools: { position: 'absolute', end: 12, gap: 20, alignItems: 'center' },
   tool: { alignItems: 'center', gap: 2 },
+  toolDot: { position: 'absolute', top: 0, end: 0, width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#ff2d55', borderWidth: 1.5, borderColor: '#fff' },
   toolText: { color: '#fff', fontSize: 11, fontWeight: '600', ...shadow },
   bottom: { position: 'absolute', bottom: 0, start: 0, end: 0, alignItems: 'center', gap: 14 },
   chips: { flexDirection: 'row', gap: 8, backgroundColor: 'rgba(0,0,0,0.35)', padding: 4, borderRadius: 999 },

@@ -182,7 +182,9 @@
     "goLive": "Mulai LIVE",
     "notFound": "Video ini tidak tersedia",
     "addComment": "Tambahkan komentar…",
-    "originalSound": "Suara asli · @{{handle}}"
+    "originalSound": "Suara asli · @{{handle}}",
+    "seeMore": "Lihat selengkapnya",
+    "seeLess": "Lihat lebih sedikit"
   },
   "comments": {
     "title": "Komentar ({{count}})",

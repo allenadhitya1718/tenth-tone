@@ -8,7 +8,7 @@ import { router } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Animated, AppState, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, AppState, Platform, Pressable, Share, StyleSheet, Text, View, ScrollView } from 'react-native';
 
 import { countShare, videoLink } from '@/api/discover';
 import type { Video } from '@/api/types';
@@ -147,6 +147,8 @@ function Overlay({
 
   const isMine = video.user?.id === me;
   const [reportOpen, setReportOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [descLines, setDescLines] = useState(0);
   const del = useDeleteVideo();
 
   function toggleLike(next = !video.liked) {
@@ -305,9 +307,34 @@ function Overlay({
           </Text>
         </Pressable>
         {video.description ? (
-          <Text style={styles.desc} numberOfLines={3}>
-            {video.description}
-          </Text>
+          expanded && active ? (
+            <ScrollView style={styles.descScroll} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+              <Text style={styles.desc}>{video.description}</Text>
+              <Pressable onPress={() => setExpanded(false)} accessibilityRole="button" hitSlop={8}>
+                <Text style={styles.descMore}>{t('feed.seeLess')}</Text>
+              </Pressable>
+            </ScrollView>
+          ) : (
+            <View>
+              {/* Invisible copy at full length: its line count says whether the 2-line preview cuts text off. */}
+              <Text
+                style={[styles.desc, styles.descProbe]}
+                onTextLayout={(e) => setDescLines(e.nativeEvent.lines.length)}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              >
+                {video.description}
+              </Text>
+              <Text style={styles.desc} numberOfLines={2}>
+                {video.description}
+              </Text>
+              {descLines > 2 ? (
+                <Pressable onPress={() => setExpanded(true)} accessibilityRole="button" hitSlop={8}>
+                  <Text style={styles.descMore}>{t('feed.seeMore')}</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          )
         ) : null}
         <PostPlaceTags videoId={video.id} active={active} />
         <View style={styles.soundRow}>
@@ -395,6 +422,9 @@ const styles = StyleSheet.create({
   whoLetter: { color: '#fff', fontWeight: '800', fontSize: 13 },
   handle: { flexShrink: 1, color: '#fff', fontWeight: '800', fontSize: 15, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 4 },
   desc: { color: '#fff', fontSize: 14, lineHeight: 20, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 4 },
+  descProbe: { position: 'absolute', start: 0, end: 0, opacity: 0 },
+  descScroll: { maxHeight: 200 },
+  descMore: { color: 'rgba(255,255,255,0.78)', fontSize: 14, lineHeight: 20, fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 4 },
   soundRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
   sound: { color: '#fff', fontSize: 13, flexShrink: 1 },
 });

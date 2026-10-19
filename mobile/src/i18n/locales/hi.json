@@ -182,7 +182,9 @@
     "goLive": "लाइव जाएँ",
     "notFound": "यह वीडियो उपलब्ध नहीं है",
     "addComment": "कमेंट जोड़ें…",
-    "originalSound": "ओरिजिनल साउंड · @{{handle}}"
+    "originalSound": "ओरिजिनल साउंड · @{{handle}}",
+    "seeMore": "और देखें",
+    "seeLess": "कम देखें"
   },
   "comments": {
     "title": "कमेंट ({{count}})",

@@ -182,7 +182,9 @@
     "goLive": "Transmitir en vivo",
     "notFound": "Este video no está disponible",
     "addComment": "Añade un comentario…",
-    "originalSound": "Sonido original · @{{handle}}"
+    "originalSound": "Sonido original · @{{handle}}",
+    "seeMore": "Ver más",
+    "seeLess": "Ver menos"
   },
   "comments": {
     "title": "Comentarios ({{count}})",

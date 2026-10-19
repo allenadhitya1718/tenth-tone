@@ -182,7 +182,9 @@
     "goLive": "Canlı yayına geç",
     "notFound": "Bu video kullanılamıyor",
     "addComment": "Yorum ekle…",
-    "originalSound": "Orijinal ses · @{{handle}}"
+    "originalSound": "Orijinal ses · @{{handle}}",
+    "seeMore": "Daha fazla",
+    "seeLess": "Daha az"
   },
   "comments": {
     "title": "Yorumlar ({{count}})",
