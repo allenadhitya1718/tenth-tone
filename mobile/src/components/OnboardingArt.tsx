@@ -33,8 +33,10 @@ export type ArtKind = 'watch' | 'create' | 'live' | 'chat';
  */
 export const BEZEL = 2;
 export const ART_W = 250;
-export const ART_H = 517;
+export const ART_H = 553;
 const IN_H = ART_H - BEZEL * 2;
+/** The screenshots carry 160 source px of extra background below the real screen, keeping its controls clear of the rounded corners. */
+const LIFT = IN_H * (160 / 2412);
 
 const SHOTS: Record<'en' | 'ar', Record<ArtKind, ImageSourcePropType>> = {
   en: {
@@ -198,7 +200,7 @@ function Sim({ kind }: { kind: ArtKind }) {
       return (
         <>
           <HeartBurst />
-          <RisingHearts style={{ end: 14, bottom: IN_H * 0.2 }} />
+          <RisingHearts style={{ end: 14, bottom: IN_H * 0.2 + LIFT }} />
           <View pointerEvents="none" style={[styles.likeCount, GLASS]}>
             <Ionicons name="heart" size={15} color="#F43F5E" />
             <Text style={styles.chipTxt}>{(likes / 1000).toFixed(1)}K</Text>
@@ -210,9 +212,9 @@ function Sim({ kind }: { kind: ArtKind }) {
     case 'live':
       return (
         <>
-          <RisingHearts style={{ end: 14, bottom: IN_H * 0.14 }} />
+          <RisingHearts style={{ end: 14, bottom: IN_H * 0.14 + LIFT }} />
           <CommentFeed
-            style={{ start: 12, end: 44, bottom: IN_H * 0.15 }}
+            style={{ start: 12, end: 44, bottom: IN_H * 0.15 + LIFT }}
             lines={[
               { who: 'ع', tone: ['#0284C7', '#38BDF8'], text: t('onboarding.mockMsg1') },
               { who: 'س', tone: ['#3B82F6', '#6366F1'], text: t('onboarding.mockMsg2') },
@@ -290,16 +292,16 @@ const styles = StyleSheet.create({
     elevation: 14,
   },
   clip: { flex: 1, borderRadius: 36 - BEZEL, overflow: 'hidden' },
-  fade: { position: 'absolute', start: 0, end: 0, bottom: 0, height: '35%' },
+  fade: { position: 'absolute', start: 0, end: 0, bottom: 0, height: '12%' },
   pill: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   pillTxt: { color: '#fff', fontSize: 13, fontWeight: '700' },
   chipTxt: { color: '#fff', fontSize: 14, fontWeight: '800' },
   bub: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingVertical: 4, paddingStart: 4, paddingEnd: 12, alignSelf: 'flex-start', marginTop: 6 },
   bubAv: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   bubTxt: { color: '#fff', fontSize: 13 },
-  likeCount: { position: 'absolute', alignSelf: 'center', bottom: IN_H * 0.2, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 6 },
+  likeCount: { position: 'absolute', alignSelf: 'center', bottom: IN_H * 0.2 + LIFT, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 6 },
   rec: { position: 'absolute', alignSelf: 'center', top: IN_H * 0.07 - 14, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#F43F5E', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
   recBlip: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
   recTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  typing: { position: 'absolute', start: 14, bottom: IN_H * 0.11, flexDirection: 'row', gap: 5, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 12 },
+  typing: { position: 'absolute', start: 14, bottom: IN_H * 0.11 + LIFT, flexDirection: 'row', gap: 5, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 12 },
 });
