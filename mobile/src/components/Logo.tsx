@@ -1,15 +1,11 @@
-import { Image } from 'react-native';
+import { useTheme } from '@/providers/ThemeProvider';
 
-// The wide FLYP wordmark (web/icons/flyp-logo-wide.png). Its navy ground is
-// baked into the PNG, so it is rounded to sit as a badge rather than a
-// sticker, as on the web login screen.
+import { LogoMark } from './LogoMark';
+
+// The wide FLYP wordmark, blended into whatever page it sits on: the glowing
+// mark in dark mode, the ink-and-blue mark in light mode. No baked-in navy
+// rectangle, so it no longer looks like a sticker.
 export function Logo({ width = 165 }: { width?: number }) {
-  return (
-    <Image
-      source={require('../../assets/flyp-logo-wide.png')}
-      style={{ width, height: width * (230 / 472), borderRadius: 12 }}
-      resizeMode="contain"
-      accessibilityLabel="FLYP"
-    />
-  );
+  const { isDark } = useTheme();
+  return <LogoMark width={width} tone={isDark ? 'dark' : 'light'} />;
 }
