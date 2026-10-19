@@ -156,7 +156,13 @@
     "mockMsg2": "متابعة من الرياض 👋",
     "mockChat1": "وين اليوم؟ 😄",
     "mockChat2": "شوف الخريطة 📍",
-    "mockMap": "خريطة الأصدقاء"
+    "mockMap": "خريطة الأصدقاء",
+    "mockStage": "منصة صوتية",
+    "mockRequest": "اطلب التحدث",
+    "mockGift": "فهد أرسل صقر ×5",
+    "mockAway": "٠٫٨ كم",
+    "mockWalkie": "اللاسلكي · مباشر",
+    "mockHold": "اضغط للتحدث"
   },
   "legal": {
     "terms": "الشروط",
