@@ -52,7 +52,7 @@ export default function Onboarding() {
   // short screens it shrinks so the title, dots and button always fit below.
   const DOCK = 232 - 28; // title block + dots + button, minus the overlap
   const room = height - insets.top - insets.bottom - 50 - 24 - DOCK;
-  const scale = Math.min(Math.min(width * 0.76, ART_W) / ART_W, (height * 0.58) / ART_H, room / ART_H);
+  const scale = Math.min((width * 0.7) / ART_W, (height * 0.6) / ART_H, room / ART_H, 1.25);
   const last = idx === SLIDES.length - 1;
   const rtl = I18nManager.isRTL;
 

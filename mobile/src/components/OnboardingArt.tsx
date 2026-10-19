@@ -26,9 +26,15 @@ import Animated, {
 
 export type ArtKind = 'watch' | 'create' | 'live' | 'chat';
 
-/** Design size; the screen scales the frame down on small phones. */
-export const ART_W = 310;
-export const ART_H = 490;
+/**
+ * Design size of the phone frame. The screenshots are 1080x2252, so the inner
+ * screen (frame minus the 2px bezel each side) is exactly that aspect ratio:
+ * 246 x 513. Nothing is cropped or stretched.
+ */
+export const BEZEL = 2;
+export const ART_W = 250;
+export const ART_H = 517;
+const IN_H = ART_H - BEZEL * 2;
 
 const SHOTS: Record<'en' | 'ar', Record<ArtKind, ImageSourcePropType>> = {
   en: {
@@ -129,7 +135,7 @@ function HeartBurst() {
   }, [s]);
   const a = useAnimatedStyle(() => ({ opacity: Math.min(1, s.value * 1.5), transform: [{ scale: s.value }] }));
   return (
-    <Animated.Text pointerEvents="none" style={[{ position: 'absolute', alignSelf: 'center', top: 170, fontSize: 92 }, a]}>
+    <Animated.Text pointerEvents="none" style={[{ position: 'absolute', alignSelf: 'center', top: IN_H * 0.3, fontSize: 84 }, a]}>
       ❤️
     </Animated.Text>
   );
@@ -164,25 +170,6 @@ function RecTimer() {
   );
 }
 
-function WaveBar({ h, delay, color }: { h: number; delay: number; color: string }) {
-  const s = useSharedValue(0.3);
-  useEffect(() => {
-    s.value = withDelay(delay, withRepeat(withSequence(withTiming(1, { duration: 320 }), withTiming(0.3, { duration: 320 })), -1));
-  }, [s, delay]);
-  const a = useAnimatedStyle(() => ({ transform: [{ scaleY: s.value }] }));
-  return <Animated.View style={[{ width: 3.5, height: 24 * h, borderRadius: 2, backgroundColor: color }, a]} />;
-}
-
-function Wave({ color }: { color: string }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, height: 24 }}>
-      {[0.5, 0.9, 0.6, 1, 0.7, 0.85, 0.45].map((h, i) => (
-        <WaveBar key={i} h={h} delay={i * 90} color={color} />
-      ))}
-    </View>
-  );
-}
-
 function WaveDot({ delay }: { delay: number }) {
   const s = useSharedValue(0);
   useEffect(() => {
@@ -211,7 +198,7 @@ function Sim({ kind }: { kind: ArtKind }) {
       return (
         <>
           <HeartBurst />
-          <RisingHearts style={{ end: 22, bottom: 120 }} />
+          <RisingHearts style={{ end: 14, bottom: IN_H * 0.2 }} />
           <View pointerEvents="none" style={[styles.likeCount, GLASS]}>
             <Ionicons name="heart" size={15} color="#F43F5E" />
             <Text style={styles.chipTxt}>{(likes / 1000).toFixed(1)}K</Text>
@@ -223,9 +210,9 @@ function Sim({ kind }: { kind: ArtKind }) {
     case 'live':
       return (
         <>
-          <RisingHearts style={{ end: 22, bottom: 100 }} />
+          <RisingHearts style={{ end: 14, bottom: IN_H * 0.14 }} />
           <CommentFeed
-            style={{ start: 16, end: 70, bottom: 92 }}
+            style={{ start: 12, end: 44, bottom: IN_H * 0.15 }}
             lines={[
               { who: 'ع', tone: ['#0284C7', '#38BDF8'], text: t('onboarding.mockMsg1') },
               { who: 'س', tone: ['#3B82F6', '#6366F1'], text: t('onboarding.mockMsg2') },
@@ -239,19 +226,16 @@ function Sim({ kind }: { kind: ArtKind }) {
       return (
         <>
           <Typing />
-          <View pointerEvents="none" style={[styles.talk, GLASS]}>
-            <Wave color="#34D399" />
-          </View>
         </>
       );
   }
 }
 
 const PILL: Record<ArtKind, { text: string; side: 'start' | 'end'; top: number }> = {
-  watch: { text: 'onboarding.pillWatch', side: 'end', top: 150 },
-  create: { text: 'onboarding.pillCreate', side: 'start', top: 190 },
-  live: { text: 'onboarding.pillLive', side: 'start', top: 230 },
-  chat: { text: 'onboarding.pillChat', side: 'end', top: 170 },
+  watch: { text: 'onboarding.pillWatch', side: 'end', top: ART_H * 0.27 },
+  create: { text: 'onboarding.pillCreate', side: 'start', top: ART_H * 0.36 },
+  live: { text: 'onboarding.pillLive', side: 'start', top: ART_H * 0.42 },
+  chat: { text: 'onboarding.pillChat', side: 'end', top: ART_H * 0.15 },
 };
 
 /** The one translated pill per slide that breaks out past the frame edge. */
@@ -272,7 +256,14 @@ export function OnboardingArt({ kind, scale = 1 }: { kind: ArtKind; scale?: numb
   const set = i18n.language === 'ar' ? SHOTS.ar : SHOTS.en;
   return (
     <View style={{ width: ART_W * scale, height: ART_H * scale }}>
-      <View style={[styles.frame, { transform: [{ scale }], transformOrigin: 'top left' }]}>
+      <View
+        style={[
+          styles.frame,
+          // Physical left/top + a centre origin keep the scaled frame centred
+          // in its box in both reading directions.
+          { position: 'absolute', left: (ART_W * scale - ART_W) / 2, top: (ART_H * scale - ART_H) / 2, transform: [{ scale }], transformOrigin: 'center' },
+        ]}
+      >
         <View style={styles.clip}>
           <Image source={set[kind]} style={[StyleSheet.absoluteFill, { width: '100%', height: '100%', objectFit: 'cover' }]} accessibilityIgnoresInvertColors />
           <LinearGradient colors={['rgba(7,8,13,0)', 'rgba(7,8,13,0.85)', '#07080D']} style={styles.fade} pointerEvents="none" />
@@ -288,9 +279,9 @@ const styles = StyleSheet.create({
   frame: {
     width: ART_W,
     height: ART_H,
-    borderRadius: 38,
+    borderRadius: 36,
     backgroundColor: '#11131F',
-    borderWidth: 2,
+    borderWidth: BEZEL,
     borderColor: 'rgba(255,255,255,0.18)',
     shadowColor: '#6366F1',
     shadowOpacity: 0.45,
@@ -298,7 +289,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 16 },
     elevation: 14,
   },
-  clip: { flex: 1, borderRadius: 36, overflow: 'hidden' },
+  clip: { flex: 1, borderRadius: 36 - BEZEL, overflow: 'hidden' },
   fade: { position: 'absolute', start: 0, end: 0, bottom: 0, height: '35%' },
   pill: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 12, shadowOffset: { width: 0, height: 6 } },
   pillTxt: { color: '#fff', fontSize: 13, fontWeight: '700' },
@@ -306,10 +297,9 @@ const styles = StyleSheet.create({
   bub: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 999, paddingVertical: 4, paddingStart: 4, paddingEnd: 12, alignSelf: 'flex-start', marginTop: 6 },
   bubAv: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   bubTxt: { color: '#fff', fontSize: 13 },
-  likeCount: { position: 'absolute', alignSelf: 'center', bottom: 112, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 6 },
-  rec: { position: 'absolute', alignSelf: 'center', top: 16, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#F43F5E', borderRadius: 999, paddingHorizontal: 15, paddingVertical: 7 },
+  likeCount: { position: 'absolute', alignSelf: 'center', bottom: IN_H * 0.2, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 6 },
+  rec: { position: 'absolute', alignSelf: 'center', top: IN_H * 0.07 - 14, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#F43F5E', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
   recBlip: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
   recTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  typing: { position: 'absolute', start: 16, bottom: 96, flexDirection: 'row', gap: 5, borderRadius: 999, paddingHorizontal: 15, paddingVertical: 13 },
-  talk: { position: 'absolute', end: 16, bottom: 96, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 9 },
+  typing: { position: 'absolute', start: 14, bottom: IN_H * 0.11, flexDirection: 'row', gap: 5, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 12 },
 });
