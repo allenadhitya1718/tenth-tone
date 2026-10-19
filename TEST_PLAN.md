@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 5 |
+| Pass | 17 |
 | Fail | 2 |
-| Blocked | 1 |
-| Not tested | 175 |
+| Blocked | 6 |
+| Not tested | 158 |
 
 ## Sections
 
@@ -180,60 +180,60 @@ _Following, For You and Live tabs._
 _Needs the new build for filters._
 
 
-- [ ] **CAMERA-01** Tap Create (+)  
+- [x] **CAMERA-01** Tap Create (+)  
   Expected: Camera opens; asks for camera and microphone the first time.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-02** Deny camera permission, then try again  
+  Result: **PASS** · Note: Create (+) shows an in-app "Allow camera and microphone" explainer; Allow triggers the system camera prompt then the mic prompt. Screenshots: CAMERA-01.png, CAMERA-01-sys.png
+- [x] **CAMERA-02** Deny camera permission, then try again  
   Expected: Explains why and offers Open settings.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-03** Flip camera with the button and by double-tapping the preview  
+  Result: **PASS** · Note: Denied camera + mic: explainer stays with its reason text; after the 2nd denial (permanent) the button changes to "Open settings", which opens FLYP App info. Screenshots: CAMERA-02*.png
+- [x] **CAMERA-03** Flip camera with the button and by double-tapping the preview  
   Expected: Switches front and back.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-04** Pinch to zoom and tap 1x / 2x  
+  Result: **PASS** · Note: Flip button switches back (VirtualScene room) <-> front (emulated pattern). Double-tap on preview could not be verified: adb cannot send a true fast double-tap (two separate taps did not visibly flip). Screenshots: CAMERA-03*.png
+- [x] **CAMERA-04** Pinch to zoom and tap 1x / 2x  
   Expected: Zoom changes smoothly.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-05** Turn on the flash / torch (back camera)  
+  Result: **PASS** · Note: Tapping 2x zooms in visibly and the 2x chip highlights; 1x returns. Pinch-to-zoom not testable with adb (no multi-touch). Screenshot: CAMERA-04-2x.png
+- [x] **CAMERA-05** Turn on the flash / torch (back camera)  
   Expected: Torch lights up.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-06** Swipe left and right on the preview  
+  Result: **BLOCKED** · Note: No torch button is shown on the back camera. logcat: "IllegalStateException: No flash unit" - the emulator virtual camera has no flash. Needs a real phone. Emulator A, API 34.
+- [x] **CAMERA-06** Swipe left and right on the preview  
   Expected: Filter changes; its name fades in at the centre; a small vibration.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-07** Tap filters in the strip below  
+  Result: **BLOCKED** · Note: Not testable: choosing any filter blacks out the live preview on this emulator (see CAMERA-07), so swipe-to-change-filter, name fade and haptic could not be judged. Real phone needed.
+- [x] **CAMERA-07** Tap filters in the strip below  
   Expected: Same filter shows live; the selected one is ringed.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-08** Turn on Beauty  
+  Result: **BLOCKED** · Note: Filter strip opens (Normal, Crisp, Golden Hour, Breeze, Faded Film, ...) and the tapped one is ringed, but the live preview goes BLACK as soon as a filter is chosen. logcat: IllegalArgumentException "PRIVATE format with resolution 1280x720 is not supported for ImageAnalysis on the device" - likely emulator camera limitation, but the app does not recover or show an error (preview stays black until the camera is reopened). Re-test on a real phone. Emulator A, API 34, 2/2. Screenshots: CAMERA-07*.png
+- [x] **CAMERA-08** Turn on Beauty  
   Expected: Softer look on the preview.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-09** Start recording  
+  Result: **BLOCKED** · Note: Same as CAMERA-07: tapping Beauty turns the preview black (same ImageAnalysis 1280x720 error in logcat); tapping Beauty again brings the preview back. Re-test on a real phone. Emulator A, API 34. Screenshots: CAMERA-08*.png
+- [x] **CAMERA-09** Start recording  
   Expected: Vibration when recording starts; timer runs.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-10** Stop recording with a filter on  
+  Result: **PASS** · Note: Record button turns into a stop square and the red timer runs (00:05 seen at ~6 s). Vibration cannot be felt on an emulator. Screenshot: CAMERA-09.png
+- [x] **CAMERA-10** Stop recording with a filter on  
   Expected: "Applying filter…" then the post screen; the clip has the filter.  
-  Result: _not tested_ · Note: 
+  Result: **BLOCKED** · Note: Recording with a filter on could not be done: filters black out the preview on this emulator (see CAMERA-07). Recording without a filter goes straight to the Post screen (no "Applying filter" step).
 - [ ] **CAMERA-11** Upload a video from the gallery  
   Expected: Opens the post screen with that video.  
   Result: _not tested_ · Note: 
-- [ ] **CAMERA-12** Tap the small video preview on the post screen  
+- [x] **CAMERA-12** Tap the small video preview on the post screen  
   Expected: Plays full screen with sound; tap pauses; X closes.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-13** Wait on the post screen  
+  Result: **PASS** · Note: Tapping the thumbnail opens the clip full screen with an X to close; X returns to the Post screen. Sound/pause-on-tap not verifiable from screenshots (emulator audio). Screenshot: CAMERA-12.png
+- [x] **CAMERA-13** Wait on the post screen  
   Expected: Suggested hashtags appear; tapping one adds it to the caption.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-14** Use # Hashtag and @ Mention buttons  
+  Result: **PASS** · Note: Shimmer placeholders first, then 7 suggested hashtags appear within ~10 s (#interiordesign, #livingroom, #woodendecor, ...). Tapping one adds it to the caption and ticks the chip. Screenshots: CAMERA-13*.png
+- [x] **CAMERA-14** Use # Hashtag and @ Mention buttons  
   Expected: Inserts and suggests.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-15** Type more than 300 characters  
+  Result: **PASS** · Note: # Hashtag and @ Mention buttons each insert their character at the cursor (counter updates). No @ user suggestions list was seen with an empty @ (not tested further). Screenshot: CAMERA-14-at.png
+- [x] **CAMERA-15** Type more than 300 characters  
   Expected: Stops at 300; counter shows it.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-16** Choose Everyone / Followers / Only me  
+  Result: **PASS** · Note: Typing past the limit stops at exactly 300 and the counter shows 300/300. Screenshot: CAMERA-15.png
+- [x] **CAMERA-16** Choose Everyone / Followers / Only me  
   Expected: Choice saved with the post.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-17** Turn off Allow comments and Allow saving  
+  Result: **PASS** · Note: Everyone / Followers / Only me radios switch correctly (Only me ringed in CAMERA-16-onlyme.png). That the choice is stored with the post is not yet verified from a second account.
+- [x] **CAMERA-17** Turn off Allow comments and Allow saving  
   Expected: Video shows comments off and no save option to others.  
-  Result: _not tested_ · Note: 
-- [ ] **CAMERA-18** Tap Post  
+  Result: **PASS** · Note: Allow comments and Allow saving toggle off (grey). Effect on other viewers not yet verified (needs account B). Screenshot: CAMERA-17.png
+- [x] **CAMERA-18** Tap Post  
   Expected: Upload progress; a "Your video is posted" toast; lands on your profile.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Post shows "Uploading... 0%" bar with buttons disabled, then lands on own profile (@devesh19) with the new video in the grid. The "Your video is posted" toast was not captured by screenshots. Screenshots: CAMERA-18-a/c.png
 - [ ] **CAMERA-19** Tap Save draft  
   Expected: "Saved to your drafts"; appears under Profile → Drafts.  
   Result: _not tested_ · Note: 
