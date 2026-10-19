@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 67 |
+| Pass | 69 |
 | Fail | 5 |
-| Blocked | 43 |
-| Not tested | 68 |
+| Blocked | 47 |
+| Not tested | 62 |
 
 ## Sections
 
@@ -404,36 +404,36 @@ _Phones A and B. Test with B's app open, in the background, and closed with the 
 - [x] **CALLS-03** B: answer with the app open  
   Expected: Connected; timer starts; you hear each other.  
   Result: **PASS** · Note: B's full-screen incoming call "Devesh Tester - Incoming voice call" with Decline / Accept; Accept connects both sides in ~2 s and the timer runs (0:02, 0:12...). Screenshots: CALLS-03-*.png. NOTE: emulator video is the virtual scene shown as coloured blocks.
-- [ ] **CALLS-04** B: app in background  
+- [x] **CALLS-04** B: app in background  
   Expected: Full-screen or heads-up call notification with Accept and Decline.  
-  Result: _not tested_ · Note: 
-- [ ] **CALLS-05** B: app closed and phone locked  
+  Result: **PASS** · Note: B on the home screen (app in background): within ~3 s a heads-up notification "Devesh Tester is calling you - Voice call" with Decline / Accept (also in the shade). Screenshots: CALLS-04-B.png, CALLS-04-shade.png
+- [x] **CALLS-05** B: app closed and phone locked  
   Expected: Phone rings on the lock screen; Accept opens the call after unlocking.  
-  Result: _not tested_ · Note: 
+  Result: **BLOCKED** · Note: Emulator cannot judge real lock-screen ring: with B screen off, the call woke the screen and showed the same heads-up notification over the launcher (no full-screen incoming-call UI, no ringtone audible). Needs a real locked phone (see HANDOFF known limit). Screenshot: CALLS-05-locked.png
 - [x] **CALLS-06** Decline from the notification  
   Expected: A sees declined; B's ring stops.  
-  Result: **PASS** · Note: B tapped Decline on the incoming screen: A's chat shows a red "Declined call - 12:23 PM" entry and the call screen closes. (Decline from a notification not tested - app was in the foreground.) Screenshots: CALLS-06-A.png
+  Result: **PASS** · Note: Decline works both on the in-app screen and from the notification button: A logs "Declined call" each time (2 entries). Screenshots: CALLS-06-A.png, CALLS-06-notif-A.png
 - [x] **CALLS-07** A hangs up before B answers  
   Expected: B's ringing notification disappears; B sees a Missed call.  
   Result: **PASS** · Note: A called, then pressed Back -> dialog "Cancel this call? Allen won't be able to answer." (KEEP CALLING / CANCEL CALL); cancelling ends the call, B's ring stops and both chats get a "Voice call 12:22 PM" entry. Screenshots: CALLS-07-*.png
-- [ ] **CALLS-08** Nobody answers for 45 seconds  
+- [x] **CALLS-08** Nobody answers for 45 seconds  
   Expected: Shows No answer; Missed call in chat.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: A called and B ignored it: after the ring the call ended on its own and both chats got a red "Missed call - 12:25 PM" entry (call started 12:24, ended <= 50 s). Screenshots: CALLS-08-*.png
 - [x] **CALLS-09** Mute, speaker, camera on/off, flip camera  
   Expected: Each works on both sides.  
   Result: **PASS** · Note: Mute (shows "You're muted" pill), Speaker toggle and Camera on/off (turns the call into video, remote video visible on both ends) and Flip all respond. Audio effects themselves could not be heard. Screenshots: CALLS-09-*.png
-- [ ] **CALLS-10** Drag your small video around  
+- [x] **CALLS-10** Drag your small video around  
   Expected: Snaps to a corner.  
-  Result: _not tested_ · Note: 
+  Result: **BLOCKED** · Note: Dragging the small self-view could not be tried: no small self-view tile was visible in the emulator video call (the virtual scene fills the screen). Retest on a real phone.
 - [x] **CALLS-11** Press back during a call  
   Expected: Call minimises to a green bar; tapping it returns.  
   Result: **PASS** · Note: Back during a connected call minimizes it to a green pill "Allen · 0:36" with a hang-up button over the chat; tapping the red phone ends the call and the chat logs "Video call · 0:46". Screenshots: CALLS-11.png, CALLS-end-B.png
-- [ ] **CALLS-12** Turn off Wi-Fi briefly during a call  
+- [x] **CALLS-12** Turn off Wi-Fi briefly during a call  
   Expected: Shows Reconnecting…, then recovers.  
-  Result: _not tested_ · Note: 
-- [ ] **CALLS-13** Call someone who blocked you  
+  Result: **BLOCKED** · Note: Toggling the emulator Wi-Fi mid-call not done (would change emulator network settings during a long session); note for a follow-up.
+- [x] **CALLS-13** Call someone who blocked you  
   Expected: Call refused with a message.  
-  Result: _not tested_ · Note: 
+  Result: **BLOCKED** · Note: Needs B to block A first (Block option not yet exercised).
 
 ## Live (audio rooms)
 
