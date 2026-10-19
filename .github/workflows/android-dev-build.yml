@@ -67,6 +67,8 @@ jobs:
       - name: Build APK
         env:
           GOOGLE_SERVICES_JSON: ${{ runner.temp }}/google-services.json
+          # Maps SDK for Android key (restricted); without it the map shows its placeholder.
+          GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_KEY }}
           GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" -Dorg.gradle.daemon=false
         run: eas build --local --profile preview --platform android --non-interactive --output ${{ github.workspace }}/flyp-test.apk
 

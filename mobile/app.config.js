@@ -7,5 +7,10 @@ module.exports = ({ config }) => ({
   android: {
     ...config.android,
     googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? './google-services.json',
+    // Maps SDK for Android key: restricted to com.flyp.app + our signing
+    // SHA-1, but kept out of the public repo. EAS / CI / .env.local set it.
+    ...(process.env.GOOGLE_MAPS_ANDROID_KEY
+      ? { config: { ...config.android?.config, googleMaps: { apiKey: process.env.GOOGLE_MAPS_ANDROID_KEY } } }
+      : {}),
   },
 });
