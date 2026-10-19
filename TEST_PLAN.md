@@ -12,8 +12,8 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 |---|---|
 | Pass | 40 |
 | Fail | 4 |
-| Blocked | 23 |
-| Not tested | 116 |
+| Blocked | 27 |
+| Not tested | 112 |
 
 ## Sections
 
@@ -308,18 +308,18 @@ _Your own profile and other people's._
 ## Notifications (in the app)
 
 
-- [ ] **NOTIF-01** Get a like, comment, follow, mention from phone B  
+- [x] **NOTIF-01** Get a like, comment, follow, mention from phone B  
   Expected: Each appears in Notifications with the right text.  
-  Result: _not tested_ · Note: 
-- [ ] **NOTIF-02** Tap each notification  
+  Result: **BLOCKED** · Note: Needs account B to generate likes/comments/follows/mentions/follow requests. Bell opens a Notifications screen with the empty state "No notifications yet - Likes, comments and new followers will show up here." (own actions correctly produce none). Screenshot: NOTIFS-01.png
+- [x] **NOTIF-02** Tap each notification  
   Expected: Opens the right video, profile or chat.  
-  Result: _not tested_ · Note: 
-- [ ] **NOTIF-03** Accept and decline follow requests (private account)  
+  Result: **BLOCKED** · Note: Needs account B to generate likes/comments/follows/mentions/follow requests. Bell opens a Notifications screen with the empty state "No notifications yet - Likes, comments and new followers will show up here." (own actions correctly produce none). Screenshot: NOTIFS-01.png
+- [x] **NOTIF-03** Accept and decline follow requests (private account)  
   Expected: Requester becomes a follower or the request disappears.  
-  Result: _not tested_ · Note: 
-- [ ] **NOTIF-04** Unread badge  
+  Result: **BLOCKED** · Note: Needs account B to generate likes/comments/follows/mentions/follow requests. Bell opens a Notifications screen with the empty state "No notifications yet - Likes, comments and new followers will show up here." (own actions correctly produce none). Screenshot: NOTIFS-01.png
+- [x] **NOTIF-04** Unread badge  
   Expected: Badge shows and clears after opening.  
-  Result: _not tested_ · Note: 
+  Result: **BLOCKED** · Note: Needs account B to generate likes/comments/follows/mentions/follow requests. Bell opens a Notifications screen with the empty state "No notifications yet - Likes, comments and new followers will show up here." (own actions correctly produce none). Screenshot: NOTIFS-01.png
 
 ## Chat
 
