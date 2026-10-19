@@ -58,7 +58,7 @@ class FlypVideoFilterModule : Module() {
       val decoders = DefaultDecoderFactory.Builder(context).setEnableDecoderFallback(true).build()
 
       val transformer = Transformer.Builder(context)
-        .setAssetLoaderFactory(DefaultAssetLoaderFactory(context, decoders, Clock.DEFAULT))
+        .setAssetLoaderFactory(DefaultAssetLoaderFactory(context, decoders, Clock.DEFAULT, null))
         // H.264 so every phone in the feed can play it; audio is passed through.
         .setVideoMimeType(MimeTypes.VIDEO_H264)
         .setEncoderFactory(encoders)
