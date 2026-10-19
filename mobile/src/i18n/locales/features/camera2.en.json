@@ -2,7 +2,7 @@
   "camera2": {
     "filters": "Filters",
     "beauty": "Beauty",
-    "applying": "Applying filter…",
+    "applying": "Applying effects…",
     "applyFailed": "Couldn't apply the filter",
     "postWithout": "Post without filter",
     "cancel": "Cancel",
@@ -18,7 +18,27 @@
       "cinema": "Cinema",
       "vivid": "Vivid",
       "silver": "Silver",
-      "ink": "Ink"
+      "ink": "Ink",
+      "sunset": "Sunset",
+      "neon": "Neon",
+      "dreamy": "Dreamy",
+      "fresh": "Fresh"
+    },
+    "effects": "Effects",
+    "none": "None",
+    "beautyAmount": "Beauty strength",
+    "fxUnavailable": "Face effects aren't available on this phone right now",
+    "fx": {
+      "dog": "Puppy",
+      "cat": "Kitty",
+      "bunny": "Bunny",
+      "shades": "Shades",
+      "glasses": "Round specs",
+      "crown": "Crown",
+      "hearts": "Hearts",
+      "sweet": "Sweet",
+      "hero": "Hero",
+      "halo": "Halo"
     }
   }
 }

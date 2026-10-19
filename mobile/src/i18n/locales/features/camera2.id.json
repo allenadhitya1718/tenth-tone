@@ -2,7 +2,7 @@
   "camera2": {
     "filters": "Filter",
     "beauty": "Kecantikan",
-    "applying": "Menerapkan filter…",
+    "applying": "Menerapkan efek…",
     "applyFailed": "Tidak dapat menerapkan filter",
     "postWithout": "Posting tanpa filter",
     "cancel": "Batal",
@@ -18,7 +18,27 @@
       "cinema": "Sinema",
       "vivid": "Cerah",
       "silver": "Perak",
-      "ink": "Tinta"
+      "ink": "Tinta",
+      "sunset": "Senja",
+      "neon": "Neon",
+      "dreamy": "Impian",
+      "fresh": "Segar"
+    },
+    "effects": "Efek",
+    "none": "Tanpa",
+    "beautyAmount": "Intensitas kecantikan",
+    "fxUnavailable": "Efek wajah tidak tersedia di ponsel ini saat ini",
+    "fx": {
+      "dog": "Anjing",
+      "cat": "Kucing",
+      "bunny": "Kelinci",
+      "shades": "Kacamata hitam",
+      "glasses": "Kacamata bulat",
+      "crown": "Mahkota",
+      "hearts": "Hati",
+      "sweet": "Manis",
+      "hero": "Pahlawan",
+      "halo": "Halo"
     }
   }
 }

@@ -2,7 +2,7 @@
   "camera2": {
     "filters": "滤镜",
     "beauty": "美颜",
-    "applying": "正在应用滤镜…",
+    "applying": "正在应用特效…",
     "applyFailed": "无法应用滤镜",
     "postWithout": "不加滤镜直接发布",
     "cancel": "取消",
@@ -18,7 +18,27 @@
       "cinema": "电影",
       "vivid": "鲜艳",
       "silver": "银色",
-      "ink": "水墨"
+      "ink": "水墨",
+      "sunset": "日落",
+      "neon": "霓虹",
+      "dreamy": "梦幻",
+      "fresh": "清新"
+    },
+    "effects": "特效",
+    "none": "无",
+    "beautyAmount": "美颜强度",
+    "fxUnavailable": "此手机暂时无法使用人脸特效",
+    "fx": {
+      "dog": "小狗",
+      "cat": "小猫",
+      "bunny": "兔子",
+      "shades": "墨镜",
+      "glasses": "圆框眼镜",
+      "crown": "皇冠",
+      "hearts": "爱心",
+      "sweet": "甜心",
+      "hero": "英雄",
+      "halo": "光环"
     }
   }
 }

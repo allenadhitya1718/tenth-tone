@@ -7,6 +7,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.Clock
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.effect.OverlayEffect
+import androidx.media3.effect.TextureOverlay
 import androidx.media3.effect.RgbMatrix
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultAssetLoaderFactory
@@ -23,6 +25,7 @@ import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.functions.Queues
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import org.json.JSONObject
 import java.io.File
 
 // Re-encodes a recorded clip with a colour matrix baked into every frame.
@@ -70,6 +73,61 @@ class FlypVideoFilterModule : Module() {
           override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) {
             out.delete()
             promise.reject("ERR_FILTER_EXPORT", exportException.message, exportException)
+          }
+        })
+        .build()
+
+      transformer.start(item, out.absolutePath)
+    }.runOnQueue(Queues.MAIN)
+
+    // Re-encodes with the look shader and the face-effect sprites. `specJson` is
+    // {"look": {vertex, fragment, uniforms} | null, "fx": timeline | null}, built
+    // by videoFilter.ts so the file runs the same maths as the Skia preview.
+    AsyncFunction("applyLook") { inputUri: String, specJson: String, bitRate: Int, promise: Promise ->
+      val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+      val spec = JSONObject(specJson)
+      val effects = ArrayList<Effect>()
+      val look = spec.optJSONObject("look")
+      if (look != null) {
+        val uniformsJson = look.getJSONObject("uniforms")
+        val uniforms = HashMap<String, FloatArray>()
+        for (name in uniformsJson.keys()) {
+          val arr = uniformsJson.getJSONArray(name)
+          uniforms[name] = FloatArray(arr.length()) { i -> arr.getDouble(i).toFloat() }
+        }
+        effects.add(LookShaderEffect(look.getString("vertex"), look.getString("fragment"), uniforms))
+      }
+      val fx = spec.optJSONObject("fx")
+      if (fx != null) {
+        // Sprites go on top of the graded picture, so they keep their own colours.
+        effects.add(OverlayEffect(listOf<TextureOverlay>(FxOverlay(FxTimeline.parse(fx)))))
+      }
+      require(effects.isNotEmpty()) { "Nothing to apply" }
+      val out = File(context.cacheDir, "flyp-look-${System.currentTimeMillis()}.mp4")
+
+      val uri = if (inputUri.startsWith("/")) Uri.fromFile(File(inputUri)) else Uri.parse(inputUri)
+      val item = EditedMediaItem.Builder(MediaItem.fromUri(uri))
+        .setEffects(Effects(emptyList(), effects))
+        .build()
+
+      val encoders = DefaultEncoderFactory.Builder(context)
+        .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder().setBitrate(bitRate).build())
+        .build()
+      // Same decoder fallback as applyColorMatrix (see the note there).
+      val decoders = DefaultDecoderFactory.Builder(context).setEnableDecoderFallback(true).build()
+
+      val transformer = Transformer.Builder(context)
+        .setAssetLoaderFactory(DefaultAssetLoaderFactory(context, decoders, Clock.DEFAULT, null))
+        .setVideoMimeType(MimeTypes.VIDEO_H264)
+        .setEncoderFactory(encoders)
+        .addListener(object : Transformer.Listener {
+          override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+            promise.resolve(Uri.fromFile(out).toString())
+          }
+
+          override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) {
+            out.delete()
+            promise.reject("ERR_LOOK_EXPORT", exportException.message, exportException)
           }
         })
         .build()

@@ -18,7 +18,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   type Comment,
@@ -89,6 +89,7 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   // The sheet sits at the bottom of a transparent modal, where KeyboardAvoidingView
   // did not lift it (seen on a Redmi, Android 12): lift the whole panel by the
   // keyboard height ourselves and shrink it so its top stays on screen.
@@ -157,14 +158,16 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
   useEffect(() => {
     const sub = Keyboard.addListener('keyboardDidShow', (e) => {
       setEmojiOpen(false);
-      setKbHeight(e.endCoordinates.height);
+      // endCoordinates.height leaves out the navigation-bar inset on edge-to-edge
+      // Android (measured: the composer sat ~24 px under the keyboard), so add it.
+      setKbHeight(e.endCoordinates.height + insets.bottom);
     });
     const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0));
     return () => {
       sub.remove();
       hide.remove();
     };
-  }, []);
+  }, [insets.bottom]);
 
   const send = useMutation({
     mutationFn: ({ body, parentId }: { body: string; parentId: string | null }) =>

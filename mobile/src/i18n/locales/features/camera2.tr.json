@@ -2,7 +2,7 @@
   "camera2": {
     "filters": "Filtreler",
     "beauty": "Güzellik",
-    "applying": "Filtre uygulanıyor…",
+    "applying": "Efektler uygulanıyor…",
     "applyFailed": "Filtre uygulanamadı",
     "postWithout": "Filtresiz paylaş",
     "cancel": "İptal",
@@ -18,7 +18,27 @@
       "cinema": "Sinema",
       "vivid": "Canlı",
       "silver": "Gümüş",
-      "ink": "Mürekkep"
+      "ink": "Mürekkep",
+      "sunset": "Gün batımı",
+      "neon": "Neon",
+      "dreamy": "Rüya gibi",
+      "fresh": "Ferah"
+    },
+    "effects": "Efektler",
+    "none": "Yok",
+    "beautyAmount": "Güzellik şiddeti",
+    "fxUnavailable": "Yüz efektleri bu telefonda şu anda kullanılamıyor",
+    "fx": {
+      "dog": "Köpek",
+      "cat": "Kedi",
+      "bunny": "Tavşan",
+      "shades": "Güneş gözlüğü",
+      "glasses": "Yuvarlak gözlük",
+      "crown": "Taç",
+      "hearts": "Kalpler",
+      "sweet": "Tatlı",
+      "hero": "Kahraman",
+      "halo": "Hale"
     }
   }
 }

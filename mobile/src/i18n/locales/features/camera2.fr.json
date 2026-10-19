@@ -2,7 +2,7 @@
   "camera2": {
     "filters": "Filtres",
     "beauty": "Beauté",
-    "applying": "Application du filtre…",
+    "applying": "Application des effets…",
     "applyFailed": "Impossible d'appliquer le filtre",
     "postWithout": "Publier sans filtre",
     "cancel": "Annuler",
@@ -18,7 +18,27 @@
       "cinema": "Cinéma",
       "vivid": "Éclatant",
       "silver": "Argent",
-      "ink": "Encre"
+      "ink": "Encre",
+      "sunset": "Coucher de soleil",
+      "neon": "Néon",
+      "dreamy": "Rêveur",
+      "fresh": "Frais"
+    },
+    "effects": "Effets",
+    "none": "Aucun",
+    "beautyAmount": "Intensité du lissage",
+    "fxUnavailable": "Les effets de visage ne sont pas disponibles sur ce téléphone pour le moment",
+    "fx": {
+      "dog": "Chiot",
+      "cat": "Chaton",
+      "bunny": "Lapin",
+      "shades": "Lunettes de soleil",
+      "glasses": "Lunettes rondes",
+      "crown": "Couronne",
+      "hearts": "Cœurs",
+      "sweet": "Mignon",
+      "hero": "Héros",
+      "halo": "Auréole"
     }
   }
 }
