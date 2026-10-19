@@ -12,8 +12,8 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 |---|---|
 | Pass | 60 |
 | Fail | 5 |
-| Blocked | 41 |
-| Not tested | 77 |
+| Blocked | 43 |
+| Not tested | 75 |
 
 ## Sections
 
@@ -341,12 +341,12 @@ _Use phones A and B._
 - [ ] **CHAT-05** Open a chat with an old photo (older than a week)  
   Expected: Photo still loads (not a blank box).  
   Result: _not tested_ · Note: 
-- [ ] **CHAT-06** Record a voice note: hold to record, release to send  
+- [x] **CHAT-06** Record a voice note: hold to record, release to send  
   Expected: Sends; plays on the other phone.  
-  Result: _not tested_ · Note: 
-- [ ] **CHAT-07** Voice note: slide to cancel, and tap to lock  
+  Result: **BLOCKED** · Note: Hold-to-record on A shows the red state briefly, then the toast "Couldn't record. Try again." and nothing is sent. Mic permission is granted; logcat: "MediaRecorderService: OMX service is not available" (emulator media encoder). Likely emulator limitation but the app gives no detail - retest on a real phone. Emulator A, API 34, 2/2. Screenshots: CHAT-06-hold.png, CHAT-06-sent.png
+- [x] **CHAT-07** Voice note: slide to cancel, and tap to lock  
   Expected: Cancel discards; lock keeps recording hands-free.  
-  Result: _not tested_ · Note: 
+  Result: **BLOCKED** · Note: Depends on voice recording (see CHAT-06).
 - [x] **CHAT-08** Long-press a message: react, reply, copy, delete  
   Expected: Each works; delete removes it for you.  
   Result: **PASS** · Note: Long-press opens a sheet with 8 quick reactions + more, Reply, Copy, Cancel (and Delete on own messages). Heart reaction shows under the message on A and on B (B only after leaving and re-opening the chat). Delete asks "Delete message? This message will be deleted for everyone." and the message disappeared on A at once. BUG (minor): on B, with the chat open, the deleted message and the reaction did NOT update live - they only updated after leaving and reopening the chat (retry 1/1). Reply and Copy not exercised. Screenshots: CHAT-08*.png
