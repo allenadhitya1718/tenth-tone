@@ -7,6 +7,7 @@
     "noRoom": "#{{tag}}: no queda espacio en la descripción",
     "place": "Lugar",
     "rateLimited": "No hay más sugerencias por ahora. Vuelve a intentarlo en un rato.",
-    "hint": "Toca un hashtag para añadirlo a tu descripción"
+    "hint": "Toca un hashtag para añadirlo a tu descripción",
+    "suggestButton": "Sugerir hashtags"
   }
 }

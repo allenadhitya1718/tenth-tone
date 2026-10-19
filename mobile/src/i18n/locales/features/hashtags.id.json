@@ -7,6 +7,7 @@
     "noRoom": "#{{tag}}: keterangan sudah penuh",
     "place": "Tempat",
     "rateLimited": "Belum ada saran lagi untuk saat ini. Coba lagi sebentar lagi.",
-    "hint": "Ketuk hashtag untuk menambahkannya ke keteranganmu"
+    "hint": "Ketuk hashtag untuk menambahkannya ke keteranganmu",
+    "suggestButton": "Sarankan hashtag"
   }
 }

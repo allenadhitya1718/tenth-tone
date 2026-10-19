@@ -7,6 +7,7 @@
     "noRoom": "#{{tag}}: no room left in the caption",
     "place": "Place",
     "rateLimited": "No more suggestions for now. Try again in a little while.",
-    "hint": "Tap a hashtag to add it to your caption"
+    "hint": "Tap a hashtag to add it to your caption",
+    "suggestButton": "Suggest hashtags"
   }
 }

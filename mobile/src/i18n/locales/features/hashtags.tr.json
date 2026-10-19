@@ -7,6 +7,7 @@
     "noRoom": "#{{tag}}: açıklamada yer kalmadı",
     "place": "Yer",
     "rateLimited": "Şimdilik başka öneri yok. Biraz sonra tekrar dene.",
-    "hint": "Açıklamana eklemek için bir hashtag'e dokun"
+    "hint": "Açıklamana eklemek için bir hashtag'e dokun",
+    "suggestButton": "Hashtag öner"
   }
 }

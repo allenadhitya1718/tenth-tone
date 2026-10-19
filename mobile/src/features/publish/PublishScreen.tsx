@@ -283,10 +283,13 @@ export function SuggestedHashtags({
   const tint = isDark ? colors.primary2 : colors.primary;
   const lang = tagLangFor(i18n.language);
   const placeName = place?.trim() || null;
+  // Only on request: each suggestion is a Gemini call, and the free tier's
+  // daily cap is shared with upload screening, which must always run.
+  const [asked, setAsked] = useState(false);
   const q = useQuery({
     queryKey: suggestTagsKeys.forImage(image?.uri ?? null, placeName, lang),
     queryFn: () => suggestTags({ image, place: placeName, lang }),
-    enabled: !!image,
+    enabled: !!image && asked,
     staleTime: Infinity,
     gcTime: 30 * 60 * 1000,
     retry: false,
@@ -295,6 +298,19 @@ export function SuggestedHashtags({
   });
 
   if (!image) return null;
+  if (!asked) {
+    return (
+      <Pressable
+        onPress={() => setAsked(true)}
+        disabled={disabled}
+        accessibilityRole="button"
+        style={[styles.suggestChip, { alignSelf: 'flex-start', backgroundColor: colors.bg2, borderColor: colors.border }]}
+      >
+        <Ionicons name="sparkles" size={14} color={tint} />
+        <Text style={{ color: tint, fontWeight: '700', fontSize: 13 }}>{t('hashtags.suggestButton')}</Text>
+      </Pressable>
+    );
+  }
   const rateLimited = q.error instanceof ApiError && q.error.code === 'rate_limited';
   if (q.isError && !rateLimited) return null;
   const tags = q.data ? [...(q.data.placeTag ? [q.data.placeTag] : []), ...q.data.tags] : [];

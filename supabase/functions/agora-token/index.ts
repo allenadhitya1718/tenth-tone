@@ -171,6 +171,21 @@ Deno.serve(async (req) => {
     const token = RtcTokenBuilder.buildTokenWithUid(
       APP_ID, APP_CERT, channel, uid, wantsHost ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER, expireAt, expireAt,
     );
+
+    // Usage log (0129): nothing else records walkie time, and Agora bills it
+    // per minute. Best effort: a failure (0129 not applied yet) never costs
+    // the user their token.
+    try {
+      const svc = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '', { auth: { persistSession: false } });
+      const { error: logErr } = await svc.from('walkie_sessions').insert({
+        user_id: userId, chat_id: chatId, role: wantsHost ? 'host' : 'audience',
+        expires_at: new Date(expireAt * 1000).toISOString(),
+      });
+      if (logErr) console.warn('[agora-token] walkie log:', logErr.code, logErr.message);
+    } catch (e) {
+      console.warn('[agora-token] walkie log:', (e as Error)?.message);
+    }
+
     return json({ token, uid, channel, expiresAt: expireAt, role: wantsHost ? 'host' : 'audience' });
   }
 

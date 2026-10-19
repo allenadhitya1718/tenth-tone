@@ -7,6 +7,7 @@
     "noRoom": "#{{tag}} : plus de place dans la légende",
     "place": "Lieu",
     "rateLimited": "Plus de suggestions pour le moment. Réessayez dans un petit moment.",
-    "hint": "Touchez un hashtag pour l'ajouter à votre légende"
+    "hint": "Touchez un hashtag pour l'ajouter à votre légende",
+    "suggestButton": "Suggérer des hashtags"
   }
 }
