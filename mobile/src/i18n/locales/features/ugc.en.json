@@ -1,0 +1,32 @@
+{
+  "ugc": {
+    "reply": "Reply",
+    "replyingTo": "Replying to {{handle}}",
+    "cancelReply": "Cancel reply",
+    "viewReplies": "View replies ({{count}})",
+    "hideReplies": "Hide replies",
+    "report": "Report",
+    "reportTitle": "Why are you reporting this?",
+    "reasonInappropriate": "Inappropriate content",
+    "reasonHate": "Hate speech or bullying",
+    "reasonViolence": "Violence or shocking content",
+    "reasonImpersonation": "Impersonation",
+    "reasonMisleading": "Misleading content",
+    "reasonSpam": "Spam",
+    "reasonOther": "Other",
+    "detailsPlaceholder": "Add details (optional)",
+    "submit": "Send report",
+    "reportSent": "Thanks, we received your report",
+    "reportFailed": "Could not send the report",
+    "commentsOff": "Comments are turned off for this video",
+    "blockTitle": "Block {{name}}?",
+    "blockBody": "They will not be able to find your profile, follow you or message you, and you will not see their videos or comments. You can unblock them any time in Settings > Blocked accounts.",
+    "blockConfirm": "Block",
+    "blockedToast": "{{name}} is blocked",
+    "blockFailed": "Could not block this account",
+    "reportUser": "Report account",
+    "blockUser": "Block account",
+    "moreOptions": "More options",
+    "mentionList": "People you can mention"
+  }
+}

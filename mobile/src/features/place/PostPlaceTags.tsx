@@ -9,6 +9,7 @@ import { fetchPostExtras, tagKeys } from '@/api/tags';
 import type { Uuid } from '@/api/types';
 
 import { openPlaceInMaps } from './placeName';
+import { atHandle } from '@/lib/handle';
 
 const SHOWN = 3;
 
@@ -48,7 +49,7 @@ export function PostPlaceTags({ videoId, active }: { videoId: Uuid; active: bool
               <Fragment key={p.id}>
                 {i ? ', ' : ''}
                 <Text style={styles.name} onPress={() => router.push(`/user/${p.id}`)} accessibilityRole="link">
-                  @{p.handle ?? p.name}
+                  {atHandle(p.handle ?? p.name)}
                 </Text>
               </Fragment>
             ))}

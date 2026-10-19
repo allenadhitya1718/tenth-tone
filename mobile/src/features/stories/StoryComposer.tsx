@@ -286,7 +286,7 @@ export function StoryComposer() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>
       <TopBar title={t('stories.newStory')} onBack={leave} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.previewRow}>
             <View style={[styles.preview, { backgroundColor: colors.bg3 }]}>

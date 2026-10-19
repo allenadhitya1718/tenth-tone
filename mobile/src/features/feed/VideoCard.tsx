@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEventListener } from 'expo';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -7,14 +8,16 @@ import { router } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Animated, AppState, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
 import { countShare, videoLink } from '@/api/discover';
 import type { Video } from '@/api/types';
 import { trackEngagement } from '@/api/videos';
 import { PostPlaceTags } from '@/features/place/PostPlaceTags';
+import { ReportSheet } from '@/features/safety/ReportSheet';
 import { useAuth } from '@/providers/AuthProvider';
 
+import { patchVideoEverywhere } from './cache';
 import { formatCount } from './format';
 import { useToggleFollow, useToggleLike, useToggleSave } from './useFeed';
 
@@ -137,10 +140,12 @@ function Overlay({
   const likeM = useToggleLike();
   const saveM = useToggleSave();
   const followM = useToggleFollow();
+  const qc = useQueryClient();
   const [heart] = useState(() => new Animated.Value(0));
   const lastTap = useRef(0);
 
   const isMine = video.user?.id === me;
+  const [reportOpen, setReportOpen] = useState(false);
 
   function toggleLike(next = !video.liked) {
     if (next === video.liked) return;
@@ -167,11 +172,28 @@ function Overlay({
     }, 290);
   }
 
+  // Only a completed share counts. iOS says so (sharedAction vs
+  // dismissedAction). Android's Share.share resolves "shared" even when the
+  // chooser is cancelled, so there a share counts only if the app really went
+  // to the background, which is what picking a target app does and cancelling
+  // the chooser does not.
   async function share() {
+    let wentAway = false;
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'background' || s === 'inactive') wentAway = true;
+    });
     try {
       const res = await Share.share({ message: videoLink(video.id) });
-      if (res.action === Share.sharedAction) void countShare(video.id);
-    } catch {}
+      const done = res.action === Share.sharedAction && (Platform.OS !== 'android' || wentAway);
+      if (done) {
+        void countShare(video.id);
+        patchVideoEverywhere(qc, video.id, (v) => ({ ...v, shares_count: (v.shares_count ?? 0) + 1 }));
+      }
+    } catch {
+      /* a failed share sheet is not a share */
+    } finally {
+      sub.remove();
+    }
   }
 
   return (
@@ -247,7 +269,9 @@ function Overlay({
           onPress={() => saveM.mutate({ id: video.id, next: !video.saved })}
         />
         <RailButton icon="arrow-redo" label={formatCount(video.shares_count)} a11y={t('feed.share')} onPress={share} />
+        {!isMine ? <RailButton icon="flag-outline" label={t('ugc.report')} a11y={t('ugc.report')} onPress={() => setReportOpen(true)} /> : null}
       </View>
+      <ReportSheet visible={reportOpen} onClose={() => setReportOpen(false)} targetType="video" targetId={video.id} />
 
       <View style={styles.caption} pointerEvents="box-none">
         {/* Profile photo in place of the "@", like the client asked. */}

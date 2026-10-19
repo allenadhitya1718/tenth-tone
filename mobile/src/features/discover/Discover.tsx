@@ -23,6 +23,7 @@ import { FollowButton } from './FollowButton';
 import { go, tagPath, userPath } from './nav';
 import { Avatar, EmptyState, ErrorState, LoadingState, SectionHead } from './parts';
 import { GRID_GAP, useTileStyle, VideoTileCell } from './rows';
+import { atHandle } from '@/lib/handle';
 
 const TAGS = 10;
 const PEOPLE = 12;
@@ -208,7 +209,7 @@ const PersonCard = memo(function PersonCard({ person }: { person: PersonResult }
         onPress={() => go(userPath(person.id))}
         style={styles.cardMain}
         accessibilityRole="button"
-        accessibilityLabel={[display, person.handle ? `@${person.handle}` : null].filter(Boolean).join(', ')}
+        accessibilityLabel={[display, person.handle ? atHandle(person.handle) : null].filter(Boolean).join(', ')}
       >
         <Avatar uri={person.avatar_url} name={display} size={64} />
         <View style={styles.cardName}>
@@ -219,7 +220,7 @@ const PersonCard = memo(function PersonCard({ person }: { person: PersonResult }
         </View>
         {person.handle ? (
           <Text style={[styles.cardHandle, { color: colors.muted }]} numberOfLines={1}>
-            @{person.handle}
+            {atHandle(person.handle)}
           </Text>
         ) : null}
       </Pressable>

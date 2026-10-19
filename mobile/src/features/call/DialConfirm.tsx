@@ -10,6 +10,7 @@ import { fetchProfile, profileKeys } from '@/api/profiles';
 import { Avatar } from '@/features/chat/Avatar';
 
 import { dialPath, leaveCallScreen } from './nav';
+import { atHandle } from '@/lib/handle';
 
 // A /call/dial link that did not come from inside the app (a deep link from a
 // web page, a message, another app). Nothing rings until the person says so,
@@ -59,7 +60,7 @@ export function DialConfirm({ to, kind }: { to: string; kind: CallKind }) {
       <>
         <Avatar uri={person.avatar_url} name={name} size={112} />
         <Text style={styles.title}>{t('call.confirmTitle', { name })}</Text>
-        {person.handle ? <Text style={styles.sub}>@{person.handle}</Text> : null}
+        {person.handle ? <Text style={styles.sub}>{atHandle(person.handle)}</Text> : null}
         <Text style={styles.sub}>{t('call.confirmBody')}</Text>
         <Pressable onPress={call} style={styles.callBtn} accessibilityRole="button">
           <Ionicons name={kind === 'video' ? 'videocam' : 'call'} size={20} color={INK} />

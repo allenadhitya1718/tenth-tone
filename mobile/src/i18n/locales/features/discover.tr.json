@@ -8,18 +8,22 @@
       "errorSub": "Bağlantını kontrol edip tekrar dene.",
       "retry": "Tekrar dene",
       "seeAll": "Tümünü gör",
-      "followers": "{{n}} takipçi",
       "video": "Video",
-      "plays": "{{n}} oynatma",
       "share": "Paylaş",
       "videosCount_one": "{{n}} video",
-      "videosCount_other": "{{n}} video"
+      "videosCount_other": "{{n}} video",
+      "followers_other": "{{n}} takipçi",
+      "plays_other": "{{n}} oynatma"
     },
     "follow": {
       "follow": "Takip et",
       "following": "Takip ediliyor",
       "requested": "İstek gönderildi",
-      "failed": "Güncellenemedi. Tekrar dene."
+      "failed": "Güncellenemedi. Tekrar dene.",
+      "cancelRequestTitle": "Takip isteği iptal edilsin mi?",
+      "cancelRequestBody": "{{name}} kişisini takip etme isteğin geri çekilecek.",
+      "cancelRequestConfirm": "İsteği iptal et",
+      "cancelRequestKeep": "İsteği koru"
     },
     "search": {
       "placeholder": "Kişi, video, ses ara",

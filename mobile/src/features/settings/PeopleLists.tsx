@@ -16,6 +16,7 @@ import {
 } from '@/api/safety';
 import type { UserSummary } from '@/api/types';
 import { TopBar } from '@/components/ui';
+import { atHandle } from '@/lib/handle';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { confirm, EmptyView, ErrorView, LoadingView, Note, PersonRow, showError, type IconName } from './components';
@@ -185,7 +186,7 @@ export function BlockedScreen() {
             name={shown}
             handle={u.handle}
             avatarUrl={u.avatar_url || null}
-            subtitle={known ? (u.handle ? `@${u.handle}` : '') : t('settings2.blocked.mutual')}
+            subtitle={known ? (u.handle ? atHandle(u.handle) : '') : t('settings2.blocked.mutual')}
             actionLabel={t('settings2.blocked.unblock')}
             busy={busyId === u.id}
             onAction={() => unblock(u.id, shown)}

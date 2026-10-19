@@ -24,6 +24,7 @@ import { openOrCreateDm } from '@/api/chat';
 import { profileLink } from '@/api/discover';
 import {
   fetchProfile,
+  cancelFollowRequest,
   follow,
   hasRequestedFollow,
   isFollowing,
@@ -38,7 +39,11 @@ import { Button } from '@/components/ui';
 import { DraftSheet } from '@/features/drafts/DraftSheet';
 import { ProfilePlacesMap } from '@/features/map/ProfilePlacesMap';
 import { formatCount } from '@/features/feed/format';
+import { BottomSheet } from '@/features/safety/BottomSheet';
+import { ReportSheet } from '@/features/safety/ReportSheet';
+import { useBlock } from '@/features/safety/useBlock';
 import { ProfileStoryAvatar } from '@/features/stories/ProfileStoryAvatar';
+import { atHandle } from '@/lib/handle';
 import { useTheme } from '@/providers/ThemeProvider';
 
 type Tab = 'videos' | 'audio' | 'map' | 'saved' | 'drafts';
@@ -171,6 +176,15 @@ function ProfileHeader({ profile, userId, isMe, loading }: { profile: Profile | 
   const share = () => {
     if (profile?.handle) void Share.share({ message: profileLink(profile.handle) });
   };
+  // Report and block live behind a "more" button on other people's profiles.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const confirmBlock = useBlock();
+  const shownName = profile?.name ?? profile?.handle ?? '';
+  async function onBlock() {
+    setMenuOpen(false);
+    if (await confirmBlock(userId, shownName)) router.back();
+  }
 
   return (
     <View>
@@ -185,12 +199,42 @@ function ProfileHeader({ profile, userId, isMe, loading }: { profile: Profile | 
           </Pressable>
         )}
         <Text style={[styles.topHandle, { color: colors.text }]} numberOfLines={1}>
-          {profile?.handle ? `@${profile.handle}` : ''}
+          {profile?.handle ? atHandle(profile.handle) : ''}
         </Text>
-        <Pressable onPress={share} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('profile.share')}>
-          <Ionicons name="share-social-outline" size={24} color={colors.text} />
-        </Pressable>
+        <View style={styles.topRight}>
+          <Pressable onPress={share} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('profile.share')}>
+            <Ionicons name="share-social-outline" size={24} color={colors.text} />
+          </Pressable>
+          {!isMe && profile ? (
+            <Pressable onPress={() => setMenuOpen(true)} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('ugc.moreOptions')}>
+              <Ionicons name="ellipsis-horizontal" size={24} color={colors.text} />
+            </Pressable>
+          ) : null}
+        </View>
       </View>
+
+      {!isMe ? (
+        <>
+          <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)}>
+            <Pressable
+              style={styles.menuRow}
+              accessibilityRole="button"
+              onPress={() => {
+                setMenuOpen(false);
+                setReporting(true);
+              }}
+            >
+              <Ionicons name="flag-outline" size={22} color={colors.text} />
+              <Text style={[styles.menuText, { color: colors.text }]}>{t('ugc.reportUser')}</Text>
+            </Pressable>
+            <Pressable style={styles.menuRow} accessibilityRole="button" onPress={() => void onBlock()}>
+              <Ionicons name="ban-outline" size={22} color="#ff453a" />
+              <Text style={[styles.menuText, { color: '#ff453a' }]}>{t('ugc.blockUser')}</Text>
+            </Pressable>
+          </BottomSheet>
+          <ReportSheet visible={reporting} onClose={() => setReporting(false)} targetType="user" targetId={userId} />
+        </>
+      ) : null}
 
       {loading ? <Spinner /> : null}
 
@@ -247,7 +291,12 @@ function OtherActions({ profile }: { profile: Profile }) {
   const state = following.data ? 'following' : requested.data ? 'requested' : 'none';
 
   const toggle = useMutation({
-    mutationFn: async () => (state === 'none' ? follow(profile.id) : (await unfollow(profile.id), 'none' as const)),
+    mutationFn: async () => {
+      if (state === 'none') return follow(profile.id);
+      if (state === 'requested') await cancelFollowRequest(profile.id);
+      else await unfollow(profile.id);
+      return 'none' as const;
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: profileKeys.isFollowing(profile.id) });
       void qc.invalidateQueries({ queryKey: profileKeys.hasRequestedFollow(profile.id) });
@@ -258,6 +307,14 @@ function OtherActions({ profile }: { profile: Profile }) {
   });
 
   function onFollowPress() {
+    if (state === 'requested') {
+      const name = profile.name ?? profile.handle ?? '';
+      Alert.alert(t('discover.follow.cancelRequestTitle'), t('discover.follow.cancelRequestBody', { name }), [
+        { text: t('discover.follow.cancelRequestKeep'), style: 'cancel' },
+        { text: t('discover.follow.cancelRequestConfirm'), style: 'destructive', onPress: () => toggle.mutate() },
+      ]);
+      return;
+    }
     // Leaving a private account means asking again and waiting, so only that
     // unfollow is confirmed.
     if (state === 'following' && profile.is_private) {
@@ -339,6 +396,9 @@ const normalizeLink = (l: string) => (/^https?:\/\//i.test(l) ? l : `https://${l
 
 const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 48 },
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  menuRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 16 },
+  menuText: { fontSize: 16, fontWeight: '600' },
   topHandle: { fontSize: 16, fontWeight: '800', flex: 1, textAlign: 'center' },
   top: { alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14 },
   avatarWrap: { marginTop: 2 },

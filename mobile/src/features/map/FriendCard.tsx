@@ -20,6 +20,7 @@ import { locationErrorKey } from './errors';
 import { distanceMeters, formatDistance, openDirections, type LatLng } from './geo';
 import { PersonAvatar } from './PersonAvatar';
 import { isStale, type Pin } from './usePins';
+import { atHandle } from '@/lib/handle';
 
 type Props = {
   pin: Pin;
@@ -105,7 +106,7 @@ export function FriendCard({ pin, me, now, following, bottomInset, onFollow, onC
             </AppText>
             {pin.handle ? (
               <AppText variant="small" muted numberOfLines={1}>
-                @{pin.handle}
+                {atHandle(pin.handle)}
               </AppText>
             ) : null}
             <AppText variant="small" muted numberOfLines={1}>

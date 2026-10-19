@@ -14,6 +14,7 @@ import { FollowButton } from './FollowButton';
 import { go, isImageUrl, soundPath, tagPath, userPath, videoPath } from './nav';
 import { Avatar } from './parts';
 import { makeThemed } from './themed';
+import { atHandle } from '@/lib/handle';
 
 export type PersonLike = UserSummary & { followers_count?: number | null };
 
@@ -33,8 +34,8 @@ export const PersonRow = memo(function PersonRow({
   const th = useThemed();
   const display = person.name || person.handle || '';
   const meta = [
-    person.handle ? `@${person.handle}` : null,
-    person.followers_count != null ? t('discover.common.followers', { n: formatCount(person.followers_count) }) : null,
+    person.handle ? atHandle(person.handle) : null,
+    person.followers_count != null ? t('discover.common.followers', { n: formatCount(person.followers_count), count: Number(person.followers_count) }) : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -102,7 +103,7 @@ export const VideoTileCell = memo(function VideoTileCell({
         go(videoPath(video.id));
       }}
       accessibilityRole="button"
-      accessibilityLabel={[video.description?.trim() || t('discover.common.video'), t('discover.common.plays', { n: count })].join(', ')}
+      accessibilityLabel={[video.description?.trim() || t('discover.common.video'), t('discover.common.plays', { n: count, count: Number(video.views_count ?? video.likes_count ?? 0) })].join(', ')}
     >
       {isImageUrl(video.thumbnail) ? (
         <Image source={{ uri: video.thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" recyclingKey={video.id} transition={120} />

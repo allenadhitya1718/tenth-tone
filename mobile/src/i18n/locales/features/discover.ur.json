@@ -8,18 +8,23 @@
       "errorSub": "اپنا کنکشن چیک کریں اور دوبارہ کوشش کریں۔",
       "retry": "دوبارہ کوشش کریں",
       "seeAll": "سب دیکھیں",
-      "followers": "{{n}} فالوورز",
       "video": "ویڈیو",
-      "plays": "{{n}} بار چلایا گیا",
       "share": "شیئر",
       "videosCount_one": "{{n}} ویڈیو",
-      "videosCount_other": "{{n}} ویڈیوز"
+      "videosCount_other": "{{n}} ویڈیوز",
+      "followers_one": "{{n}} فالوور",
+      "followers_other": "{{n}} فالوورز",
+      "plays_other": "{{n}} بار چلایا گیا"
     },
     "follow": {
       "follow": "فالو",
       "following": "فالوئنگ",
       "requested": "درخواست بھیجی گئی",
-      "failed": "اپ ڈیٹ نہیں ہو سکا۔ دوبارہ کوشش کریں۔"
+      "failed": "اپ ڈیٹ نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+      "cancelRequestTitle": "فالو کی درخواست منسوخ کریں؟",
+      "cancelRequestBody": "{{name}} کو فالو کرنے کی آپ کی درخواست واپس لے لی جائے گی۔",
+      "cancelRequestConfirm": "درخواست منسوخ کریں",
+      "cancelRequestKeep": "درخواست رہنے دیں"
     },
     "search": {
       "placeholder": "لوگ، ویڈیوز، ساؤنڈز تلاش کریں",

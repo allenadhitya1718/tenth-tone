@@ -6,12 +6,14 @@
 import type { PostgrestError } from '@supabase/supabase-js';
 
 import { ApiError, requireUid, supabase, uid } from './client';
-import { attach, checkText } from './moderation';
+import { attach, checkText, report } from './moderation';
 import type { Iso, UserSummary, Uuid } from './types';
 
 export const commentKeys = {
   thread: (videoId: Uuid) => ['comments', videoId] as const,
   mine: () => ['myComments'] as const,
+  allowed: (videoId: Uuid) => ['commentsAllowed', videoId] as const,
+  mentions: (prefix: string) => ['mentions', prefix] as const,
 };
 
 export type Comment = {
@@ -20,6 +22,8 @@ export type Comment = {
   likes_count: number;
   created_at: Iso;
   user_id?: Uuid;
+  // Null for a top-level comment; replies sit one level under their parent.
+  parent_id?: Uuid | null;
   user: Pick<UserSummary, 'id' | 'name' | 'handle' | 'avatar_url'> | null;
   // Whether I liked it. Absent when signed out or the lookup failed.
   liked?: boolean;
@@ -31,7 +35,7 @@ export async function fetchComments(videoId: Uuid): Promise<Comment[]> {
     .from('comments')
     .select(
       `
-      id, text, likes_count, created_at, user_id,
+      id, text, likes_count, created_at, user_id, parent_id,
       user:profiles!comments_user_id_fkey ( id, name, handle, avatar_url )
     `,
     )
@@ -46,10 +50,16 @@ export async function fetchComments(videoId: Uuid): Promise<Comment[]> {
   // settings area (fetchHiddenWords / fetchRestricted) and, like those, read
   // an error as "nothing".
   try {
-    const [wordsRes, restrictedRes] = await Promise.all([
+    const [wordsRes, restrictedRes, blockedRes] = await Promise.all([
       supabase.from('hidden_words').select('word').eq('user_id', me),
       supabase.from('restricted_users').select('restricted_id').eq('user_id', me),
+      supabase.from('blocks').select('blocked_id').eq('blocker_id', me),
     ]);
+    // People I blocked: their comments are gone from my view.
+    const blockedIds = new Set(
+      blockedRes.error ? [] : ((blockedRes.data ?? []) as { blocked_id: Uuid }[]).map((r) => r.blocked_id),
+    );
+    if (blockedIds.size) rows = rows.filter((r) => !blockedIds.has(r.user_id ?? r.user?.id ?? ''));
     const words = wordsRes.error ? [] : ((wordsRes.data ?? []) as { word: string }[]).map((r) => r.word);
     const restrictedIds = new Set(
       restrictedRes.error
@@ -112,16 +122,21 @@ export type OnCommentWithdrawn = (commentId: Uuid, message: string | null) => vo
 // froze the box for 1.3-2.7 s on the most-used action in the app. The trade:
 // a violating comment is visible from the insert until the verdict lands
 // (about a second), then it is withdrawn and its author told.
-export async function postComment(videoId: Uuid, text: string, onWithdrawn?: OnCommentWithdrawn): Promise<Comment> {
+export async function postComment(
+  videoId: Uuid,
+  text: string,
+  onWithdrawn?: OnCommentWithdrawn,
+  parentId?: Uuid | null,
+): Promise<Comment> {
   const me = await requireUid();
   const screening = checkText('comment', text).catch(() => null);
 
   const { data, error } = await supabase
     .from('comments')
-    .insert({ video_id: videoId, user_id: me, text })
+    .insert({ video_id: videoId, user_id: me, text, ...(parentId ? { parent_id: parentId } : {}) })
     .select(
       `
-      id, text, likes_count, created_at,
+      id, text, likes_count, created_at, parent_id,
       user:profiles!comments_user_id_fkey ( id, name, handle, avatar_url )
     `,
     )
@@ -173,6 +188,51 @@ async function withdraw(id: Uuid, message: string | null, onWithdrawn?: OnCommen
 export async function deleteComment(id: Uuid): Promise<void> {
   const { error } = await supabase.from('comments').delete().eq('id', id);
   if (error) throw error;
+}
+
+// Whether the owner has comments switched on for this video. Null while it
+// cannot be read, which callers treat as "on" (the server still decides).
+export async function fetchCommentsAllowed(videoId: Uuid): Promise<boolean | null> {
+  const { data, error } = await supabase.from('videos').select('allow_comments').eq('id', videoId).maybeSingle();
+  if (error || !data) return null;
+  return (data as { allow_comments: boolean | null }).allow_comments !== false;
+}
+
+// Reports one comment into the same queue as every other report. The
+// reasons are stored in the same Arabic wording the web app wrote, so the
+// admin panel reads one vocabulary.
+export async function reportComment(commentId: Uuid, reason: string): Promise<void> {
+  await report({ targetType: 'comment', targetId: commentId, reason });
+}
+
+export type MentionCandidate = {
+  id: Uuid;
+  handle: string;
+  name: string | null;
+  avatar_url: string | null;
+};
+
+// search_handles (0035) is a prefix search that already hides blocked people
+// in both directions. People I follow, or who follow me, come first.
+export async function searchMentions(prefix: string, limit = 5): Promise<MentionCandidate[]> {
+  const p = prefix.replace(/^@+/, '').trim();
+  if (!p) return [];
+  const { data, error } = await supabase.rpc('search_handles', { p_prefix: p, p_limit: 20 });
+  if (error) throw error;
+  const rows = ((data ?? []) as MentionCandidate[]).filter((r) => r.handle);
+  const me = await uid();
+  if (!me) return rows.slice(0, limit);
+  const ids = rows.map((r) => r.id);
+  const [following, followers] = await Promise.all([
+    supabase.from('follows').select('followed_id').eq('follower_id', me).in('followed_id', ids),
+    supabase.from('follows').select('follower_id').eq('followed_id', me).in('follower_id', ids),
+  ]);
+  const close = new Set<string>([
+    ...((following.data ?? []) as { followed_id: string }[]).map((r) => r.followed_id),
+    ...((followers.data ?? []) as { follower_id: string }[]).map((r) => r.follower_id),
+  ]);
+  const ranked = [...rows.filter((r) => close.has(r.id)), ...rows.filter((r) => !close.has(r.id))];
+  return ranked.filter((r) => r.id !== me).slice(0, limit);
 }
 
 // ---------- Your activity ----------

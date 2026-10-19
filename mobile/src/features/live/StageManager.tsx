@@ -10,6 +10,7 @@ import { useTheme } from '@/providers/ThemeProvider';
 import { MAX_GUESTS } from './config';
 import { Avatar, Sheet } from './Sheet';
 import { fetchLiveViewers, liveViewersKey } from './viewers';
+import { atHandle } from '@/lib/handle';
 
 // The host's stage manager (client note 6): requests to approve or turn
 // down, the guests on stage to remove, open invites to withdraw, and the
@@ -115,7 +116,7 @@ export function StageManager({
                   </Text>
                   {item.user.handle ? (
                     <Text style={[styles.handle, { color: colors.muted }]} numberOfLines={1}>
-                      @{item.user.handle.replace(/^@/, '')}
+                      {atHandle(item.user.handle)}
                     </Text>
                   ) : null}
                 </View>

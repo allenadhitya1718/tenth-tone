@@ -174,3 +174,16 @@ const SCENE = [
 export function swatchColors(id: FilterId): string[] {
   return SCENE.map((rgb) => apply(MATRICES[id], rgb));
 }
+
+/**
+ * A flat colour to lay over the plain camera picture when the Skia preview is
+ * unavailable: what the filter does to mid grey, at low opacity. It only hints
+ * at the look; the exact matrix is still baked into the file after recording.
+ */
+export function tintOverlayColor(m: ColorMatrix): string {
+  const ch = [0, 1, 2].map((row) => {
+    const v = m[row * 5 + 4] + m[row * 5] * 0.5 + m[row * 5 + 1] * 0.5 + m[row * 5 + 2] * 0.5;
+    return Math.round(Math.max(0, Math.min(1, v)) * 255);
+  });
+  return `rgba(${ch[0]}, ${ch[1]}, ${ch[2]}, 0.28)`;
+}

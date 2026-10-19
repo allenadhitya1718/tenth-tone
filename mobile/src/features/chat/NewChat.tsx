@@ -26,6 +26,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { Avatar } from './Avatar';
+import { atHandle } from '@/lib/handle';
 
 const EMPTY: UserSummary[] = [];
 const MAX_NAME = 60;
@@ -275,7 +276,7 @@ const PersonRow = memo(function PersonRow({
         </View>
         {user.handle ? (
           <Text style={[styles.handle, { color: colors.muted }]} numberOfLines={1}>
-            @{user.handle}
+            {atHandle(user.handle)}
           </Text>
         ) : null}
       </View>

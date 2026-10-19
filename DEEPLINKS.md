@@ -4,6 +4,41 @@ Shared links open the native app directly on the right screen instead of
 the browser. The app-side code is **done**; the remaining steps need the
 real developer accounts and the live domain, so they're listed here.
 
+## Android App Links on the React Native build (owner steps)
+
+Symptom this fixes: `https://flyp-sa.com/u/<handle>` opens Chrome instead of
+FLYP, and `adb shell pm get-app-links com.flyp.app` shows `flyp-sa.com: 1024`
+(not verified). Cause: `https://flyp-sa.com/.well-known/assetlinks.json`
+returned 404. The file is in the repo (`site/.well-known/assetlinks.json`)
+and `site/vercel.json` already serves it as `application/json` with no
+redirect, so the site simply has not been deployed with it (or the host
+skipped the hidden `.well-known` folder). The routes in
+`mobile/app.json` (`/u/`, `/v/`, `/live/` on `flyp-sa.com` and
+`www.flyp-sa.com`, `autoVerify: true`) match the screens in `mobile/src/app`.
+
+1. Find the Play app-signing fingerprint: Play Console, select FLYP,
+   Test and release, App integrity (older UI: Setup, App signing), tab
+   "App signing" ("Play app signing"), copy **SHA-256 certificate
+   fingerprint** under "App signing key certificate". If you also install
+   builds signed with your own upload key or EAS keystore, copy their
+   SHA-256 too (the "Upload key certificate" box in the same page, or
+   `eas credentials`). Never guess one.
+2. Open `site/.well-known/assetlinks.json` and add each fingerprint to
+   `sha256_cert_fingerprints` (colon-separated uppercase hex, one string
+   per key). It currently holds only the fingerprint of the sideloaded test
+   APK; keep it, and add the Play one next to it.
+3. Deploy `site/` so that the hidden `.well-known` folder is included
+   (Vercel: `vercel --prod` from `site/`; with a drag-and-drop or FTP
+   host, upload the `.well-known` folder explicitly).
+4. Check: `curl -sI https://flyp-sa.com/.well-known/assetlinks.json` must
+   return `200` and `content-type: application/json`, with no redirect
+   (also for `https://www.flyp-sa.com/...`; if www redirects to the apex,
+   either serve the file on www too or drop the www intent filter).
+5. On the phone: `adb shell pm verify-app-links --re-verify com.flyp.app`,
+   wait a minute, then `adb shell pm get-app-links com.flyp.app` must show
+   `flyp-sa.com: verified`. This needs a build that contains the
+   `autoVerify` filters (any build from this repo state).
+
 ## Link formats
 
 | Link | Opens |

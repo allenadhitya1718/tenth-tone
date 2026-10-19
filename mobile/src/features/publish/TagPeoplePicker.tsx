@@ -13,6 +13,7 @@ import { Button } from '@/components/ui';
 import { useDebouncedValue } from '@/features/discover/useDebouncedValue';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
+import { atHandle } from '@/lib/handle';
 
 // Well under the database's cap of 20 (0101), so a post never hits it.
 export const MAX_TAGS = 10;
@@ -122,7 +123,7 @@ export function TagPeoplePicker({
               >
                 <Avatar user={p} size={22} />
                 <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }} numberOfLines={1}>
-                  @{p.handle ?? p.name}
+                  {atHandle(p.handle ?? p.name)}
                 </Text>
                 <Ionicons name="close" size={14} color={colors.muted} />
               </Pressable>
@@ -165,7 +166,7 @@ export function TagPeoplePicker({
                   </Text>
                   {item.handle ? (
                     <Text style={{ color: colors.muted, fontSize: 13 }} numberOfLines={1}>
-                      @{item.handle}
+                      {atHandle(item.handle)}
                     </Text>
                   ) : null}
                 </View>

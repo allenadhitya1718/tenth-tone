@@ -99,7 +99,7 @@ export function CallScreen(props: Props) {
       peer: { id: dialReq.to, name: dialReq.name ?? null, handle: dialReq.handle ?? null, avatar_url: dialReq.avatar ?? null },
     })
       .then((r: Readiness) => {
-        if (!r.ok && getCallState().dialNonce !== dialReq.nonce) setRefusal({ error: r.error, openSettings: r.openSettings });
+        if (!r.ok) setRefusal({ error: r.error, openSettings: r.openSettings });
       })
       .catch(() => setRefusal({ error: { key: 'call.errors.generic' } }));
     // Dial exactly once per nonce; the params never change for one screen.

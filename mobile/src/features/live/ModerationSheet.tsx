@@ -9,6 +9,7 @@ import type { UserSummary } from '@/api/types';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { Avatar, OptionRow, Sheet } from './Sheet';
+import { atHandle } from '@/lib/handle';
 
 // Report and block from the live room (App Review 1.2), the port of
 // openLiveCommentOptions / openLiveOptions / openViewerControls in V.live.
@@ -137,7 +138,7 @@ export function ModerationSheet({
                   {target.text}
                 </Text>
               ) : user.handle ? (
-                <Text style={[styles.quote, { color: colors.muted }]}>@{user.handle.replace(/^@/, '')}</Text>
+                <Text style={[styles.quote, { color: colors.muted }]}>{atHandle(user.handle)}</Text>
               ) : null}
             </View>
           </View>

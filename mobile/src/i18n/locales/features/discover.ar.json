@@ -8,17 +8,36 @@
       "errorSub": "تحقق من اتصالك وحاول مرة أخرى.",
       "retry": "حاول مرة أخرى",
       "seeAll": "عرض الكل",
-      "followers": "{{n}} متابِع",
       "video": "فيديو",
-      "plays": "{{n}} مشاهدة",
-      "videosCount": "{{n}} فيديو",
-      "share": "مشاركة"
+      "share": "مشاركة",
+      "followers_zero": "لا متابِعين",
+      "followers_one": "متابِع واحد",
+      "followers_two": "متابِعان",
+      "followers_few": "{{n}} متابِعين",
+      "followers_many": "{{n}} متابِعًا",
+      "followers_other": "{{n}} متابِع",
+      "plays_zero": "لا مشاهدات",
+      "plays_one": "مشاهدة واحدة",
+      "plays_two": "مشاهدتان",
+      "plays_few": "{{n}} مشاهدات",
+      "plays_many": "{{n}} مشاهدة",
+      "plays_other": "{{n}} مشاهدة",
+      "videosCount_zero": "لا فيديوهات",
+      "videosCount_one": "فيديو واحد",
+      "videosCount_two": "فيديوان",
+      "videosCount_few": "{{n}} فيديوهات",
+      "videosCount_many": "{{n}} فيديو",
+      "videosCount_other": "{{n}} فيديو"
     },
     "follow": {
       "follow": "متابعة",
       "following": "متابَع",
       "requested": "تم الطلب",
-      "failed": "تعذّر التحديث. حاول مرة أخرى."
+      "failed": "تعذّر التحديث. حاول مرة أخرى.",
+      "cancelRequestTitle": "إلغاء طلب المتابعة؟",
+      "cancelRequestBody": "سيتم سحب طلبك لمتابعة {{name}}.",
+      "cancelRequestConfirm": "إلغاء الطلب",
+      "cancelRequestKeep": "إبقاء الطلب"
     },
     "search": {
       "placeholder": "ابحث عن أشخاص، فيديوهات، أصوات",
@@ -54,7 +73,6 @@
     },
     "sound": {
       "title": "الصوت",
-      "uses": "{{n}} فيديو",
       "untitled": "صوت أصلي",
       "notFound": "هذا الصوت لم يعد متاحًا",
       "empty": "لا توجد فيديوهات تستخدم هذا الصوت بعد",
@@ -63,7 +81,13 @@
       "favorite": "المفضلة",
       "unfavorite": "إزالة من المفضلة",
       "favorited": "محفوظ",
-      "favoriteFailed": "تعذّر تحديث المفضلة. حاول مرة أخرى."
+      "favoriteFailed": "تعذّر تحديث المفضلة. حاول مرة أخرى.",
+      "uses_zero": "لا فيديوهات",
+      "uses_one": "فيديو واحد",
+      "uses_two": "فيديوان",
+      "uses_few": "{{n}} فيديوهات",
+      "uses_many": "{{n}} فيديو",
+      "uses_other": "{{n}} فيديو"
     },
     "lists": {
       "followers": "المتابِعون",

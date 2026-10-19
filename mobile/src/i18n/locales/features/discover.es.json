@@ -8,19 +8,27 @@
       "errorSub": "Revisa tu conexión e inténtalo de nuevo.",
       "retry": "Reintentar",
       "seeAll": "Ver todo",
-      "followers": "{{n}} seguidores",
       "video": "Video",
-      "plays": "{{n}} reproducciones",
       "share": "Compartir",
       "videosCount_one": "{{n}} video",
       "videosCount_many": "{{n}} de videos",
-      "videosCount_other": "{{n}} videos"
+      "videosCount_other": "{{n}} videos",
+      "followers_one": "{{n}} seguidor",
+      "followers_many": "{{n}} de seguidores",
+      "followers_other": "{{n}} seguidores",
+      "plays_one": "{{n}} reproducción",
+      "plays_many": "{{n}} de reproducciones",
+      "plays_other": "{{n}} reproducciones"
     },
     "follow": {
       "follow": "Seguir",
       "following": "Siguiendo",
       "requested": "Solicitado",
-      "failed": "No se pudo actualizar. Inténtalo de nuevo."
+      "failed": "No se pudo actualizar. Inténtalo de nuevo.",
+      "cancelRequestTitle": "¿Cancelar la solicitud de seguimiento?",
+      "cancelRequestBody": "Se retirará tu solicitud para seguir a {{name}}.",
+      "cancelRequestConfirm": "Cancelar solicitud",
+      "cancelRequestKeep": "Mantener solicitud"
     },
     "search": {
       "placeholder": "Busca personas, videos, sonidos",

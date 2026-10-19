@@ -339,7 +339,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
         {other && !isRequest ? <CallButtons peer={other} chatId={chatId} /> : null}
       </View>
 
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.flex} behavior="padding">
         {/* Any touch on the thread closes the emoji panel (client note 29). */}
         <View style={styles.flex} onTouchStart={emojiOpen ? closeEmoji : undefined}>
           <ChatBackground />

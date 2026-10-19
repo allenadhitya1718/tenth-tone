@@ -70,7 +70,7 @@
       "generic": "Aramada bir sorun oluştu. Lütfen tekrar dene.",
       "self": "Kendini arayamazsın.",
       "not_signed_in": "Arama yapmak için tekrar giriş yap.",
-      "blocked": "Bu kişiyi arayamazsın.",
+      "blocked": "Bu kişiyi arayamazsın. Seni engellemiş, kendisine ulaşabilenleri sınırlamış olabilir ya da henüz bağlantılı değilsiniz. Önce bir mesaj göndermeyi dene.",
       "rate_limited": "Kısa sürede çok fazla arama yapıldı. Biraz bekleyip tekrar dene.",
       "offline": "Çevrimdışısın. Bağlantını kontrol edip tekrar dene.",
       "forbidden": "Bu aramanın bir parçası değilsin.",

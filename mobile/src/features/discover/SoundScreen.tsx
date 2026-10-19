@@ -24,6 +24,7 @@ import { useTheme } from '@/providers/ThemeProvider';
 import { go, isImageUrl, userPath } from './nav';
 import { EmptyState, ErrorState, LoadingState } from './parts';
 import { VideoGrid } from './VideoGrid';
+import { atHandle } from '@/lib/handle';
 
 // A sound: who made it, how often it is used, a favourite toggle, "Use this
 // sound" (opens the camera with it), then every video that uses it.
@@ -93,7 +94,7 @@ function SoundHeader({ sound, count }: { sound: Sound; count: number }) {
               style={styles.creator}
             >
               <Text style={[styles.author, { color: isDark ? colors.primary2 : colors.primary }]} numberOfLines={1}>
-                {creator.name || (creator.handle ? `@${creator.handle}` : sound.author_name)}
+                {creator.name || (creator.handle ? atHandle(creator.handle) : sound.author_name)}
               </Text>
             </Pressable>
           ) : sound.author_name ? (

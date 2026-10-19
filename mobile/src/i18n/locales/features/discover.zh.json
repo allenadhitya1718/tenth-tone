@@ -8,17 +8,21 @@
       "errorSub": "请检查网络后重试。",
       "retry": "重试",
       "seeAll": "查看全部",
-      "followers": "{{n}} 粉丝",
       "video": "视频",
-      "plays": "{{n}} 次播放",
       "share": "分享",
-      "videosCount_other": "{{n}} 个视频"
+      "videosCount_other": "{{n}} 个视频",
+      "followers_other": "{{n}} 粉丝",
+      "plays_other": "{{n}} 次播放"
     },
     "follow": {
       "follow": "关注",
       "following": "已关注",
       "requested": "已申请",
-      "failed": "更新失败，请重试。"
+      "failed": "更新失败，请重试。",
+      "cancelRequestTitle": "取消关注请求？",
+      "cancelRequestBody": "你对 {{name}} 的关注请求将被撤回。",
+      "cancelRequestConfirm": "取消请求",
+      "cancelRequestKeep": "保留请求"
     },
     "search": {
       "placeholder": "搜索用户、视频、声音",

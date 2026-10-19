@@ -8,19 +8,27 @@
       "errorSub": "Vérifiez votre connexion et réessayez.",
       "retry": "Réessayer",
       "seeAll": "Tout voir",
-      "followers": "{{n}} abonnés",
       "video": "Vidéo",
-      "plays": "{{n}} vues",
       "share": "Partager",
       "videosCount_one": "{{n}} vidéo",
       "videosCount_many": "{{n}} de vidéos",
-      "videosCount_other": "{{n}} vidéos"
+      "videosCount_other": "{{n}} vidéos",
+      "followers_one": "{{n}} abonné",
+      "followers_many": "{{n}} d'abonnés",
+      "followers_other": "{{n}} abonnés",
+      "plays_one": "{{n}} vue",
+      "plays_many": "{{n}} de vues",
+      "plays_other": "{{n}} vues"
     },
     "follow": {
       "follow": "Suivre",
       "following": "Abonné(e)",
       "requested": "Demande envoyée",
-      "failed": "Impossible de mettre à jour. Réessayez."
+      "failed": "Impossible de mettre à jour. Réessayez.",
+      "cancelRequestTitle": "Annuler la demande d'abonnement ?",
+      "cancelRequestBody": "Votre demande pour suivre {{name}} sera retirée.",
+      "cancelRequestConfirm": "Annuler la demande",
+      "cancelRequestKeep": "Garder la demande"
     },
     "search": {
       "placeholder": "Rechercher des personnes, vidéos, sons",

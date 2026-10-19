@@ -8,18 +8,24 @@
       "errorSub": "Check your connection and try again.",
       "retry": "Try again",
       "seeAll": "See all",
-      "followers": "{{n}} followers",
       "video": "Video",
-      "plays": "{{n}} plays",
       "share": "Share",
       "videosCount_one": "{{n}} video",
-      "videosCount_other": "{{n}} videos"
+      "videosCount_other": "{{n}} videos",
+      "followers_one": "{{n}} follower",
+      "followers_other": "{{n}} followers",
+      "plays_one": "{{n}} play",
+      "plays_other": "{{n}} plays"
     },
     "follow": {
       "follow": "Follow",
       "following": "Following",
       "requested": "Requested",
-      "failed": "Couldn't update. Try again."
+      "failed": "Couldn't update. Try again.",
+      "cancelRequestTitle": "Cancel follow request?",
+      "cancelRequestBody": "Your request to follow {{name}} will be withdrawn.",
+      "cancelRequestConfirm": "Cancel request",
+      "cancelRequestKeep": "Keep request"
     },
     "search": {
       "placeholder": "Search people, videos, sounds",

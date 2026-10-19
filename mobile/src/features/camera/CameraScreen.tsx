@@ -20,7 +20,7 @@ import {
 import { Button } from '@/components/ui';
 import { NEW_STORY_HREF } from '@/features/stories/StoryTray';
 
-import { FILTER_IDS, type ColorMatrix, type FilterId, filterMatrix, isIdentity, swatchColors } from './filters';
+import { FILTER_IDS, type ColorMatrix, type FilterId, filterMatrix, isIdentity, swatchColors, tintOverlayColor } from './filters';
 import { bakeColorMatrix, filtersAvailable } from './videoFilter';
 
 // Required only when this build has the filter module: it pulls in Skia, whose
@@ -32,6 +32,11 @@ const FilteredCamera: typeof import('./FilteredCamera').default | null = filters
 
 const MAX_SECONDS = 60;
 const BIT_RATE = 6_000_000;
+// The front sensor is softer, so it gets more bits to keep what detail there
+// is. 7 Mbps * 60 s is ~53 MB, still under the 60 MB upload ceiling.
+const FRONT_BIT_RATE = 7_000_000;
+// If the Skia preview has not delivered a frame by then, show the plain camera.
+const SKIA_FIRST_FRAME_MS = 2500;
 // Strip geometry, also used by getItemLayout so scrollToIndex is exact.
 const ITEM_WIDTH = 62;
 const ITEM_GAP = 14;
@@ -59,6 +64,10 @@ export function CameraScreen() {
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const recorder = useRef<Recorder | null>(null);
+  // Set while a recorder is being created/started. A second tap in that gap
+  // used to start a second recording and crash the app natively
+  // ("A recording is already in progress").
+  const starting = useRef(false);
   const [filter, setFilter] = useState<FilterId>('normal');
   const [beauty, setBeauty] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -70,13 +79,19 @@ export function CameraScreen() {
   const nameOpacity = useSharedValue(0);
   const nameStyle = useAnimatedStyle(() => ({ opacity: nameOpacity.value }));
   const [flashName, setFlashName] = useState<FilterId | null>(null);
-  const filtered = FilteredCamera != null && !isIdentity(matrix);
+  const [skiaFailed, setSkiaFailed] = useState(false);
+  const gotFirstFrame = useRef(false);
+  const wantsFilter = FilteredCamera != null && !isIdentity(matrix);
+  // Skia path unless it already failed on this phone; then the plain camera
+  // with a tint overlay, and the exact filter is still baked after recording.
+  const filtered = wantsFilter && !skiaFailed;
   // The look at the moment recording started; the UI is locked while recording.
   const recordedLook = useRef<{ matrix: ColorMatrix; filter: FilterId; beauty: boolean } | null>(null);
 
   // 1080p, H.264 at ~6 Mbps: sharp on a phone screen, and the upload stays
   // well under the 60 MB ceiling for a 60 s clip.
-  const video = useVideoOutput({ enableAudio: true, targetBitRate: BIT_RATE, fileType: 'mp4' });
+  const bitRate = position === 'front' ? FRONT_BIT_RATE : BIT_RATE;
+  const video = useVideoOutput({ enableAudio: true, targetBitRate: bitRate, fileType: 'mp4' });
   const constraints = useMemo(
     () => [
       { resolutionBias: video },
@@ -95,6 +110,22 @@ export function CameraScreen() {
       return () => setFocused(false);
     }, []),
   );
+
+  // Watchdog for the Skia preview: no first frame in time means a black screen,
+  // so drop to the plain camera. Never swaps while a recording is running.
+  const fallBackToPlain = useCallback(() => {
+    if (recorder.current || starting.current) return;
+    setSkiaFailed(true);
+  }, []);
+  const deviceId = device?.id;
+  useEffect(() => {
+    if (!filtered || !focused || !deviceId) return;
+    gotFirstFrame.current = false;
+    const id = setTimeout(() => {
+      if (!gotFirstFrame.current) fallBackToPlain();
+    }, SKIA_FIRST_FRAME_MS);
+    return () => clearTimeout(id);
+  }, [filtered, focused, deviceId, fallBackToPlain]);
 
   useEffect(() => {
     if (!recording) return;
@@ -174,7 +205,7 @@ export function CameraScreen() {
     }
     setBaking(true);
     try {
-      const baked = await bakeColorMatrix(uri, look.matrix, BIT_RATE);
+      const baked = await bakeColorMatrix(uri, look.matrix, bitRate);
       router.push({ pathname: '/publish', params: { uri: baked, filter: look.filter, beauty: look.beauty ? '1' : '0' } });
     } catch (e) {
       Alert.alert(t('camera2.applyFailed'), (e as Error).message, [
@@ -187,6 +218,8 @@ export function CameraScreen() {
   }
 
   async function start() {
+    if (starting.current || recorder.current) return;
+    starting.current = true;
     try {
       const rec = await video.createRecorder({ maxDuration: MAX_SECONDS });
       recorder.current = rec;
@@ -208,7 +241,10 @@ export function CameraScreen() {
       setSeconds(0);
       setRecording(true);
     } catch (e) {
+      recorder.current = null;
       Alert.alert(t('camera.recordFailed'), (e as Error).message);
+    } finally {
+      starting.current = false;
     }
   }
 
@@ -271,7 +307,15 @@ export function CameraScreen() {
               zoom={zoom}
               torch={torch}
               matrix={matrix}
-              onError={(e) => console.warn('camera:', e.message)}
+              onFirstFrame={() => {
+                gotFirstFrame.current = true;
+              }}
+              onError={(e) => {
+                console.warn('camera:', e.message);
+                // "Camera is not active" fires on every session restart and is
+                // harmless; anything else before a first frame is fatal for Skia.
+                if (!gotFirstFrame.current && !/not active/i.test(e.message)) fallBackToPlain();
+              }}
             />
           ) : device ? (
             <Camera
@@ -288,6 +332,9 @@ export function CameraScreen() {
               resizeMode="cover"
               onError={(e) => console.warn('camera:', e.message)}
             />
+          ) : null}
+          {device && wantsFilter && skiaFailed ? (
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: tintOverlayColor(matrix) }]} />
           ) : null}
         </View>
       </GestureDetector>

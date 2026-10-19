@@ -12,6 +12,7 @@ import { ActivityIndicator, Alert, I18nManager, Pressable, StyleSheet, Switch, T
 import { ApiError } from '@/api/client';
 import { AppText, Button } from '@/components/ui';
 import { useTheme } from '@/providers/ThemeProvider';
+import { atHandle } from '@/lib/handle';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -287,7 +288,7 @@ export function PersonRow({
   right?: ReactNode;
 }) {
   const { colors, isDark } = useTheme();
-  const sub = subtitle ?? (handle ? `@${handle}` : '');
+  const sub = subtitle ?? (handle ? atHandle(handle) : '');
   return (
     <View style={styles.person}>
       <Avatar uri={avatarUrl} name={name} />

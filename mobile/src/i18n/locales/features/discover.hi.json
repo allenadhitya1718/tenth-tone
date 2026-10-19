@@ -8,18 +8,23 @@
       "errorSub": "अपना कनेक्शन जाँचें और फिर से कोशिश करें।",
       "retry": "फिर से कोशिश करें",
       "seeAll": "सभी देखें",
-      "followers": "{{n}} फ़ॉलोअर्स",
       "video": "वीडियो",
-      "plays": "{{n}} प्ले",
       "share": "शेयर करें",
       "videosCount_one": "{{n}} वीडियो",
-      "videosCount_other": "{{n}} वीडियो"
+      "videosCount_other": "{{n}} वीडियो",
+      "followers_one": "{{n}} फ़ॉलोअर",
+      "followers_other": "{{n}} फ़ॉलोअर्स",
+      "plays_other": "{{n}} प्ले"
     },
     "follow": {
       "follow": "फ़ॉलो करें",
       "following": "फ़ॉलोइंग",
       "requested": "रिक्वेस्ट भेजी गई",
-      "failed": "अपडेट नहीं हो पाया। फिर से कोशिश करें।"
+      "failed": "अपडेट नहीं हो पाया। फिर से कोशिश करें।",
+      "cancelRequestTitle": "फ़ॉलो अनुरोध रद्द करें?",
+      "cancelRequestBody": "{{name}} को फ़ॉलो करने का आपका अनुरोध वापस ले लिया जाएगा।",
+      "cancelRequestConfirm": "अनुरोध रद्द करें",
+      "cancelRequestKeep": "अनुरोध रहने दें"
     },
     "search": {
       "placeholder": "लोग, वीडियो, साउंड खोजें",

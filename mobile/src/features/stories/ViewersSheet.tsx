@@ -11,6 +11,7 @@ import { AppText } from '@/components/ui';
 import { PersonAvatar } from '@/features/map/PersonAvatar';
 import { timeAgo } from '@/lib/timeAgo';
 import { useTheme } from '@/providers/ThemeProvider';
+import { atHandle } from '@/lib/handle';
 
 // "Seen by" for one of your own stories, newest view first.
 export function ViewersSheet({
@@ -106,7 +107,7 @@ const ViewerRow = memo(function ViewerRow({ v, onOpen }: { v: StoryViewer; onOpe
         </View>
         {v.handle ? (
           <AppText variant="small" muted numberOfLines={1}>
-            @{v.handle}
+            {atHandle(v.handle)}
           </AppText>
         ) : null}
       </View>

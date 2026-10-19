@@ -224,7 +224,6 @@
     "updateFailed": "Could not update",
     "chatFailed": "Could not open the chat",
     "pinned": "Pinned",
-    "soundUses": "Used {{count}} times",
     "empty_videos": "No videos",
     "empty_videos_me": "You haven't posted a video yet. Make your first one and share it with the world.",
     "empty_audio": "No audio yet",
@@ -233,7 +232,9 @@
     "empty_saved": "Nothing saved",
     "empty_saved_me": "Save videos to watch later. They appear here.",
     "empty_drafts": "No drafts",
-    "empty_drafts_me": "Clips you save as drafts appear here before you post them."
+    "empty_drafts_me": "Clips you save as drafts appear here before you post them.",
+    "soundUses_one": "Used {{count}} time",
+    "soundUses_other": "Used {{count}} times"
   },
   "camera": {
     "permTitle": "Allow camera and microphone",

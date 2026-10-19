@@ -70,7 +70,7 @@
       "generic": "Something went wrong with the call. Please try again.",
       "self": "You can't call yourself.",
       "not_signed_in": "Sign in again to make calls.",
-      "blocked": "You can't call this person.",
+      "blocked": "You can't call this person. They may have blocked you, limited who can contact them, or you may not be connected yet. Try sending a message first.",
       "rate_limited": "Too many calls in a short time. Please wait a little and try again.",
       "offline": "You're offline. Check your connection and try again.",
       "forbidden": "You're not part of this call.",

@@ -488,6 +488,23 @@ export async function publishDraft(videoId: Uuid): Promise<true> {
   const { data, error } = await supabase.from('videos').update({ is_draft: false }).eq('id', videoId).select('id');
   if (error) throw error;
   if (!data || !data.length) throw new ApiError('draft_publish_failed');
+  // A draft is saved without its original sound (see createVideo: none for
+  // drafts), so a public post made from one never reached the profile's
+  // Audio tab. Same rule as createVideo: public posts only, never blocks.
+  try {
+    const { data: v } = await supabase
+      .from('videos')
+      .select('privacy, sound_id, video_url, thumbnail')
+      .eq('id', videoId)
+      .maybeSingle();
+    const row = v as { privacy: Privacy; sound_id: Uuid | null; video_url: string | null; thumbnail: string | null } | null;
+    if (row && row.privacy === 'public' && !row.sound_id && row.video_url) {
+      const snd = await createOriginalSound({ videoId, title: 'صوت أصلي', coverUrl: row.thumbnail, audioUrl: row.video_url });
+      if (snd?.id) await supabase.from('videos').update({ sound_id: snd.id }).eq('id', videoId);
+    }
+  } catch (e) {
+    console.warn('original sound:', e);
+  }
   return true;
 }
 

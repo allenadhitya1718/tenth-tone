@@ -1,0 +1,32 @@
+{
+  "ugc": {
+    "reply": "رد",
+    "replyingTo": "ردًّا على {{handle}}",
+    "cancelReply": "إلغاء الرد",
+    "viewReplies": "عرض الردود ({{count}})",
+    "hideReplies": "إخفاء الردود",
+    "report": "إبلاغ",
+    "reportTitle": "لماذا تبلّغ عن هذا؟",
+    "reasonInappropriate": "محتوى غير لائق",
+    "reasonHate": "خطاب كراهية أو تنمر",
+    "reasonViolence": "عنف أو محتوى صادم",
+    "reasonImpersonation": "انتحال شخصية",
+    "reasonMisleading": "محتوى مضلل",
+    "reasonSpam": "بريد عشوائي",
+    "reasonOther": "أخرى",
+    "detailsPlaceholder": "أضف تفاصيل (اختياري)",
+    "submit": "إرسال البلاغ",
+    "reportSent": "شكرًا، تم استلام بلاغك",
+    "reportFailed": "تعذر إرسال البلاغ",
+    "commentsOff": "التعليقات متوقفة لهذا الفيديو",
+    "blockTitle": "حظر {{name}}؟",
+    "blockBody": "لن يتمكن من العثور على ملفك الشخصي أو متابعتك أو مراسلتك، ولن ترى فيديوهاته أو تعليقاته. يمكنك إلغاء الحظر في أي وقت من الإعدادات > الحسابات المحظورة.",
+    "blockConfirm": "حظر",
+    "blockedToast": "تم حظر {{name}}",
+    "blockFailed": "تعذر حظر هذا الحساب",
+    "reportUser": "الإبلاغ عن الحساب",
+    "blockUser": "حظر الحساب",
+    "moreOptions": "المزيد من الخيارات",
+    "mentionList": "أشخاص يمكنك الإشارة إليهم"
+  }
+}

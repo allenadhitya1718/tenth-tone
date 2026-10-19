@@ -70,7 +70,7 @@
       "generic": "Terjadi masalah pada panggilan. Silakan coba lagi.",
       "self": "Kamu tidak bisa memanggil dirimu sendiri.",
       "not_signed_in": "Masuk lagi untuk melakukan panggilan.",
-      "blocked": "Kamu tidak bisa memanggil orang ini.",
+      "blocked": "Kamu tidak bisa memanggil orang ini. Mereka mungkin memblokirmu, membatasi siapa yang bisa menghubungi, atau kalian belum terhubung. Coba kirim pesan dulu.",
       "rate_limited": "Terlalu banyak panggilan dalam waktu singkat. Tunggu sebentar lalu coba lagi.",
       "offline": "Kamu sedang offline. Periksa koneksimu dan coba lagi.",
       "forbidden": "Kamu bukan peserta panggilan ini.",

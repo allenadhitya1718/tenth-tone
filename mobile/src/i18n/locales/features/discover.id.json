@@ -8,17 +8,21 @@
       "errorSub": "Periksa koneksimu dan coba lagi.",
       "retry": "Coba lagi",
       "seeAll": "Lihat semua",
-      "followers": "{{n}} pengikut",
       "video": "Video",
-      "plays": "{{n}} kali diputar",
       "share": "Bagikan",
-      "videosCount_other": "{{n}} video"
+      "videosCount_other": "{{n}} video",
+      "followers_other": "{{n}} pengikut",
+      "plays_other": "{{n}} kali diputar"
     },
     "follow": {
       "follow": "Ikuti",
       "following": "Mengikuti",
       "requested": "Diminta",
-      "failed": "Tidak dapat memperbarui. Coba lagi."
+      "failed": "Tidak dapat memperbarui. Coba lagi.",
+      "cancelRequestTitle": "Batalkan permintaan mengikuti?",
+      "cancelRequestBody": "Permintaanmu untuk mengikuti {{name}} akan ditarik.",
+      "cancelRequestConfirm": "Batalkan permintaan",
+      "cancelRequestKeep": "Pertahankan permintaan"
     },
     "search": {
       "placeholder": "Cari orang, video, suara",

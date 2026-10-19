@@ -71,6 +71,7 @@ import {
   useLiveStreamRow,
   useProfileLookup,
 } from './useLiveData';
+import { atHandle } from '@/lib/handle';
 
 // One screen for the host, the audience and guests on stage (client notes 4,
 // 5, 6, 7, 17, 29). Port of V.live in web/js/views.js, audio only.
@@ -482,7 +483,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
       <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
       <View style={[StyleSheet.absoluteFill, styles.dim]} />
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         {/* Header */}
         <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
           <Pressable
@@ -498,7 +499,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
               </Text>
               {host?.handle ? (
                 <Text style={styles.hostHandle} numberOfLines={1}>
-                  @{host.handle.replace(/^@/, '')}
+                  {atHandle(host.handle)}
                 </Text>
               ) : null}
             </View>
@@ -813,8 +814,9 @@ const CommentList = memo(function CommentList({
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       ListEmptyComponent={
-        // Inverted lists flip their empty component too.
-        <View style={{ transform: [{ scaleY: -1 }] }}>
+        // VirtualizedList already counter-flips the empty component of an
+        // inverted list; flipping it again here drew it upside down.
+        <View>
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (

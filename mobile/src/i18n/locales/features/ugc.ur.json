@@ -1,0 +1,32 @@
+{
+  "ugc": {
+    "reply": "جواب دیں",
+    "replyingTo": "{{handle}} کو جواب",
+    "cancelReply": "جواب منسوخ کریں",
+    "viewReplies": "جوابات دیکھیں ({{count}})",
+    "hideReplies": "جوابات چھپائیں",
+    "report": "رپورٹ کریں",
+    "reportTitle": "آپ اس کی رپورٹ کیوں کر رہے ہیں؟",
+    "reasonInappropriate": "نامناسب مواد",
+    "reasonHate": "نفرت انگیز باتیں یا تنگ کرنا",
+    "reasonViolence": "تشدد یا چونکا دینے والا مواد",
+    "reasonImpersonation": "کسی اور کا روپ دھارنا",
+    "reasonMisleading": "گمراہ کن مواد",
+    "reasonSpam": "سپیم",
+    "reasonOther": "دیگر",
+    "detailsPlaceholder": "تفصیل شامل کریں (اختیاری)",
+    "submit": "رپورٹ بھیجیں",
+    "reportSent": "شکریہ، ہمیں آپ کی رپورٹ مل گئی",
+    "reportFailed": "رپورٹ نہیں بھیجی جا سکی",
+    "commentsOff": "اس ویڈیو پر تبصرے بند ہیں",
+    "blockTitle": "{{name}} کو بلاک کریں؟",
+    "blockBody": "وہ آپ کی پروفائل نہیں ڈھونڈ سکیں گے، آپ کو فالو یا پیغام نہیں بھیج سکیں گے، اور آپ ان کی ویڈیوز یا تبصرے نہیں دیکھیں گے۔ آپ کسی بھی وقت ترتیبات > بلاک شدہ اکاؤنٹس میں جا کر ان بلاک کر سکتے ہیں۔",
+    "blockConfirm": "بلاک کریں",
+    "blockedToast": "{{name}} بلاک ہو گیا",
+    "blockFailed": "یہ اکاؤنٹ بلاک نہیں ہو سکا",
+    "reportUser": "اکاؤنٹ کی رپورٹ کریں",
+    "blockUser": "اکاؤنٹ بلاک کریں",
+    "moreOptions": "مزید اختیارات",
+    "mentionList": "جنہیں آپ مینشن کر سکتے ہیں"
+  }
+}

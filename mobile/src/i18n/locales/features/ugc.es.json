@@ -1,0 +1,32 @@
+{
+  "ugc": {
+    "reply": "Responder",
+    "replyingTo": "Respondiendo a {{handle}}",
+    "cancelReply": "Cancelar respuesta",
+    "viewReplies": "Ver respuestas ({{count}})",
+    "hideReplies": "Ocultar respuestas",
+    "report": "Denunciar",
+    "reportTitle": "¿Por qué denuncias esto?",
+    "reasonInappropriate": "Contenido inapropiado",
+    "reasonHate": "Discurso de odio o acoso",
+    "reasonViolence": "Violencia o contenido impactante",
+    "reasonImpersonation": "Suplantación de identidad",
+    "reasonMisleading": "Contenido engañoso",
+    "reasonSpam": "Spam",
+    "reasonOther": "Otro",
+    "detailsPlaceholder": "Añade detalles (opcional)",
+    "submit": "Enviar denuncia",
+    "reportSent": "Gracias, hemos recibido tu denuncia",
+    "reportFailed": "No se pudo enviar la denuncia",
+    "commentsOff": "Los comentarios están desactivados en este vídeo",
+    "blockTitle": "¿Bloquear a {{name}}?",
+    "blockBody": "No podrá encontrar tu perfil, seguirte ni enviarte mensajes, y tú no verás sus vídeos ni comentarios. Puedes desbloquearlo cuando quieras en Ajustes > Cuentas bloqueadas.",
+    "blockConfirm": "Bloquear",
+    "blockedToast": "{{name}} está bloqueado",
+    "blockFailed": "No se pudo bloquear esta cuenta",
+    "reportUser": "Denunciar cuenta",
+    "blockUser": "Bloquear cuenta",
+    "moreOptions": "Más opciones",
+    "mentionList": "Personas que puedes mencionar"
+  }
+}

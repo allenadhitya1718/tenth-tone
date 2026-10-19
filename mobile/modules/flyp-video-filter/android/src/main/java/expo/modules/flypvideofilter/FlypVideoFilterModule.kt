@@ -5,9 +5,12 @@ import androidx.annotation.OptIn
 import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.Clock
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.RgbMatrix
 import androidx.media3.transformer.Composition
+import androidx.media3.transformer.DefaultAssetLoaderFactory
+import androidx.media3.transformer.DefaultDecoderFactory
 import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.Effects
@@ -48,7 +51,14 @@ class FlypVideoFilterModule : Module() {
         .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder().setBitrate(bitRate).build())
         .build()
 
+      // Some Qualcomm phones (Redmi M2010J19SI: OMX.qcom.video.decoder.avc) throw
+      // while configuring their hardware AVC decoder for the 1080x1920 clip.
+      // With fallback on, Media3 tries the next matching decoder instead
+      // (typically the software c2.android.avc.decoder), which always works.
+      val decoders = DefaultDecoderFactory.Builder(context).setEnableDecoderFallback(true).build()
+
       val transformer = Transformer.Builder(context)
+        .setAssetLoaderFactory(DefaultAssetLoaderFactory(context, decoders, Clock.DEFAULT))
         // H.264 so every phone in the feed can play it; audio is passed through.
         .setVideoMimeType(MimeTypes.VIDEO_H264)
         .setEncoderFactory(encoders)

@@ -1,0 +1,32 @@
+{
+  "ugc": {
+    "reply": "Répondre",
+    "replyingTo": "En réponse à {{handle}}",
+    "cancelReply": "Annuler la réponse",
+    "viewReplies": "Voir les réponses ({{count}})",
+    "hideReplies": "Masquer les réponses",
+    "report": "Signaler",
+    "reportTitle": "Pourquoi signalez-vous ceci ?",
+    "reasonInappropriate": "Contenu inapproprié",
+    "reasonHate": "Discours haineux ou harcèlement",
+    "reasonViolence": "Violence ou contenu choquant",
+    "reasonImpersonation": "Usurpation d'identité",
+    "reasonMisleading": "Contenu trompeur",
+    "reasonSpam": "Spam",
+    "reasonOther": "Autre",
+    "detailsPlaceholder": "Ajouter des détails (facultatif)",
+    "submit": "Envoyer le signalement",
+    "reportSent": "Merci, nous avons reçu votre signalement",
+    "reportFailed": "Impossible d'envoyer le signalement",
+    "commentsOff": "Les commentaires sont désactivés pour cette vidéo",
+    "blockTitle": "Bloquer {{name}} ?",
+    "blockBody": "Cette personne ne pourra plus trouver votre profil, vous suivre ni vous écrire, et vous ne verrez plus ses vidéos ni ses commentaires. Vous pouvez la débloquer à tout moment dans Paramètres > Comptes bloqués.",
+    "blockConfirm": "Bloquer",
+    "blockedToast": "{{name}} est bloqué(e)",
+    "blockFailed": "Impossible de bloquer ce compte",
+    "reportUser": "Signaler le compte",
+    "blockUser": "Bloquer le compte",
+    "moreOptions": "Plus d'options",
+    "mentionList": "Personnes que vous pouvez mentionner"
+  }
+}

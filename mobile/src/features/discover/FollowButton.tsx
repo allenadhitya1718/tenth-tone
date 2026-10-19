@@ -88,7 +88,18 @@ export const FollowButton = memo(function FollowButton({ userId, name }: { userI
 
   return (
     <Pressable
-      onPress={() => toggle.mutate(settled)}
+      onPress={() => {
+        // Withdrawing a request is not undone by tapping again (it is only
+        // asked again from scratch), so it is confirmed first.
+        if (settled === 'requested') {
+          Alert.alert(t('discover.follow.cancelRequestTitle'), t('discover.follow.cancelRequestBody', { name: name ?? '' }), [
+            { text: t('discover.follow.cancelRequestKeep'), style: 'cancel' },
+            { text: t('discover.follow.cancelRequestConfirm'), style: 'destructive', onPress: () => toggle.mutate(settled) },
+          ]);
+          return;
+        }
+        toggle.mutate(settled);
+      }}
       disabled={toggle.isPending || following.isLoading}
       hitSlop={6}
       accessibilityRole="button"

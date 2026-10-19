@@ -183,7 +183,7 @@ function DraftBody({ draft, onClose }: { draft: VideoTile; onClose: () => void }
         <View style={{ width: 26 }} />
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={editing ? styles.editTop : styles.viewTop}>
             <Pressable

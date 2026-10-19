@@ -91,7 +91,7 @@ export function WithdrawFlow({
           </Text>
           <View style={{ width: 26 }} />
         </View>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           {step === 'kyc' ? (
             <KycForm summary={summary} onDone={() => setStep('kycDone')} />
           ) : step === 'kycDone' ? (

@@ -224,7 +224,6 @@
     "updateFailed": "تعذر التحديث",
     "chatFailed": "تعذر فتح المحادثة",
     "pinned": "مثبّت",
-    "soundUses": "استُخدم {{count}} مرة",
     "empty_videos": "لا توجد فيديوهات",
     "empty_videos_me": "لم تنشر أي فيديو بعد. أنشئ أول فيديو لك وشاركه مع العالم.",
     "empty_audio": "لا توجد صوتيات بعد",
@@ -233,7 +232,13 @@
     "empty_saved": "لا توجد عناصر محفوظة",
     "empty_saved_me": "احفظ الفيديوهات لمشاهدتها لاحقًا — ستظهر هنا",
     "empty_drafts": "لا توجد مسودات",
-    "empty_drafts_me": "المقاطع التي تحفظها كمسودة تظهر هنا قبل نشرها"
+    "empty_drafts_me": "المقاطع التي تحفظها كمسودة تظهر هنا قبل نشرها",
+    "soundUses_zero": "لم يُستخدم بعد",
+    "soundUses_one": "استُخدم مرة واحدة",
+    "soundUses_two": "استُخدم مرتين",
+    "soundUses_few": "استُخدم {{count}} مرات",
+    "soundUses_many": "استُخدم {{count}} مرة",
+    "soundUses_other": "استُخدم {{count}} مرة"
   },
   "camera": {
     "permTitle": "اسمح بالوصول إلى الكاميرا والميكروفون",

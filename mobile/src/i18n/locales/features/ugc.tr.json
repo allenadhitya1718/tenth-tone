@@ -1,0 +1,32 @@
+{
+  "ugc": {
+    "reply": "Yanıtla",
+    "replyingTo": "{{handle}} kişisine yanıt",
+    "cancelReply": "Yanıtı iptal et",
+    "viewReplies": "Yanıtları gör ({{count}})",
+    "hideReplies": "Yanıtları gizle",
+    "report": "Bildir",
+    "reportTitle": "Bunu neden bildiriyorsun?",
+    "reasonInappropriate": "Uygunsuz içerik",
+    "reasonHate": "Nefret söylemi veya zorbalık",
+    "reasonViolence": "Şiddet veya rahatsız edici içerik",
+    "reasonImpersonation": "Kimliğe bürünme",
+    "reasonMisleading": "Yanıltıcı içerik",
+    "reasonSpam": "Spam",
+    "reasonOther": "Diğer",
+    "detailsPlaceholder": "Ayrıntı ekle (isteğe bağlı)",
+    "submit": "Bildirimi gönder",
+    "reportSent": "Teşekkürler, bildirimini aldık",
+    "reportFailed": "Bildirim gönderilemedi",
+    "commentsOff": "Bu videoda yorumlar kapalı",
+    "blockTitle": "{{name}} engellensin mi?",
+    "blockBody": "Profilini bulamaz, seni takip edemez ve sana mesaj gönderemez; sen de onun videolarını veya yorumlarını görmezsin. Engeli istediğin zaman Ayarlar > Engellenen hesaplar bölümünden kaldırabilirsin.",
+    "blockConfirm": "Engelle",
+    "blockedToast": "{{name}} engellendi",
+    "blockFailed": "Bu hesap engellenemedi",
+    "reportUser": "Hesabı bildir",
+    "blockUser": "Hesabı engelle",
+    "moreOptions": "Daha fazla seçenek",
+    "mentionList": "Etiketleyebileceğin kişiler"
+  }
+}

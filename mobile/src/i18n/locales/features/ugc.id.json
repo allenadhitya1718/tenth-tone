@@ -1,0 +1,32 @@
+{
+  "ugc": {
+    "reply": "Balas",
+    "replyingTo": "Membalas {{handle}}",
+    "cancelReply": "Batalkan balasan",
+    "viewReplies": "Lihat balasan ({{count}})",
+    "hideReplies": "Sembunyikan balasan",
+    "report": "Laporkan",
+    "reportTitle": "Mengapa kamu melaporkan ini?",
+    "reasonInappropriate": "Konten tidak pantas",
+    "reasonHate": "Ujaran kebencian atau perundungan",
+    "reasonViolence": "Kekerasan atau konten mengejutkan",
+    "reasonImpersonation": "Peniruan identitas",
+    "reasonMisleading": "Konten menyesatkan",
+    "reasonSpam": "Spam",
+    "reasonOther": "Lainnya",
+    "detailsPlaceholder": "Tambahkan detail (opsional)",
+    "submit": "Kirim laporan",
+    "reportSent": "Terima kasih, laporanmu sudah kami terima",
+    "reportFailed": "Tidak dapat mengirim laporan",
+    "commentsOff": "Komentar dinonaktifkan untuk video ini",
+    "blockTitle": "Blokir {{name}}?",
+    "blockBody": "Mereka tidak akan bisa menemukan profilmu, mengikutimu, atau mengirim pesan kepadamu, dan kamu tidak akan melihat video atau komentar mereka. Kamu bisa membuka blokir kapan saja di Pengaturan > Akun diblokir.",
+    "blockConfirm": "Blokir",
+    "blockedToast": "{{name}} diblokir",
+    "blockFailed": "Tidak dapat memblokir akun ini",
+    "reportUser": "Laporkan akun",
+    "blockUser": "Blokir akun",
+    "moreOptions": "Opsi lainnya",
+    "mentionList": "Orang yang bisa kamu sebut"
+  }
+}

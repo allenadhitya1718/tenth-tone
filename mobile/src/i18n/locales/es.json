@@ -224,7 +224,6 @@
     "updateFailed": "No se pudo actualizar",
     "chatFailed": "No se pudo abrir el chat",
     "pinned": "Fijado",
-    "soundUses": "Usado {{count}} veces",
     "empty_videos": "Sin videos",
     "empty_videos_me": "Aún no has publicado ningún video. Crea el primero y compártelo con el mundo.",
     "empty_audio": "Aún no hay audios",
@@ -233,7 +232,10 @@
     "empty_saved": "Nada guardado",
     "empty_saved_me": "Guarda videos para verlos más tarde. Aparecerán aquí.",
     "empty_drafts": "Sin borradores",
-    "empty_drafts_me": "Los clips que guardes como borrador aparecen aquí antes de publicarlos."
+    "empty_drafts_me": "Los clips que guardes como borrador aparecen aquí antes de publicarlos.",
+    "soundUses_one": "Usado {{count}} vez",
+    "soundUses_many": "Usado {{count}} de veces",
+    "soundUses_other": "Usado {{count}} veces"
   },
   "camera": {
     "permTitle": "Permite el acceso a la cámara y al micrófono",

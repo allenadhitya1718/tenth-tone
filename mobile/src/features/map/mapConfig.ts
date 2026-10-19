@@ -10,6 +10,9 @@ import { PROVIDER_DEFAULT, PROVIDER_GOOGLE, type MapStyleElement } from 'react-n
 // plugin's androidGoogleMapsApiKey.
 function androidKeyConfigured(): boolean {
   const cfg = Constants.expoConfig;
+  // android.config and plugins are stripped from the runtime config, so
+  // app.config.js also sets this flag in `extra` when the key is present.
+  if ((cfg?.extra as { mapsKeyConfigured?: boolean } | undefined)?.mapsKeyConfigured) return true;
   if (cfg?.android?.config?.googleMaps?.apiKey) return true;
   return (cfg?.plugins ?? []).some(
     (p) =>

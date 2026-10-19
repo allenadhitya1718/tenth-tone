@@ -18,7 +18,7 @@ import { AndroidImportance as I, AndroidNotificationVisibility as V } from 'expo
 import type { TFunction } from 'i18next';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { declineCallIfRinging } from '@/api/calls';
 import { markNotificationsRead, notificationKeys } from '@/api/notifications';
@@ -195,19 +195,42 @@ async function saveToken(token: string, lang: string) {
   await AsyncStorage.setItem(TOKEN_KEY, token).catch(() => {});
 }
 
+// Fetches the native token and saves it. Never throws: on a phone without
+// reachable Google services (e.g. SERVICE_NOT_AVAILABLE on some Xiaomi/Redmi
+// builds, no Play services, or no network) the app simply goes on without
+// push and tries again later (see usePushRegistration).
+let lastTokenFailure = '';
+async function fetchAndSaveToken(lang: string): Promise<boolean> {
+  try {
+    const { data } = await Notifications.getDevicePushTokenAsync();
+    if (typeof data === 'string' && data) await saveToken(data, lang);
+    lastTokenFailure = '';
+    return true;
+  } catch (e) {
+    const msg = (e as Error)?.message ?? String(e);
+    // One line per distinct failure, not one per retry.
+    if (msg !== lastTokenFailure) {
+      lastTokenFailure = msg;
+      console.warn(`push: no device token yet, will retry (${msg.slice(0, 160)})`);
+    }
+    return false;
+  }
+}
+
 // Safe on every launch and sign-in: a token already saved is upserted again,
-// which refreshes its language.
-async function register(t: TFunction, lang: string) {
+// which refreshes its language. Resolves true when a token was saved, false
+// when only the token step failed (retry later).
+async function register(t: TFunction, lang: string): Promise<boolean> {
   // Channels first: on Android 13+ the permission prompt only appears once
   // the app has a channel.
   await ensureChannels(t);
   await ensureCallCategory(t);
-  if (!(await allowed())) return;
-  const { data } = await Notifications.getDevicePushTokenAsync();
-  if (typeof data === 'string' && data) await saveToken(data, lang);
+  if (!(await allowed())) return true;
+  const ok = await fetchAndSaveToken(lang);
   // Android 14+: the ringing call can only take over a locked screen with
   // full-screen access. Asked once, after notifications are allowed.
   await maybeAskFullScreenCalls(t);
+  return ok;
 }
 
 // iPhone: the incoming-call alert (send-push aps.category 'incoming_call')
@@ -342,14 +365,52 @@ export function usePushRegistration() {
 
   useEffect(() => {
     if (!native || !userId) return;
-    register(t, lang).catch((e) => console.warn('push: register:', (e as Error)?.message));
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let failures = 0;
+    let running = false;
+    const clear = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    };
+    // Backoff 30 s, 1 m, 2 m ... capped at 15 min; a return to the
+    // foreground tries at once (it is also when the network is most likely
+    // to be back), then the backoff continues.
+    const attempt = async () => {
+      if (cancelled || running) return;
+      running = true;
+      clear();
+      let ok = false;
+      try {
+        ok = await register(t, lang);
+      } catch (e) {
+        console.warn('push: register:', (e as Error)?.message);
+      }
+      running = false;
+      if (cancelled) return;
+      if (ok) {
+        failures = 0;
+        return;
+      }
+      failures += 1;
+      timer = setTimeout(() => void attempt(), Math.min(30_000 * 2 ** (failures - 1), 15 * 60_000));
+    };
+    void attempt();
+    const appSub = AppState.addEventListener('change', (st) => {
+      if (st === 'active' && failures > 0) void attempt();
+    });
     // FCM and APNs rotate tokens now and then.
     const sub = Notifications.addPushTokenListener((tok) => {
       if (typeof tok.data === 'string' && tok.data) {
         saveToken(tok.data, lang).catch((e) => console.warn('push: token not saved:', (e as Error)?.message));
       }
     });
-    return () => sub.remove();
+    return () => {
+      cancelled = true;
+      clear();
+      appSub.remove();
+      sub.remove();
+    };
   }, [userId, lang, t]);
 
   // A tap that launched the app from cold arrives before any listener.

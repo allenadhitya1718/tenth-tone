@@ -23,6 +23,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { Avatar, TagPeoplePicker } from './TagPeoplePicker';
+import { atHandle } from '@/lib/handle';
 
 const MAX_CAPTION = 300;
 
@@ -239,7 +240,7 @@ export function PublishScreen({
                   ))}
                 </View>
                 <Text style={[styles.optionText, { color: colors.text }]} numberOfLines={1}>
-                  {tagged.map((p) => `@${p.handle ?? p.name}`).join(', ')}
+                  {tagged.map((p) => atHandle(p.handle ?? p.name)).join(', ')}
                 </Text>
               </View>
             ) : (

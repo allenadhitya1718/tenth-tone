@@ -4,6 +4,9 @@
 // builds read the copy in this folder.
 module.exports = ({ config }) => ({
   ...config,
+  // Expo strips android.config (it holds secrets) from the config the app
+  // reads at runtime, so expose only a boolean for the maps availability check.
+  extra: { ...config.extra, mapsKeyConfigured: !!process.env.GOOGLE_MAPS_ANDROID_KEY },
   android: {
     ...config.android,
     googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? './google-services.json',

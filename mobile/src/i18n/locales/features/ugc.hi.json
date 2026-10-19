@@ -1,0 +1,32 @@
+{
+  "ugc": {
+    "reply": "जवाब दें",
+    "replyingTo": "{{handle}} को जवाब",
+    "cancelReply": "जवाब रद्द करें",
+    "viewReplies": "जवाब देखें ({{count}})",
+    "hideReplies": "जवाब छिपाएँ",
+    "report": "रिपोर्ट करें",
+    "reportTitle": "आप इसकी रिपोर्ट क्यों कर रहे हैं?",
+    "reasonInappropriate": "अनुचित सामग्री",
+    "reasonHate": "नफ़रत भरी बातें या धमकाना",
+    "reasonViolence": "हिंसा या चौंकाने वाली सामग्री",
+    "reasonImpersonation": "किसी और का रूप धरना",
+    "reasonMisleading": "भ्रामक सामग्री",
+    "reasonSpam": "स्पैम",
+    "reasonOther": "अन्य",
+    "detailsPlaceholder": "विवरण जोड़ें (वैकल्पिक)",
+    "submit": "रिपोर्ट भेजें",
+    "reportSent": "धन्यवाद, हमें आपकी रिपोर्ट मिल गई",
+    "reportFailed": "रिपोर्ट नहीं भेजी जा सकी",
+    "commentsOff": "इस वीडियो पर टिप्पणियाँ बंद हैं",
+    "blockTitle": "{{name}} को ब्लॉक करें?",
+    "blockBody": "वे आपकी प्रोफ़ाइल नहीं ढूँढ पाएँगे, आपको फ़ॉलो या मैसेज नहीं कर पाएँगे, और आप उनके वीडियो या टिप्पणियाँ नहीं देखेंगे। आप कभी भी सेटिंग > ब्लॉक किए गए खाते में जाकर अनब्लॉक कर सकते हैं।",
+    "blockConfirm": "ब्लॉक करें",
+    "blockedToast": "{{name}} ब्लॉक हो गया",
+    "blockFailed": "यह खाता ब्लॉक नहीं हो सका",
+    "reportUser": "खाते की रिपोर्ट करें",
+    "blockUser": "खाता ब्लॉक करें",
+    "moreOptions": "और विकल्प",
+    "mentionList": "जिन्हें आप मेंशन कर सकते हैं"
+  }
+}

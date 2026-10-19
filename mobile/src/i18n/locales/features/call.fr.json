@@ -70,7 +70,7 @@
       "generic": "Un problème est survenu pendant l'appel. Veuillez réessayer.",
       "self": "Vous ne pouvez pas vous appeler vous-même.",
       "not_signed_in": "Reconnectez-vous pour passer des appels.",
-      "blocked": "Vous ne pouvez pas appeler cette personne.",
+      "blocked": "Vous ne pouvez pas appeler cette personne. Elle vous a peut-être bloqué, limite qui peut la contacter, ou vous n'êtes pas encore en contact. Essayez d'abord de lui envoyer un message.",
       "rate_limited": "Trop d'appels en peu de temps. Patientez un peu et réessayez.",
       "offline": "Vous êtes hors ligne. Vérifiez votre connexion et réessayez.",
       "forbidden": "Vous ne faites pas partie de cet appel.",
