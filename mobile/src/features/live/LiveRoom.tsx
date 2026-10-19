@@ -468,6 +468,17 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
     );
   }
 
+  // An ended live (e.g. opened from an old "Your live has started" alert)
+  // shows only its summary, never the room with its End button and comment box.
+  if (ended) {
+    return (
+      <View style={styles.root}>
+        <StatusBar style="light" />
+        <EndedCard live={live} isHost={isHost} peak={stream.peak} onDone={() => router.replace('/')} />
+      </View>
+    );
+  }
+
   const hostName = host?.name || host?.handle || t('live.someone');
   const composerBottom = Math.max(insets.bottom, 10);
 

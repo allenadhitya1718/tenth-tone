@@ -25,7 +25,7 @@ import {
   commentKeys,
   deleteComment,
   fetchComments,
-  fetchCommentsAllowed,
+  fetchCommentsAccess,
   isCommentBlocked,
   likeComment,
   type MentionCandidate,
@@ -35,6 +35,7 @@ import {
 } from '@/api/comments';
 import { ApiError } from '@/api/client';
 import { videoKeys } from '@/api/videos';
+import { NotFoundState } from '@/components/NotFoundState';
 import { EmojiPanel, QuickEmojis } from '@/components/emoji/EmojiPanel';
 import { patchVideoEverywhere } from '@/features/feed/cache';
 import { formatCount } from '@/features/feed/format';
@@ -110,8 +111,10 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
   const q = useQuery({ queryKey: key, queryFn: () => fetchComments(videoId) });
   // COMMENTS-08: the owner can switch comments off. null (unknown) is treated
   // as on; the server still has the final say.
-  const allowed = useQuery({ queryKey: commentKeys.allowed(videoId), queryFn: () => fetchCommentsAllowed(videoId) });
-  const off = allowed.data === false;
+  const access = useQuery({ queryKey: commentKeys.allowed(videoId), queryFn: () => fetchCommentsAccess(videoId) });
+  const off = access.data?.exists === true && !access.data.allowed;
+  // A link to a video that is gone: say so instead of an empty sheet.
+  const missing = access.data?.exists === false;
 
   // @mentions: debounce the typed prefix, then ask search_handles.
   const token = mentionToken(text, cursor);
@@ -184,7 +187,9 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
         parentId,
       ),
     onSuccess: (comment) => {
-      qc.setQueryData<Comment[]>(key, (list) => [comment, ...(list ?? [])]);
+      // A comment with one of MY hidden words stays out of my thread, as it
+      // would after a refetch. It is still posted, so the counter moves.
+      if (!comment.hiddenForMe) qc.setQueryData<Comment[]>(key, (list) => [comment, ...(list ?? [])]);
       // The feed's counter would otherwise stay behind until the next refetch.
       bumpCount(1);
       void qc.invalidateQueries({ queryKey: videoKeys.video(videoId) });
@@ -238,6 +243,17 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
   const comments = q.data ?? [];
   const rows = useMemo(() => buildRows(comments, expanded), [comments, expanded]);
 
+  if (missing) {
+    return (
+      <View style={styles.backdrop}>
+        <Pressable style={{ flex: 1 }} onPress={() => router.back()} accessibilityLabel={t('legal.close')} />
+        <SafeAreaView style={[styles.panel, { height: height * 0.5, backgroundColor: colors.bg }]} edges={['bottom']}>
+          <NotFoundState embedded title={t('fix4.notFoundVideoTitle')} body={t('fix4.notFoundVideoBody')} />
+        </SafeAreaView>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.backdrop}>
     <Pressable style={{ flex: 1 }} onPress={() => router.back()} accessibilityLabel={t('legal.close')} />
@@ -271,6 +287,8 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
             ListEmptyComponent={
               q.isLoading ? (
                 <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />
+              ) : off ? (
+                <></>
               ) : (
                 <Text style={[styles.empty, { color: colors.muted }]}>{t('comments.empty')}</Text>
               )

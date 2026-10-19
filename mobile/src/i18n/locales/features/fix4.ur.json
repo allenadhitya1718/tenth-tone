@@ -1,0 +1,30 @@
+{
+  "fix4": {
+    "addNewStory": "نئی اسٹوری شامل کریں",
+    "chatDeleteBody": "یہ پیغام اس چیٹ میں سب کے لیے حذف ہو جائے گا۔ اسے واپس نہیں کیا جا سکتا۔",
+    "chatDeleteConfirm": "سب کے لیے حذف کریں",
+    "chatDeleteTitle": "پیغام حذف کریں؟",
+    "deleteHint": "اس ویڈیو کو حذف کرنے کے لیے دیر تک دبائیں",
+    "deleteShort": "حذف کریں",
+    "deleteVideo": "ویڈیو حذف کریں",
+    "deleteVideoBody": "یہ ویڈیو اپنے لائکس اور تبصروں سمیت ہمیشہ کے لیے حذف ہو جائے گی۔ اسے واپس نہیں کیا جا سکتا۔",
+    "deleteVideoFailed": "ویڈیو حذف نہیں ہو سکی۔ دوبارہ کوشش کریں۔",
+    "deleteVideoTitle": "یہ ویڈیو حذف کریں؟",
+    "goBack": "واپس جائیں",
+    "notFoundChatBody": "یہ گفتگو موجود نہیں ہے یا آپ اس کا حصہ نہیں ہیں۔",
+    "notFoundChatTitle": "گفتگو نہیں ملی",
+    "notFoundUserBody": "ہو سکتا ہے یہ اکاؤنٹ حذف ہو گیا ہو یا لنک غلط ہو۔",
+    "notFoundUserTitle": "صارف نہیں ملا",
+    "notFoundVideoBody": "ہو سکتا ہے یہ ویڈیو حذف ہو گئی ہو یا لنک غلط ہو۔",
+    "notFoundVideoTitle": "ویڈیو نہیں ملی",
+    "privateListBody": "نجی اکاؤنٹ کے فالوورز اور فالونگ صرف منظور شدہ فالوورز دیکھ سکتے ہیں۔",
+    "privateListTitle": "یہ اکاؤنٹ نجی ہے",
+    "quotedMessage": "ایک پیغام",
+    "slideUpToLock": "لاک کرنے کے لیے اوپر سلائیڈ کریں",
+    "soundLabel": "آواز: {{title}}",
+    "soundRemove": "آواز ہٹائیں",
+    "videoDeleted": "ویڈیو حذف ہو گئی",
+    "voiceCancel": "ریکارڈنگ منسوخ کریں",
+    "voiceLocked": "ریکارڈنگ لاک ہے"
+  }
+}

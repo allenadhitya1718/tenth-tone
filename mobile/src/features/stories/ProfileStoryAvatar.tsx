@@ -104,7 +104,7 @@ export const ProfileStoryAvatar = memo(function ProfileStoryAvatar({
             },
           ]}
           accessibilityRole="button"
-          accessibilityLabel={t('stories.addStory')}
+          accessibilityLabel={t('fix4.addNewStory')}
         >
           <Ionicons name="add" size={18} color={colors.onPrimary} />
         </Pressable>

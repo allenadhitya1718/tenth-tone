@@ -22,6 +22,7 @@ import { PlacePicker } from '@/features/place/PlacePicker';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
+import { clearPendingSound, usePendingSound } from './pendingSound';
 import { Avatar, TagPeoplePicker } from './TagPeoplePicker';
 import { atHandle } from '@/lib/handle';
 
@@ -62,6 +63,10 @@ export function PublishScreen({
   const [place, setPlace] = useState<VideoPlace | null>(initialPlace);
   const [tagged, setTagged] = useState<UserSummary[]>([]);
   const [picker, setPicker] = useState<null | 'place' | 'tags'>(null);
+  // "Use this sound" on a sound page: the post is linked to that sound.
+  const sound = usePendingSound();
+  // Leaving this screen (posted, or backed out) drops the pick.
+  useEffect(() => clearPendingSound, []);
 
   const player = useVideoPlayer({ uri }, (p) => {
     p.loop = true;
@@ -99,6 +104,8 @@ export function PublishScreen({
         video: { uri, mimeType: mime ?? 'video/mp4', size: size ?? null, name: 'clip.mp4' },
         poster,
         description: caption.trim(),
+        sound_id: sound?.id ?? null,
+        music: sound?.title ?? null,
         privacy,
         is_draft: asDraft,
         allow_comments: allowComments,
@@ -190,6 +197,24 @@ export function PublishScreen({
         </View>
 
         <SuggestedHashtags image={poster} place={place?.name} caption={caption} max={MAX_CAPTION} onChange={setCaption} disabled={!!busy} />
+
+        {sound ? (
+          <View style={[styles.soundChip, { backgroundColor: colors.bg2 }]}>
+            <Ionicons name="musical-notes" size={18} color={colors.text} />
+            <Text style={[styles.optionText, { color: colors.text }]} numberOfLines={1}>
+              {t('fix4.soundLabel', { title: sound.title || t('discover.sound.untitled') })}
+            </Text>
+            <Pressable
+              onPress={clearPendingSound}
+              disabled={!!busy}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t('fix4.soundRemove')}
+            >
+              <Ionicons name="close-circle" size={20} color={colors.muted} />
+            </Pressable>
+          </View>
+        ) : null}
 
         <Section title={t('place.details')}>
           <Pressable
@@ -516,6 +541,7 @@ function FullPreview({ open, player, onClose }: { open: boolean; player: VideoPl
 }
 
 const styles = StyleSheet.create({
+  soundChip: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 14 },
   expand: { position: 'absolute', bottom: 6, end: 6, backgroundColor: 'rgba(0,0,0,0.45)', borderRadius: 10, padding: 4 },
   fullRoot: { flex: 1, backgroundColor: '#000' },
   fullCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },

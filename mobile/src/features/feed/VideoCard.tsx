@@ -8,7 +8,7 @@ import { router } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, AppState, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, AppState, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
 import { countShare, videoLink } from '@/api/discover';
 import type { Video } from '@/api/types';
@@ -19,6 +19,7 @@ import { useAuth } from '@/providers/AuthProvider';
 
 import { patchVideoEverywhere } from './cache';
 import { formatCount } from './format';
+import { useDeleteVideo } from './useDeleteVideo';
 import { useToggleFollow, useToggleLike, useToggleSave } from './useFeed';
 
 type Props = {
@@ -146,6 +147,7 @@ function Overlay({
 
   const isMine = video.user?.id === me;
   const [reportOpen, setReportOpen] = useState(false);
+  const del = useDeleteVideo();
 
   function toggleLike(next = !video.liked) {
     if (next === video.liked) return;
@@ -270,6 +272,15 @@ function Overlay({
         />
         <RailButton icon="arrow-redo" label={formatCount(video.shares_count)} a11y={t('feed.share')} onPress={share} />
         {!isMine ? <RailButton icon="flag-outline" label={t('ugc.report')} a11y={t('ugc.report')} onPress={() => setReportOpen(true)} /> : null}
+        {isMine ? (
+          <RailButton
+            icon="trash-outline"
+            label={t('fix4.deleteShort')}
+            a11y={t('fix4.deleteVideo')}
+            busy={del.busyId === video.id}
+            onPress={() => del.confirm(video.id)}
+          />
+        ) : null}
       </View>
       <ReportSheet visible={reportOpen} onClose={() => setReportOpen(false)} targetType="video" targetId={video.id} />
 
@@ -315,17 +326,27 @@ function RailButton({
   label,
   color = '#fff',
   a11y,
+  busy = false,
   onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   color?: string;
   a11y: string;
+  busy?: boolean;
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={a11y} hitSlop={6} style={styles.railBtn}>
-      <Ionicons name={icon} size={32} color={color} style={styles.shadow} />
+    <Pressable
+      onPress={onPress}
+      disabled={busy}
+      accessibilityRole="button"
+      accessibilityLabel={a11y}
+      accessibilityState={{ busy }}
+      hitSlop={6}
+      style={styles.railBtn}
+    >
+      {busy ? <ActivityIndicator color="#fff" style={styles.railSpinner} /> : <Ionicons name={icon} size={32} color={color} style={styles.shadow} />}
       <Text style={styles.railLabel}>{label}</Text>
     </Pressable>
   );
@@ -365,6 +386,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   railBtn: { alignItems: 'center' },
+  railSpinner: { width: 32, height: 32 },
   railLabel: { color: '#fff', fontSize: 12, fontWeight: '700', marginTop: 2, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3 },
   shadow: { textShadowColor: 'rgba(0,0,0,0.5)', textShadowRadius: 6 },
   caption: { position: 'absolute', start: 12, end: 80, bottom: 22, gap: 4 },

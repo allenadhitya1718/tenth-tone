@@ -1,0 +1,30 @@
+{
+  "fix4": {
+    "addNewStory": "Yeni hikaye ekle",
+    "chatDeleteBody": "Bu mesaj bu sohbetteki herkes için silinecek. Bu işlem geri alınamaz.",
+    "chatDeleteConfirm": "Herkesten sil",
+    "chatDeleteTitle": "Mesaj silinsin mi?",
+    "deleteHint": "Bu videoyu silmek için uzun basın",
+    "deleteShort": "Sil",
+    "deleteVideo": "Videoyu sil",
+    "deleteVideoBody": "Bu video, beğenileri ve yorumlarıyla birlikte kalıcı olarak silinecek. Bu işlem geri alınamaz.",
+    "deleteVideoFailed": "Video silinemedi. Tekrar deneyin.",
+    "deleteVideoTitle": "Bu video silinsin mi?",
+    "goBack": "Geri dön",
+    "notFoundChatBody": "Bu sohbet mevcut değil veya sohbette yer almıyorsunuz.",
+    "notFoundChatTitle": "Sohbet bulunamadı",
+    "notFoundUserBody": "Bu hesap silinmiş olabilir veya bağlantı yanlış.",
+    "notFoundUserTitle": "Kullanıcı bulunamadı",
+    "notFoundVideoBody": "Bu video silinmiş olabilir veya bağlantı yanlış.",
+    "notFoundVideoTitle": "Video bulunamadı",
+    "privateListBody": "Gizli bir hesabın takipçilerini ve takip ettiklerini yalnızca onaylı takipçiler görebilir.",
+    "privateListTitle": "Bu hesap gizli",
+    "quotedMessage": "bir mesaj",
+    "slideUpToLock": "Kilitlemek için yukarı kaydırın",
+    "soundLabel": "Ses: {{title}}",
+    "soundRemove": "Sesi kaldır",
+    "videoDeleted": "Video silindi",
+    "voiceCancel": "Kaydı iptal et",
+    "voiceLocked": "Kayıt kilitlendi"
+  }
+}

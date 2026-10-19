@@ -136,7 +136,7 @@ const MyStory = memo(function MyStory({
         hitSlop={8}
         style={[styles.plus, { backgroundColor: colors.primary, borderColor: overlay ? '#000' : colors.bg }]}
         accessibilityRole="button"
-        accessibilityLabel={t('stories.addStory')}
+        accessibilityLabel={t('fix4.addNewStory')}
       >
         <Ionicons name="add" size={16} color={colors.onPrimary} />
       </Pressable>

@@ -1,0 +1,30 @@
+{
+  "fix4": {
+    "addNewStory": "नई स्टोरी जोड़ें",
+    "chatDeleteBody": "यह संदेश इस चैट में सभी के लिए हटा दिया जाएगा। इसे वापस नहीं किया जा सकता।",
+    "chatDeleteConfirm": "सभी के लिए हटाएँ",
+    "chatDeleteTitle": "संदेश हटाएँ?",
+    "deleteHint": "इस वीडियो को हटाने के लिए देर तक दबाएँ",
+    "deleteShort": "हटाएँ",
+    "deleteVideo": "वीडियो हटाएँ",
+    "deleteVideoBody": "यह वीडियो अपने लाइक और कमेंट के साथ हमेशा के लिए हटा दिया जाएगा। इसे वापस नहीं किया जा सकता।",
+    "deleteVideoFailed": "वीडियो नहीं हटाया जा सका। फिर से कोशिश करें।",
+    "deleteVideoTitle": "यह वीडियो हटाएँ?",
+    "goBack": "वापस जाएँ",
+    "notFoundChatBody": "यह बातचीत मौजूद नहीं है या आप इसका हिस्सा नहीं हैं।",
+    "notFoundChatTitle": "बातचीत नहीं मिली",
+    "notFoundUserBody": "हो सकता है यह खाता हटा दिया गया हो या लिंक गलत हो।",
+    "notFoundUserTitle": "उपयोगकर्ता नहीं मिला",
+    "notFoundVideoBody": "हो सकता है यह वीडियो हटा दिया गया हो या लिंक गलत हो।",
+    "notFoundVideoTitle": "वीडियो नहीं मिला",
+    "privateListBody": "निजी खाते के फ़ॉलोअर्स और फ़ॉलोइंग केवल स्वीकृत फ़ॉलोअर्स ही देख सकते हैं।",
+    "privateListTitle": "यह खाता निजी है",
+    "quotedMessage": "एक संदेश",
+    "slideUpToLock": "लॉक करने के लिए ऊपर स्लाइड करें",
+    "soundLabel": "साउंड: {{title}}",
+    "soundRemove": "साउंड हटाएँ",
+    "videoDeleted": "वीडियो हटा दिया गया",
+    "voiceCancel": "रिकॉर्डिंग रद्द करें",
+    "voiceLocked": "रिकॉर्डिंग लॉक है"
+  }
+}

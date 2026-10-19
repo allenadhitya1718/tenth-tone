@@ -21,6 +21,8 @@ import { Button, TopBar } from '@/components/ui';
 import { formatCount } from '@/features/feed/format';
 import { useTheme } from '@/providers/ThemeProvider';
 
+import { setPendingSound } from '@/features/publish/pendingSound';
+
 import { go, isImageUrl, userPath } from './nav';
 import { EmptyState, ErrorState, LoadingState } from './parts';
 import { VideoGrid } from './VideoGrid';
@@ -112,8 +114,12 @@ function SoundHeader({ sound, count }: { sound: Sound; count: number }) {
         <Button
           title={t('discover.sound.use')}
           style={styles.use}
-          // The camera reads soundId to start recording over this sound.
-          onPress={() => router.push({ pathname: '/camera', params: { soundId: sound.id } })}
+          // The pick is parked in pendingSound for the Post screen to link the
+          // video to it; soundId stays on the route for the camera.
+          onPress={() => {
+            setPendingSound({ id: sound.id, title: sound.title });
+            router.push({ pathname: '/camera', params: { soundId: sound.id } });
+          }}
         />
       </View>
     </View>

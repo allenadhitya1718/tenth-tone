@@ -1,0 +1,30 @@
+{
+  "fix4": {
+    "addNewStory": "Ajouter une nouvelle story",
+    "chatDeleteBody": "Ce message sera supprimé pour tous les membres de cette discussion. Cette action est irréversible.",
+    "chatDeleteConfirm": "Supprimer pour tous",
+    "chatDeleteTitle": "Supprimer le message ?",
+    "deleteHint": "Appuyez longuement pour supprimer cette vidéo",
+    "deleteShort": "Supprimer",
+    "deleteVideo": "Supprimer la vidéo",
+    "deleteVideoBody": "Cette vidéo sera définitivement supprimée, avec ses J'aime et ses commentaires. Cette action est irréversible.",
+    "deleteVideoFailed": "Impossible de supprimer la vidéo. Réessayez.",
+    "deleteVideoTitle": "Supprimer cette vidéo ?",
+    "goBack": "Retour",
+    "notFoundChatBody": "Cette conversation n'existe pas ou vous n'en faites pas partie.",
+    "notFoundChatTitle": "Conversation introuvable",
+    "notFoundUserBody": "Ce compte a peut-être été supprimé ou le lien est incorrect.",
+    "notFoundUserTitle": "Utilisateur introuvable",
+    "notFoundVideoBody": "Cette vidéo a peut-être été supprimée ou le lien est incorrect.",
+    "notFoundVideoTitle": "Vidéo introuvable",
+    "privateListBody": "Seuls les abonnés approuvés peuvent voir les abonnés et abonnements d'un compte privé.",
+    "privateListTitle": "Ce compte est privé",
+    "quotedMessage": "un message",
+    "slideUpToLock": "Glissez vers le haut pour verrouiller",
+    "soundLabel": "Son : {{title}}",
+    "soundRemove": "Retirer le son",
+    "videoDeleted": "Vidéo supprimée",
+    "voiceCancel": "Annuler l'enregistrement",
+    "voiceLocked": "Enregistrement verrouillé"
+  }
+}

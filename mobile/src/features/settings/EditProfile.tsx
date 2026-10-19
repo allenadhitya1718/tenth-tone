@@ -30,12 +30,14 @@ import { HANDLE_RE } from '@/lib/auth';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
+import { countryNameFor } from '@/lib/countryNames';
+
 import { pickAvatar } from './avatarImage';
 import { Avatar, confirm, ErrorView, errorText, Group, InlineError, LoadingView, pgCode, RadioRow, Row } from './components';
 
 const LIMITS = { name: 50, handle: 30, bio: 150, link: 200 } as const;
 const GENDERS: Gender[] = ['male', 'female', 'other', 'undisclosed'];
-// Same list as the web app; names come from Intl so they localise themselves.
+// Same list as the web app; names come from src/lib/countryNames.ts.
 const COUNTRY_CODES = [
   'SA', 'AE', 'EG', 'QA', 'KW', 'BH', 'OM', 'JO', 'LB', 'IQ', 'SY', 'YE', 'PS', 'SD', 'LY', 'TN', 'DZ', 'MA', 'MR', 'SO', 'DJ', 'KM',
   'TR', 'IR', 'PK', 'IN', 'BD', 'ID', 'MY', 'SG', 'PH', 'TH', 'VN', 'CN', 'JP', 'KR',
@@ -44,14 +46,9 @@ const COUNTRY_CODES = [
   'AU', 'NZ', 'ZA', 'NG', 'KE', 'ET', 'GH', 'TZ', 'UG',
 ];
 
+// Hermes has no Intl.DisplayNames, so the names come from a shipped table.
 function countryName(code: string, lang: string) {
-  try {
-    const DN = (Intl as unknown as { DisplayNames?: new (l: string[], o: { type: string }) => { of: (c: string) => string | undefined } })
-      .DisplayNames;
-    return (DN && new DN([lang], { type: 'region' }).of(code)) || code;
-  } catch {
-    return code;
-  }
+  return countryNameFor(code, lang.split('-')[0]);
 }
 
 type Form = { name: string; handle: string; bio: string; link: string; gender: Gender | ''; country: string };

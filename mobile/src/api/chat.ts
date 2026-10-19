@@ -92,6 +92,8 @@ export type ChatInfo = {
   memberCount: number;
   title: string;
   photo: string;
+  // The chat does not exist or you are not in it (a stale link).
+  missing?: boolean;
 };
 
 export type Reaction = { user_id: Uuid; emoji: string };
@@ -158,10 +160,13 @@ const MEMBER_PROFILE = 'profiles:profiles!chat_members_user_id_fkey(id, name, ha
 // Details for ONE chat (title, photo, members), for the thread header.
 export async function fetchChatInfo(chatId: Uuid): Promise<ChatInfo> {
   const me = await uid();
-  const [{ data: chat }, { data: members }] = await Promise.all([
+  const [{ data: chat, error: chatError }, { data: members }] = await Promise.all([
     supabase.from('chats').select('id, type, name, photo_url').eq('id', chatId).maybeSingle(),
     supabase.from('chat_members').select(`user_id, ${MEMBER_PROFILE}`).eq('chat_id', chatId),
   ]);
+  // A failed read is an error to retry; only a clean "no such chat" (not a
+  // member, or never existed) is reported as missing.
+  if (chatError) throw chatError;
   const c = chat as Pick<Chat, 'id' | 'type' | 'name' | 'photo_url'> | null;
   const rows = (members ?? []) as unknown as Pick<ChatMember, 'user_id' | 'profiles'>[];
   const others = rows
@@ -176,6 +181,7 @@ export async function fetchChatInfo(chatId: Uuid): Promise<ChatInfo> {
     memberCount: rows.length,
     title: isGroup ? c?.name || GROUP_FALLBACK_TITLE : others[0]?.name || others[0]?.handle || DM_FALLBACK_TITLE,
     photo: isGroup ? c?.photo_url || '' : others[0]?.avatar_url || '',
+    ...(c ? {} : { missing: true }),
   };
 }
 

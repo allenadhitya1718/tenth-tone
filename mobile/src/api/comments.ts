@@ -122,14 +122,36 @@ export type OnCommentWithdrawn = (commentId: Uuid, message: string | null) => vo
 // froze the box for 1.3-2.7 s on the most-used action in the app. The trade:
 // a violating comment is visible from the insert until the verdict lands
 // (about a second), then it is withdrawn and its author told.
+// My hidden words, lower-cased. Empty on any failure (the same fail-open the
+// thread filter uses).
+async function myHiddenWords(me: Uuid): Promise<string[]> {
+  try {
+    const { data, error } = await supabase.from('hidden_words').select('word').eq('user_id', me);
+    if (error) return [];
+    return ((data ?? []) as { word: string }[]).map((r) => String(r.word).toLowerCase()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+// What fetchComments does on a refetch, applied to a comment I just posted:
+// one containing one of my hidden words is not shown to me.
+export function containsHiddenWord(text: string, words: string[]): boolean {
+  const lower = String(text || '').toLowerCase();
+  return words.some((w) => lower.includes(w));
+}
+
+export type PostedComment = Comment & { hiddenForMe?: boolean };
+
 export async function postComment(
   videoId: Uuid,
   text: string,
   onWithdrawn?: OnCommentWithdrawn,
   parentId?: Uuid | null,
-): Promise<Comment> {
+): Promise<PostedComment> {
   const me = await requireUid();
   const screening = checkText('comment', text).catch(() => null);
+  const hiddenWords = myHiddenWords(me);
 
   const { data, error } = await supabase
     .from('comments')
@@ -153,7 +175,9 @@ export async function postComment(
     }
     void withdraw(row.id, verdict.message, onWithdrawn);
   });
-  return row;
+  // The comment is posted either way; this only says whether MY filter would
+  // hide it, so the open thread matches what a refetch would show.
+  return { ...row, hiddenForMe: containsHiddenWord(row.text, await hiddenWords) };
 }
 
 // The BEFORE INSERT word filter (0135, on comments and live_comments) raises
@@ -188,6 +212,19 @@ async function withdraw(id: Uuid, message: string | null, onWithdrawn?: OnCommen
 export async function deleteComment(id: Uuid): Promise<void> {
   const { error } = await supabase.from('comments').delete().eq('id', id);
   if (error) throw error;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Whether this video exists (for this viewer) and takes comments. `exists:
+// false` is a link to a video that is gone or never was; null means the read
+// itself failed, which says nothing about the video.
+export async function fetchCommentsAccess(videoId: Uuid): Promise<{ exists: boolean; allowed: boolean } | null> {
+  if (!UUID_RE.test(videoId)) return { exists: false, allowed: false };
+  const { data, error } = await supabase.from('videos').select('allow_comments').eq('id', videoId).maybeSingle();
+  if (error) return null;
+  if (!data) return { exists: false, allowed: false };
+  return { exists: true, allowed: (data as { allow_comments: boolean | null }).allow_comments !== false };
 }
 
 // Whether the owner has comments switched on for this video. Null while it

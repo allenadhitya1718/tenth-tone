@@ -200,6 +200,37 @@ void main() {
 `;
 }
 
+/**
+ * GLSL ES 1.00 fragment shader for the native fx camera (modules/flyp-fx-camera):
+ * the same look body, but the picture is the camera's external OES texture,
+ * sampled through the per-output texture matrix CameraX provides (so every tap
+ * lands on the right texel whatever the sensor rotation or crop). uDim is the
+ * size of the rendered buffer. The skin-smoothing radius follows the long side,
+ * because that buffer is the sensor's (landscape) orientation, not the upright one.
+ */
+export function glslOesFragmentSource(): string {
+  const body = BODY.replace('float px = uDim.y * 0.0045;', 'float px = max(uDim.x, uDim.y) * 0.0045;');
+  return `#extension GL_OES_EGL_image_external : require
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
+precision mediump float;
+#endif
+uniform samplerExternalOES uTexSampler;
+uniform mat4 uTexMat;
+varying vec2 vTexSamplingCoord;
+${DECLS}
+vec3 tap(vec2 q) {
+  return texture2D(uTexSampler, (uTexMat * vec4(q * uDim.zw, 0.0, 1.0)).xy).rgb;
+}
+${body}
+void main() {
+  vec2 p = vTexSamplingCoord * uDim.xy;
+  gl_FragColor = vec4(look(p), 1.0);
+}
+`;
+}
+
 export const GLSL_VERTEX_SOURCE = `attribute vec4 aFramePosition;
 varying vec2 vTexSamplingCoord;
 void main() {
@@ -294,6 +325,16 @@ export function lookUniforms(id: LookId, beauty: number): LookUniforms {
     uBty: [beauty, beauty * 0.8, 0, 0],
     uT: [0, 0, 0, 0],
   };
+}
+
+/** The uniforms the native fx camera takes (all but uDim and uT, which it sets itself), flat, in this order. */
+export const NATIVE_UNIFORM_NAMES = ['uA', 'uBal', 'uSh', 'uHi', 'uFx', 'uBty'] as const;
+
+export function nativeUniforms(id: LookId, beauty: number): number[] {
+  const u = lookUniforms(id, beauty);
+  const out: number[] = [];
+  for (const n of NATIVE_UNIFORM_NAMES) for (const v of u[n]) out.push(v);
+  return out;
 }
 
 /** Flat array in LOOK_UNIFORM_NAMES order, as Skia's makeShader wants it. */

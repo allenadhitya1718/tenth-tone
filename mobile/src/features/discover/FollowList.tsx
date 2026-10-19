@@ -6,8 +6,9 @@ import { useTranslation } from 'react-i18next';
 import { I18nManager, Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { fetchFollowers, fetchFollowing, type FollowListRow, profileKeys } from '@/api/profiles';
+import { fetchFollowers, fetchFollowing, fetchProfile, type FollowListRow, profileKeys } from '@/api/profiles';
 import { TopBar } from '@/components/ui';
+import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { EmptyState, ErrorState, LoadingState } from './parts';
@@ -27,6 +28,18 @@ export function FollowList({ kind, userId }: { kind: FollowListKind; userId: str
     queryKey: kind === 'followers' ? profileKeys.followers(userId) : profileKeys.following(userId),
     queryFn: () => (kind === 'followers' ? fetchFollowers(userId) : fetchFollowing(userId)),
   });
+
+  // A private account's lists are hidden from people it has not approved,
+  // while its header still shows the counts. Say so rather than "No
+  // followers yet". The profile is normally already cached from the page
+  // that opened this list.
+  const me = useAuth().session?.user.id;
+  const profile = useQuery({ queryKey: profileKeys.profile(userId), queryFn: () => fetchProfile(userId), enabled: !!userId });
+  const hiddenByPrivacy =
+    !!profile.data?.is_private &&
+    me !== userId &&
+    (list.data?.length ?? 0) === 0 &&
+    (kind === 'followers' ? profile.data.followers_count : profile.data.following_count) > 0;
 
   const rows = useMemo(() => {
     const all = list.data ?? [];
@@ -76,6 +89,8 @@ export function FollowList({ kind, userId }: { kind: FollowListKind; userId: str
             <LoadingState />
           ) : list.isError ? (
             <ErrorState onRetry={onRefresh} />
+          ) : hiddenByPrivacy ? (
+            <EmptyState icon="lock-closed-outline" title={t('fix4.privateListTitle')} sub={t('fix4.privateListBody')} />
           ) : filter.trim() ? (
             <EmptyState icon="search-outline" title={t('discover.search.noResults')} />
           ) : (

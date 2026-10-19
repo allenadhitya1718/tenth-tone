@@ -1,0 +1,30 @@
+{
+  "fix4": {
+    "addNewStory": "添加新快拍",
+    "chatDeleteBody": "此消息将对本聊天中的所有人删除，且无法撤销。",
+    "chatDeleteConfirm": "为所有人删除",
+    "chatDeleteTitle": "删除消息？",
+    "deleteHint": "长按可删除此视频",
+    "deleteShort": "删除",
+    "deleteVideo": "删除视频",
+    "deleteVideoBody": "此视频及其点赞和评论将被永久删除，且无法撤销。",
+    "deleteVideoFailed": "无法删除视频，请重试。",
+    "deleteVideoTitle": "删除此视频？",
+    "goBack": "返回",
+    "notFoundChatBody": "此对话不存在，或你不在其中。",
+    "notFoundChatTitle": "未找到对话",
+    "notFoundUserBody": "该账号可能已被删除，或链接有误。",
+    "notFoundUserTitle": "未找到用户",
+    "notFoundVideoBody": "该视频可能已被删除，或链接有误。",
+    "notFoundVideoTitle": "未找到视频",
+    "privateListBody": "只有已获批准的关注者才能查看私密账号的粉丝和关注列表。",
+    "privateListTitle": "此账号为私密账号",
+    "quotedMessage": "一条消息",
+    "slideUpToLock": "上滑锁定",
+    "soundLabel": "声音：{{title}}",
+    "soundRemove": "移除声音",
+    "videoDeleted": "视频已删除",
+    "voiceCancel": "取消录音",
+    "voiceLocked": "录音已锁定"
+  }
+}

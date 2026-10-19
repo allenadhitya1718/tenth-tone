@@ -1,0 +1,30 @@
+{
+  "fix4": {
+    "addNewStory": "Tambah cerita baru",
+    "chatDeleteBody": "Pesan ini akan dihapus untuk semua orang di obrolan ini. Tindakan ini tidak dapat dibatalkan.",
+    "chatDeleteConfirm": "Hapus untuk semua orang",
+    "chatDeleteTitle": "Hapus pesan?",
+    "deleteHint": "Tekan lama untuk menghapus video ini",
+    "deleteShort": "Hapus",
+    "deleteVideo": "Hapus video",
+    "deleteVideoBody": "Video ini akan dihapus permanen beserta suka dan komentarnya. Tindakan ini tidak dapat dibatalkan.",
+    "deleteVideoFailed": "Tidak dapat menghapus video. Coba lagi.",
+    "deleteVideoTitle": "Hapus video ini?",
+    "goBack": "Kembali",
+    "notFoundChatBody": "Percakapan ini tidak ada atau Anda bukan anggotanya.",
+    "notFoundChatTitle": "Percakapan tidak ditemukan",
+    "notFoundUserBody": "Akun ini mungkin telah dihapus atau tautannya salah.",
+    "notFoundUserTitle": "Pengguna tidak ditemukan",
+    "notFoundVideoBody": "Video ini mungkin telah dihapus atau tautannya salah.",
+    "notFoundVideoTitle": "Video tidak ditemukan",
+    "privateListBody": "Hanya pengikut yang disetujui yang dapat melihat pengikut dan yang diikuti akun pribadi.",
+    "privateListTitle": "Akun ini pribadi",
+    "quotedMessage": "sebuah pesan",
+    "slideUpToLock": "Geser ke atas untuk mengunci",
+    "soundLabel": "Suara: {{title}}",
+    "soundRemove": "Hapus suara",
+    "videoDeleted": "Video dihapus",
+    "voiceCancel": "Batalkan rekaman",
+    "voiceLocked": "Rekaman terkunci"
+  }
+}

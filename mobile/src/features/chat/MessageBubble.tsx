@@ -96,6 +96,11 @@ export const MessageBubble = memo(function MessageBubble({
 
   const reactions = groupReactions(item.reactions, myId);
 
+  // "Replying to <name>: <text>"; with no name known, a nameless phrase
+  // rather than "Replying to : <text>".
+  const quoteA11y = (name?: string | null) =>
+    (name ? t('chat.replyingTo', { name }) : t('fix4.quotedMessage')) + ': ' + (item.reply_to ? previewText(item.reply_to, t) : '');
+
   return (
     <View style={[styles.wrap, mine ? styles.wrapMine : styles.wrapTheirs]}>
       <Pressable
@@ -129,7 +134,7 @@ export const MessageBubble = memo(function MessageBubble({
             accessibilityRole="button"
             accessibilityLabel={
               item.reply_to
-                ? t('chat.replyingTo', { name: item.reply_to.from?.name ?? '' }) + ': ' + previewText(item.reply_to, t)
+                ? quoteA11y(item.reply_to.from_user_id === myId ? t('chat.you') : item.reply_to.from?.name)
                 : t('chat.deletedMessage')
             }
           >

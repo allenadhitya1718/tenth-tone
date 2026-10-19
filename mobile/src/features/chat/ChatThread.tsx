@@ -34,6 +34,7 @@ import {
 } from '@/api/chat';
 import { ApiError } from '@/api/client';
 import type { LocalMedia } from '@/api/upload';
+import { NotFoundState } from '@/components/NotFoundState';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -220,10 +221,12 @@ export function ChatThread({ chatId }: { chatId: string }) {
 
   const onDelete = useCallback(
     (m: ThreadMessage) => {
-      Alert.alert(t('chat.deleteTitle'), t('chat.deleteBody'), [
+      // Messages are deleted outright (own messages only), so it is gone for
+      // everyone in the chat; the dialog says exactly that.
+      Alert.alert(t('fix4.chatDeleteTitle'), t('fix4.chatDeleteBody'), [
         { text: t('chat.cancel'), style: 'cancel' },
         {
-          text: t('chat.delete'),
+          text: t('fix4.chatDeleteConfirm'),
           style: 'destructive',
           onPress: () => {
             if (replyTo?.id === m.id) setReplyTo(null);
@@ -299,11 +302,19 @@ export function ChatThread({ chatId }: { chatId: string }) {
   const replyName = replyTo
     ? replyTo.from_user_id === me
       ? t('chat.replyToYourself')
-      : t('chat.replyingTo', { name: replyTo.from?.name || (isGroup ? '' : title) })
+      : replyTo.from?.name || (!isGroup && title)
+        ? t('chat.replyingTo', { name: replyTo.from?.name || title })
+        : t('fix4.quotedMessage')
     : '';
 
   const closeEmoji = useCallback(() => setEmojiOpen(false), []);
   const cancelReply = useCallback(() => setReplyTo(null), []);
+
+  // A link to a conversation that does not exist (or is not yours): no empty
+  // thread with a live composer.
+  if (info.data?.missing) {
+    return <NotFoundState icon="chatbubbles-outline" title={t('fix4.notFoundChatTitle')} body={t('fix4.notFoundChatBody')} />;
+  }
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>

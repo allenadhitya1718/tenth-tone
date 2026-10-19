@@ -1,0 +1,30 @@
+{
+  "fix4": {
+    "addNewStory": "إضافة قصة جديدة",
+    "chatDeleteBody": "ستُحذف هذه الرسالة للجميع في هذه المحادثة. لا يمكن التراجع عن ذلك.",
+    "chatDeleteConfirm": "حذف للجميع",
+    "chatDeleteTitle": "حذف الرسالة؟",
+    "deleteHint": "اضغط مطولًا لحذف هذا الفيديو",
+    "deleteShort": "حذف",
+    "deleteVideo": "حذف الفيديو",
+    "deleteVideoBody": "سيُحذف هذا الفيديو نهائيًا مع إعجاباته وتعليقاته. لا يمكن التراجع عن ذلك.",
+    "deleteVideoFailed": "تعذّر حذف الفيديو. حاول مرة أخرى.",
+    "deleteVideoTitle": "حذف هذا الفيديو؟",
+    "goBack": "رجوع",
+    "notFoundChatBody": "هذه المحادثة غير موجودة أو لست عضوًا فيها.",
+    "notFoundChatTitle": "المحادثة غير موجودة",
+    "notFoundUserBody": "ربما حُذف هذا الحساب أو أن الرابط غير صحيح.",
+    "notFoundUserTitle": "المستخدم غير موجود",
+    "notFoundVideoBody": "ربما حُذف هذا الفيديو أو أن الرابط غير صحيح.",
+    "notFoundVideoTitle": "الفيديو غير موجود",
+    "privateListBody": "يمكن للمتابعين المعتمدين فقط رؤية المتابِعين والمتابَعين في الحساب الخاص.",
+    "privateListTitle": "هذا الحساب خاص",
+    "quotedMessage": "رسالة",
+    "slideUpToLock": "اسحب للأعلى للتثبيت",
+    "soundLabel": "الصوت: {{title}}",
+    "soundRemove": "إزالة الصوت",
+    "videoDeleted": "تم حذف الفيديو",
+    "voiceCancel": "إلغاء التسجيل",
+    "voiceLocked": "التسجيل مثبّت"
+  }
+}

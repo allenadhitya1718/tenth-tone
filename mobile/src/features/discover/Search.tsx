@@ -359,9 +359,10 @@ function Recent({
             style={styles.recentMain}
             onPress={() => onPick(item)}
             accessibilityRole="button"
+            accessibilityLabel={item}
             accessibilityHint={t('discover.search.recentHint')}
           >
-            <Ionicons name="time-outline" size={20} color={colors.muted} />
+            <Ionicons name="time-outline" size={20} color={colors.muted} accessibilityElementsHidden importantForAccessibility="no" />
             <Text style={[styles.recentText, { color: colors.text }]} numberOfLines={1}>
               {item}
             </Text>
@@ -373,7 +374,7 @@ function Recent({
             accessibilityRole="button"
             accessibilityLabel={t('discover.search.removeRecent', { q: item })}
           >
-            <Ionicons name="close" size={18} color={colors.muted} />
+            <Ionicons name="close" size={18} color={colors.muted} accessibilityElementsHidden importantForAccessibility="no" />
           </Pressable>
         </View>
       )}

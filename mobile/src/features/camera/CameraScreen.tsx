@@ -22,6 +22,7 @@ import { NEW_STORY_HREF } from '@/features/stories/StoryTray';
 
 import { buildFxTimeline, FACE_FX_IDS, type FaceFxId } from './faceFx';
 import { faceFxAvailable } from './faceSupport';
+import { FxCamera, fxCameraAvailable, type FxCameraError, type FxCameraHandle, type FxCameraReady, type FxCameraRecording } from './fxCamera';
 import { isNeutral, LOOK_IDS, lookSpec, TINTS, type LookId } from './looks';
 import { bakeColorMatrix, bakeLook, filtersAvailable, shaderBakeAvailable } from './videoFilter';
 
@@ -51,6 +52,8 @@ const BIT_RATE = 6_000_000;
 const FRONT_BIT_RATE = 7_000_000;
 // If the Skia preview has not delivered a frame by then, fall back a step.
 const SKIA_FIRST_FRAME_MS = 4000;
+// Same watchdog for the native fx camera (its first start also compiles the look shader).
+const NATIVE_FIRST_FRAME_MS = 5000;
 // Strip geometry, also used by getItemLayout so scrollToIndex is exact.
 const ITEM_WIDTH = 62;
 const ITEM_GAP = 14;
@@ -67,7 +70,7 @@ type StripItem = { key: string; kind: 'none' } | { key: string; kind: 'fx'; id: 
 // file), then the colour looks.
 const STRIP: StripItem[] = [
   { key: 'none', kind: 'none' },
-  ...(faceFxAvailable ? FACE_FX_IDS.map((id, index): StripItem => ({ key: `fx:${id}`, kind: 'fx', id, index })) : []),
+  ...(faceFxAvailable || fxCameraAvailable ? FACE_FX_IDS.map((id, index): StripItem => ({ key: `fx:${id}`, kind: 'fx', id, index })) : []),
   ...LOOK_IDS.filter((id) => id !== 'normal').map((id): StripItem => ({ key: `look:${id}`, kind: 'look', id })),
 ];
 
@@ -77,6 +80,11 @@ const STRIP: StripItem[] = [
 //      runs through Skia (a colour/beauty shader plus sprites anchored to an
 //      ML Kit face), and the same shader and sprite timeline are replayed into
 //      the file by a native re-encode right after recording (videoFilter.ts).
+//      On Android builds that have the native fx camera (fxCamera.tsx) none of
+//      that is needed: one GPU pass draws the look and the sprites for the
+//      preview AND the encoder, so the recorded file is final and goes straight
+//      to the post screen. The Skia path above is the fallback (iOS, older
+//      binaries, or if the native camera fails to start).
 //   19 double tap anywhere flips front/back.
 //   20 a short vibration when recording starts (and stops).
 export function CameraScreen() {
@@ -115,9 +123,17 @@ export function CameraScreen() {
   const [faceFailed, setFaceFailed] = useState(false);
   const [skiaFailed, setSkiaFailed] = useState(false);
   const gotFirstFrame = useRef(false);
+  // Native fx camera (Android): preview and file come from the same GPU pass.
+  const [nativeFailed, setNativeFailed] = useState(false);
+  const [nativeInfo, setNativeInfo] = useState<FxCameraReady | null>(null);
+  const nativeRef = useRef<FxCameraHandle | null>(null);
+  const nativeFirstFrame = useRef(false);
+  const nativeRec = useRef(false);
+  const nativeLook = useRef<{ look: LookId; beauty: number; fx: FaceFxId | null } | null>(null);
+  const useNative = fxCameraAvailable && !nativeFailed;
 
   const wantsSkia = FilteredCamera != null && (look !== 'normal' || beauty > 0 || fx != null);
-  const filtered = wantsSkia && !skiaFailed;
+  const filtered = wantsSkia && !skiaFailed && !useNative;
   const useFace = filtered && FaceCamera != null && !faceFailed;
   // The recorder that logs face detections for the export, one per screen.
   const fxRec = useMemo(() => FilteredMod?.createFxRecorder() ?? null, []);
@@ -175,21 +191,43 @@ export function CameraScreen() {
   // A step down the ladder when the picture cannot be produced. Never while a
   // recording is running (swapping the camera would end it).
   const degrade = useCallback(() => {
-    if (recorder.current || starting.current) return;
+    if (recorder.current || starting.current || nativeRec.current) return;
     if (useFace) setFaceFailed(true);
     else setSkiaFailed(true);
     dropFx();
   }, [useFace, dropFx]);
   const faceFailedNow = useCallback(() => {
-    if (recorder.current || starting.current) return;
+    if (recorder.current || starting.current || nativeRec.current) return;
     setFaceFailed(true);
     dropFx();
   }, [dropFx]);
   const shaderFailedNow = useCallback(() => {
-    if (recorder.current || starting.current) return;
+    if (recorder.current || starting.current || nativeRec.current) return;
     setSkiaFailed(true);
     dropFx();
   }, [dropFx]);
+
+  // The native camera could not start (or died before recording): step down to the
+  // VisionCamera + Skia path. Face effects only survive there if the face detector is in this build.
+  const nativeFailedNow = useCallback(
+    (why: string) => {
+      if (nativeRec.current || starting.current) return;
+      console.warn('native fx camera failed:', why);
+      setNativeFailed(true);
+      if (!FaceCamera) dropFx();
+    },
+    [dropFx],
+  );
+
+  // First-frame watchdog for the native camera: never leave a black screen.
+  useEffect(() => {
+    if (!useNative || !focused) return;
+    nativeFirstFrame.current = false;
+    const id = setTimeout(() => {
+      if (!nativeFirstFrame.current) nativeFailedNow('no first frame');
+    }, NATIVE_FIRST_FRAME_MS);
+    return () => clearTimeout(id);
+  }, [useNative, focused, position, nativeFailedNow]);
 
   const deviceId = device?.id;
   useEffect(() => {
@@ -226,8 +264,8 @@ export function CameraScreen() {
     return () => clearTimeout(handle);
   }, [showFilters]);
 
-  const minZoom = device?.minZoom ?? 1;
-  const maxZoom = Math.min(device?.maxZoom ?? 8, 10);
+  const minZoom = (useNative ? nativeInfo?.minZoom : device?.minZoom) ?? 1;
+  const maxZoom = Math.min((useNative ? nativeInfo?.maxZoom : device?.maxZoom) ?? 8, 10);
   const clampZoom = (z: number) => Math.max(minZoom, Math.min(maxZoom, z));
 
   const flip = useCallback(() => {
@@ -366,7 +404,52 @@ export function CameraScreen() {
     }
   }
 
+  // Native camera: the file is final (look, beauty and sprites were drawn into the
+  // encoder's frames), so it goes straight to the post screen, no re-encode.
+  const onNativeFinished = useCallback(
+    (r: FxCameraRecording) => {
+      const nl = nativeLook.current;
+      nativeLook.current = null;
+      nativeRec.current = false;
+      setRecording(false);
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (!r.ok || !r.path) {
+        Alert.alert(t('camera.recordFailed'), r.message ?? '');
+        return;
+      }
+      const uri = r.path.startsWith('file://') ? r.path : `file://${r.path}`;
+      if (!nl || (isNeutral(nl.look, nl.beauty) && nl.fx == null)) {
+        router.push({ pathname: '/publish', params: { uri } });
+      } else {
+        router.push({ pathname: '/publish', params: { uri, filter: nl.look, beauty: nl.beauty > 0 ? '1' : '0', fx: nl.fx ?? '' } });
+      }
+    },
+    [t],
+  );
+
+  async function startNative() {
+    const cam = nativeRef.current;
+    if (!cam || starting.current || nativeRec.current) return;
+    starting.current = true;
+    try {
+      // What the file carries is what is selected right now (the UI is locked while recording).
+      nativeLook.current = { look, beauty, fx };
+      nativeRec.current = true;
+      await cam.startRecording(MAX_SECONDS);
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setSeconds(0);
+      setRecording(true);
+    } catch (e) {
+      nativeRec.current = false;
+      nativeLook.current = null;
+      Alert.alert(t('camera.recordFailed'), (e as Error).message);
+    } finally {
+      starting.current = false;
+    }
+  }
+
   async function start() {
+    if (useNative) return startNative();
     if (starting.current || recorder.current) return;
     starting.current = true;
     try {
@@ -405,6 +488,10 @@ export function CameraScreen() {
   }
 
   async function stop() {
+    if (nativeRec.current) {
+      nativeRef.current?.stopRecording();
+      return;
+    }
     try {
       await recorder.current?.stopRecording();
     } catch (e) {
@@ -456,7 +543,31 @@ export function CameraScreen() {
     <View style={styles.root}>
       <GestureDetector gesture={gestures}>
         <View style={StyleSheet.absoluteFill}>
-          {device && filtered && Cam && fxRec ? (
+          {useNative ? (
+            <FxCamera
+              ref={nativeRef}
+              style={StyleSheet.absoluteFill}
+              facing={position}
+              torch={torch}
+              zoom={zoom}
+              active={focused}
+              bitRate={bitRate}
+              look={look}
+              beauty={beauty}
+              fx={fxIndex}
+              onReady={setNativeInfo}
+              onFirstFrame={() => {
+                nativeFirstFrame.current = true;
+              }}
+              onError={(e: FxCameraError) => {
+                console.warn('fx camera:', e.code, e.message);
+                // The face detector failing only costs the face effects; anything else is the camera itself.
+                if (e.code === 'FACE') dropFx();
+                else nativeFailedNow(`${e.code}: ${e.message}`);
+              }}
+              onRecordingFinished={onNativeFinished}
+            />
+          ) : device && filtered && Cam && fxRec ? (
             <Cam
               style={StyleSheet.absoluteFill}
               device={device}
@@ -497,7 +608,7 @@ export function CameraScreen() {
               onError={(e) => console.warn('camera:', e.message)}
             />
           ) : null}
-          {device && wantsSkia && skiaFailed && look !== 'normal' ? (
+          {device && wantsSkia && skiaFailed && !useNative && look !== 'normal' ? (
             <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: TINTS[look] }]} />
           ) : null}
         </View>
@@ -528,7 +639,7 @@ export function CameraScreen() {
 
       <View style={[styles.sideTools, { top: insets.top + 12 }]}>
         <Tool icon="camera-reverse-outline" label={t('camera.flip')} onPress={flip} disabled={recording} />
-        {position === 'back' && device?.hasTorch ? (
+        {position === 'back' && (useNative ? nativeInfo?.hasTorch : device?.hasTorch) ? (
           <Tool icon={torch ? 'flash' : 'flash-off'} label={t('camera.flash')} onPress={() => setTorch((v) => !v)} />
         ) : null}
         {FilteredCamera ? (

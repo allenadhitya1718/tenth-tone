@@ -1,0 +1,30 @@
+{
+  "fix4": {
+    "addNewStory": "Add new story",
+    "chatDeleteBody": "This message will be deleted for everyone in this chat. This cannot be undone.",
+    "chatDeleteConfirm": "Delete for everyone",
+    "chatDeleteTitle": "Delete message?",
+    "deleteHint": "Long-press to delete this video",
+    "deleteShort": "Delete",
+    "deleteVideo": "Delete video",
+    "deleteVideoBody": "This video will be permanently removed, with its likes and comments. This cannot be undone.",
+    "deleteVideoFailed": "Could not delete the video. Try again.",
+    "deleteVideoTitle": "Delete this video?",
+    "goBack": "Go back",
+    "notFoundChatBody": "This conversation does not exist or you are not part of it.",
+    "notFoundChatTitle": "Conversation not found",
+    "notFoundUserBody": "This account may have been deleted or the link is wrong.",
+    "notFoundUserTitle": "User not found",
+    "notFoundVideoBody": "This video may have been deleted or the link is wrong.",
+    "notFoundVideoTitle": "Video not found",
+    "privateListBody": "Only approved followers can see the followers and following of a private account.",
+    "privateListTitle": "This account is private",
+    "quotedMessage": "a message",
+    "slideUpToLock": "Slide up to lock",
+    "soundLabel": "Sound: {{title}}",
+    "soundRemove": "Remove sound",
+    "videoDeleted": "Video deleted",
+    "voiceCancel": "Cancel recording",
+    "voiceLocked": "Recording locked"
+  }
+}

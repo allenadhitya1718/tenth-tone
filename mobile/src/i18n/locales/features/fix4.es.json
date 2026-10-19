@@ -1,0 +1,30 @@
+{
+  "fix4": {
+    "addNewStory": "Añadir nueva historia",
+    "chatDeleteBody": "Este mensaje se eliminará para todos en este chat. No se puede deshacer.",
+    "chatDeleteConfirm": "Eliminar para todos",
+    "chatDeleteTitle": "¿Eliminar mensaje?",
+    "deleteHint": "Mantén pulsado para eliminar este vídeo",
+    "deleteShort": "Eliminar",
+    "deleteVideo": "Eliminar vídeo",
+    "deleteVideoBody": "Este vídeo se eliminará de forma permanente, con sus me gusta y comentarios. No se puede deshacer.",
+    "deleteVideoFailed": "No se pudo eliminar el vídeo. Inténtalo de nuevo.",
+    "deleteVideoTitle": "¿Eliminar este vídeo?",
+    "goBack": "Volver",
+    "notFoundChatBody": "Esta conversación no existe o no formas parte de ella.",
+    "notFoundChatTitle": "Conversación no encontrada",
+    "notFoundUserBody": "Puede que esta cuenta se haya eliminado o que el enlace sea incorrecto.",
+    "notFoundUserTitle": "Usuario no encontrado",
+    "notFoundVideoBody": "Puede que este vídeo se haya eliminado o que el enlace sea incorrecto.",
+    "notFoundVideoTitle": "Vídeo no encontrado",
+    "privateListBody": "Solo los seguidores aprobados pueden ver los seguidores y seguidos de una cuenta privada.",
+    "privateListTitle": "Esta cuenta es privada",
+    "quotedMessage": "un mensaje",
+    "slideUpToLock": "Desliza hacia arriba para bloquear",
+    "soundLabel": "Sonido: {{title}}",
+    "soundRemove": "Quitar sonido",
+    "videoDeleted": "Vídeo eliminado",
+    "voiceCancel": "Cancelar grabación",
+    "voiceLocked": "Grabación bloqueada"
+  }
+}

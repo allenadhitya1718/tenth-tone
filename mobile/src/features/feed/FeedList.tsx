@@ -12,6 +12,7 @@ import {
 
 import type { Video } from '@/api/types';
 import { type FeedTab, fetchVideo, videoKeys } from '@/api/videos';
+import { NotFoundState } from '@/components/NotFoundState';
 import { Button } from '@/components/ui';
 
 import { useFeed } from './useFeed';
@@ -93,6 +94,16 @@ export function FeedList({
     return (
       <View style={[styles.center, { height }]}>
         <ActivityIndicator color="#fff" />
+      </View>
+    );
+  }
+
+  // A link to a video that is gone (or never existed): say so, with a way
+  // out, instead of silently showing the normal feed.
+  if (pin && pinned.isSuccess && !pinned.data) {
+    return (
+      <View style={{ height, backgroundColor: '#000' }}>
+        <NotFoundState dark embedded icon="videocam-off-outline" title={t('fix4.notFoundVideoTitle')} body={t('fix4.notFoundVideoBody')} />
       </View>
     );
   }

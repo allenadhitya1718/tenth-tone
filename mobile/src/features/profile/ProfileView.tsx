@@ -35,8 +35,10 @@ import {
 import { fetchUserSounds, type Sound, soundKeys } from '@/api/sounds';
 import { fetchDrafts, fetchSavedVideos, fetchUserVideos, videoKeys, type VideoTile } from '@/api/videos';
 import { tagKeys } from '@/api/tags';
+import { NotFoundState } from '@/components/NotFoundState';
 import { Button } from '@/components/ui';
 import { DraftSheet } from '@/features/drafts/DraftSheet';
+import { useDeleteVideo } from '@/features/feed/useDeleteVideo';
 import { ProfilePlacesMap } from '@/features/map/ProfilePlacesMap';
 import { formatCount } from '@/features/feed/format';
 import { BottomSheet } from '@/features/safety/BottomSheet';
@@ -58,6 +60,8 @@ export function ProfileView({ userId, isMe }: { userId: string; isMe: boolean })
   const [tab, setTab] = useState<Tab>('videos');
   // Client note 2: a draft opens its own sheet, never the For You feed.
   const [openDraft, setOpenDraft] = useState<VideoTile | null>(null);
+  // Long-press on one of your own posts offers Delete video.
+  const del = useDeleteVideo();
 
   const profile = useQuery({ queryKey: profileKeys.profile(userId), queryFn: () => fetchProfile(userId) });
   const tabs: Tab[] = isMe ? ['videos', 'audio', 'map', 'saved', 'drafts'] : ['videos', 'audio', 'map'];
@@ -77,6 +81,11 @@ export function ProfileView({ userId, isMe }: { userId: string; isMe: boolean })
 
   const grid = tab === 'videos' ? videos : tab === 'saved' ? saved : tab === 'drafts' ? drafts : null;
   const tile = Math.floor((width - 4) / 3);
+
+  // A link to a person who does not exist (or is not visible to you).
+  if (!isMe && profile.isSuccess && !profile.data) {
+    return <NotFoundState icon="person-outline" title={t('fix4.notFoundUserTitle')} body={t('fix4.notFoundUserBody')} />;
+  }
 
   const header = (
     <>
@@ -123,11 +132,19 @@ export function ProfileView({ userId, isMe }: { userId: string; isMe: boolean })
             <Pressable
               style={{ width: tile, height: tile * 1.33, backgroundColor: colors.bg3 }}
               onPress={() => (tab === 'drafts' ? setOpenDraft(item) : router.push(`/video/${item.id}`))}
+              onLongPress={isMe && tab === 'videos' ? () => del.confirm(item.id) : undefined}
+              disabled={del.busyId === item.id}
+              accessibilityHint={isMe && tab === 'videos' ? t('fix4.deleteHint') : undefined}
               accessibilityRole="button"
               accessibilityLabel={tab === 'drafts' ? t('drafts.open') : undefined}
             >
               {item.thumbnail && !/\.(mp4|mov|webm)(\?|$)/i.test(item.thumbnail) ? (
                 <Image source={{ uri: item.thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" />
+              ) : null}
+              {del.busyId === item.id ? (
+                <View style={[StyleSheet.absoluteFill, styles.deleting]}>
+                  <ActivityIndicator color="#fff" />
+                </View>
               ) : null}
               {item.is_pinned ? <Text style={styles.pinned}>{t('profile.pinned')}</Text> : null}
               <View style={styles.views}>
@@ -414,6 +431,7 @@ const styles = StyleSheet.create({
   action: { flex: 1, height: 44 },
   tabs: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 10, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  deleting: { backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   pinned: { position: 'absolute', top: 6, start: 6, backgroundColor: '#ff2d55', color: '#fff', fontSize: 10, fontWeight: '800', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
   views: { position: 'absolute', bottom: 6, start: 6, flexDirection: 'row', alignItems: 'center', gap: 3 },
   viewsText: { color: '#fff', fontSize: 12, fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3 },

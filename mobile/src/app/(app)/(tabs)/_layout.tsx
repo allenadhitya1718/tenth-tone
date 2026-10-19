@@ -17,7 +17,17 @@ export default function TabsLayout() {
 
   const icon = (on: IconName, off: IconName) =>
     function TabIcon({ focused, size }: { focused: boolean; size: number }) {
-      return <Ionicons name={focused ? on : off} size={size} color={focused ? colors.text : colors.muted} />;
+      // The glyph is decoration: without this a screen reader speaks the
+      // raw icon character before the tab name.
+      return (
+        <Ionicons
+          name={focused ? on : off}
+          size={size}
+          color={focused ? colors.text : colors.muted}
+          accessibilityElementsHidden
+          importantForAccessibility="no"
+        />
+      );
     };
 
   return (
@@ -30,8 +40,8 @@ export default function TabsLayout() {
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: t('tabs.home'), tabBarIcon: icon('home', 'home-outline') }} />
-      <Tabs.Screen name="discover" options={{ title: t('tabs.discover'), tabBarIcon: icon('search', 'search-outline') }} />
+      <Tabs.Screen name="index" options={{ title: t('tabs.home'), tabBarAccessibilityLabel: t('tabs.home'), tabBarIcon: icon('home', 'home-outline') }} />
+      <Tabs.Screen name="discover" options={{ title: t('tabs.discover'), tabBarAccessibilityLabel: t('tabs.discover'), tabBarIcon: icon('search', 'search-outline') }} />
       <Tabs.Screen
         name="create"
         // The + opens the camera full screen instead of switching tabs.
@@ -64,12 +74,12 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="inbox"
         options={{
-          title: t('tabs.inbox'),
+          title: t('tabs.inbox'), tabBarAccessibilityLabel: t('tabs.inbox'),
           tabBarIcon: icon('chatbubbles', 'chatbubbles-outline'),
           tabBarBadge: unread.data ? (unread.data > 99 ? '99+' : unread.data) : undefined,
         }}
       />
-      <Tabs.Screen name="profile" options={{ title: t('tabs.profile'), tabBarIcon: icon('person', 'person-outline') }} />
+      <Tabs.Screen name="profile" options={{ title: t('tabs.profile'), tabBarAccessibilityLabel: t('tabs.profile'), tabBarIcon: icon('person', 'person-outline') }} />
     </Tabs>
   );
 }
