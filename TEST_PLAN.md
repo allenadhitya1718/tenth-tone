@@ -11,9 +11,9 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 | | Count |
 |---|---|
 | Pass | 5 |
-| Fail | 0 |
-| Blocked | 0 |
-| Not tested | 178 |
+| Fail | 2 |
+| Blocked | 1 |
+| Not tested | 175 |
 
 ## Sections
 
@@ -62,15 +62,15 @@ _Accounts on the Mumbai server. Codes arrive from no-reply@notify.flyp-sa.com._
 - [x] **AUTH-01** Change language on the welcome screen with the globe pill  
   Expected: A list of 9 languages opens; picking Arabic flips the layout to right-to-left after a restart.  
   Result: **PASS** · Note: Globe pill opens a sheet with all 9 languages (ar, en, zh, hi, ur, fr, es, tr, id); current one ticked. English -> app reloads LTR on slide 1; Arabic -> app reloads RTL. Observation: app defaults to Arabic/RTL although the emulator system language is English. Screenshots: test-results/AUTH-01*.png
-- [ ] **AUTH-02** Sign up with a new email and password  
+- [x] **AUTH-02** Sign up with a new email and password  
   Expected: A 6-digit code email arrives within a minute (check Spam).  
-  Result: _not tested_ · Note: 
-- [ ] **AUTH-03** Enter the 6-digit code  
+  Result: **FAIL** · Note: Steps: sign up with new email+password on emulator A. Expected: email with a 6-digit code. Actual: app shows "Enter verification code" screen, but the email from no-reply@notify.flyp-sa.com ("Confirm your email address") contains only a "Confirm email address" link, no code. Link opens http://localhost:3000/#access_token=... (browser: cannot be reached), i.e. backend Site URL/redirect points at localhost. Device: emulator A, API 34 (Play x86_64). Account: tester inbox (user-created). Frequency: 1/1 (Resend tried, see AUTH-04). Screenshot: test-results/AUTH-02.png (+ user-supplied email screenshot not stored)
+- [x] **AUTH-03** Enter the 6-digit code  
   Expected: Account verified; profile set-up starts (name, username, birth date, gender, country).  
-  Result: _not tested_ · Note: 
-- [ ] **AUTH-04** Enter a wrong code, then an expired one  
+  Result: **BLOCKED** · Note: No 6-digit code can be obtained: the only email from no-reply@notify.flyp-sa.com (11:40) is link-only (see AUTH-02), and Resend at 11:43 produced no second email in the inbox within ~6 min (also checked all folders). Device: emulator A, API 34. Frequency: 1/1.
+- [x] **AUTH-04** Enter a wrong code, then an expired one  
   Expected: Clear error message each time; you can request a new code.  
-  Result: _not tested_ · Note: 
+  Result: **FAIL** · Note: Wrong code 000000 -> red boxes + "The code is wrong or has expired" (good). But "request a new code" does not work end to end: tapping Resend shows "Code sent again" (60 s cooldown) yet no new email arrived in ~6 min, so a valid code is never available. Expired-code case could not be tested. Device: emulator A, API 34. Frequency: 1/1 (resend). Screenshot: test-results/AUTH-04.png
 - [ ] **AUTH-05** Try a username that's already taken  
   Expected: Error shown before saving.  
   Result: _not tested_ · Note: 
