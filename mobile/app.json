@@ -121,6 +121,7 @@
     "plugins": [
       "expo-router",
       "./plugins/withRtlSupport",
+      "./plugins/withMinSdk26",
       [
         "expo-splash-screen",
         {

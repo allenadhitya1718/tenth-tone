@@ -10,7 +10,6 @@ import {
   FlatList,
   I18nManager,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -90,6 +89,10 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const { height } = useWindowDimensions();
+  // The sheet sits at the bottom of a transparent modal, where KeyboardAvoidingView
+  // did not lift it (seen on a Redmi, Android 12): lift the whole panel by the
+  // keyboard height ourselves and shrink it so its top stays on screen.
+  const [kbHeight, setKbHeight] = useState(0);
   const { session } = useAuth();
   const me = session?.user.id;
   const qc = useQueryClient();
@@ -152,8 +155,15 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
 
   // Note 29: the emoji panel gives way to the keyboard.
   useEffect(() => {
-    const sub = Keyboard.addListener('keyboardDidShow', () => setEmojiOpen(false));
-    return () => sub.remove();
+    const sub = Keyboard.addListener('keyboardDidShow', (e) => {
+      setEmojiOpen(false);
+      setKbHeight(e.endCoordinates.height);
+    });
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKbHeight(0));
+    return () => {
+      sub.remove();
+      hide.remove();
+    };
   }, []);
 
   const send = useMutation({
@@ -228,7 +238,10 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
   return (
     <View style={styles.backdrop}>
     <Pressable style={{ flex: 1 }} onPress={() => router.back()} accessibilityLabel={t('legal.close')} />
-    <SafeAreaView style={[styles.panel, { height: height * 0.75, backgroundColor: colors.bg }]} edges={['bottom']}>
+    <SafeAreaView
+      style={[styles.panel, { height: Math.min(height * 0.75, height - kbHeight - 120), marginBottom: kbHeight, backgroundColor: colors.bg }]}
+      edges={kbHeight ? [] : ['bottom']}
+    >
       <View style={[styles.grabber, { backgroundColor: colors.muted2 }]} />
       <View style={[styles.header, { borderBottomColor: colors.border }]} onTouchStart={closeInputs}>
         <Text style={[styles.title, { color: colors.text }]}>
@@ -239,7 +252,7 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
         </Pressable>
       </View>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <View style={{ flex: 1 }}>
         {/* Note 29: any touch on the list (a row, its buttons, or the blank
             area) closes the emoji panel and the keyboard. onTouchStart sees
             the touch without claiming it, so like, long-press and the
@@ -378,7 +391,7 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
           </>
         )}
         {emojiOpen && !off ? <EmojiPanel onPick={addEmoji} /> : null}
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
     <ReportSheet visible={!!reporting} onClose={() => setReporting(null)} targetType="comment" targetId={reporting ?? ''} />
     </View>
