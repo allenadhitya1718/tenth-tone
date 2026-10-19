@@ -303,5 +303,5 @@ const styles = StyleSheet.create({
   rec: { position: 'absolute', alignSelf: 'center', top: IN_H * 0.07 - 14, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#F43F5E', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 },
   recBlip: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
   recTxt: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  typing: { position: 'absolute', start: 14, bottom: IN_H * 0.11 + LIFT, flexDirection: 'row', gap: 5, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 12 },
+  typing: { position: 'absolute', start: 14, bottom: IN_H * 0.05 + LIFT, flexDirection: 'row', gap: 5, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 12 },
 });
