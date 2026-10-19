@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | |
-| Fail | |
-| Blocked | |
-| Not tested | 183 |
+| Pass | 5 |
+| Fail | 0 |
+| Blocked | 0 |
+| Not tested | 178 |
 
 ## Sections
 
@@ -41,27 +41,27 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 _The app opens cleanly and asks for permissions at the right moment._
 
 
-- [ ] **INSTALL-01** Install the APK and open FLYP  
+- [x] **INSTALL-01** Install the APK and open FLYP  
   Expected: Splash screen, then the welcome or tour screen. No crash, no blank white screen.  
-  Result: _not tested_ · Note: 
-- [ ] **INSTALL-02** Kill the app and open it again  
+  Result: **PASS** · Note: Cold launch showed the welcome tour (Arabic, RTL) with no crash or blank screen. A System UI ANR dialog appeared once right after first boot (emulator A, API 34, software GPU), unrelated to FLYP; dismissed with Wait. Screenshot: test-results/INSTALL-01.png
+- [x] **INSTALL-02** Kill the app and open it again  
   Expected: Opens straight to where you were (or welcome if signed out).  
-  Result: _not tested_ · Note: 
-- [ ] **INSTALL-03** Turn on airplane mode and open the app  
+  Result: **PASS** · Note: Force-stop then relaunch while signed out returned to the welcome tour. Screenshot: test-results/INSTALL-02.png
+- [x] **INSTALL-03** Turn on airplane mode and open the app  
   Expected: A clear offline message or cached content; no crash.  
-  Result: _not tested_ · Note: 
-- [ ] **INSTALL-04** Lock and unlock the phone with FLYP open  
+  Result: **PASS** · Note: Airplane mode on (icon visible), cold launch showed the welcome tour; no crash, no blank screen. Tour is static so no offline message needed. Screenshot: test-results/INSTALL-03.png
+- [x] **INSTALL-04** Lock and unlock the phone with FLYP open  
   Expected: App comes back on the same screen.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Power button lock then unlock with swipe: app returned on the same tour slide. Screenshot: test-results/INSTALL-04.png
 
 ## Sign up, log in and password
 
 _Accounts on the Mumbai server. Codes arrive from no-reply@notify.flyp-sa.com._
 
 
-- [ ] **AUTH-01** Change language on the welcome screen with the globe pill  
+- [x] **AUTH-01** Change language on the welcome screen with the globe pill  
   Expected: A list of 9 languages opens; picking Arabic flips the layout to right-to-left after a restart.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Globe pill opens a sheet with all 9 languages (ar, en, zh, hi, ur, fr, es, tr, id); current one ticked. English -> app reloads LTR on slide 1; Arabic -> app reloads RTL. Observation: app defaults to Arabic/RTL although the emulator system language is English. Screenshots: test-results/AUTH-01*.png
 - [ ] **AUTH-02** Sign up with a new email and password  
   Expected: A 6-digit code email arrives within a minute (check Spam).  
   Result: _not tested_ · Note: 
