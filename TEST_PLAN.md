@@ -10,9 +10,9 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 50 |
+| Pass | 55 |
 | Fail | 5 |
-| Blocked | 46 |
+| Blocked | 41 |
 | Not tested | 82 |
 
 ## Sections
@@ -124,7 +124,7 @@ _Following, For You and Live tabs._
   Result: **PASS** · Note: Tapping the creator name/photo under the caption opens the profile page (@devesh19, Devesh). The feed shows the name without "@". Screenshot: FEED-09.png (own video, so no Follow state tested)
 - [x] **FEED-10** Tap the + on the creator's photo on the right  
   Expected: Follows them; the + disappears.  
-  Result: **BLOCKED** · Note: Own video has no "+" on the avatar (correct). Needs a video from another account (B) to test follow-from-feed.
+  Result: **PASS** · Note: On B, the creator avatar on A's video shows a red +; tapping it follows and the + disappears. (B = @allen11 "Allen", A = @devesh19.) Screenshot: FEED-10.png
 - [x] **FEED-11** Read caption and sound line  
   Expected: Caption shows up to 3 lines; sound line shows the song or Original sound.  
   Result: **PASS** · Note: Caption "First test video" and the line "Original sound · @devesh19" are shown. 3-line truncation not tested (caption is short).
@@ -173,7 +173,7 @@ _Following, For You and Live tabs._
   Result: **BLOCKED** · Note: Needs a video posted with Allow comments off and opened from B. Retest later.
 - [x] **COMMENTS-09** Post a comment with a banned or rude word  
   Expected: Blocked or hidden by moderation.  
-  Result: **FAIL** · Note: Steps: post comment "fuck you bitch" (and earlier "you are a stupid idiot") on my video. Expected: blocked or hidden by moderation. Actual: both posted and stayed visible after 14 s, no warning. Possible: flagged comments are hidden only for other viewers; check from B. Emulator A, API 34, account A, 2/2. Screenshots: COMMENTS-09*.png
+  Result: **FAIL** · Note: Steps: post "fuck you bitch" and "you are a stupid idiot" on my video (account A). Expected: blocked or hidden by moderation. Actual: both posted on A, and both are also visible to account B in the comments sheet 17+ min later. No warning. Emulator A/B, API 34, 3/3. Screenshots: COMMENTS-09*.png, COMMENTS-09-B.png
 
 ## Camera and posting
 
@@ -272,10 +272,10 @@ _Your own profile and other people's._
   Result: **PASS** · Note: Tapping Followers opens a Followers screen with a Search box and the empty state "No followers yet". Follow/remove actions need account B. Screenshot: PROFILE-07.png
 - [x] **PROFILE-08** Open someone else's profile  
   Expected: Follow, Message buttons; their videos.  
-  Result: **BLOCKED** · Note: Needs account B (someone else profile).
+  Result: **PASS** · Note: A opened B's profile (@allen11) from a notification: shows Following/Followers/Likes, "Following" and "Message" buttons and the tabs Videos/Audio/Map (no Saved/Drafts for others) with "No videos" empty state. Screenshot: NOTIF-02-follow.png
 - [x] **PROFILE-09** Follow and unfollow them  
   Expected: Counts update on both sides.  
-  Result: **BLOCKED** · Note: Needs account B.
+  Result: **PASS** · Note: B followed A: A got a "started following you" notification; after A followed back the counts read Following 1 / Followers 1 on both. Unfollow not tested yet. Screenshots: NOTIF-01.png, PROFILE-09-A.png
 - [x] **PROFILE-10** Follow a private account  
   Expected: Shows Requested; they get a follow request.  
   Result: **BLOCKED** · Note: Needs account B set to a private account.
@@ -310,16 +310,16 @@ _Your own profile and other people's._
 
 - [x] **NOTIF-01** Get a like, comment, follow, mention from phone B  
   Expected: Each appears in Notifications with the right text.  
-  Result: **BLOCKED** · Note: Needs account B to generate likes/comments/follows/mentions/follow requests. Bell opens a Notifications screen with the empty state "No notifications yet - Likes, comments and new followers will show up here." (own actions correctly produce none). Screenshot: NOTIFS-01.png
+  Result: **PASS** · Note: From B: like, comment ("Hello from B") and follow each appear on A within seconds under Today, with text "Allen liked your video / commented: ... / started following you". @mention not tested. Screenshot: NOTIF-01.png
 - [x] **NOTIF-02** Tap each notification  
   Expected: Opens the right video, profile or chat.  
-  Result: **BLOCKED** · Note: Needs account B to generate likes/comments/follows/mentions/follow requests. Bell opens a Notifications screen with the empty state "No notifications yet - Likes, comments and new followers will show up here." (own actions correctly produce none). Screenshot: NOTIFS-01.png
+  Result: **PASS** · Note: Tapping the comment notification opens the video's comments sheet (Comments (3)); tapping the follow notification opens Allen's profile. The like notification opens the video (screenshot NOTIF-02-like.png). Screenshots: NOTIF-02-*.png
 - [x] **NOTIF-03** Accept and decline follow requests (private account)  
   Expected: Requester becomes a follower or the request disappears.  
   Result: **BLOCKED** · Note: Needs account B to generate likes/comments/follows/mentions/follow requests. Bell opens a Notifications screen with the empty state "No notifications yet - Likes, comments and new followers will show up here." (own actions correctly produce none). Screenshot: NOTIFS-01.png
 - [x] **NOTIF-04** Unread badge  
   Expected: Badge shows and clears after opening.  
-  Result: **BLOCKED** · Note: Needs account B to generate likes/comments/follows/mentions/follow requests. Bell opens a Notifications screen with the empty state "No notifications yet - Likes, comments and new followers will show up here." (own actions correctly produce none). Screenshot: NOTIFS-01.png
+  Result: **BLOCKED** · Note: No numeric unread badge was seen on the bell on A before opening; not sure it exists. Retest.
 
 ## Chat
 
