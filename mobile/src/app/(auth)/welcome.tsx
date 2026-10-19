@@ -10,7 +10,7 @@ import { AppleButton } from '@/components/AppleButton';
 import { DARK, GlassButton, GradientButton, TopGlow } from '@/components/DarkAuth';
 import { LanguageSwitch } from '@/components/LanguageSwitch';
 import { LegalSheet } from '@/components/LegalSheet';
-import { Logo } from '@/components/Logo';
+import { LogoMark } from '@/components/LogoMark';
 import { ErrorBox, type ErrorMsg } from '@/components/ui';
 import { toErrorMsg } from '@/hooks/useAuthError';
 
@@ -60,9 +60,7 @@ export default function Welcome() {
         </View>
 
         <View style={styles.copy}>
-          <View style={styles.logoGlow}>
-            <Logo width={140} />
-          </View>
+          <LogoMark width={190} />
           <Text style={styles.headline}>{t('welcome.tagline')}</Text>
         </View>
 
@@ -93,7 +91,6 @@ const styles = StyleSheet.create({
   card: { position: 'absolute', top: 10, borderRadius: 22, overflow: 'hidden', backgroundColor: '#11131F' },
   fade: { position: 'absolute', start: -20, end: -20, bottom: 0, height: HERO_H * 0.32, zIndex: 20 },
   copy: { alignItems: 'center', marginTop: -26, paddingHorizontal: 24 },
-  logoGlow: { borderRadius: 14, shadowColor: DARK.blue, shadowOpacity: 0.4, shadowRadius: 16, shadowOffset: { width: 0, height: 0 }, elevation: 10 },
   headline: { color: DARK.text, fontSize: 28, lineHeight: 34, fontWeight: '800', textAlign: 'center', marginTop: 16, marginBottom: 20, maxWidth: 330 },
   actions: { width: '100%', maxWidth: 420, alignSelf: 'center', paddingHorizontal: 24, gap: 14 },
   legal: { fontSize: 13, lineHeight: 19, color: DARK.faint, textAlign: 'center', marginTop: 4 },

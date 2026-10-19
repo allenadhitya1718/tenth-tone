@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppleButton } from '@/components/AppleButton';
 import { CircleBack, DARK, GlassField, GradientButton, TopGlow } from '@/components/DarkAuth';
 import { LanguageSwitch } from '@/components/LanguageSwitch';
-import { Logo } from '@/components/Logo';
+import { LogoMark } from '@/components/LogoMark';
 import { ErrorBox, type ErrorMsg } from '@/components/ui';
 import { toErrorMsg } from '@/hooks/useAuthError';
 import { signIn } from '@/lib/auth';
@@ -48,9 +48,7 @@ export default function Login() {
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
             <View style={styles.head}>
-              <View style={styles.logoGlow}>
-                <Logo width={170} />
-              </View>
+              <LogoMark width={210} />
               <Text style={styles.title}>{t('login.title')}</Text>
               <Text style={styles.sub}>{t('login.subtitle')}</Text>
             </View>
@@ -109,8 +107,7 @@ const styles = StyleSheet.create({
   top: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
   content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 28, maxWidth: 460, width: '100%', alignSelf: 'center' },
   head: { alignItems: 'center', marginTop: 12, marginBottom: 30 },
-  logoGlow: { borderRadius: 18, shadowColor: DARK.blue, shadowOpacity: 0.45, shadowRadius: 22, shadowOffset: { width: 0, height: 0 }, elevation: 10 },
-  title: { color: DARK.text, fontSize: 30, fontWeight: '800', marginTop: 20 },
+  title: { color: DARK.text, fontSize: 30, fontWeight: '800', marginTop: 8 },
   sub: { color: DARK.sub, fontSize: 15, marginTop: 6 },
   forgot: { color: DARK.link, fontSize: 14, fontWeight: '600', marginTop: 14, marginBottom: 26 },
   footer: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingTop: 18, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.10)' },
