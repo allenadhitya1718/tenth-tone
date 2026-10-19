@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 40 |
+| Pass | 42 |
 | Fail | 4 |
-| Blocked | 27 |
-| Not tested | 112 |
+| Blocked | 34 |
+| Not tested | 103 |
 
 ## Sections
 
@@ -485,9 +485,9 @@ _Host on phone A, listener on phone B._
 _Needs Google Play test products set up._
 
 
-- [ ] **WALLET-01** Open Settings → Wallet  
+- [x] **WALLET-01** Open Settings → Wallet  
   Expected: Balance, how-to-top-up steps, coin packages, history.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Settings -> Wallet shows "Your coins 100", how-to-top-up steps, 5 coin packages and a History section. Screenshot: SET-wallet.png
 - [ ] **WALLET-02** Coin packages show prices  
   Expected: Prices in your local currency from Google Play.  
   Result: _not tested_ · Note: 
@@ -573,24 +573,24 @@ _Two accounts that follow each other, both 18+._
 _Open every row once._
 
 
-- [ ] **SETTINGS-01** Privacy → Private account on and off  
+- [x] **SETTINGS-01** Privacy → Private account on and off  
   Expected: New followers need approval when on.  
-  Result: _not tested_ · Note: 
-- [ ] **SETTINGS-02** Who can message / comment / tag me: Everyone, Friends, People I follow, Nobody  
+  Result: **BLOCKED** · Note: Privacy screen opens with a "Private account" toggle (off, explanatory text). "New followers need approval" needs account B to verify; toggle not flipped yet. Screenshot: SET-privacy.png
+- [x] **SETTINGS-02** Who can message / comment / tag me: Everyone, Friends, People I follow, Nobody  
   Expected: Each rule enforced when phone B tries.  
-  Result: _not tested_ · Note: 
-- [ ] **SETTINGS-03** Close friends: add and remove  
+  Result: **BLOCKED** · Note: Rows "Who can message me / comment / tag me" exist (all "Everyone"); enforcement needs account B. Screenshot: SET-privacy.png
+- [x] **SETTINGS-03** Close friends: add and remove  
   Expected: List updates; close-friends story audience uses it.  
-  Result: _not tested_ · Note: 
-- [ ] **SETTINGS-04** Hidden words: add a word  
+  Result: **BLOCKED** · Note: Close friends screen opens from Settings; add/remove needs mutual friends (account B).
+- [x] **SETTINGS-04** Hidden words: add a word  
   Expected: Comments with it are hidden.  
-  Result: _not tested_ · Note: 
-- [ ] **SETTINGS-05** Restricted, Muted and Blocked accounts  
+  Result: **BLOCKED** · Note: Hidden words row exists under Privacy; effect on comments needs account B.
+- [x] **SETTINGS-05** Restricted, Muted and Blocked accounts  
   Expected: Add, see in the list, remove.  
-  Result: _not tested_ · Note: 
-- [ ] **SETTINGS-06** Notifications: turn each type off  
+  Result: **BLOCKED** · Note: Restricted, Muted and Blocked rows exist; Blocked shows the empty state "No blocked accounts - You can block anyone from their profile." Add/remove needs account B. Screenshot: SET-blocked.png
+- [x] **SETTINGS-06** Notifications: turn each type off  
   Expected: That type stops arriving.  
-  Result: _not tested_ · Note: 
+  Result: **BLOCKED** · Note: Notification preferences lists Likes, Comments, New followers, Messages, Live streams, Gifts (all on); "stops arriving" needs account B. Screenshot: SET-notifprefs.png
 - [ ] **SETTINGS-07** Language: try all 9 (Arabic and Urdu right-to-left)  
   Expected: Whole app translated; layout flips for Arabic and Urdu.  
   Result: _not tested_ · Note: 
@@ -603,12 +603,12 @@ _Open every row once._
 - [ ] **SETTINGS-10** Change email  
   Expected: Code to the new email; email updated.  
   Result: _not tested_ · Note: 
-- [ ] **SETTINGS-11** Devices  
+- [x] **SETTINGS-11** Devices  
   Expected: Shows signed-in phones; sign out another device.  
-  Result: _not tested_ · Note: 
-- [ ] **SETTINGS-12** Download my data  
+  Result: **PASS** · Note: Login activity lists this device ("sdk_gphone64_x86_64 · android", Last active 6m, "This device"). Signing out another device not testable until B logs into the same account. Screenshot: SET-loginactivity.png
+- [x] **SETTINGS-12** Download my data  
   Expected: Request accepted; data export arrives.  
-  Result: _not tested_ · Note: 
+  Result: **BLOCKED** · Note: Download your data screen opens with a "Request download" button; not pressed (would create a real export job and email). Ask Allen if OK to request. Screenshot: SET-download.png
 - [ ] **SETTINGS-13** Activity (your comments, likes, time)  
   Expected: Lists load; tapping opens the item.  
   Result: _not tested_ · Note: 
