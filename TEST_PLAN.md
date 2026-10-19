@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 42 |
+| Pass | 44 |
 | Fail | 4 |
-| Blocked | 34 |
-| Not tested | 103 |
+| Blocked | 39 |
+| Not tested | 96 |
 
 ## Sections
 
@@ -488,21 +488,21 @@ _Needs Google Play test products set up._
 - [x] **WALLET-01** Open Settings → Wallet  
   Expected: Balance, how-to-top-up steps, coin packages, history.  
   Result: **PASS** · Note: Settings -> Wallet shows "Your coins 100", how-to-top-up steps, 5 coin packages and a History section. Screenshot: SET-wallet.png
-- [ ] **WALLET-02** Coin packages show prices  
+- [x] **WALLET-02** Coin packages show prices  
   Expected: Prices in your local currency from Google Play.  
-  Result: _not tested_ · Note: 
-- [ ] **WALLET-03** Buy a package with a test account  
+  Result: **BLOCKED** · Note: The Wallet itself says "Buying coins needs a real phone. It isn't available in a simulator or emulator." Package rows show coin amounts but no prices, and Play purchases also need Allen to confirm license-tester setup. Screenshot: SET-wallet.png
+- [x] **WALLET-03** Buy a package with a test account  
   Expected: Google Play sheet; coins arrive once; Purchase history shows it.  
-  Result: _not tested_ · Note: 
-- [ ] **WALLET-04** Cancel the purchase sheet  
+  Result: **BLOCKED** · Note: The Wallet itself says "Buying coins needs a real phone. It isn't available in a simulator or emulator." Package rows show coin amounts but no prices, and Play purchases also need Allen to confirm license-tester setup. Screenshot: SET-wallet.png
+- [x] **WALLET-04** Cancel the purchase sheet  
   Expected: Nothing happens; no coins.  
-  Result: _not tested_ · Note: 
-- [ ] **WALLET-05** Buy, then turn off internet straight away  
+  Result: **BLOCKED** · Note: The Wallet itself says "Buying coins needs a real phone. It isn't available in a simulator or emulator." Package rows show coin amounts but no prices, and Play purchases also need Allen to confirm license-tester setup. Screenshot: SET-wallet.png
+- [x] **WALLET-05** Buy, then turn off internet straight away  
   Expected: Shows Almost there; coins arrive once you're back online.  
-  Result: _not tested_ · Note: 
-- [ ] **WALLET-06** Buy the same package again  
+  Result: **BLOCKED** · Note: The Wallet itself says "Buying coins needs a real phone. It isn't available in a simulator or emulator." Package rows show coin amounts but no prices, and Play purchases also need Allen to confirm license-tester setup. Screenshot: SET-wallet.png
+- [x] **WALLET-06** Buy the same package again  
   Expected: Works again (not "already owned").  
-  Result: _not tested_ · Note: 
+  Result: **BLOCKED** · Note: The Wallet itself says "Buying coins needs a real phone. It isn't available in a simulator or emulator." Package rows show coin amounts but no prices, and Play purchases also need Allen to confirm license-tester setup. Screenshot: SET-wallet.png
 
 ## Stories
 
@@ -594,9 +594,9 @@ _Open every row once._
 - [ ] **SETTINGS-07** Language: try all 9 (Arabic and Urdu right-to-left)  
   Expected: Whole app translated; layout flips for Arabic and Urdu.  
   Result: _not tested_ · Note: 
-- [ ] **SETTINGS-08** Theme: light, dark, system  
+- [x] **SETTINGS-08** Theme: light, dark, system  
   Expected: Dark mode uses navy; everything readable.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Appearance offers System / Light / Dark; Dark uses a navy background with readable white text and blue accents; Light and System switch back correctly. Screenshots: SETTINGS-08-dark.png, SETTINGS-08-light.png
 - [ ] **SETTINGS-09** Change password  
   Expected: Old password required; new one works.  
   Result: _not tested_ · Note: 
@@ -615,9 +615,9 @@ _Open every row once._
 - [ ] **SETTINGS-14** Report a problem and Contact support  
   Expected: Sends; confirmation shown.  
   Result: _not tested_ · Note: 
-- [ ] **SETTINGS-15** Community guidelines and Legal  
+- [x] **SETTINGS-15** Community guidelines and Legal  
   Expected: Text opens and scrolls.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Community guidelines opens and scrolls (5 sections). Terms and privacy policy opens a sheet with Terms / Privacy tabs and Close. Minor text bug: guidelines say "Settings, then Privacy and security, then Blocked users", but the real path is Settings -> Privacy -> Blocked accounts. Screenshots: SETTINGS-15-*.png
 - [ ] **SETTINGS-16** Deactivate account  
   Expected: Profile hidden; logging in again reactivates.  
   Result: _not tested_ · Note: 
