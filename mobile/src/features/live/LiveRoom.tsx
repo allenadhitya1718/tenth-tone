@@ -62,7 +62,14 @@ import { createSpeakingStore } from './speakingStore';
 import { Stage, type StageSpeaker } from './Stage';
 import { StageManager } from './StageManager';
 import { useAgoraAudio } from './useAgoraAudio';
-import { useElapsed, useLiveComments, useLiveGuests, useLiveStreamRow, useProfileLookup } from './useLiveData';
+import {
+  useElapsed,
+  useHostHeartbeat,
+  useLiveComments,
+  useLiveGuests,
+  useLiveStreamRow,
+  useProfileLookup,
+} from './useLiveData';
 
 // One screen for the host, the audience and guests on stage (client notes 4,
 // 5, 6, 7, 17, 29). Port of V.live in web/js/views.js, audio only.
@@ -133,12 +140,30 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
 
   // ---------- audio ----------
   const [speaking] = useState(createSpeakingStore);
+  // The ongoing notification's button while minimised: there is no screen to
+  // confirm on, so the host's press ends the live and a guest's steps down.
+  const queryClient = useQueryClient();
+  const leaveFromNotification = useCallback(() => {
+    if (isHost) {
+      void endLive(liveId)
+        .then(() =>
+          queryClient.setQueryData<LiveStream | null>(liveKeys.stream(liveId), (old) =>
+            old ? { ...old, status: 'ended', ended_at: new Date().toISOString() } : old,
+          ),
+        )
+        .catch(() => {});
+    } else {
+      void leaveLiveStage(liveId).catch(() => {});
+    }
+  }, [isHost, liveId, queryClient]);
+
   const agora = useAgoraAudio({
     channel: live ? liveId : null,
     uid: me ? agoraUidFor(me) : null,
     role: amSpeaker ? 'host' : 'audience',
     enabled: isLive && !!me,
     speaking,
+    onLeave: leaveFromNotification,
   });
 
   const speakers = useMemo<StageSpeaker[]>(() => {
@@ -384,6 +409,9 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
   // The host leaves only by ending: back is turned into the End prompt, and
   // the iOS swipe-back is switched off below while the stream runs.
   const hostLive = isHost && isLive;
+  // Keeps the stream open server-side; a killed app stops beating and the
+  // server ends the live within ~90 s (0126).
+  useHostHeartbeat(liveId, hostLive);
   useEffect(() => {
     if (!hostLive) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {

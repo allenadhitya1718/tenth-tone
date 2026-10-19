@@ -53,10 +53,12 @@ import type { Unsubscribe, UserSummary, Uuid } from '@/api/types';
 import { claimAgora } from '@/api/walkie';
 import type { ErrorMsg } from '@/components/ui';
 import { AGORA_APP_ID, agoraUidFor } from '@/features/live/config';
+import { startAudioForeground, stopAudioForeground } from '@/lib/audioForeground';
 
 import { otherAgoraSessionActive } from './agoraGuard';
 import { dismissIncomingCall, markCallOver } from './callNotification';
 import { keepAwake } from './keepAwake';
+import { openCallScreen } from './nav';
 import { ensureCamera, ensureMic } from './permissions';
 
 // ---------- Timing ----------
@@ -762,6 +764,16 @@ async function joinMedia(g: number) {
     return;
   }
   engine = e;
+  // The call keeps its microphone when the app is minimised (Android 14+
+  // foreground service). Started here, with the screen in front.
+  const fgsCallId = state.callId;
+  startAudioForeground('call', {
+    onEnd: () => hangUp(),
+    onOpen: () => {
+      if (fgsCallId && state.callId === fgsCallId && isCallActive()) openCallScreen(fgsCallId);
+    },
+    body: state.peer?.name || state.peer?.handle || null,
+  });
 
   const renew = () => {
     fetchAgoraToken(channel, localUid, 'host')
@@ -940,6 +952,7 @@ function resetResources() {
   releaseEngine();
   stopRinging();
   keepAwake(false);
+  stopAudioForeground('call');
 }
 
 function finish(reason: EndReason, error: ErrorMsg = null) {

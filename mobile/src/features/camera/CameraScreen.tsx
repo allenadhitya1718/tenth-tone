@@ -18,6 +18,7 @@ import {
 } from 'react-native-vision-camera';
 
 import { Button } from '@/components/ui';
+import { NEW_STORY_HREF } from '@/features/stories/StoryTray';
 
 import { FILTER_IDS, type ColorMatrix, type FilterId, filterMatrix, isIdentity, swatchColors } from './filters';
 import { bakeColorMatrix, filtersAvailable } from './videoFilter';
@@ -404,6 +405,26 @@ export function CameraScreen() {
           <View style={styles.side} />
         </View>
         <Text style={styles.hint}>{t('camera.hint')}</Text>
+        {/* Video | Story, like Instagram's mode switch. Story hands over to
+            the story composer (it picks a photo or a clip); filters and
+            recording here are untouched. Hidden while recording. */}
+        {!recording && !baking ? (
+          <View style={styles.modes} accessibilityRole="tablist" accessibilityLabel={t('stories.modeA11y')}>
+            <View style={styles.mode} accessibilityRole="tab" accessibilityState={{ selected: true }}>
+              <Text style={[styles.modeText, styles.modeTextOn]}>{t('stories.modeVideo')}</Text>
+              <View style={styles.modeDot} />
+            </View>
+            <Pressable
+              onPress={() => router.replace(NEW_STORY_HREF)}
+              hitSlop={10}
+              style={styles.mode}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: false }}
+            >
+              <Text style={styles.modeText}>{t('stories.modeStory')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </View>
 
       {baking ? (
@@ -471,6 +492,11 @@ const styles = StyleSheet.create({
   recInner: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#ff2d55' },
   recInnerOn: { width: 32, height: 32, borderRadius: 8 },
   hint: { color: 'rgba(255,255,255,0.75)', fontSize: 12, ...shadow },
+  modes: { flexDirection: 'row', gap: 26, marginTop: -4 },
+  mode: { alignItems: 'center', gap: 4, minHeight: 28 },
+  modeText: { color: 'rgba(255,255,255,0.7)', fontSize: 14, fontWeight: '700', ...shadow },
+  modeTextOn: { color: '#fff', fontWeight: '800' },
+  modeDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#fff' },
   stripWrap: { alignSelf: 'stretch', flexGrow: 0 },
   strip: { paddingHorizontal: 16 },
   filterItem: { alignItems: 'center', width: ITEM_WIDTH, gap: 4 },

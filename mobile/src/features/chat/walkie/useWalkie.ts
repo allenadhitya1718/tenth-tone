@@ -2,7 +2,7 @@ import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from '
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import {
   AudienceLatencyLevelType,
   AudioProfileType,
@@ -28,6 +28,7 @@ import {
   walkieChannelName,
 } from '@/api/walkie';
 import { agoraUidFor, AGORA_APP_ID } from '@/features/live/config';
+import { startAudioForeground } from '@/lib/audioForeground';
 
 // Live push-to-talk in a chat thread (client note 26). See src/api/walkie.ts
 // for the channel and the shared-engine guard.
@@ -150,7 +151,11 @@ export function useWalkie({ chatId, me, myName, others, allowed }: Options): Wal
   }, []);
 
   const visible = allowed && focused && appActive && !!me;
-  const audioOn = visible && on;
+  // On Android a walkie that is on keeps going when the app is minimised: a
+  // foreground service (lib/audioForeground) keeps the audio and the mic,
+  // and the signal stays open with it. Elsewhere backgrounding tears it down.
+  const audioOn = (Platform.OS === 'android' ? allowed && focused && !!me : visible) && on;
+  const signalOn = visible || audioOn;
   const agoraUid = useMemo(() => (me ? agoraUidFor(me) : 0), [me]);
 
   const engineRef = useRef<IRtcEngine | null>(null);
@@ -167,7 +172,7 @@ export function useWalkie({ chatId, me, myName, others, allowed }: Options): Wal
 
   // ---------- signal ----------
   useEffect(() => {
-    if (!visible || !me) return;
+    if (!signalOn || !me) return;
     const staleTimers = new Map<string, ReturnType<typeof setTimeout>>();
     const signal = openWalkieSignal(chatId, me, myName, {
       onPresence: setPresence,
@@ -200,7 +205,7 @@ export function useWalkie({ chatId, me, myName, others, allowed }: Options): Wal
       setPresence([]);
       setEventTalkers({});
     };
-  }, [visible, chatId, me, myName]);
+  }, [signalOn, chatId, me, myName]);
 
   // ---------- talk ----------
   const stopTalking = useCallback(() => {
@@ -448,6 +453,14 @@ export function useWalkie({ chatId, me, myName, others, allowed }: Options): Wal
     };
   }, [audioOn, agoraUid, chatId, attempt, pushSignal]);
 
+  // The ongoing "Walkie-talkie on" notification (Android foreground
+  // service), started when walkie comes on with the app in front.
+  const setOnRef = useRef<(on: boolean) => void>(() => {});
+  useEffect(() => {
+    if (!audioOn) return;
+    return startAudioForeground('walkie', { onEnd: () => setOnRef.current(false) });
+  }, [audioOn]);
+
   // ---------- controls ----------
   const setOn = useCallback(
     (next: boolean) => {
@@ -457,6 +470,9 @@ export function useWalkie({ chatId, me, myName, others, allowed }: Options): Wal
     },
     [stopTalking],
   );
+  useEffect(() => {
+    setOnRef.current = setOn;
+  }, [setOn]);
 
   const retry = useCallback(() => {
     setError(null);

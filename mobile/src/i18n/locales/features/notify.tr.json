@@ -9,6 +9,24 @@
       "body": "Gelen aramaları telefonun kilitliyken bile tam ekran göstermek için Ayarlar'da FLYP'ye tam ekran bildirim izni verin.",
       "open": "Ayarları aç",
       "later": "Şimdi değil"
+    },
+    "fgs": {
+      "channel": "Devam eden aramalar ve canlı ses",
+      "call": {
+        "title": "FLYP araması sürüyor",
+        "body": "Aramaya dönmek için dokunun",
+        "end": "Kapat"
+      },
+      "live": {
+        "title": "Canlı yayındasın",
+        "body": "Odaya dönmek için dokunun",
+        "end": "Ayrıl"
+      },
+      "walkie": {
+        "title": "Telsiz açık",
+        "body": "Sohbete dönmek için dokunun",
+        "end": "Kapat"
+      }
     }
   }
 }

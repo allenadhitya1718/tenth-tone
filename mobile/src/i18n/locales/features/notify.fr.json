@@ -9,6 +9,24 @@
       "body": "Pour afficher les appels entrants en plein écran, même téléphone verrouillé, autorisez FLYP à utiliser les notifications plein écran dans les Réglages.",
       "open": "Ouvrir les Réglages",
       "later": "Plus tard"
+    },
+    "fgs": {
+      "channel": "Appels et audio en direct en cours",
+      "call": {
+        "title": "Appel FLYP en cours",
+        "body": "Touchez pour revenir à l’appel",
+        "end": "Raccrocher"
+      },
+      "live": {
+        "title": "Vous êtes en direct",
+        "body": "Touchez pour revenir au salon",
+        "end": "Quitter"
+      },
+      "walkie": {
+        "title": "Talkie-walkie activé",
+        "body": "Touchez pour revenir à la discussion",
+        "end": "Désactiver"
+      }
     }
   }
 }

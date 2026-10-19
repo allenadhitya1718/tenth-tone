@@ -77,6 +77,9 @@
     "errBlockedBody": "Topluluk kurallarımıza aykırı.",
     "errTooLarge": "Bu dosya çok büyük veya yükleme sınırına ulaştın.",
     "errFormat": "Bu dosya türü desteklenmiyor. JPEG fotoğraf ya da MP4 veya MOV video kullan.",
-    "errSignedOut": "Oturumun kapandı. Tekrar giriş yapıp yeniden dene."
+    "errSignedOut": "Oturumun kapandı. Tekrar giriş yapıp yeniden dene.",
+    "modeA11y": "Kamera modu",
+    "modeVideo": "Video",
+    "modeStory": "Hikaye"
   }
 }

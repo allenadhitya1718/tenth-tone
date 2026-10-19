@@ -41,6 +41,9 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.BLUETOOTH_CONNECT",
         "android.permission.CAMERA",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE",
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.RECORD_AUDIO",
@@ -94,7 +97,19 @@
         }
       ],
       "expo-asset",
-      "react-native-notify-kit",
+      [
+        "react-native-notify-kit",
+        {
+          "android": {
+            "foregroundService": {
+              "types": [
+                "microphone",
+                "mediaPlayback"
+              ]
+            }
+          }
+        }
+      ],
       "expo-iap"
     ],
     "experiments": {

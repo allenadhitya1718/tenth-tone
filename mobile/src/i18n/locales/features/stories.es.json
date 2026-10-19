@@ -78,6 +78,9 @@
     "errBlockedBody": "Incumple nuestras normas de la comunidad.",
     "errTooLarge": "Este archivo es demasiado grande o alcanzaste tu límite de subidas.",
     "errFormat": "Este tipo de archivo no es compatible. Usa una foto JPEG o un video MP4 o MOV.",
-    "errSignedOut": "Cerraste sesión. Vuelve a iniciar sesión e inténtalo otra vez."
+    "errSignedOut": "Cerraste sesión. Vuelve a iniciar sesión e inténtalo otra vez.",
+    "modeA11y": "Modo de cámara",
+    "modeVideo": "Video",
+    "modeStory": "Historia"
   }
 }

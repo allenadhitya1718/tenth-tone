@@ -37,6 +37,7 @@ import { tagKeys } from '@/api/tags';
 import { Button } from '@/components/ui';
 import { ProfilePlacesMap } from '@/features/map/ProfilePlacesMap';
 import { formatCount } from '@/features/feed/format';
+import { ProfileStoryAvatar } from '@/features/stories/ProfileStoryAvatar';
 import { useTheme } from '@/providers/ThemeProvider';
 
 type Tab = 'videos' | 'audio' | 'map' | 'saved' | 'drafts';
@@ -189,13 +190,15 @@ function ProfileHeader({ profile, userId, isMe, loading }: { profile: Profile | 
       {loading ? <Spinner /> : null}
 
       <View style={styles.top}>
-        {profile?.avatar_url ? (
-          <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, { backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }]}>
-            <Text style={styles.avatarLetter}>{(profile?.name ?? profile?.handle ?? ' ').slice(0, 1)}</Text>
-          </View>
-        )}
+        {/* Stories live here now (not in the feed): ring when there are
+            active stories, tap to watch them, "+" on your own to post. */}
+        <ProfileStoryAvatar
+          userId={userId}
+          isMe={isMe}
+          uri={profile?.avatar_url}
+          name={profile?.name ?? profile?.handle ?? null}
+          style={styles.avatarWrap}
+        />
         <View style={styles.nameRow}>
           <Text style={[styles.name, { color: colors.text }]}>{profile?.name ?? ''}</Text>
           {profile?.verified ? <Ionicons name="checkmark-circle" size={18} color={colors.primary2} /> : null}
@@ -333,8 +336,7 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 48 },
   topHandle: { fontSize: 16, fontWeight: '800', flex: 1, textAlign: 'center' },
   top: { alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14 },
-  avatar: { width: 96, height: 96, borderRadius: 48, marginTop: 6 },
-  avatarLetter: { color: '#fff', fontSize: 36, fontWeight: '800' },
+  avatarWrap: { marginTop: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
   name: { fontSize: 19, fontWeight: '800' },
   stats: { flexDirection: 'row', gap: 28, marginTop: 14 },

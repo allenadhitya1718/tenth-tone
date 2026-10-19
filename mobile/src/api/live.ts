@@ -136,6 +136,22 @@ export async function leaveLiveStream(liveId: Uuid): Promise<number> {
   }
 }
 
+// The host's "still here" signal (0126). Sent every 30 s while live and when
+// the app returns to the foreground; a live with no beat for 90 s is ended by
+// the server (end_stale_lives), with the same triggers as tapping End. The
+// server ignores a beat < 15 s after the last one. Returns the stream's status
+// ('ended' if it was swept while the app was away), or null when the call
+// failed (offline, 0126 not applied) - fail soft, the next beat retries.
+export async function liveHeartbeat(liveId: Uuid): Promise<LiveStatus | null> {
+  try {
+    const { data, error } = await supabase.rpc('live_heartbeat', { p_live_id: liveId });
+    if (error) return null;
+    return (data as LiveStatus | null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // Watches the stream row itself, so the viewer count moves and viewers are
 // told when the host ends the broadcast instead of staring at a frozen frame.
 export function subscribeToLiveStream(liveId: Uuid, cb: (row: LiveStreamRow) => void): Unsubscribe {

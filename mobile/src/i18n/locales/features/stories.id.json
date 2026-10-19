@@ -76,6 +76,9 @@
     "errBlockedBody": "Story ini melanggar pedoman komunitas kami.",
     "errTooLarge": "File ini terlalu besar, atau kamu sudah mencapai batas unggahan.",
     "errFormat": "Jenis file ini tidak didukung. Gunakan foto JPEG atau video MP4 atau MOV.",
-    "errSignedOut": "Kamu sudah keluar. Masuk lagi lalu coba sekali lagi."
+    "errSignedOut": "Kamu sudah keluar. Masuk lagi lalu coba sekali lagi.",
+    "modeA11y": "Mode kamera",
+    "modeVideo": "Video",
+    "modeStory": "Story"
   }
 }

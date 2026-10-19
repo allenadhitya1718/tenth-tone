@@ -4,4 +4,8 @@
 // Accept / Decline press) with the app closed, and only what this file loads
 // exists there. See src/features/call/background.ts.
 import './src/features/call/background';
+// The Android foreground service that keeps a call / live stage / walkie
+// heard when the app is minimised: its runner and the notification's
+// buttons must exist in a headless runtime too (src/lib/audioForeground.ts).
+import './src/lib/audioForeground';
 import 'expo-router/entry';

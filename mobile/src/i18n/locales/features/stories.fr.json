@@ -78,6 +78,9 @@
     "errBlockedBody": "Elle enfreint nos règles de la communauté.",
     "errTooLarge": "Ce fichier est trop volumineux, ou vous avez atteint votre limite d'importation.",
     "errFormat": "Ce type de fichier n'est pas pris en charge. Utilisez une photo JPEG ou une vidéo MP4 ou MOV.",
-    "errSignedOut": "Vous êtes déconnecté. Reconnectez-vous et réessayez."
+    "errSignedOut": "Vous êtes déconnecté. Reconnectez-vous et réessayez.",
+    "modeA11y": "Mode de l'appareil photo",
+    "modeVideo": "Vidéo",
+    "modeStory": "Story"
   }
 }

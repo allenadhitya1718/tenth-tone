@@ -9,6 +9,24 @@
       "body": "To show incoming calls full screen, even when your phone is locked, allow FLYP to use full-screen notifications in Settings.",
       "open": "Open Settings",
       "later": "Not now"
+    },
+    "fgs": {
+      "channel": "Ongoing calls and live audio",
+      "call": {
+        "title": "FLYP call in progress",
+        "body": "Tap to return to the call",
+        "end": "Hang up"
+      },
+      "live": {
+        "title": "You're live",
+        "body": "Tap to return to the room",
+        "end": "Leave"
+      },
+      "walkie": {
+        "title": "Walkie-talkie on",
+        "body": "Tap to return to the chat",
+        "end": "Turn off"
+      }
     }
   }
 }

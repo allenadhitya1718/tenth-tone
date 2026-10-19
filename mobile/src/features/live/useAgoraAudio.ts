@@ -18,6 +18,7 @@ import { fetchAgoraToken, type AgoraRole } from '@/api/agora';
 import { ApiError } from '@/api/client';
 import type { ErrorMsg } from '@/components/ui';
 import { claimAgora } from '@/api/walkie';
+import { startAudioForeground } from '@/lib/audioForeground';
 
 import { AGORA_APP_ID } from './config';
 import { liveError } from './errors';
@@ -50,6 +51,12 @@ type Options = {
   role: AgoraRole;
   enabled: boolean;
   speaking: SpeakingStore;
+  /**
+   * The "Leave" button of the ongoing "You're live" notification (Android
+   * foreground service, shown while this phone publishes). No button
+   * without it; tapping the notification still brings the room back.
+   */
+  onLeave?: () => void;
 };
 
 // Volume is 0-255. Below this is breathing and room noise.
@@ -67,7 +74,7 @@ async function micAllowed(): Promise<boolean> {
   }
 }
 
-export function useAgoraAudio({ channel, uid, role, enabled, speaking }: Options) {
+export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave }: Options) {
   const [status, setStatus] = useState<AgoraStatus>('idle');
   const [error, setError] = useState<ErrorMsg>(null);
   const [muted, setMutedState] = useState(false);
@@ -310,6 +317,19 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking }: Options
   }, []);
 
   const clearError = useCallback(() => setError(null), []);
+
+  // While this phone publishes (host, or a guest on stage) the microphone
+  // must survive the app being minimised: Android 14+ foreground service.
+  const onLeaveRef = useRef(onLeave);
+  useEffect(() => {
+    onLeaveRef.current = onLeave;
+  }, [onLeave]);
+  const hasLeave = !!onLeave;
+  const publishing = enabled && activeRole === 'host';
+  useEffect(() => {
+    if (!publishing) return;
+    return startAudioForeground('live', hasLeave ? { onEnd: () => onLeaveRef.current?.() } : {});
+  }, [publishing, hasLeave]);
 
   return { status, error, clearError, muted, setMuted, activeRole, remoteCount };
 }

@@ -77,6 +77,9 @@
     "errBlockedBody": "It goes against our community guidelines.",
     "errTooLarge": "This file is too large, or you have reached your upload limit.",
     "errFormat": "This file type is not supported. Use a JPEG photo or an MP4 or MOV video.",
-    "errSignedOut": "You are signed out. Sign in again and try once more."
+    "errSignedOut": "You are signed out. Sign in again and try once more.",
+    "modeA11y": "Camera mode",
+    "modeVideo": "Video",
+    "modeStory": "Story"
   }
 }

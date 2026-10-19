@@ -9,6 +9,24 @@
       "body": "Agar panggilan masuk tampil layar penuh, bahkan saat ponsel terkunci, izinkan FLYP menggunakan notifikasi layar penuh di Setelan.",
       "open": "Buka Setelan",
       "later": "Nanti saja"
+    },
+    "fgs": {
+      "channel": "Panggilan dan audio live yang berlangsung",
+      "call": {
+        "title": "Panggilan FLYP sedang berlangsung",
+        "body": "Ketuk untuk kembali ke panggilan",
+        "end": "Tutup"
+      },
+      "live": {
+        "title": "Kamu sedang live",
+        "body": "Ketuk untuk kembali ke ruang",
+        "end": "Keluar"
+      },
+      "walkie": {
+        "title": "Walkie-talkie aktif",
+        "body": "Ketuk untuk kembali ke chat",
+        "end": "Matikan"
+      }
     }
   }
 }

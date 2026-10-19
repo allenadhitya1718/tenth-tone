@@ -76,6 +76,9 @@
     "errBlockedBody": "它违反了我们的社区准则。",
     "errTooLarge": "文件过大，或你已达到上传上限。",
     "errFormat": "不支持此文件类型。请使用 JPEG 照片或 MP4、MOV 视频。",
-    "errSignedOut": "你已退出登录，请重新登录后再试。"
+    "errSignedOut": "你已退出登录，请重新登录后再试。",
+    "modeA11y": "相机模式",
+    "modeVideo": "视频",
+    "modeStory": "快拍"
   }
 }

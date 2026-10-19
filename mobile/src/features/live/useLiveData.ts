@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
 import {
   fetchLiveComments,
   fetchLiveGuests,
   fetchLiveStream,
+  liveHeartbeat,
   liveKeys,
   subscribeToLiveComments,
   subscribeToLiveGuests,
@@ -163,6 +165,43 @@ export function useLiveComments(liveId: Uuid, enabled: boolean, hidden: Readonly
   );
 
   return { comments: visible, loading, failed, remove };
+}
+
+// The host's heartbeat (0126): every 30 s while the stream is live, at once
+// when the room opens, and again whenever the app comes back to the
+// foreground. Without it the server ends the live after 90 s of silence, so a
+// host whose app was killed does not leave a 'live' row behind forever. If the
+// server says the stream already ended (swept while the app was away), the
+// room is switched to its ended state; realtime usually says so too, but the
+// subscription may have dropped while backgrounded.
+export const HEARTBEAT_MS = 30_000;
+export function useHostHeartbeat(liveId: Uuid, enabled: boolean) {
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!enabled) return;
+    let active = true;
+    const beat = () => {
+      void liveHeartbeat(liveId).then((status) => {
+        if (!active || !status || status === 'live') return;
+        qc.setQueryData<LiveStream | null>(liveKeys.stream(liveId), (old) =>
+          old && old.status === 'live'
+            ? { ...old, status, ended_at: old.ended_at ?? new Date().toISOString() }
+            : old,
+        );
+        void qc.invalidateQueries({ queryKey: liveKeys.stream(liveId) });
+      });
+    };
+    beat();
+    const timer = setInterval(beat, HEARTBEAT_MS);
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') beat();
+    });
+    return () => {
+      active = false;
+      clearInterval(timer);
+      sub.remove();
+    };
+  }, [liveId, enabled, qc]);
 }
 
 // Seconds since the stream started, ticking once a second. Its own hook so

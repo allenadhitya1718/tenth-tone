@@ -9,6 +9,24 @@
       "body": "Para mostrar las llamadas entrantes en pantalla completa, incluso con el teléfono bloqueado, permite que FLYP use notificaciones de pantalla completa en Ajustes.",
       "open": "Abrir Ajustes",
       "later": "Ahora no"
+    },
+    "fgs": {
+      "channel": "Llamadas y audio en directo en curso",
+      "call": {
+        "title": "Llamada de FLYP en curso",
+        "body": "Toca para volver a la llamada",
+        "end": "Colgar"
+      },
+      "live": {
+        "title": "Estás en directo",
+        "body": "Toca para volver a la sala",
+        "end": "Salir"
+      },
+      "walkie": {
+        "title": "Walkie-talkie activado",
+        "body": "Toca para volver al chat",
+        "end": "Desactivar"
+      }
     }
   }
 }
