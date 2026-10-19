@@ -21,7 +21,7 @@ Build: APK from run 39224436812 (commit 18a22bc). Emulators A (@devesh19) and B 
 | REAL-PHONE | Camera quality, push, background mic, voice notes, filters, torch | NEEDS REAL PHONE | Emulator limits, as in round 1 |
 
 ## Summary (final for this session)
-Pass 12, Fail 3 (Discover map, Wallet earnings/payouts, place picker Current location), Blocked 8, Not run: remaining round-1 blocked checks listed above plus message-request Delete.
-Newly verified this pass (A and B): follow/unfollow with counts on both sides, opening another profile, non-follower message goes to Requests, accept + reply, stories from Create and from the profile photo, place and tag pickers, EN comment filter.
+Pass 15, Fail 4 (Discover map, Wallet earnings/payouts, place picker Current location, private account still shows videos to a non-follower), Blocked 10, Not run: group chat, chat search, message-request Delete, push checks, Decline follow request.
+Verified this session with A and B: follow/unfollow with counts, profiles, message requests (accept + reply), private account + follow request + approve, stories (Create and profile photo), place and tag pickers, EN comment filter.
 Needs real phone: camera quality, push, background mic, voice notes, filters, torch, Current location, Maps.
-Login/sign-up screens are in D:\Downloads\FLYP\login-flow (outside the repo).
+Login/sign-up screens are in D:/Downloads/FLYP/login-flow (outside the repo).
