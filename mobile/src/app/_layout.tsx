@@ -13,6 +13,7 @@ import { useRecordSession } from '@/features/settings/useRecordSession';
 import { initI18n, languageIsRtl } from '@/i18n';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { ThemeProvider, useTheme } from '@/providers/ThemeProvider';
+import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { ToastHost } from '@/components/Toast';
 import { CallPill, useIncomingCalls } from '@/features/call';
 
@@ -55,11 +56,14 @@ function RootNavigator() {
   useIncomingCalls();
   useRecordSession();
 
-  useEffect(() => {
-    if (ready) SplashScreen.hideAsync().catch(() => {});
-  }, [ready]);
+  const [splashDone, setSplashDone] = useState(false);
+  const splash = splashDone ? null : (
+    // The native splash stays up until this overlay has drawn its first frame,
+    // so the two look like one continuous screen.
+    <AnimatedSplash ready={ready} onShown={() => SplashScreen.hideAsync().catch(() => {})} onFinish={() => setSplashDone(true)} />
+  );
 
-  if (!ready) return null;
+  if (!ready) return splash;
 
   const signedIn = !!session && !recovering;
 
@@ -75,6 +79,7 @@ function RootNavigator() {
         </Stack.Protected>
       </Stack>
       {signedIn ? <CallPill /> : null}
+      {splash}
     </LocaleProvider>
   );
 }
