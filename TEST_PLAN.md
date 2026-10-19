@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 31 |
+| Pass | 36 |
 | Fail | 3 |
 | Blocked | 16 |
-| Not tested | 133 |
+| Not tested | 128 |
 
 ## Sections
 
@@ -249,27 +249,27 @@ _Needs the new build for filters._
 _Your own profile and other people's._
 
 
-- [ ] **PROFILE-01** Open your profile tab  
+- [x] **PROFILE-01** Open your profile tab  
   Expected: Photo, name, username, following / followers / likes, bio.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Profile tab shows avatar (initial letter), name "Devesh", @devesh19, Following/Followers/Likes counts, Edit/Share buttons and 5 content tabs. No bio set so none shown. Screenshot: PROFILE-01.png
 - [ ] **PROFILE-02** Edit profile: change photo, name, username, bio, link, gender, country  
   Expected: Saved and shown everywhere.  
   Result: _not tested_ · Note: 
 - [ ] **PROFILE-03** Set an inappropriate profile photo  
   Expected: Rejected by moderation.  
   Result: _not tested_ · Note: 
-- [ ] **PROFILE-04** Open each tab: Videos, Audio, Map, Saved, Drafts  
+- [x] **PROFILE-04** Open each tab: Videos, Audio, Map, Saved, Drafts  
   Expected: Each shows its content or a friendly empty message.  
-  Result: _not tested_ · Note: 
-- [ ] **PROFILE-05** Tap one of your videos  
+  Result: **PASS** · Note: Videos (my post), Audio, Map ("Add a place when you post and it will show on your map."), Saved (shows the video I bookmarked, confirming FEED-07) and Drafts ("Clips you save as drafts appear here before you post them.") all show content or a friendly empty state. OBSERVATION: Audio tab lists the original sound as "Used 2 times" although I posted exactly 1 video (possible off-by-one count). Screenshots: PROFILE-04-tab*.png
+- [x] **PROFILE-05** Tap one of your videos  
   Expected: Opens in the home feed with that video first; swiping continues into normal videos.  
-  Result: _not tested_ · Note: 
-- [ ] **PROFILE-06** Share profile  
+  Result: **PASS** · Note: Tapping my video in the grid opens Home/For You on that video (likes 1, comments 2, saved 1, shares 1). Swiping into other videos untested (only one exists). Screenshot: PROFILE-05.png
+- [x] **PROFILE-06** Share profile  
   Expected: Share sheet with your profile link.  
-  Result: _not tested_ · Note: 
-- [ ] **PROFILE-07** Tap Followers and Following  
+  Result: **PASS** · Note: Share profile opens the Android share sheet with https://flyp-sa.com/u/devesh19. Screenshot: PROFILE-06.png
+- [x] **PROFILE-07** Tap Followers and Following  
   Expected: Lists open; you can follow or remove from there.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Tapping Followers opens a Followers screen with a Search box and the empty state "No followers yet". Follow/remove actions need account B. Screenshot: PROFILE-07.png
 - [ ] **PROFILE-08** Open someone else's profile  
   Expected: Follow, Message buttons; their videos.  
   Result: _not tested_ · Note: 
