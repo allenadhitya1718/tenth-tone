@@ -77,3 +77,4 @@ __pycache__/
 # Stray editor backup.
 *.old-backup
 supabase/.temp/
+mobile/.env.testaccount

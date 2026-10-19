@@ -576,7 +576,13 @@
     let otpSent = false;
     const field = (id, label, input) => h('div', { class: 'field' }, [h('label', { for: id, text: label }), input]);
     const fEmail = field('lg-email', L('Work email', 'البريد الإلكتروني'), email);
-    const fPass = field('lg-pass', L('Password', 'كلمة المرور'), pass);
+    const showPw = h('button', { type: 'button', class: 'pw-toggle', 'aria-label': L('Show password', 'إظهار كلمة المرور'), text: L('Show', 'إظهار'), onclick: () => {
+      const on = pass.type === 'password';
+      pass.type = on ? 'text' : 'password';
+      showPw.textContent = on ? L('Hide', 'إخفاء') : L('Show', 'إظهار');
+      showPw.setAttribute('aria-label', on ? L('Hide password', 'إخفاء كلمة المرور') : L('Show password', 'إظهار كلمة المرور'));
+    } });
+    const fPass = field('lg-pass', L('Password', 'كلمة المرور'), h('div', { class: 'pw' }, [pass, showPw]));
     const fCode = field('lg-code', L('6-digit code', 'الرمز المكوّن من 6 أرقام'), code);
 
     function showErr(e) { err.textContent = typeof e === 'string' ? e : (/Invalid login/i.test((e && e.message) || '') ? L('Wrong email or password.', 'البريد أو كلمة المرور غير صحيحة.') : errText(e)); err.hidden = false; }
@@ -618,7 +624,13 @@
       box.innerHTML = '';
       box.appendChild(fEmail);
       if (mode === 'password') box.appendChild(fPass);
-      if (mode === 'otp' && otpSent) box.appendChild(fCode);
+      if (mode === 'otp' && otpSent) {
+        box.appendChild(fCode);
+        box.appendChild(h('div', { class: 'resend' }, [
+          h('span', { class: 'muted small', text: L('Code sent to ', 'أُرسل الرمز إلى ') + email.value.trim() }),
+          h('button', { type: 'button', class: 'linkish', text: L('Use another email', 'استخدم بريدًا آخر'), onclick: () => { otpSent = false; info.hidden = true; err.hidden = true; draw(); email.focus(); } }),
+        ]));
+      }
       submit.textContent = mode === 'password' ? L('Sign in', 'تسجيل الدخول') : otpSent ? L('Verify code', 'تحقق من الرمز') : L('Email me a code', 'أرسل لي رمزًا');
     }
     const modeTabs = tabs([['password', L('Password', 'كلمة المرور')], ['otp', L('Email code', 'رمز بالبريد')]], mode, (v) => {
@@ -629,18 +641,29 @@
     modeTabs.classList.add('full');
     draw();
     const form = h('form', { class: 'login-card', novalidate: true, onsubmit: (e) => { e.preventDefault(); submit.click(); } }, [
-      h('div', { class: 'wordmark' }, [brandMark(), h('span', { text: 'FLYP' }), h('em', { text: L('Admin', 'الإدارة') })]),
-      h('h1', { text: L('Admin portal', 'بوابة الإدارة') }),
-      h('p', { class: 'login-sub', text: L('New app backend (Mumbai). Admin accounts only.', 'خادم التطبيق الجديد (Mumbai). لحسابات المشرفين فقط.') }),
+      h('div', { class: 'wordmark only-narrow' }, [brandMark(), h('span', { text: 'FLYP' })]),
+      h('h1', { text: L('Welcome back', 'مرحبًا بعودتك') }),
+      h('p', { class: 'login-sub', text: L('Sign in to the FLYP admin portal.', 'سجّل الدخول إلى بوابة إدارة FLYP.') }),
       note ? h('div', { class: 'notice bad', role: 'alert', text: note }) : null,
       modeTabs, box, err, info, submit,
       h('button', { type: 'submit', hidden: true }),
-      h('div', { class: 'login-foot' }, [
-        h('span', { class: 'muted small', text: L('Sessions stay on this device. Sign out on shared computers.', 'تبقى الجلسة على هذا الجهاز. سجّل الخروج على الأجهزة المشتركة.') }),
-        h('button', { type: 'button', class: 'linkish', lang: LANG === 'ar' ? 'en' : 'ar', onclick: () => setLang(LANG === 'ar' ? 'en' : 'ar') }, LANG === 'ar' ? 'English' : 'العربية'),
-      ]),
+      h('p', { class: 'login-foot muted small', text: L('Admin accounts only. Sessions stay on this device, so sign out on shared computers.', 'لحسابات المشرفين فقط. تبقى الجلسة على هذا الجهاز، فسجّل الخروج على الأجهزة المشتركة.') }),
     ]);
-    return h('div', { class: 'login' }, [h('div', { class: 'login-glow', 'aria-hidden': 'true' }), form]);
+    const point = (t) => h('li', {}, [h('i', { 'aria-hidden': 'true' }), h('span', { text: t })]);
+    const aside = h('aside', { class: 'login-aside' }, [
+      h('div', { class: 'wordmark' }, [brandMark(), h('span', { text: 'FLYP' }), h('em', { text: L('Admin', 'الإدارة') })]),
+      h('div', { class: 'aside-body' }, [
+        h('h2', { text: L('Everything behind FLYP, in one place.', 'كل ما يقف خلف FLYP في مكان واحد.') }),
+        h('ul', {}, [
+          point(L('Review reports, videos, stories and appeals', 'راجع البلاغات والفيديوهات والقصص والاعتراضات')),
+          point(L('Approve creator payouts and identity checks', 'اعتمد سحوبات صنّاع المحتوى والتحقق من الهوية')),
+          point(L('Watch usage and billing before it costs you', 'تابع الاستهلاك والفواتير قبل أن تكلّفك')),
+        ]),
+      ]),
+      h('span', { class: 'aside-foot', text: 'flyp-sa.com' }),
+    ]);
+    const langBtn = h('button', { type: 'button', class: 'login-lang', lang: LANG === 'ar' ? 'en' : 'ar', onclick: () => setLang(LANG === 'ar' ? 'en' : 'ar') }, LANG === 'ar' ? 'English' : 'العربية');
+    return h('div', { class: 'login' }, [aside, h('main', { class: 'login-main' }, [langBtn, form])]);
   }
 
   // ---------- dashboard ----------
