@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 17 |
+| Pass | 27 |
 | Fail | 2 |
-| Blocked | 6 |
-| Not tested | 158 |
+| Blocked | 12 |
+| Not tested | 142 |
 
 ## Sections
 
@@ -95,54 +95,54 @@ _Accounts on the Mumbai server. Codes arrive from no-reply@notify.flyp-sa.com._
 _Following, For You and Live tabs._
 
 
-- [ ] **FEED-01** Open the app on For You  
+- [x] **FEED-01** Open the app on For You  
   Expected: A video plays full screen with sound.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-02** Swipe up and down between videos  
+  Result: **PASS** · Note: For You opens straight on the only video (my own post) full screen with the right-side action column, caption and sound line. Audio cannot be heard on the emulator host capture, so "with sound" is unverified. Screenshot: FEED-01.png
+- [x] **FEED-02** Swipe up and down between videos  
   Expected: One video per swipe; the previous one stops; no double audio.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-03** Swipe left and right between Following, For You and Live  
+  Result: **BLOCKED** · Note: Only one video exists on the brand-new backend, so one-video-per-swipe and no double audio cannot be checked. Needs more content / account B posts.
+- [x] **FEED-03** Swipe left and right between Following, For You and Live  
   Expected: Tabs change by swipe and by tapping their names.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-04** Tap the video once  
+  Result: **PASS** · Note: Swipe left/right moves For You <-> Live (and Following), and tapping the tab names works; the white underline follows. Following shows an empty state, Live shows "Nobody is live right now" + Go live button. Screenshots: FEED-03-*.png, FEED-15.png
+- [x] **FEED-04** Tap the video once  
   Expected: Sound toggles; a small muted pill appears.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-05** Double-tap the video  
+  Result: **PASS** · Note: Single tap on the video shows a "Tap for sound" (muted icon) pill at the top. Screenshot: FEED-04.png
+- [x] **FEED-05** Double-tap the video  
   Expected: Big heart animation; like count goes up by one. Double-tap again doesn't unlike.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-06** Tap the heart button twice  
+  Result: **PASS** · Note: Double-tap shows the big red heart and the like count goes 0 -> 1. Second double-tap (should not unlike) not run. Screenshot: FEED-05.png
+- [x] **FEED-06** Tap the heart button twice  
   Expected: Likes, then unlikes; count follows.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-07** Tap the bookmark  
+  Result: **PASS** · Note: Heart button toggles: 1 -> 0 (outline) -> 1 (red); count follows. Screenshots: FEED-06-a/b.png
+- [x] **FEED-07** Tap the bookmark  
   Expected: Saved; appears under Profile → Saved.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-08** Tap share  
+  Result: **PASS** · Note: Bookmark turns yellow and its count goes 0 -> 1. "Appears under Profile -> Saved" is checked in the PROFILE section. Screenshot: FEED-07.png
+- [x] **FEED-08** Tap share  
   Expected: Phone share sheet opens with a flyp-sa.com link; share count updates.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-09** Tap the creator's photo or name next to the caption  
+  Result: **PASS** · Note: Share opens the Android share sheet "Sharing link" with https://flyp-sa.com/v/<id>. Observation: the share count went 0 -> 1 as soon as the sheet opened, even though I dismissed it without sharing. Screenshot: FEED-08.png
+- [x] **FEED-09** Tap the creator's photo or name next to the caption  
   Expected: Opens their profile. The name shows with their profile photo (no @).  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-10** Tap the + on the creator's photo on the right  
+  Result: **PASS** · Note: Tapping the creator name/photo under the caption opens the profile page (@devesh19, Devesh). The feed shows the name without "@". Screenshot: FEED-09.png (own video, so no Follow state tested)
+- [x] **FEED-10** Tap the + on the creator's photo on the right  
   Expected: Follows them; the + disappears.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-11** Read caption and sound line  
+  Result: **BLOCKED** · Note: Own video has no "+" on the avatar (correct). Needs a video from another account (B) to test follow-from-feed.
+- [x] **FEED-11** Read caption and sound line  
   Expected: Caption shows up to 3 lines; sound line shows the song or Original sound.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-12** Keep scrolling past 20 videos  
+  Result: **PASS** · Note: Caption "First test video" and the line "Original sound · @devesh19" are shown. 3-line truncation not tested (caption is short).
+- [x] **FEED-12** Keep scrolling past 20 videos  
   Expected: More videos load without a spinner stuck.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-13** Pull down at the top  
+  Result: **BLOCKED** · Note: Cannot scroll past 20 videos: only one video exists.
+- [x] **FEED-13** Pull down at the top  
   Expected: Feed refreshes.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-14** Switch to another tab and back  
+  Result: **BLOCKED** · Note: Pull-down on the single video shows no visible refresh indicator via adb swipe and nothing changes; cannot tell if a refresh ran. Retest with more content on a real swipe.
+- [x] **FEED-14** Switch to another tab and back  
   Expected: Video pauses when you leave and resumes when you return.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-15** Following tab with nobody followed  
+  Result: **BLOCKED** · Note: Pause/resume on tab switch cannot be told apart from a screenshot (video is near-static and audio is not captured). Returning to For You shows the video again.
+- [x] **FEED-15** Following tab with nobody followed  
   Expected: Friendly empty message.  
-  Result: _not tested_ · Note: 
-- [ ] **FEED-16** Watch videos fully, then reopen For You later  
+  Result: **PASS** · Note: Following with nobody followed shows "Follow people to see their videos here". Screenshot: FEED-15.png
+- [x] **FEED-16** Watch videos fully, then reopen For You later  
   Expected: Feed changes based on what you watched; you don't keep seeing the same videos.  
-  Result: _not tested_ · Note: 
+  Result: **BLOCKED** · Note: Needs many videos and watch history to judge the algorithm.
 
 ## Comments
 
