@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>افتح في FLYP</title>
+<meta name="description" content="افتح هذا الرابط في تطبيق FLYP، أو حمّل التطبيق مجانًا.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1e56d6">
+<meta name="tt-title-ar" content="افتح في FLYP">
+<meta name="tt-title-en" content="Open in FLYP">
+<meta name="tt-desc-en" content="Open this link in the FLYP app, or get the app for free.">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="FLYP">
+<meta property="og:title" content="FLYP">
+<meta property="og:description" content="افتح هذا الرابط في تطبيق FLYP">
+<meta property="og:image" content="https://flyp-sa.com/assets/app-icon.png">
+<meta name="twitter:card" content="summary">
+
+<!--
+  Fallback for shared links: /live/<id>, /v/<id>, /u/<id>.
+  Served for those paths by the rewrites in site/vercel.json. Every URL on
+  this page is absolute (/site.css, not site.css) because the page is shown
+  at /live/<id>, where a relative path would resolve under /live/.
+
+  When the app is installed and the domain is verified (site/.well-known),
+  the phone opens the app directly and this page is never shown. It appears
+  when the app is not installed, or the link was opened inside a browser.
+-->
+
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site.css?v=8">
+<style>
+  .open-ico { width: 88px; height: 88px; border-radius: 22px; display: block; margin: 0 auto 22px; }
+  .open-kind { display: inline-block; font-size: 13px; font-weight: 600; color: var(--accent-ink); background: var(--tint-brand); border-radius: 999px; padding: 5px 14px; margin-bottom: 14px; }
+  .open-stores { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .open-note { margin-top: 26px; font-size: 14px; color: var(--ink-3); }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main" data-ar="تخطي إلى المحتوى" data-en="Skip to content">تخطي إلى المحتوى</a>
+
+<header class="nav" id="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="/index.html">
+      <img src="/assets/app-icon.png" alt="" width="34" height="34">
+      <span>FLYP</span>
+    </a>
+    <div class="nav-right">
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="ar" class="on">AR</button>
+        <button type="button" data-lang="en">EN</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<section class="oops">
+  <div class="wrap">
+    <img class="open-ico" src="/assets/app-icon.png" alt="FLYP" width="88" height="88">
+    <span class="open-kind" id="open-kind" data-ar="رابط من FLYP" data-en="A FLYP link">رابط من FLYP</span>
+    <h1 id="open-title" data-ar="افتح هذا الرابط في FLYP" data-en="Open this link in FLYP">افتح هذا الرابط في FLYP</h1>
+    <p class="lede" id="open-lede" data-ar="إذا كان التطبيق مثبّتًا فاضغط «افتح في FLYP». وإن لم يكن، حمّله مجانًا ثم افتح الرابط مرة أخرى." data-en="If you have the app, tap Open in FLYP. If not, get it for free, then open the link again.">إذا كان التطبيق مثبّتًا فاضغط «افتح في FLYP». وإن لم يكن، حمّله مجانًا ثم افتح الرابط مرة أخرى.</p>
+
+    <div class="row-cta">
+      <a class="btn" id="open-app" href="flyp://" data-ar="افتح في FLYP" data-en="Open in FLYP">افتح في FLYP</a>
+    </div>
+
+    <div class="open-stores">
+      <a class="btn btn-ghost" id="get-ios" href="/download.html" rel="noopener" data-ar="حمّل من App Store" data-en="Get it on the App Store">حمّل من App Store</a>
+      <a class="btn btn-ghost" id="get-android" href="https://play.google.com/store/apps/details?id=com.flyp.app" rel="noopener" data-ar="حمّل من Google Play" data-en="Get it on Google Play">حمّل من Google Play</a>
+    </div>
+
+    <p class="open-note"><a href="/index.html" data-ar="تعرّف على FLYP" data-en="Learn about FLYP">تعرّف على FLYP</a></p>
+  </div>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-bottom">
+      <span>&copy; 2026 FLYP</span>
+      <span class="spacer"></span>
+      <a href="/privacy.html" data-ar="سياسة الخصوصية" data-en="Privacy policy">سياسة الخصوصية</a>
+      <a href="/terms.html" data-ar="شروط الاستخدام" data-en="Terms of use">شروط الاستخدام</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  // The App Store link needs the app's numeric id, which only exists once the
+  // iOS app is live. Paste the full URL here (https://apps.apple.com/app/id...)
+  // and the button goes straight to the store; while empty it opens /download.html.
+  var APP_STORE_URL = '';
+  var PLAY_URL = 'https://play.google.com/store/apps/details?id=com.flyp.app';
+  var PACKAGE = 'com.flyp.app';
+
+  var KINDS = {
+    live: { app: 'live', ar: 'بث مباشر', en: 'Live',
+            tAr: 'شاهد هذا البث المباشر في FLYP', tEn: 'Watch this live in FLYP' },
+    v:    { app: 'v', ar: 'مقطع فيديو', en: 'Video',
+            tAr: 'شاهد هذا المقطع في FLYP', tEn: 'Watch this video in FLYP' },
+    u:    { app: 'u', ar: 'ملف شخصي', en: 'Profile',
+            tAr: 'شاهد هذا الملف الشخصي في FLYP', tEn: 'See this profile in FLYP' }
+  };
+
+  // /live/<id>, /v/<id>, /u/<id>. Ids are UUIDs; anything else just opens the app.
+  var m = location.pathname.match(/^\/(live|v|u)\/([0-9a-fA-F-]{36})\/?$/);
+  var kind = m ? KINDS[m[1]] : null;
+  var appPath = kind ? kind.app + '/' + m[2].toLowerCase() : '';
+
+  function set(id, ar, en) {
+    var el = document.getElementById(id);
+    el.setAttribute('data-ar', ar);
+    el.setAttribute('data-en', en);
+  }
+  if (kind) {
+    set('open-kind', kind.ar, kind.en);
+    set('open-title', kind.tAr, kind.tEn);
+  }
+
+  var ua = navigator.userAgent || '';
+  var android = /Android/i.test(ua);
+  var ios = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
+
+  // Android: an intent URL opens the app if installed and otherwise falls back
+  // to the Play Store, with no error page in between. Elsewhere the custom scheme.
+  var openUrl = android
+    ? 'intent://' + appPath + '#Intent;scheme=flyp;package=' + PACKAGE +
+      ';S.browser_fallback_url=' + encodeURIComponent(PLAY_URL) + ';end'
+    : 'flyp://' + appPath;
+  document.getElementById('open-app').href = openUrl;
+
+  var iosBtn = document.getElementById('get-ios');
+  var andBtn = document.getElementById('get-android');
+  if (APP_STORE_URL) iosBtn.href = APP_STORE_URL;
+  // Show the store for this phone first; on a computer show both.
+  if (ios) andBtn.hidden = true;
+  if (android) iosBtn.hidden = true;
+
+  // Try the app straight away on Android, where the intent falls back cleanly.
+  // iOS Safari shows an "invalid address" alert for an unhandled scheme, so
+  // there the visitor taps the button instead.
+  if (android && kind) {
+    setTimeout(function () { location.href = openUrl; }, 250);
+  }
+})();
+</script>
+<script src="/site.js?v=3"></script>
+</body>
+</html>

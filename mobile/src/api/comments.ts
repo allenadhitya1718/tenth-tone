@@ -1,8 +1,11 @@
 // Comments on videos, and your own comment history. Port of the matching
 // parts of web/js/db.js.
 //
-// ApiError codes introduced here: none (only the shared 'not_signed_in').
-import { requireUid, supabase, uid } from './client';
+// ApiError codes introduced here: 'comment_blocked' (the server's word
+// filter refused the text, 0135), plus the shared 'not_signed_in'.
+import type { PostgrestError } from '@supabase/supabase-js';
+
+import { ApiError, requireUid, supabase, uid } from './client';
 import { attach, checkText } from './moderation';
 import type { Iso, UserSummary, Uuid } from './types';
 
@@ -123,7 +126,7 @@ export async function postComment(videoId: Uuid, text: string, onWithdrawn?: OnC
     `,
     )
     .single();
-  if (error) throw error;
+  if (error) throw asCommentError(error);
   const row = data as unknown as Comment;
 
   // Deliberately not awaited: the caller gets its row now.
@@ -136,6 +139,19 @@ export async function postComment(videoId: Uuid, text: string, onWithdrawn?: OnC
     void withdraw(row.id, verdict.message, onWithdrawn);
   });
   return row;
+}
+
+// The BEFORE INSERT word filter (0135, on comments and live_comments) raises
+// 'comment_blocked'. Turned into an ApiError so screens can show their own
+// translated text instead of a generic failure. Anything else is passed on.
+export function isCommentBlocked(e: unknown): boolean {
+  if (e instanceof ApiError) return e.code === 'comment_blocked';
+  const msg = (e as PostgrestError | null)?.message;
+  return typeof msg === 'string' && msg.includes('comment_blocked');
+}
+
+export function asCommentError(e: unknown): unknown {
+  return isCommentBlocked(e) && !(e instanceof ApiError) ? new ApiError('comment_blocked') : e;
 }
 
 // Best-effort in both halves. If the delete is refused the comment simply

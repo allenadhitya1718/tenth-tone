@@ -4,30 +4,45 @@ Everything here describes what the app **actually does today**. Do not add a
 feature to the description that is not in the build: Google checks the listing
 against the app, and a claim the reviewer cannot find is a rejection.
 
-Removed from the record screen before this build, so do NOT mention them:
-beauty filters, video filters, AR effects.
+Current build (React Native app, `mobile/`, version 2.0.0). Checked against the
+code on 19 Oct 2026: the record screen **does** have colour filters again (12
+looks plus a "beauty" soft-tone toggle, `mobile/src/features/camera/filters.ts`).
+Still do NOT mention: AR effects / face masks, or creator payouts and withdrawals
+(not shipped yet). If the build you submit was made without the native filter
+module, drop the filters line.
+
+The Arabic-first title, iOS subtitle and keywords (for Arabic store search) are
+in `STORE_LISTING_AR.md` next to this file. Use that for the `ar` locale.
 
 ---
 
 ## App name (30 char max)
 
+Arabic (`ar`, default locale):
 ```
-FLYP
+FLYP فلاي - فيديو وبث مباشر
 ```
+(27 characters)
+
+English (`en-US`):
+```
+FLYP: Short Video & Live
+```
+(24 characters)
 
 ## Short description (80 char max)
 
 Arabic (default locale, `ar`):
 ```
-شارك فيديوهاتك القصيرة، ابدأ بثًا مباشرًا، وتواصل مع أصدقائك
+فيديوهات قصيرة وبث مباشر ودردشة وقصص مع أصدقائك. شارك لحظتك على FLYP
 ```
-(60 characters)
+(68 characters)
 
 English (`en-US`):
 ```
-Share short videos, go live, and chat with friends
+Short videos, live streams, stories and chat with friends, Arabic-first
 ```
-(49 characters)
+(71 characters)
 
 ---
 
@@ -36,64 +51,76 @@ Share short videos, go live, and chat with friends
 ### Arabic (`ar`)
 
 ```
-FLYP هو تطبيق الفيديوهات القصيرة للمجتمع العربي.
+FLYP هو تطبيق الفيديوهات القصيرة والبث المباشر للمجتمع العربي.
 
 ■ فيديوهات قصيرة
-تصفّح فيديوهات قصيرة بتمرير واحد. سجّل مباشرة من التطبيق حتى ٩٠ ثانية، أو ارفع
-مقطعًا من معرض الصور، وقصّه قبل النشر.
+تصفّح الفيديوهات بتمرير واحد. صوّر من داخل التطبيق حتى ٦٠ ثانية مع فلاتر ألوان
+ولمسة تجميل، أو ارفع مقطعًا من معرض الصور وقصّه قبل النشر. أضف وصفًا ووسومًا
+وموقعًا.
 
 ■ بث مباشر
-ابدأ بثًا مباشرًا وتفاعل مع مشاهديك لحظة بلحظة. تعليقات فورية وتفاعلات متحركة
-على الشاشة، مع عدد المشاهدين ومدة البث.
+ابدأ بثًا مباشرًا وتفاعل مع مشاهديك لحظة بلحظة: تعليقات فورية، تفاعلات متحركة،
+وعدد المشاهدين. ادعُ حتى ٤ ضيوف إلى المنصة، واستقبل الهدايا من جمهورك.
 
-■ محادثات
-راسل أصدقاءك مباشرة أو في مجموعات. شارك الفيديوهات داخل المحادثة، وأرسل
-الصور والملفات والرسائل الصوتية.
+■ القصص
+شارك صورًا ومقاطع تختفي بعد ٢٤ ساعة، مع صوت من مكتبة الأصوات، واعرف من شاهدها.
+
+■ محادثات ومكالمات
+راسل أصدقاءك مباشرة أو في مجموعات، وأرسل الصور والرسائل الصوتية، وشارك الفيديوهات داخل المحادثة.
+اتصل بمكالمة صوتية أو فيديو، أو استخدم الضغط للتحدث (Walkie-talkie).
 
 ■ اكتشف
-تصفّح الوسوم الرائجة، وابحث عن الحسابات والفيديوهات والأصوات، وتابع من يعجبك.
+الوسوم الرائجة، والبحث عن الحسابات والفيديوهات والأصوات، وخريطة الأصدقاء لمن
+يختار مشاركة موقعه.
 
-■ الأصوات
-كل مقطع عام ينشئ صوتًا أصليًا يمكن لأي شخص إعادة استخدامه، أو اختر صوتًا
-جاهزًا قبل التسجيل.
+■ المحفظة والهدايا
+اشترِ العملات من المتجر وأرسل الهدايا في البث المباشر.
 
 ■ خصوصيتك بين يديك
-اجعل حسابك خاصًا، وتحكّم في من يعلّق أو يحفظ مقاطعك، واحظر من تريد. يمكنك
-الإبلاغ عن أي محتوى مخالف.
+اجعل حسابك خاصًا، وتحكّم في من يراسلك أو يعلّق أو يشير إليك، واحظر من تريد،
+وأبلغ عن أي محتوى مخالف. يمكنك حذف حسابك من داخل التطبيق.
 
-التطبيق بالعربية بالكامل مع دعم كامل للكتابة من اليمين إلى اليسار.
+متوفر بالعربية والإنجليزية والأردية والهندية والإندونيسية والتركية والفرنسية
+والإسبانية والصينية، مع دعم كامل للكتابة من اليمين إلى اليسار.
 ```
 
 ### English (`en-US`)
 
 ```
-FLYP is a short-video app built Arabic-first.
+FLYP is the short-video and live-streaming app built Arabic-first.
 
 ■ Short videos
-Swipe through short videos one at a time. Record up to 90 seconds in the app
-with a countdown timer, or upload from your gallery and trim before posting.
+Swipe through videos one at a time. Record up to 60 seconds in the app with
+colour filters and a beauty toggle, or upload from your gallery and trim before
+posting. Add a caption, hashtags and a place.
 
 ■ Go live
-Start a live stream and see your audience react in real time — live comments,
-animated reactions, viewer count and stream duration.
+Start a live stream and see your audience react in real time: live comments,
+animated reactions and a viewer count. Bring up to 4 guests on stage and
+receive gifts from your viewers.
 
-■ Messages
-Message friends directly or in groups. Share videos straight into a chat, and
-send photos, files and voice notes.
+■ Stories
+Share photos and clips that disappear after 24 hours, add a sound, and see who
+watched.
+
+■ Messages and calls
+Message friends directly or in groups, send photos and voice notes, and share videos into a chat.
+Make voice and video calls, or use push-to-talk.
 
 ■ Discover
-Browse trending hashtags, search accounts, videos and sounds, and follow the
-creators you like.
+Trending hashtags, search for accounts, videos and sounds, and a friends map
+for people who choose to share their location.
 
-■ Sounds
-Every public post creates an original sound anyone can reuse, or pick an
-existing sound before you record.
+■ Wallet and gifts
+Buy coins in the store and send gifts during live streams.
 
 ■ Your privacy, your call
-Make your account private, control who can comment on or save your videos, and
-block anyone you choose. Report anything that breaks the rules.
+Make your account private, control who can message, comment on or mention you,
+block anyone, and report anything that breaks the rules. You can delete your
+account inside the app.
 
-Fully localised in Arabic with complete right-to-left support.
+Available in Arabic, English, Urdu, Hindi, Indonesian, Turkish, French, Spanish
+and Chinese, with full right-to-left support.
 ```
 
 ---
@@ -129,7 +156,7 @@ Declare honestly; this is cross-checked against the app's behaviour.
 | Name, username, profile photo | Yes | shown on your public profile |
 | Photos and videos | Yes | the posts and messages people upload |
 | Messages | Yes | direct and group chat |
-| Approximate location | Yes, optional | only if the user enables the friends map |
+| Location (approximate and precise) | Yes, optional | only if the user enables the friends map or tags a place on a post |
 | Crash logs / diagnostics | Check your Supabase and Agora settings before answering |
 
 All of it is transmitted encrypted (HTTPS). Users can request deletion in-app —

@@ -1,0 +1,19 @@
+{
+  "drafts": {
+    "title": "Draf",
+    "open": "Buka draf",
+    "postNow": "Posting sekarang",
+    "edit": "Edit keterangan & pengaturan",
+    "delete": "Hapus draf",
+    "deleteTitle": "Hapus draf ini?",
+    "deleteBody": "Tindakan ini tidak bisa dibatalkan.",
+    "deleted": "Draf dihapus",
+    "save": "Simpan perubahan",
+    "saved": "Draf diperbarui",
+    "noCaption": "Tanpa keterangan",
+    "togglePlay": "Putar atau jeda pratinjau",
+    "postFailed": "Draf ini tidak bisa diposting. Coba lagi.",
+    "saveFailed": "Perubahan tidak bisa disimpan. Coba lagi.",
+    "deleteFailed": "Draf ini tidak bisa dihapus. Coba lagi."
+  }
+}

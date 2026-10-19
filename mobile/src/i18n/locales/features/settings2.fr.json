@@ -231,6 +231,7 @@
       "deleteLose2": "Vos discussions et messages seront supprimés.",
       "deleteLose3": "Vous perdrez vos abonnés et vos abonnements.",
       "deleteLose4": "Quelqu'un d'autre pourra prendre votre nom d'utilisateur.",
+      "deleteLoseEarnings": "Vos gains de créateur non retirés ({{n}} 💎) seront perdus. Retirez-les avant de supprimer votre compte.",
       "deleteWhen": "Votre compte sera supprimé dans 30 jours. D'ici là, il est masqué pour tout le monde. Si vous vous connectez pendant ces 30 jours, la suppression est annulée et tout est conservé.",
       "deleteCta": "Supprimer mon compte",
       "deleteConfirm": "Votre compte et tout son contenu seront supprimés dans 30 jours. Vous allez maintenant être déconnecté. Connectez-vous dans les 30 jours pour annuler.",
@@ -241,7 +242,13 @@
       "pendingBody_other": "{{count}} jours restants. Vous pouvez annuler la suppression maintenant et tout conserver.",
       "keepCta": "Annuler la suppression et garder mon compte",
       "cancelledTitle": "Suppression annulée",
-      "cancelledBody": "Votre compte est en sécurité et rien ne sera supprimé."
+      "cancelledBody": "Votre compte est en sécurité et rien ne sera supprimé.",
+      "deactivatedTitle": "Votre compte est désactivé",
+      "deactivatedBody": "Il est masqué pour tout le monde. Réactivez-le pour afficher à nouveau votre profil, vos vidéos et vos commentaires.",
+      "reactivateCta": "Réactiver mon compte",
+      "bannedTitle": "Votre compte est suspendu",
+      "appealRow": "Faire appel d'une décision",
+      "appealRowHint": "Demandez-nous de réexaminer une suspension ou un contenu retiré"
     },
     "activity": {
       "title": "Votre activité",
@@ -325,6 +332,71 @@
       "discardBody": "Vos modifications n'ont pas été enregistrées. Elles seront perdues si vous quittez maintenant.",
       "discard": "Abandonner",
       "keepEditing": "Continuer à modifier"
+    },
+    "appeals": {
+      "gate": {
+        "welcomeBack": "Bon retour — votre compte est de nouveau actif",
+        "deletionCancelled": "Bon retour — la suppression de votre compte est annulée et votre compte est de nouveau actif"
+      },
+      "title": "Faire appel d'une décision",
+      "intro": "Si vous pensez que nous nous sommes trompés, dites-nous pourquoi. Chaque appel est examiné par une personne, et vous recevrez une notification avec la décision.",
+      "itemsTitle": "Décisions contestables",
+      "none": "Rien à contester",
+      "noneSub": "Votre compte n'a aucune suspension ni aucun contenu retiré.",
+      "historyTitle": "Vos appels",
+      "type": {
+        "ban": "Suspension du compte",
+        "video_hidden": "Vidéo masquée",
+        "video_removed": "Vidéo retirée",
+        "comment_hidden": "Commentaire masqué",
+        "comment_removed": "Commentaire retiré",
+        "story_removed": "Story retirée",
+        "live_comment_removed": "Message du chat en direct retiré",
+        "live_stream": "Live arrêté par la modération"
+      },
+      "actionedOn": "Le {{date}}",
+      "sentOn": "Envoyé le {{date}}",
+      "moderatorReason": "Motif : {{reason}}",
+      "reasonAuto": "Masqué automatiquement après plusieurs signalements",
+      "appealCta": "Faire appel",
+      "status_open": "En cours d'examen",
+      "status_accepted": "Accepté",
+      "status_rejected": "Refusé",
+      "adminNote": "Note de l'examinateur : {{note}}",
+      "final": "Cette décision est définitive.",
+      "limitReached": "Vous avez {{n}} appels en cours d'examen. Vous pourrez en envoyer un autre lorsqu'une décision aura été prise.",
+      "form": {
+        "title": "Votre appel",
+        "label": "Pourquoi devrions-nous réexaminer cela ?",
+        "placeholder": "Expliquez ce qui s'est passé et pourquoi vous pensez que la décision est erronée.",
+        "hint": "Une personne lira votre message. Soyez précis et courtois.",
+        "tooShort": "Écrivez au moins {{n}} caractères.",
+        "send": "Envoyer l'appel",
+        "sent": "Appel envoyé. Nous vous informerons de la décision.",
+        "missing": "Il n'est plus possible de faire appel."
+      },
+      "errors": {
+        "appeal_not_eligible": "Il n'est plus possible de faire appel.",
+        "appeal_already_open": "Vous avez déjà un appel en cours d'examen pour cela.",
+        "appeal_already_decided": "Un appel à ce sujet a déjà été tranché.",
+        "appeal_limit_open": "Vous avez 3 appels en cours d'examen. Attendez une décision avant d'en envoyer un autre.",
+        "appeal_reason_required": "Indiquez le motif de votre appel.",
+        "appeal_reason_too_long": "Restez sous les 1000 caractères.",
+        "appeals_unavailable": "Les appels ne sont pas encore disponibles. Réessayez plus tard."
+      },
+      "banned": {
+        "title": "Votre compte est suspendu",
+        "until": "Jusqu'au {{date}}",
+        "permanent": "Cette suspension est définitive.",
+        "reason": "Motif : {{reason}}",
+        "body": "Vous ne pouvez pas utiliser FLYP tant que votre compte est suspendu. Si vous pensez qu'il s'agit d'une erreur, faites appel : une personne l'examinera.",
+        "appealCta": "Faire appel",
+        "appealOpen": "Votre appel est en cours d'examen. Nous vous informerons de la décision.",
+        "checkAgain": "Vérifier à nouveau",
+        "stillBanned": "Votre compte est toujours suspendu.",
+        "lifted": "Votre compte n'est plus suspendu",
+        "signOut": "Se déconnecter"
+      }
     }
   }
 }

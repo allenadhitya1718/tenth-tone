@@ -1,7 +1,7 @@
 // Terms of Service and Privacy Policy shown in the app (LegalSheet). Started
 // as a copy of LEGAL_DOCS in web/js/views.js; since 19 October 2026 it also
 // covers what only this app does (calls, walkie-talkie, the friends map,
-// stories, coins, push) and is a short form of site/terms.html and
+// stories, coins, creator earnings, push) and is a short form of site/terms.html and
 // site/privacy.html. Both languages live here; the documents are never run
 // through the translation layer.
 export type Lang2 = { ar: string; en: string };
@@ -90,8 +90,18 @@ export const LEGAL_DOCS: Record<"terms" | "privacy", LegalDoc> = {
           "en": "Coins and gifts"
         },
         "p": {
-          "ar": "تُشترى العملات داخل التطبيق عبر App Store أو Google Play، ويتولى المتجر الدفع وفق شروطه. العملات ترخيص لاستخدام ميزة إرسال الهدايا في البث المباشر: ليست مالًا، ولا قيمة نقدية لها، ولا تُستبدل بمال، ولا تُباع ولا تُنقل إلى حساب آخر. عمليات الشراء نهائية وغير قابلة للاسترداد إلا عبر إجراءات الاسترداد لدى Apple أو Google أو حيث يمنحك القانون ذلك، وإن استُرد مبلغ شراء فقد نزيل العملات التي أضافها. عند إرسال هدية يُخصم سعرها من رصيدك ويُضاف إلى رصيد من استلمها، ولا يمكن استرجاعها. لا يمكن حاليًا صرف العملات أو الهدايا المستلمة نقدًا أو سحبها. وتسقط العملات غير المستخدمة عند حذف الحساب نهائيًا أو إغلاقه بسبب مخالفة.",
-          "en": "Coins are bought in the app through the App Store or Google Play, and the store handles payment under its own terms. Coins are a licence to use the gift feature in live streams: they are not money, have no cash value, cannot be exchanged for money, and may not be sold or transferred to another account. Purchases are final and non-refundable, except through Apple’s or Google’s refund process or where the law gives you a refund, and if a purchase is refunded we may remove the coins it added. When you send a gift, its price is taken from your balance and added to the recipient’s, and it cannot be taken back. Coins and gifts you receive cannot currently be cashed out or withdrawn. Unused coins are lost if the account is permanently deleted, or closed for breaking these terms."
+          "ar": "تُشترى العملات داخل التطبيق عبر App Store أو Google Play، ويتولى المتجر الدفع وفق شروطه. العملات ترخيص لاستخدام ميزة إرسال الهدايا في البث المباشر: ليست مالًا، ولا قيمة نقدية لها، ولا تُستبدل بمال، ولا تُباع ولا تُنقل إلى حساب آخر. عمليات الشراء نهائية وغير قابلة للاسترداد إلا عبر إجراءات الاسترداد لدى Apple أو Google أو حيث يمنحك القانون ذلك، وإن استُرد مبلغ شراء فقد نزيل العملات التي أضافها. عند إرسال هدية يُخصم سعرها من رصيدك ولا يمكن استرجاعها. من يستلم الهدية لا يحصل على عملات، بل يكسب ماسات فقط يمكن سحبها وفق «أرباح صانع المحتوى». العملات نفسها لا تُصرف نقدًا ولا تُستبدل بمال. وتسقط العملات غير المستخدمة عند حذف الحساب نهائيًا أو إغلاقه بسبب مخالفة.",
+          "en": "Coins are bought in the app through the App Store or Google Play, and the store handles payment under its own terms. Coins are a licence to use the gift feature in live streams: they are not money, have no cash value, cannot be exchanged for money, and may not be sold or transferred to another account. Purchases are final and non-refundable, except through Apple’s or Google’s refund process or where the law gives you a refund, and if a purchase is refunded we may remove the coins it added. When you send a gift, its price is taken from your balance and it cannot be taken back. The recipient does not receive coins; they earn diamonds only, which can be withdrawn under “Creator earnings”. Coins themselves cannot be cashed out or exchanged for money. Unused coins are lost if the account is permanently deleted, or closed for breaking these terms."
+        }
+      },
+      {
+        "h": {
+          "ar": "أرباح صانع المحتوى",
+          "en": "Creator earnings"
+        },
+        "p": {
+          "ar": "كل هدية تستلمها تمنحك ماسات، لا عملات. تُحتسب قيمة الماسة بتحفّظ على أساس أقل سعر نبيع به العملة الواحدة (شاملًا العملات الإضافية) بعد استبعاد ضريبة القيمة المضافة 15% المضمّنة في أسعار المتجر، ثم خصم عمولة المتجر، وحصتك 50% من الباقي، ويظهر سعرها بالريال في محفظتك. تبقى ماسات كل هدية معلّقة سبعة أيام قبل أن يمكن سحبها، والحد الأدنى للسحب 100 ريال. السحب متاح لمن أتمّ 18 عامًا، ومضى على حسابه 30 يومًا، وحسابه غير مقيّد، وأتمّ التحقق من هويته: الاسم القانوني الكامل، ورقم الهوية الوطنية أو الإقامة، وصورة الوجه الأمامي للهوية، وآيبان سعودي باسمه، واسم البنك. يراجع فريقنا كل طلب يدويًا ويرسله بحوالة بنكية، دون رسوم منّا، خلال 3 إلى 5 أيام عمل من الموافقة عليه. يجوز لنا حجز الماسات أو إلغاؤها ورفض السحب إذا جاءت الهدية من عملات استُرد ثمنها أو لم تُدفع أو كانت تجريبية، أو إذا كان لدى المُرسل استرداد حديث أو حسابه قيد المراجعة، أو عند الاشتباه في احتيال أو مخالفة، ويجوز خصم ما دُفع خطأً من أرباحك المستقبلية. الماسات ليست مالًا ولا تُنقل، والماسات غير المسحوبة تسقط عند حذف الحساب، فاسحبها قبل طلب الحذف. أنت مسؤول عن أي ضرائب على أرباحك.",
+          "en": "Every gift you receive earns you diamonds, not coins. To be safe, a diamond’s value is worked out from the lowest price at which we sell a single coin (bonus coins included), excluding the 15% VAT included in store prices and after the app store’s fee; your share is 50% of that, and its SAR value is shown in your wallet. The diamonds from each gift are held for seven days before they can be withdrawn, and the minimum withdrawal is 100 SAR. You can withdraw if you are 18 or over, your account is at least 30 days old and not restricted, and you have verified your identity: your full legal name, national ID or Iqama number, a photo of the front of your ID, a Saudi IBAN in your own name, and your bank’s name. Our team reviews each request by hand and sends it by bank transfer within 3 to 5 business days of approval, with no fee from us. We may hold or cancel diamonds and decline withdrawals where the gift came from coins that were refunded, not paid for or bought as a test, where the sender has a recent refund or is under review, or where we suspect fraud or a breach of these terms, and we may deduct amounts paid in error from future earnings. Diamonds are not money and cannot be transferred, and diamonds not withdrawn are forfeited when the account is deleted, so withdraw them before you ask for deletion. You are responsible for any taxes on your earnings."
         }
       },
       {
@@ -174,6 +184,16 @@ export const LEGAL_DOCS: Record<"terms" | "privacy", LegalDoc> = {
       },
       {
         "h": {
+          "ar": "بيانات السحب",
+          "en": "Withdrawal details"
+        },
+        "p": {
+          "ar": "إن طلبت سحب أرباحك نجمع اسمك القانوني الكامل، ورقم الهوية الوطنية أو الإقامة، وصورة الوجه الأمامي للهوية، والآيبان واسم البنك، ونحفظ طلبات السحب ومرجع الحوالة. نستخدمها فقط للتحقق منك ودفع أرباحك ومنع الاحتيال. تُحفظ صورة الهوية في مساحة تخزين خاصة لا يفتحها إلا أنت والموظفون المخوّلون بمراجعة المدفوعات، ولا يظهر في التطبيق من الآيبان ورقم الهوية إلا آخر أرقامهما. عند التحويل نعطي بنكنا اسمك والآيبان والمبلغ فقط. نحتفظ بهذه البيانات ما دام حسابك قائمًا، ثم حتى خمس سنوات بعد آخر سحب أو بعد حذف الحساب، أيهما أبعد، لأغراض المحاسبة والضرائب ومنع الاحتيال، ثم نحذفها.",
+          "en": "If you ask to withdraw your earnings, we collect your full legal name, national ID or Iqama number, a photo of the front of your ID, your IBAN and bank name, and we keep your withdrawal requests and the transfer reference. We use them only to verify you, pay you and prevent fraud. The ID photo is kept in private storage that only you and the staff authorised to review payouts can open, and the app only shows the last digits of your IBAN and ID number. When we transfer, we give our bank only your name, IBAN and the amount. We keep these details while your account exists, then for up to five years after your last withdrawal or after you delete your account, whichever is later, for accounting, tax and fraud prevention, and then delete them."
+        }
+      },
+      {
+        "h": {
           "ar": "من نستعين بهم",
           "en": "Who we work with"
         },
@@ -188,8 +208,8 @@ export const LEGAL_DOCS: Record<"terms" | "privacy", LegalDoc> = {
           "en": "How long we keep it"
         },
         "p": {
-          "ar": "نحتفظ ببيانات حسابك، بما فيها سجل المكالمات وسجل شراء العملات والهدايا، ما دام حسابك قائمًا. عند طلب حذف الحساب يُخفى فورًا، ويُحذف نهائيًا مع كل بياناته بعد 30 يومًا، باستثناء ما يلزمنا قانونًا الاحتفاظ به. القصص تُحذف بعد سبعة أيام من انتهائها. سجل الموقع يُحذف بعد سبعة أيام دون تحديث.",
-          "en": "We keep your account data, including call records and coin purchase and gift records, for as long as your account exists. When you ask to delete your account it is hidden at once, and it is permanently deleted with all its data after 30 days, apart from anything we are legally required to keep. Stories are deleted seven days after they expire. The location record is deleted after seven days without an update."
+          "ar": "نحتفظ ببيانات حسابك، بما فيها سجل المكالمات وسجل شراء العملات والهدايا، ما دام حسابك قائمًا. عند طلب حذف الحساب يُخفى فورًا، ويُحذف نهائيًا مع كل بياناته بعد 30 يومًا، باستثناء ما يلزمنا قانونًا الاحتفاظ به وبيانات السحب الموضّحة أعلاه. القصص تُحذف بعد سبعة أيام من انتهائها. سجل الموقع يُحذف بعد سبعة أيام دون تحديث.",
+          "en": "We keep your account data, including call records and coin purchase and gift records, for as long as your account exists. When you ask to delete your account it is hidden at once, and it is permanently deleted with all its data after 30 days, apart from anything we are legally required to keep and the withdrawal details described above. Stories are deleted seven days after they expire. The location record is deleted after seven days without an update."
         }
       },
       {

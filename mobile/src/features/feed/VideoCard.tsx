@@ -12,6 +12,7 @@ import { Animated, Pressable, Share, StyleSheet, Text, View } from 'react-native
 import { countShare, videoLink } from '@/api/discover';
 import type { Video } from '@/api/types';
 import { trackEngagement } from '@/api/videos';
+import { PostPlaceTags } from '@/features/place/PostPlaceTags';
 import { useAuth } from '@/providers/AuthProvider';
 
 import { formatCount } from './format';
@@ -273,6 +274,7 @@ function Overlay({
             {video.description}
           </Text>
         ) : null}
+        <PostPlaceTags videoId={video.id} active={active} />
         <View style={styles.soundRow}>
           <Ionicons name="musical-notes" size={13} color="#fff" />
           <Text style={styles.sound} numberOfLines={1}>

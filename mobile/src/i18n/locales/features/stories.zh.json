@@ -79,6 +79,12 @@
     "errSignedOut": "你已退出登录，请重新登录后再试。",
     "modeA11y": "相机模式",
     "modeVideo": "视频",
-    "modeStory": "快拍"
+    "modeStory": "快拍",
+    "fromLibrary": "从相册选择",
+    "fromCamera": "使用相机",
+    "takePhoto": "拍照",
+    "takePhotoHint": "显示 5 秒，配乐时 15 秒",
+    "recordVideo": "录制视频",
+    "cameraDenied": "请在设置中允许访问相机，以便用相机拍摄快拍。"
   }
 }

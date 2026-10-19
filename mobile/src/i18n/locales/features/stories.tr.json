@@ -80,6 +80,12 @@
     "errSignedOut": "Oturumun kapandı. Tekrar giriş yapıp yeniden dene.",
     "modeA11y": "Kamera modu",
     "modeVideo": "Video",
-    "modeStory": "Hikaye"
+    "modeStory": "Hikaye",
+    "fromLibrary": "Galerinden",
+    "fromCamera": "Kamerayı kullan",
+    "takePhoto": "Fotoğraf çek",
+    "takePhotoHint": "5 saniye, şarkıyla 15 saniye gösterilir",
+    "recordVideo": "Video kaydet",
+    "cameraDenied": "Kamerayla hikâye çekmek için Ayarlar’dan kamera erişimine izin ver."
   }
 }

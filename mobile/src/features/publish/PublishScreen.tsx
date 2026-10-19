@@ -11,14 +11,18 @@ import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } fr
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/client';
-import type { Privacy } from '@/api/types';
+import type { TagRefusal } from '@/api/tags';
+import type { Privacy, UserSummary } from '@/api/types';
 import type { LocalMedia } from '@/api/upload';
 import { appendTag, captionTags, suggestTags, suggestTagsKeys, tagLangFor } from '@/api/suggestTags';
 import { publishVideo, videoKeys, type VideoPlace } from '@/api/videos';
 import { showToast } from '@/components/Toast';
 import { Button, TopBar } from '@/components/ui';
+import { PlacePicker } from '@/features/place/PlacePicker';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
+
+import { Avatar, TagPeoplePicker } from './TagPeoplePicker';
 
 const MAX_CAPTION = 300;
 
@@ -27,14 +31,15 @@ const MAX_CAPTION = 300;
 // from disk straight to R2 with real progress, a failure keeps everything on
 // screen with Retry, and Save draft goes through the same path.
 //
-// `place` (note 21) is optional: when the screen is given one it is saved
-// with the post and offered as a hashtag. There is no place picker on this
-// screen yet; whoever adds one passes its value here or lifts it into state.
+// Note 21: a place (the Location row, PlacePicker) and tagged people (the
+// Tag people row, TagPeoplePicker). The place is saved with the post and
+// offered as a hashtag; tags the server refuses (who_can_tag, blocks) are
+// listed after posting. `place` seeds the row when a caller already has one.
 export function PublishScreen({
   uri,
   mime,
   size,
-  place = null,
+  place: initialPlace = null,
 }: {
   uri: string;
   mime?: string;
@@ -53,6 +58,9 @@ export function PublishScreen({
   const [full, setFull] = useState(false);
   const [progress, setProgress] = useState(0);
   const [poster, setPoster] = useState<LocalMedia | null>(null);
+  const [place, setPlace] = useState<VideoPlace | null>(initialPlace);
+  const [tagged, setTagged] = useState<UserSummary[]>([]);
+  const [picker, setPicker] = useState<null | 'place' | 'tags'>(null);
 
   const player = useVideoPlayer({ uri }, (p) => {
     p.loop = true;
@@ -86,7 +94,7 @@ export function PublishScreen({
     setBusy(asDraft ? 'draft' : 'post');
     setProgress(0);
     try {
-      await publishVideo({
+      const { tagRefusals } = await publishVideo({
         video: { uri, mimeType: mime ?? 'video/mp4', size: size ?? null, name: 'clip.mp4' },
         poster,
         description: caption.trim(),
@@ -95,6 +103,7 @@ export function PublishScreen({
         allow_comments: allowComments,
         allow_saving: allowSaving,
         place,
+        tags: tagged.map((p) => p.id),
         onProgress: (sent, total) => total > 0 && setProgress(sent / total),
       });
       player.pause();
@@ -103,6 +112,7 @@ export function PublishScreen({
       void qc.invalidateQueries({ queryKey: videoKeys.drafts() });
       if (me) void qc.invalidateQueries({ queryKey: videoKeys.userVideos(me) });
       showToast(t(asDraft ? 'publish.draftSaved' : 'publish.posted'), asDraft ? 'document-text' : 'checkmark-circle');
+      if (tagRefusals.length) reportRefusals(tagRefusals);
       router.dismissAll();
       router.replace('/profile');
     } catch (e) {
@@ -120,6 +130,21 @@ export function PublishScreen({
     } finally {
       setBusy(null);
     }
+  }
+
+  // The post is up; only some tags did not land. One alert naming each.
+  function reportRefusals(refusals: TagRefusal[]) {
+    const byId = new Map(tagged.map((p) => [p.id, p]));
+    const lines = refusals.some((r) => r.reason === 'tags_unavailable')
+      ? [t('place.refusedUnavailable')]
+      : refusals.map((r) => {
+          const who = byId.get(r.userId);
+          const handle = who?.handle ?? who?.name ?? '?';
+          if (r.reason === 'tag_not_allowed') return t('place.refusedNotAllowed', { handle });
+          if (r.reason === 'tag_limit') return t('place.refusedLimit', { handle });
+          return t('place.refusedFailed', { handle });
+        });
+    Alert.alert(t('place.refusedTitle'), lines.join('\n'));
   }
 
   const insert = (s: string) => setCaption((c) => (c + (c && !c.endsWith(' ') ? ' ' : '') + s).slice(0, MAX_CAPTION));
@@ -164,6 +189,65 @@ export function PublishScreen({
         </View>
 
         <SuggestedHashtags image={poster} place={place?.name} caption={caption} max={MAX_CAPTION} onChange={setCaption} disabled={!!busy} />
+
+        <Section title={t('place.details')}>
+          <Pressable
+            onPress={() => setPicker('place')}
+            disabled={!!busy}
+            accessibilityRole="button"
+            accessibilityLabel={place ? `${t('place.location')}: ${place.name}` : t('place.addLocation')}
+            style={styles.option}
+          >
+            <Ionicons name="location-outline" size={20} color={colors.text} />
+            <Text style={[styles.optionText, { color: colors.text }]} numberOfLines={1}>
+              {place ? place.name : t('place.addLocation')}
+            </Text>
+            {place ? (
+              <Pressable
+                onPress={() => setPlace(null)}
+                hitSlop={10}
+                disabled={!!busy}
+                accessibilityRole="button"
+                accessibilityLabel={t('place.removeLocation')}
+              >
+                <Ionicons name="close-circle" size={20} color={colors.muted} />
+              </Pressable>
+            ) : (
+              <Ionicons name={I18nManager.isRTL ? 'chevron-back' : 'chevron-forward'} size={18} color={colors.muted} />
+            )}
+          </Pressable>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <Pressable
+            onPress={() => setPicker('tags')}
+            disabled={!!busy}
+            accessibilityRole="button"
+            accessibilityLabel={
+              tagged.length
+                ? `${t('place.tagPeople')}: ${tagged.map((p) => p.handle ?? p.name).join(', ')}`
+                : t('place.tagPeople')
+            }
+            style={styles.option}
+          >
+            <Ionicons name="person-add-outline" size={20} color={colors.text} />
+            {tagged.length ? (
+              <View style={styles.taggedRow}>
+                <View style={styles.faces}>
+                  {tagged.slice(0, 3).map((p, i) => (
+                    <View key={p.id} style={[styles.face, { borderColor: colors.bg2, marginStart: i ? -8 : 0 }]}>
+                      <Avatar user={p} size={24} />
+                    </View>
+                  ))}
+                </View>
+                <Text style={[styles.optionText, { color: colors.text }]} numberOfLines={1}>
+                  {tagged.map((p) => `@${p.handle ?? p.name}`).join(', ')}
+                </Text>
+              </View>
+            ) : (
+              <Text style={[styles.optionText, { color: colors.text }]}>{t('place.tagPeople')}</Text>
+            )}
+            <Ionicons name={I18nManager.isRTL ? 'chevron-back' : 'chevron-forward'} size={18} color={colors.muted} />
+          </Pressable>
+        </Section>
 
         <Section title={t('publish.whoCanWatch')}>
           {(['public', 'followers', 'private'] as Privacy[]).map((p) => (
@@ -214,6 +298,8 @@ export function PublishScreen({
         </View>
       </ScrollView>
       <FullPreview open={full} player={player} onClose={() => setFull(false)} />
+      <PlacePicker open={picker === 'place'} onClose={() => setPicker(null)} onPick={setPlace} />
+      <TagPeoplePicker open={picker === 'tags'} initial={tagged} onClose={() => setPicker(null)} onDone={setTagged} />
     </SafeAreaView>
   );
 }
@@ -453,6 +539,10 @@ const styles = StyleSheet.create({
   card: { borderRadius: 14, paddingHorizontal: 14 },
   option: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 50 },
   optionText: { flex: 1, fontSize: 15 },
+  divider: { height: StyleSheet.hairlineWidth },
+  taggedRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  faces: { flexDirection: 'row' },
+  face: { borderWidth: 2, borderRadius: 14 },
   bar: { height: 6, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: 6 },
   actions: { flexDirection: 'row', gap: 10 },

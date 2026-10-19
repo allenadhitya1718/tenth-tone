@@ -193,7 +193,9 @@
     "delete": "删除",
     "deleteTitle": "删除这条评论？",
     "sendFailed": "评论发送失败",
-    "withdrawn": "你的评论已被移除"
+    "withdrawn": "你的评论已被移除",
+    "blocked": "评论未发布",
+    "blockedBody": "请保持礼貌。FLYP 不允许侮辱性和冒犯性的言语。"
   },
   "time": {
     "now": "刚刚",

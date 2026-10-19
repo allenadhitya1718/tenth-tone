@@ -193,7 +193,9 @@
     "delete": "Delete",
     "deleteTitle": "Delete this comment?",
     "sendFailed": "Could not send the comment",
-    "withdrawn": "Your comment was removed"
+    "withdrawn": "Your comment was removed",
+    "blocked": "Comment not posted",
+    "blockedBody": "Please keep it respectful. Insults and offensive words aren't allowed on FLYP."
   },
   "time": {
     "now": "now",

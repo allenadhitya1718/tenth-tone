@@ -8,24 +8,39 @@ import {
   cancelAccountDeletion,
   deactivateAccount,
   fetchAccountStatus,
+  reactivateAccount,
   scheduleAccountDeletion,
   settingsKeys,
 } from '@/api/settings';
+import { isPermanentBan } from '@/api/appeals';
+import { creatorKeys, fetchCreatorEarnings } from '@/api/wallet';
+import { showToast } from '@/components/Toast';
 import { AppText, Button, Screen, TopBar } from '@/components/ui';
+import { isBanned } from '@/features/appeals/accountGate';
+import { formatDate } from '@/features/appeals/shared';
 import { useTheme } from '@/providers/ThemeProvider';
 
-import { confirm, ErrorView, errorText, InlineError, LoadingView } from './components';
+import { confirm, ErrorView, errorText, go, InlineError, LoadingView, Row } from './components';
 
 // Apple 5.1.1(v): account deletion has to be reachable and completable in
 // the app. Two clearly different choices: a break (nothing is lost) and
 // deletion (scheduled 30 days out, cancelled by signing back in).
 export function AccountStatusScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { colors } = useTheme();
   const qc = useQueryClient();
   const status = useQuery({ queryKey: settingsKeys.accountStatus(), queryFn: fetchAccountStatus });
   const [view, setView] = useState<'choices' | 'delete'>('choices');
-  const [busy, setBusy] = useState<'deactivate' | 'delete' | 'cancel' | null>(null);
+  const [busy, setBusy] = useState<'deactivate' | 'delete' | 'cancel' | 'reactivate' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Diamonds not yet paid out are forfeited on deletion (terms); warn if any.
+  const earnings = useQuery({
+    queryKey: creatorKeys.summary(),
+    queryFn: fetchCreatorEarnings,
+    enabled: view === 'delete',
+  });
+  const d = earnings.data?.diamonds;
+  const unwithdrawn = d ? Math.max(d.available, 0) + d.pending + d.withheld + d.reserved : 0;
 
   async function deactivate() {
     const yes = await confirm({
@@ -80,6 +95,48 @@ export function AccountStatusScreen() {
     }
   }
 
+  // A deactivated account normally comes back on sign-in (AuthProvider); this
+  // is the manual way, and the fallback if that call failed.
+  async function reactivate() {
+    setBusy('reactivate');
+    setError(null);
+    try {
+      await reactivateAccount();
+      await qc.invalidateQueries({ queryKey: settingsKeys.accountStatus() });
+      showToast(t('settings2.appeals.gate.welcomeBack'));
+    } catch (e) {
+      setError(errorText(e, t));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const banned = isBanned(status.data);
+  // The terms promise appeals here (Settings > Account status).
+  const appealEntry = (
+    <View style={[styles.card, { backgroundColor: colors.bg2, borderColor: colors.border, padding: 0, overflow: 'hidden' }]}>
+      <Row
+        icon="document-text-outline"
+        label={t('settings2.status.appealRow')}
+        hint={t('settings2.status.appealRowHint')}
+        onPress={() => go('/appeals')}
+      />
+    </View>
+  );
+  const bannedNotice = banned ? (
+    <View style={[styles.card, { backgroundColor: colors.bg2, borderColor: colors.danger }]}>
+      <AppText variant="label" accessibilityRole="header">
+        {t('settings2.status.bannedTitle')}
+      </AppText>
+      <AppText variant="small" muted style={{ marginTop: 6 }}>
+        {isPermanentBan(status.data?.banned_until)
+          ? t('settings2.appeals.banned.permanent')
+          : t('settings2.appeals.banned.until', { date: formatDate(status.data?.banned_until, i18n.language) })}
+      </AppText>
+      <Button title={t('settings2.appeals.banned.appealCta')} onPress={() => go('/appeals')} style={styles.btn} />
+    </View>
+  ) : null;
+
   let body;
   if (status.isLoading) {
     body = <LoadingView />;
@@ -94,13 +151,20 @@ export function AccountStatusScreen() {
         </AppText>
         <InlineError text={error} />
         <Button title={t('settings2.status.keepCta')} onPress={keep} loading={busy === 'cancel'} style={styles.btn} />
+        {appealEntry}
       </>
     );
   } else if (view === 'delete') {
     body = (
       <>
         <WarnHead text={t('settings2.status.irreversible')} />
-        <Points tone="danger" lines={['deleteLose1', 'deleteLose2', 'deleteLose3', 'deleteLose4'].map((k) => t(`settings2.status.${k}`))} />
+        <Points
+          tone="danger"
+          lines={[
+            ...['deleteLose1', 'deleteLose2', 'deleteLose3', 'deleteLose4'].map((k) => t(`settings2.status.${k}`)),
+            ...(unwithdrawn > 0 ? [t('settings2.status.deleteLoseEarnings', { n: unwithdrawn.toLocaleString(i18n.language) })] : []),
+          ]}
+        />
         <AppText muted style={styles.para}>
           {t('settings2.status.deleteWhen')}
         </AppText>
@@ -112,6 +176,23 @@ export function AccountStatusScreen() {
   } else {
     body = (
       <>
+        {status.data?.deactivated && !banned ? (
+          <View style={[styles.card, { backgroundColor: colors.bg2, borderColor: colors.warn }]}>
+            <AppText variant="label" accessibilityRole="header">
+              {t('settings2.status.deactivatedTitle')}
+            </AppText>
+            <AppText variant="small" muted style={{ marginTop: 6 }}>
+              {t('settings2.status.deactivatedBody')}
+            </AppText>
+            <Button
+              title={t('settings2.status.reactivateCta')}
+              onPress={reactivate}
+              loading={busy === 'reactivate'}
+              disabled={!!busy}
+              style={styles.btn}
+            />
+          </View>
+        ) : null}
         <AppText muted style={styles.para}>
           {t('settings2.status.intro')}
         </AppText>
@@ -135,6 +216,7 @@ export function AccountStatusScreen() {
         >
           <DangerButton title={t('settings2.status.continueDelete')} onPress={() => setView('delete')} disabled={!!busy} />
         </Card>
+        {appealEntry}
         <InlineError text={error} />
       </>
     );
@@ -142,6 +224,7 @@ export function AccountStatusScreen() {
 
   return (
     <Screen header={<TopBar title={t('settings2.status.title')} />} contentStyle={styles.content}>
+      {bannedNotice}
       {body}
     </Screen>
   );

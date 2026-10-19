@@ -75,7 +75,19 @@ export function Discover() {
         <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
           {t('discover.title')}
         </Text>
-        <NotificationsBell />
+        <View style={styles.topActions}>
+          {/* The friends map used to be reachable only from Settings. */}
+          <Pressable
+            onPress={() => go('/map')}
+            hitSlop={6}
+            style={styles.topBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t('map.title')}
+          >
+            <Ionicons name="map-outline" size={25} color={colors.text} />
+          </Pressable>
+          <NotificationsBell />
+        </View>
       </View>
       <Pressable
         onPress={() => go('/search')}
@@ -227,6 +239,8 @@ const styles = StyleSheet.create({
     height: 52,
   },
   title: { fontSize: 24, fontWeight: '800' },
+  topActions: { flexDirection: 'row', alignItems: 'center' },
+  topBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',

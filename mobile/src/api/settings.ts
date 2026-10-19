@@ -143,6 +143,10 @@ export type AccountStatus = {
   deactivated_at: Iso | null;
   deletion_scheduled_at: Iso | null;
   days_left: number | null;
+  // 0132. Absent until that migration is applied.
+  banned?: boolean;
+  banned_until?: Iso | null;
+  ban_reason?: string | null;
 };
 
 export type PushPlatform = 'ios' | 'android' | 'web';

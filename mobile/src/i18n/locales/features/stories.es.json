@@ -81,6 +81,12 @@
     "errSignedOut": "Cerraste sesión. Vuelve a iniciar sesión e inténtalo otra vez.",
     "modeA11y": "Modo de cámara",
     "modeVideo": "Video",
-    "modeStory": "Historia"
+    "modeStory": "Historia",
+    "fromLibrary": "Desde tu galería",
+    "fromCamera": "Usar la cámara",
+    "takePhoto": "Hacer una foto",
+    "takePhotoHint": "Se muestra 5 segundos, o 15 con una canción",
+    "recordVideo": "Grabar un vídeo",
+    "cameraDenied": "Permite el acceso a la cámara en Ajustes para crear una historia con la cámara."
   }
 }

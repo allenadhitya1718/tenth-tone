@@ -1,0 +1,19 @@
+{
+  "drafts": {
+    "title": "Draft",
+    "open": "Open draft",
+    "postNow": "Post now",
+    "edit": "Edit caption & settings",
+    "delete": "Delete draft",
+    "deleteTitle": "Delete this draft?",
+    "deleteBody": "This can't be undone.",
+    "deleted": "Draft deleted",
+    "save": "Save changes",
+    "saved": "Draft updated",
+    "noCaption": "No caption",
+    "togglePlay": "Play or pause the preview",
+    "postFailed": "Could not post this draft. Try again.",
+    "saveFailed": "Could not save your changes. Try again.",
+    "deleteFailed": "Could not delete this draft. Try again."
+  }
+}

@@ -193,7 +193,9 @@
     "delete": "Eliminar",
     "deleteTitle": "¿Eliminar este comentario?",
     "sendFailed": "No se pudo enviar el comentario",
-    "withdrawn": "Se eliminó tu comentario"
+    "withdrawn": "Se eliminó tu comentario",
+    "blocked": "Comentario no publicado",
+    "blockedBody": "Mantén el respeto. Los insultos y las palabras ofensivas no están permitidos en FLYP."
   },
   "time": {
     "now": "ahora",

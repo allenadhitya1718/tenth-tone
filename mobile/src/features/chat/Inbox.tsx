@@ -26,6 +26,7 @@ import {
   subscribeToInbox,
 } from '@/api/chat';
 import { Button } from '@/components/ui';
+import { StoryTray } from '@/features/stories/StoryTray';
 import { timeAgo } from '@/lib/timeAgo';
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -105,6 +106,10 @@ export function Inbox() {
   );
 
   const refreshing = chats.isRefetching && !chats.isLoading;
+  // Friends' stories at the top of the inbox, like WhatsApp's Status row:
+  // with the home tray gone they were otherwise only on profiles. Hidden
+  // while searching and on the Requests segment.
+  const showStories = active === 'primary' && !deferredQuery.trim();
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -167,6 +172,7 @@ export function Inbox() {
           data={visible}
           keyExtractor={keyOf}
           renderItem={renderItem}
+          ListHeaderComponent={showStories ? STORY_ROW : undefined}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           initialNumToRender={12}
@@ -207,6 +213,8 @@ export function Inbox() {
 }
 
 const keyOf = (c: ChatListItem) => c.id;
+// One element, so the list does not remount the tray on every render.
+const STORY_ROW = <StoryTray variant="surface" style={{ marginBottom: 4 }} />;
 
 function SegmentButton({
   label,

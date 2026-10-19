@@ -26,6 +26,7 @@ import {
   commentKeys,
   deleteComment,
   fetchComments,
+  isCommentBlocked,
   likeComment,
   postComment,
   unlikeComment,
@@ -61,17 +62,26 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
 
   const send = useMutation({
     mutationFn: (body: string) =>
-      postComment(videoId, body, (id, message) => {
+      postComment(videoId, body, (id) => {
         // Moderation withdrew it after it was posted.
+        // The server's message is Arabic only; ours follows the app language.
         qc.setQueryData<Comment[]>(key, (list) => list?.filter((c) => c.id !== id));
-        Alert.alert(t('comments.withdrawn'), message ?? undefined);
+        Alert.alert(t('comments.withdrawn'), t('comments.blockedBody'));
       }),
     onSuccess: (comment) => qc.setQueryData<Comment[]>(key, (list) => [comment, ...(list ?? [])]),
-    onError: (e) =>
+    onError: (e, body) => {
+      // COMMENTS-09: refused by the server's word filter (0135). Say why, in
+      // the app's language, and give the text back so it can be reworded.
+      if (isCommentBlocked(e)) {
+        setText((v) => v || body);
+        Alert.alert(t('comments.blocked'), t('comments.blockedBody'));
+        return;
+      }
       Alert.alert(
         t('comments.sendFailed'),
         e instanceof ApiError && e.code === 'content_blocked' ? (e.message ?? undefined) : undefined,
-      ),
+      );
+    },
   });
 
   function submit() {
@@ -86,6 +96,11 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
 
   function addEmoji(e: string) {
     setText((v) => (v + e).slice(0, MAX_LEN));
+  }
+
+  function closeInputs() {
+    setEmojiOpen(false);
+    if (Keyboard.isVisible()) Keyboard.dismiss();
   }
 
   function toggleEmoji() {
@@ -105,7 +120,7 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
     <Pressable style={{ flex: 1 }} onPress={() => router.back()} accessibilityLabel={t('legal.close')} />
     <SafeAreaView style={[styles.panel, { height: height * 0.75, backgroundColor: colors.bg }]} edges={['bottom']}>
       <View style={[styles.grabber, { backgroundColor: colors.muted2 }]} />
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]} onTouchStart={closeInputs}>
         <Text style={[styles.title, { color: colors.text }]}>
           {t('comments.title', { count: comments.length })}
         </Text>
@@ -115,26 +130,30 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        {/* Tapping the list closes the emoji panel (note 29). */}
-        <FlatList
-          data={comments}
-          keyExtractor={(c) => c.id}
-          keyboardShouldPersistTaps="handled"
-          onScrollBeginDrag={() => setEmojiOpen(false)}
-          contentContainerStyle={{ paddingVertical: 8, flexGrow: 1 }}
-          ListEmptyComponent={
-            q.isLoading ? (
-              <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />
-            ) : (
-              <Text style={[styles.empty, { color: colors.muted }]}>{t('comments.empty')}</Text>
-            )
-          }
-          renderItem={({ item }) => (
-            <Pressable onPress={() => setEmojiOpen(false)}>
+        {/* Note 29: any touch on the list (a row, its buttons, or the blank
+            area) closes the emoji panel and the keyboard. onTouchStart sees
+            the touch without claiming it, so like, long-press and the
+            avatar still work; a wrapping Pressable never ran because the
+            row's own Pressable took the touch first. */}
+        <View style={{ flex: 1 }} onTouchStart={closeInputs}>
+          <FlatList
+            data={comments}
+            keyExtractor={(c) => c.id}
+            keyboardShouldPersistTaps="handled"
+            onScrollBeginDrag={() => setEmojiOpen(false)}
+            contentContainerStyle={{ paddingVertical: 8, flexGrow: 1 }}
+            ListEmptyComponent={
+              q.isLoading ? (
+                <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />
+              ) : (
+                <Text style={[styles.empty, { color: colors.muted }]}>{t('comments.empty')}</Text>
+              )
+            }
+            renderItem={({ item }) => (
               <CommentRow comment={item} videoId={videoId} mine={item.user?.id === me} locale={i18n.language} />
-            </Pressable>
-          )}
-        />
+            )}
+          />
+        </View>
 
         <QuickEmojis onPick={addEmoji} />
         <View style={[styles.composer, { borderTopColor: colors.border, backgroundColor: colors.bg }]}>

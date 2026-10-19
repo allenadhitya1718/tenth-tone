@@ -16,7 +16,14 @@
         "CFBundleAllowMixedLocalizations": true,
         "CFBundleLocalizations": [
           "ar",
-          "en"
+          "en",
+          "zh",
+          "hi",
+          "ur",
+          "fr",
+          "es",
+          "tr",
+          "id"
         ],
         "UIBackgroundModes": [
           "audio",
@@ -27,10 +34,65 @@
       },
       "entitlements": {
         "com.apple.developer.usernotifications.time-sensitive": true
-      }
+      },
+      "associatedDomains": [
+        "applinks:flyp-sa.com",
+        "applinks:www.flyp-sa.com"
+      ]
     },
     "android": {
       "package": "com.flyp.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "flyp-sa.com",
+              "pathPrefix": "/live/"
+            },
+            {
+              "scheme": "https",
+              "host": "flyp-sa.com",
+              "pathPrefix": "/v/"
+            },
+            {
+              "scheme": "https",
+              "host": "flyp-sa.com",
+              "pathPrefix": "/u/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "https",
+              "host": "www.flyp-sa.com",
+              "pathPrefix": "/live/"
+            },
+            {
+              "scheme": "https",
+              "host": "www.flyp-sa.com",
+              "pathPrefix": "/v/"
+            },
+            {
+              "scheme": "https",
+              "host": "www.flyp-sa.com",
+              "pathPrefix": "/u/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#000421",
         "foregroundImage": "./assets/icon.png"

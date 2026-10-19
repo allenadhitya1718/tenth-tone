@@ -102,7 +102,11 @@ function placeColumns(place: VideoPlace) {
   const place_name = (place.name ?? '').trim().slice(0, 120) || null;
   const ok =
     Number.isFinite(place.lat) && Number.isFinite(place.lng) && Math.abs(place.lat) <= 90 && Math.abs(place.lng) <= 180;
-  return { place_name, lat: ok ? place.lat : null, lng: ok ? place.lng : null };
+  // Privacy (PHASE4 notes): a post keeps the area of a place, not anyone's
+  // exact position. Three decimals is about 100 m; the picker already rounds,
+  // this holds for any other caller.
+  const r3 = (n: number) => Math.round(n * 1000) / 1000;
+  return { place_name, lat: ok ? r3(place.lat) : null, lng: ok ? r3(place.lng) : null };
 }
 
 export async function publishVideo({

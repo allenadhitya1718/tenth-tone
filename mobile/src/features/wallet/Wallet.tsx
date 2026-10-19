@@ -10,6 +10,8 @@ import {
   fetchMyTopups,
   fetchWallet,
   fetchWalletTransactions,
+  creatorKeys,
+  isDiamondGift,
   walletKeys,
   type CoinPackage,
   type WalletTopup,
@@ -19,6 +21,7 @@ import {
 import { showToast } from '@/components/Toast';
 import { AppText, Button, TopBar } from '@/components/ui';
 import { Sheet } from '@/features/live/Sheet';
+import { CreatorEarnings } from '@/features/wallet/CreatorEarnings';
 import {
   buyCoins,
   connectStore,
@@ -93,6 +96,7 @@ export function Wallet() {
     void txs.refetch();
     void packages.refetch();
     void topups.refetch();
+    void queryClient.invalidateQueries({ queryKey: creatorKeys.all() });
   };
 
   function section<T>(
@@ -145,6 +149,8 @@ export function Wallet() {
               )}
               <Text style={styles.balanceSub}>{t('live.wallet.balanceSub')}</Text>
             </View>
+
+            <CreatorEarnings />
 
             <View style={[styles.howTo, { backgroundColor: colors.bg2 }]}>
               <AppText variant="label">{t('live.wallet.howTitle')}</AppText>
@@ -226,6 +232,8 @@ export function Wallet() {
           if (item.kind === 'tx') {
             const x = item.tx;
             const incoming = x.type === 'topup' || x.type === 'gift_received';
+            // Since 0131 a received gift earns diamonds, not coins (amount 0).
+            const diamondGift = isDiamondGift(x);
             return (
               <View style={[styles.row, { borderBottomColor: colors.border }]} accessible>
                 <Ionicons name={TX_ICON[x.type] ?? 'swap-horizontal'} size={24} color={incoming ? colors.success : colors.muted} />
@@ -236,10 +244,18 @@ export function Wallet() {
                     {date(x.created_at)}
                   </Text>
                 </View>
-                <Text style={[styles.amount, { color: incoming ? colors.success : colors.text }]}>
-                  {incoming ? '+' : '−'}
-                  {num(x.amount)}
-                </Text>
+                {diamondGift ? (
+                  x.diamonds != null ? (
+                    <Text style={[styles.amount, { color: colors.success }]}>
+                      {t('live.wallet.diamondsEarned', { count: x.diamonds, n: num(x.diamonds) })}
+                    </Text>
+                  ) : null
+                ) : (
+                  <Text style={[styles.amount, { color: incoming ? colors.success : colors.text }]}>
+                    {incoming ? '+' : '−'}
+                    {num(x.amount)}
+                  </Text>
+                )}
               </View>
             );
           }

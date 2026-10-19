@@ -79,6 +79,12 @@
     "errSignedOut": "Kamu sudah keluar. Masuk lagi lalu coba sekali lagi.",
     "modeA11y": "Mode kamera",
     "modeVideo": "Video",
-    "modeStory": "Story"
+    "modeStory": "Story",
+    "fromLibrary": "Dari galeri",
+    "fromCamera": "Pakai kamera",
+    "takePhoto": "Ambil foto",
+    "takePhotoHint": "Tampil 5 detik, atau 15 dengan lagu",
+    "recordVideo": "Rekam video",
+    "cameraDenied": "Izinkan akses kamera di Pengaturan untuk membuat cerita dengan kamera."
   }
 }

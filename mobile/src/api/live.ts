@@ -39,6 +39,7 @@ import type {
 
 import { ApiError, must, requireUid, supabase, uid, listenerTopic } from './client';
 import { attach, checkImage, checkText, type Verdict } from './moderation';
+import { asCommentError } from './comments';
 import type { Iso, Unsubscribe, UserSummary, Uuid } from './types';
 import { type LocalMedia, uploadToR2, uploadToStorage } from './upload';
 
@@ -288,13 +289,14 @@ export async function postLiveComment(
   // would bury the reports that matter.
   const screening = checkText('live_comment', body).catch(() => null);
 
-  const data = must(
-    await supabase
-      .from('live_comments')
-      .insert({ live_stream_id: liveStreamId, user_id: me, text: body })
-      .select('id, text, created_at')
-      .single<Pick<LiveCommentRow, 'id' | 'text' | 'created_at'>>(),
-  ) as Pick<LiveCommentRow, 'id' | 'text' | 'created_at'>;
+  const res = await supabase
+    .from('live_comments')
+    .insert({ live_stream_id: liveStreamId, user_id: me, text: body })
+    .select('id, text, created_at')
+    .single<Pick<LiveCommentRow, 'id' | 'text' | 'created_at'>>();
+  // The server's word filter (0135) refuses with 'comment_blocked'.
+  if (res.error) throw asCommentError(res.error);
+  const data = res.data as Pick<LiveCommentRow, 'id' | 'text' | 'created_at'>;
 
   void screening.then(async (verdict) => {
     if (!verdict?.blocked || !data?.id) return;

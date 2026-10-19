@@ -81,6 +81,12 @@
     "errSignedOut": "Vous êtes déconnecté. Reconnectez-vous et réessayez.",
     "modeA11y": "Mode de l'appareil photo",
     "modeVideo": "Vidéo",
-    "modeStory": "Story"
+    "modeStory": "Story",
+    "fromLibrary": "Depuis votre galerie",
+    "fromCamera": "Utiliser l'appareil photo",
+    "takePhoto": "Prendre une photo",
+    "takePhotoHint": "Affichée 5 secondes, ou 15 avec une chanson",
+    "recordVideo": "Filmer une vidéo",
+    "cameraDenied": "Autorisez l'accès à l'appareil photo dans les Réglages pour créer une story avec la caméra."
   }
 }

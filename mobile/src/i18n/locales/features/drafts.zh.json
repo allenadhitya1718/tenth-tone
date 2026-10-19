@@ -1,0 +1,19 @@
+{
+  "drafts": {
+    "title": "草稿",
+    "open": "打开草稿",
+    "postNow": "立即发布",
+    "edit": "编辑说明和设置",
+    "delete": "删除草稿",
+    "deleteTitle": "删除这条草稿？",
+    "deleteBody": "此操作无法撤销。",
+    "deleted": "草稿已删除",
+    "save": "保存更改",
+    "saved": "草稿已更新",
+    "noCaption": "无说明",
+    "togglePlay": "播放或暂停预览",
+    "postFailed": "无法发布此草稿，请重试。",
+    "saveFailed": "无法保存更改，请重试。",
+    "deleteFailed": "无法删除此草稿，请重试。"
+  }
+}

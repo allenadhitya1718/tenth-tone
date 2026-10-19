@@ -231,6 +231,7 @@
       "deleteLose2": "Se eliminarán tus chats y mensajes.",
       "deleteLose3": "Perderás a tus seguidores y a las personas que sigues.",
       "deleteLose4": "Otra persona podría usar tu nombre de usuario.",
+      "deleteLoseEarnings": "Perderás tus ganancias de creador no retiradas ({{n}} 💎). Retíralas antes de eliminar tu cuenta.",
       "deleteWhen": "Tu cuenta se eliminará dentro de 30 días. Hasta entonces estará oculta para todos. Si inicias sesión durante esos 30 días, se cancela la eliminación y se conserva todo.",
       "deleteCta": "Eliminar mi cuenta",
       "deleteConfirm": "Tu cuenta y todo su contenido se eliminarán en 30 días. Ahora se cerrará tu sesión. Inicia sesión antes de 30 días para cancelar.",
@@ -241,7 +242,13 @@
       "pendingBody_other": "Quedan {{count}} días. Puedes cancelar la eliminación ahora y conservarlo todo.",
       "keepCta": "Cancelar la eliminación y conservar mi cuenta",
       "cancelledTitle": "Eliminación cancelada",
-      "cancelledBody": "Tu cuenta está a salvo y no se eliminará nada."
+      "cancelledBody": "Tu cuenta está a salvo y no se eliminará nada.",
+      "deactivatedTitle": "Tu cuenta está desactivada",
+      "deactivatedBody": "Está oculta para todos. Reactívala para que tu perfil, tus videos y tus comentarios vuelvan a verse.",
+      "reactivateCta": "Reactivar mi cuenta",
+      "bannedTitle": "Tu cuenta está suspendida",
+      "appealRow": "Apelar una decisión",
+      "appealRowHint": "Pídenos que revisemos una suspensión o un contenido retirado"
     },
     "activity": {
       "title": "Tu actividad",
@@ -325,6 +332,71 @@
       "discardBody": "Tus cambios no se han guardado. Se perderán si sales ahora.",
       "discard": "Descartar",
       "keepEditing": "Seguir editando"
+    },
+    "appeals": {
+      "gate": {
+        "welcomeBack": "Bienvenido de nuevo — tu cuenta vuelve a estar activa",
+        "deletionCancelled": "Bienvenido de nuevo — se canceló la eliminación de tu cuenta y vuelve a estar activa"
+      },
+      "title": "Apelar una decisión",
+      "intro": "Si crees que nos equivocamos, cuéntanos por qué. Una persona revisa cada apelación y recibirás una notificación con la decisión.",
+      "itemsTitle": "Decisiones que puedes apelar",
+      "none": "Nada que apelar",
+      "noneSub": "Tu cuenta no tiene suspensiones ni contenido retirado.",
+      "historyTitle": "Tus apelaciones",
+      "type": {
+        "ban": "Suspensión de la cuenta",
+        "video_hidden": "Video oculto",
+        "video_removed": "Video retirado",
+        "comment_hidden": "Comentario oculto",
+        "comment_removed": "Comentario retirado",
+        "story_removed": "Historia retirada",
+        "live_comment_removed": "Mensaje del chat en directo retirado",
+        "live_stream": "Directo finalizado por moderación"
+      },
+      "actionedOn": "El {{date}}",
+      "sentOn": "Enviada el {{date}}",
+      "moderatorReason": "Motivo: {{reason}}",
+      "reasonAuto": "Ocultado automáticamente tras varias denuncias",
+      "appealCta": "Apelar",
+      "status_open": "En revisión",
+      "status_accepted": "Aceptada",
+      "status_rejected": "Rechazada",
+      "adminNote": "Nota del revisor: {{note}}",
+      "final": "Esta decisión es definitiva.",
+      "limitReached": "Tienes {{n}} apelaciones en revisión. Podrás enviar otra cuando se resuelva alguna.",
+      "form": {
+        "title": "Tu apelación",
+        "label": "¿Por qué deberíamos revisarlo?",
+        "placeholder": "Explica qué pasó y por qué crees que la decisión fue un error.",
+        "hint": "Lo leerá una persona. Sé concreto y respetuoso.",
+        "tooShort": "Escribe al menos {{n}} caracteres.",
+        "send": "Enviar apelación",
+        "sent": "Apelación enviada. Te avisaremos de la decisión.",
+        "missing": "Ya no se puede apelar esto."
+      },
+      "errors": {
+        "appeal_not_eligible": "Ya no se puede apelar esto.",
+        "appeal_already_open": "Ya tienes una apelación en revisión sobre esto.",
+        "appeal_already_decided": "Ya se resolvió una apelación sobre esto.",
+        "appeal_limit_open": "Tienes 3 apelaciones en revisión. Espera una decisión antes de enviar otra.",
+        "appeal_reason_required": "Escribe el motivo de tu apelación.",
+        "appeal_reason_too_long": "Usa menos de 1000 caracteres.",
+        "appeals_unavailable": "Las apelaciones aún no están disponibles. Inténtalo más tarde."
+      },
+      "banned": {
+        "title": "Tu cuenta está suspendida",
+        "until": "Hasta el {{date}}",
+        "permanent": "Esta suspensión es permanente.",
+        "reason": "Motivo: {{reason}}",
+        "body": "No puedes usar FLYP mientras tu cuenta esté suspendida. Si crees que es un error, apela y una persona lo revisará.",
+        "appealCta": "Apelar",
+        "appealOpen": "Tu apelación está en revisión. Te avisaremos de la decisión.",
+        "checkAgain": "Comprobar de nuevo",
+        "stillBanned": "Tu cuenta sigue suspendida.",
+        "lifted": "Tu cuenta ya no está suspendida",
+        "signOut": "Cerrar sesión"
+      }
     }
   }
 }

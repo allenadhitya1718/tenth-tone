@@ -42,6 +42,23 @@ export type Strings = {
   liveGuestAccepted: string;
   liveGuestApproved: string;
   liveGuestRemoved: string;
+  // {a} and {n} OTHER people (n >= 1), several unread in the last hour
+  likeVideoN: string;
+  likeCommentN: string;
+  commentN: string;
+  replyN: string;
+  followN: string;
+  followRequestN: string;
+  payoutKycApproved: string;
+  payoutKycApprovedBody: string;
+  payoutKycRejected: string;
+  payoutKycRejectedBody: string;
+  payoutApproved: string;
+  payoutApprovedBody: string;
+  payoutPaid: string;
+  payoutPaidBody: string;
+  payoutRejected: string;
+  payoutRejectedBody: string;
 };
 
 const en: Strings = {
@@ -78,6 +95,22 @@ const en: Strings = {
   liveGuestAccepted: '{a} joined your live',
   liveGuestApproved: '{a} accepted your request to join the live',
   liveGuestRemoved: '{a} removed you from the live',
+  likeVideoN: '{a} and {n} more liked your video',
+  likeCommentN: '{a} and {n} more liked your comment',
+  commentN: '{a} and {n} more commented on your video',
+  replyN: '{a} and {n} more replied to your comment',
+  followN: '{a} and {n} more started following you',
+  followRequestN: '{a} and {n} more requested to follow you',
+  payoutKycApproved: 'Verification approved ✓',
+  payoutKycApprovedBody: 'You can now withdraw your creator earnings.',
+  payoutKycRejected: 'Verification not approved',
+  payoutKycRejectedBody: 'Open your wallet to see why and try again.',
+  payoutApproved: 'Withdrawal approved',
+  payoutApprovedBody: '{n} SAR is being prepared for transfer to your bank.',
+  payoutPaid: 'Withdrawal sent 💸',
+  payoutPaidBody: '{n} SAR was transferred to your bank account.',
+  payoutRejected: 'Withdrawal declined',
+  payoutRejectedBody: '{n} SAR is back in your earnings. Open your wallet for details.',
 };
 
 const ar: Strings = {
@@ -114,6 +147,22 @@ const ar: Strings = {
   liveGuestAccepted: '{a} انضم إلى بثك المباشر',
   liveGuestApproved: '{a} وافق على طلبك للانضمام إلى البث',
   liveGuestRemoved: '{a} أزالك من البث المباشر',
+  likeVideoN: '{a} و{n} آخرون أعجبوا بفيديوك',
+  likeCommentN: '{a} و{n} آخرون أعجبوا بتعليقك',
+  commentN: '{a} و{n} آخرون علّقوا على فيديوك',
+  replyN: '{a} و{n} آخرون ردّوا على تعليقك',
+  followN: '{a} و{n} آخرون بدأوا بمتابعتك',
+  followRequestN: '{a} و{n} آخرون طلبوا متابعتك',
+  payoutKycApproved: 'تم قبول التحقق ✓',
+  payoutKycApprovedBody: 'يمكنك الآن سحب أرباحك كصانع محتوى.',
+  payoutKycRejected: 'لم يُقبل التحقق',
+  payoutKycRejectedBody: 'افتح محفظتك لمعرفة السبب والمحاولة مجددًا.',
+  payoutApproved: 'تمت الموافقة على السحب',
+  payoutApprovedBody: 'نجهّز تحويل {n} ريال إلى حسابك البنكي.',
+  payoutPaid: 'تم تحويل أرباحك 💸',
+  payoutPaidBody: 'حوّلنا {n} ريال إلى حسابك البنكي.',
+  payoutRejected: 'تم رفض طلب السحب',
+  payoutRejectedBody: 'عادت {n} ريال إلى أرباحك. افتح محفظتك للتفاصيل.',
 };
 
 const zh: Strings = {
@@ -150,6 +199,22 @@ const zh: Strings = {
   liveGuestAccepted: '{a} 加入了你的直播',
   liveGuestApproved: '{a} 同意了你加入直播的请求',
   liveGuestRemoved: '{a} 将你移出了直播',
+  likeVideoN: '{a} 等 {n} 人赞了你的视频',
+  likeCommentN: '{a} 等 {n} 人赞了你的评论',
+  commentN: '{a} 等 {n} 人评论了你的视频',
+  replyN: '{a} 等 {n} 人回复了你的评论',
+  followN: '{a} 等 {n} 人关注了你',
+  followRequestN: '{a} 等 {n} 人请求关注你',
+  payoutKycApproved: '身份验证已通过 ✓',
+  payoutKycApprovedBody: '你现在可以提现创作者收益了。',
+  payoutKycRejected: '身份验证未通过',
+  payoutKycRejectedBody: '打开钱包查看原因并重新提交。',
+  payoutApproved: '提现已批准',
+  payoutApprovedBody: '{n} 沙特里亚尔正在准备转入你的银行账户。',
+  payoutPaid: '提现已转出 💸',
+  payoutPaidBody: '{n} 沙特里亚尔已转入你的银行账户。',
+  payoutRejected: '提现被拒绝',
+  payoutRejectedBody: '{n} 沙特里亚尔已退回你的收益。打开钱包查看详情。',
 };
 
 const hi: Strings = {
@@ -186,6 +251,22 @@ const hi: Strings = {
   liveGuestAccepted: '{a} आपके लाइव में शामिल हुए',
   liveGuestApproved: '{a} ने लाइव में शामिल होने का आपका अनुरोध स्वीकार किया',
   liveGuestRemoved: '{a} ने आपको लाइव से हटा दिया',
+  likeVideoN: '{a} और {n} अन्य को आपका वीडियो पसंद आया',
+  likeCommentN: '{a} और {n} अन्य को आपका कमेंट पसंद आया',
+  commentN: '{a} और {n} अन्य ने आपके वीडियो पर कमेंट किया',
+  replyN: '{a} और {n} अन्य ने आपके कमेंट का जवाब दिया',
+  followN: '{a} और {n} अन्य ने आपको फ़ॉलो करना शुरू किया',
+  followRequestN: '{a} और {n} अन्य ने आपको फ़ॉलो करने का अनुरोध भेजा',
+  payoutKycApproved: 'सत्यापन स्वीकृत ✓',
+  payoutKycApprovedBody: 'अब आप अपनी क्रिएटर कमाई निकाल सकते हैं।',
+  payoutKycRejected: 'सत्यापन स्वीकृत नहीं हुआ',
+  payoutKycRejectedBody: 'कारण देखने और फिर से कोशिश करने के लिए अपना वॉलेट खोलें।',
+  payoutApproved: 'निकासी स्वीकृत',
+  payoutApprovedBody: '{n} SAR आपके बैंक में भेजने की तैयारी हो रही है।',
+  payoutPaid: 'निकासी भेज दी गई 💸',
+  payoutPaidBody: '{n} SAR आपके बैंक खाते में भेज दिए गए।',
+  payoutRejected: 'निकासी अस्वीकृत',
+  payoutRejectedBody: '{n} SAR आपकी कमाई में वापस आ गए। विवरण के लिए वॉलेट खोलें।',
 };
 
 const ur: Strings = {
@@ -222,6 +303,22 @@ const ur: Strings = {
   liveGuestAccepted: '{a} آپ کے لائیو میں شامل ہو گئے',
   liveGuestApproved: '{a} نے لائیو میں شامل ہونے کی آپ کی درخواست قبول کر لی',
   liveGuestRemoved: '{a} نے آپ کو لائیو سے ہٹا دیا',
+  likeVideoN: '{a} اور {n} دیگر نے آپ کی ویڈیو پسند کی',
+  likeCommentN: '{a} اور {n} دیگر نے آپ کا تبصرہ پسند کیا',
+  commentN: '{a} اور {n} دیگر نے آپ کی ویڈیو پر تبصرہ کیا',
+  replyN: '{a} اور {n} دیگر نے آپ کے تبصرے کا جواب دیا',
+  followN: '{a} اور {n} دیگر نے آپ کو فالو کرنا شروع کیا',
+  followRequestN: '{a} اور {n} دیگر نے آپ کو فالو کرنے کی درخواست بھیجی',
+  payoutKycApproved: 'تصدیق منظور ✓',
+  payoutKycApprovedBody: 'اب آپ اپنی کریئیٹر کمائی نکال سکتے ہیں۔',
+  payoutKycRejected: 'تصدیق منظور نہیں ہوئی',
+  payoutKycRejectedBody: 'وجہ دیکھنے اور دوبارہ کوشش کرنے کے لیے اپنا والٹ کھولیں۔',
+  payoutApproved: 'رقم نکالنے کی درخواست منظور',
+  payoutApprovedBody: '{n} ریال آپ کے بینک میں بھیجنے کی تیاری ہو رہی ہے۔',
+  payoutPaid: 'رقم بھیج دی گئی 💸',
+  payoutPaidBody: '{n} ریال آپ کے بینک اکاؤنٹ میں بھیج دیے گئے۔',
+  payoutRejected: 'رقم نکالنے کی درخواست مسترد',
+  payoutRejectedBody: '{n} ریال آپ کی کمائی میں واپس آ گئے۔ تفصیل کے لیے والٹ کھولیں۔',
 };
 
 const fr: Strings = {
@@ -258,6 +355,22 @@ const fr: Strings = {
   liveGuestAccepted: '{a} a rejoint votre live',
   liveGuestApproved: '{a} a accepté votre demande pour rejoindre le live',
   liveGuestRemoved: '{a} vous a retiré du live',
+  likeVideoN: '{a} et {n} autres ont aimé votre vidéo',
+  likeCommentN: '{a} et {n} autres ont aimé votre commentaire',
+  commentN: '{a} et {n} autres ont commenté votre vidéo',
+  replyN: '{a} et {n} autres ont répondu à votre commentaire',
+  followN: '{a} et {n} autres ont commencé à vous suivre',
+  followRequestN: '{a} et {n} autres souhaitent vous suivre',
+  payoutKycApproved: 'Vérification approuvée ✓',
+  payoutKycApprovedBody: 'Vous pouvez maintenant retirer vos gains de créateur.',
+  payoutKycRejected: 'Vérification refusée',
+  payoutKycRejectedBody: 'Ouvrez votre portefeuille pour voir pourquoi et réessayer.',
+  payoutApproved: 'Retrait approuvé',
+  payoutApprovedBody: '{n} SAR sont en cours de virement vers votre banque.',
+  payoutPaid: 'Retrait envoyé 💸',
+  payoutPaidBody: '{n} SAR ont été virés sur votre compte bancaire.',
+  payoutRejected: 'Retrait refusé',
+  payoutRejectedBody: '{n} SAR sont revenus dans vos gains. Ouvrez votre portefeuille pour les détails.',
 };
 
 const es: Strings = {
@@ -294,6 +407,22 @@ const es: Strings = {
   liveGuestAccepted: '{a} se unió a tu transmisión en vivo',
   liveGuestApproved: '{a} aceptó tu solicitud para unirte a la transmisión',
   liveGuestRemoved: '{a} te quitó de la transmisión en vivo',
+  likeVideoN: 'A {a} y {n} más les gustó tu video',
+  likeCommentN: 'A {a} y {n} más les gustó tu comentario',
+  commentN: '{a} y {n} más comentaron tu video',
+  replyN: '{a} y {n} más respondieron a tu comentario',
+  followN: '{a} y {n} más comenzaron a seguirte',
+  followRequestN: '{a} y {n} más quieren seguirte',
+  payoutKycApproved: 'Verificación aprobada ✓',
+  payoutKycApprovedBody: 'Ya puedes retirar tus ganancias de creador.',
+  payoutKycRejected: 'Verificación no aprobada',
+  payoutKycRejectedBody: 'Abre tu billetera para ver el motivo y volver a intentarlo.',
+  payoutApproved: 'Retiro aprobado',
+  payoutApprovedBody: 'Estamos preparando la transferencia de {n} SAR a tu banco.',
+  payoutPaid: 'Retiro enviado 💸',
+  payoutPaidBody: 'Se transfirieron {n} SAR a tu cuenta bancaria.',
+  payoutRejected: 'Retiro rechazado',
+  payoutRejectedBody: '{n} SAR volvieron a tus ganancias. Abre tu billetera para ver los detalles.',
 };
 
 const tr: Strings = {
@@ -330,6 +459,22 @@ const tr: Strings = {
   liveGuestAccepted: '{a} canlı yayınına katıldı',
   liveGuestApproved: '{a} canlı yayına katılma isteğini kabul etti',
   liveGuestRemoved: '{a} seni canlı yayından çıkardı',
+  likeVideoN: '{a} ve {n} kişi daha videonu beğendi',
+  likeCommentN: '{a} ve {n} kişi daha yorumunu beğendi',
+  commentN: '{a} ve {n} kişi daha videona yorum yaptı',
+  replyN: '{a} ve {n} kişi daha yorumuna yanıt verdi',
+  followN: '{a} ve {n} kişi daha seni takip etmeye başladı',
+  followRequestN: '{a} ve {n} kişi daha seni takip etmek istiyor',
+  payoutKycApproved: 'Doğrulama onaylandı ✓',
+  payoutKycApprovedBody: 'Artık içerik üretici kazançlarını çekebilirsin.',
+  payoutKycRejected: 'Doğrulama onaylanmadı',
+  payoutKycRejectedBody: 'Nedenini görmek ve tekrar denemek için cüzdanını aç.',
+  payoutApproved: 'Para çekme onaylandı',
+  payoutApprovedBody: '{n} SAR bankana gönderilmek üzere hazırlanıyor.',
+  payoutPaid: 'Para gönderildi 💸',
+  payoutPaidBody: '{n} SAR banka hesabına aktarıldı.',
+  payoutRejected: 'Para çekme reddedildi',
+  payoutRejectedBody: '{n} SAR kazançlarına geri döndü. Ayrıntılar için cüzdanını aç.',
 };
 
 const id: Strings = {
@@ -366,6 +511,22 @@ const id: Strings = {
   liveGuestAccepted: '{a} bergabung ke live-mu',
   liveGuestApproved: '{a} menyetujui permintaanmu untuk bergabung ke live',
   liveGuestRemoved: '{a} mengeluarkanmu dari live',
+  likeVideoN: '{a} dan {n} lainnya menyukai videomu',
+  likeCommentN: '{a} dan {n} lainnya menyukai komentarmu',
+  commentN: '{a} dan {n} lainnya mengomentari videomu',
+  replyN: '{a} dan {n} lainnya membalas komentarmu',
+  followN: '{a} dan {n} lainnya mulai mengikutimu',
+  followRequestN: '{a} dan {n} lainnya ingin mengikutimu',
+  payoutKycApproved: 'Verifikasi disetujui ✓',
+  payoutKycApprovedBody: 'Kini kamu bisa menarik penghasilan kreatormu.',
+  payoutKycRejected: 'Verifikasi tidak disetujui',
+  payoutKycRejectedBody: 'Buka dompetmu untuk melihat alasannya dan coba lagi.',
+  payoutApproved: 'Penarikan disetujui',
+  payoutApprovedBody: '{n} SAR sedang disiapkan untuk ditransfer ke bankmu.',
+  payoutPaid: 'Penarikan terkirim 💸',
+  payoutPaidBody: '{n} SAR telah ditransfer ke rekening bankmu.',
+  payoutRejected: 'Penarikan ditolak',
+  payoutRejectedBody: '{n} SAR kembali ke penghasilanmu. Buka dompet untuk detailnya.',
 };
 
 export const STRINGS: Record<Lang, Strings> = { ar, en, zh, hi, ur, fr, es, tr, id };

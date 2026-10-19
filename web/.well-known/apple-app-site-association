@@ -3,11 +3,13 @@
     "apps": [],
     "details": [
       {
-        "appID": "REPLACE_WITH_TEAMID.com.flyp.app",
-        "paths": [
-          "/v/*",
-          "/u/*",
-          "/live/*"
+        "appID": "REPLACE_WITH_APPLE_TEAM_ID.com.flyp.social",
+        "appIDs": ["REPLACE_WITH_APPLE_TEAM_ID.com.flyp.social"],
+        "paths": ["/live/*", "/v/*", "/u/*"],
+        "components": [
+          { "/": "/live/*" },
+          { "/": "/v/*" },
+          { "/": "/u/*" }
         ]
       }
     ]

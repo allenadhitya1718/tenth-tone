@@ -164,7 +164,89 @@ type Msg = {
   // Pushes with the same key group (iOS thread-id) and replace each other
   // on Android (notification tag), so one chat is one notification.
   group?: string;
+  // Also replace on iPhone (apns-collapse-id), not just stack: used for the
+  // social groups, whose newest push already says "Sara and 4 more ...".
+  replace?: boolean;
+  // iOS thread-id when there is no group: stacks a type together in the
+  // Notification Centre without replacing anything.
+  thread?: string;
 };
+
+// ── grouping of social pushes (client note 11) ──
+// Repeated likes / comments / follows on the same thing share one key. On
+// Android the key is the notification tag (and FCM collapse_key), so the
+// newest push REPLACES the previous one in the shade; on iPhone it is the
+// apns-collapse-id (replace) and thread-id (stack). The newest push's title
+// counts the distinct people with an unread notification of the same key in
+// the last hour: "Sara and 4 more liked your video".
+//
+// Android cannot be told a notification group (setGroup) through an FCM
+// notification message, and drawing these locally from a data-only push
+// would make them depend on a headless JS task that some phones never start
+// for a closed app. Tags keep them system-drawn and reliable; different keys
+// (different videos, follows vs likes) still bundle under the app's name
+// once there are four or more, which Android does on its own.
+const SOCIAL_WINDOW_MS = 3600_000;
+
+type SocialKey = {
+  key: string;
+  // Narrows the "same key" notifications query.
+  type: string;
+  match: Record<string, string>;
+  // like: a video like and a comment like are both type 'like'.
+  commentLike?: boolean;
+  topLevel?: boolean;
+};
+
+const isCommentLike = (p: Record<string, unknown>) => p.kind === 'comment' || p.kind === 'comment_like';
+
+function socialKey(n: Row): SocialKey | null {
+  const p = n.payload || {};
+  const video = p.video_id ? String(p.video_id) : '';
+  switch (n.type) {
+    case 'like':
+      if (isCommentLike(p)) {
+        const c = p.comment_id ? String(p.comment_id) : '';
+        if (c) return { key: `like_c_${c}`, type: 'like', match: { comment_id: c }, commentLike: true };
+        return video ? { key: `like_cv_${video}`, type: 'like', match: { video_id: video }, commentLike: true } : null;
+      }
+      return video ? { key: `like_v_${video}`, type: 'like', match: { video_id: video }, commentLike: false } : null;
+    case 'comment':
+      if (p.parent_id) return { key: `reply_${p.parent_id}`, type: 'comment', match: { parent_id: String(p.parent_id) } };
+      return video ? { key: `cmt_${video}`, type: 'comment', match: { video_id: video }, topLevel: true } : null;
+    case 'follow':
+      return { key: 'follows', type: 'follow', match: {} };
+    case 'follow_request':
+      return { key: 'follow_reqs', type: 'follow_request', match: {} };
+  }
+  return null;
+}
+
+// Unread notifications of the same key in the window, newest first: their
+// ids (so a tap can mark them all read) and how many OTHER people sent them.
+async function socialRecent(db: Db, n: Row, k: SocialKey): Promise<{ ids: string[]; others: number }> {
+  let q = db.from('notifications')
+    .select('id,actor_id,payload')
+    .eq('user_id', n.user_id).eq('type', k.type).is('read_at', null)
+    .gte('created_at', new Date(Date.now() - SOCIAL_WINDOW_MS).toISOString())
+    .order('created_at', { ascending: false })
+    .limit(100);
+  for (const [f, v] of Object.entries(k.match)) q = q.eq(`payload->>${f}`, v);
+  const { data, error } = await q;
+  if (error || !data) return { ids: [n.id], others: 0 };
+  const rows = (data as { id: string; actor_id: string | null; payload: Record<string, unknown> | null }[])
+    .filter((r) => {
+      const rp = r.payload || {};
+      if (k.commentLike !== undefined && isCommentLike(rp) !== k.commentLike) return false;
+      if (k.topLevel && rp.parent_id) return false;
+      return r.actor_id !== n.user_id;
+    });
+  const people = new Set(rows.map((r) => r.actor_id ?? '').filter(Boolean));
+  if (n.actor_id) people.delete(n.actor_id);
+  const ids = rows.map((r) => r.id);
+  if (!ids.includes(n.id)) ids.unshift(n.id);
+  return { ids: ids.slice(0, 30), others: people.size };
+}
 
 // The person's own switch for each type. Missing row or column means "on".
 const SETTING_FOR: Record<string, string> = {
@@ -184,17 +266,33 @@ const LIVE_GUEST: Record<string, keyof Strings> = {
   live_guest_removed: 'liveGuestRemoved',
 };
 
+// Creator payout notices (0130) reuse type 'system' with a payload kind:
+// [title, body]. {n} in the body is payload.amount_sar. All open the wallet.
+const PAYOUT: Record<string, [keyof Strings, keyof Strings]> = {
+  payout_kyc_approved: ['payoutKycApproved', 'payoutKycApprovedBody'],
+  payout_kyc_rejected: ['payoutKycRejected', 'payoutKycRejectedBody'],
+  payout_withdrawal_approved: ['payoutApproved', 'payoutApprovedBody'],
+  payout_withdrawal_paid: ['payoutPaid', 'payoutPaidBody'],
+  payout_withdrawal_rejected: ['payoutRejected', 'payoutRejectedBody'],
+};
+
 // A message's kind (0093 payload.kind) shown instead of an empty body.
 const KIND_LABEL: Record<string, keyof Strings> = {
   voice: 'voice', image: 'image', video: 'video', location: 'location', file: 'file', sticker: 'sticker',
 };
 
-function compose(n: Row, actor: string, lang: Lang, extra: { unread?: number } = {}): Msg | null {
+function compose(n: Row, actor: string, lang: Lang, extra: { unread?: number; others?: number } = {}): Msg | null {
   const S = STRINGS[lang];
   const a = { a: actor };
   const p = n.payload || {};
   const video = p.video_id ? String(p.video_id) : '';
   const profile = n.actor_id ? `/profile/${n.actor_id}` : '/notifications';
+  // Social grouping: the shared key, and "{a} and {n} more" when others > 0.
+  const sk = socialKey(n);
+  const others = extra.others ?? 0;
+  const many = others > 0;
+  const grouped = (m: Msg): Msg => (sk ? { ...m, group: sk.key, replace: true } : m);
+  const t = (one: keyof Strings, n2: keyof Strings) => (many ? fill(S[n2], { a: actor, n: others }) : fill(S[one], a));
   switch (n.type) {
     case 'message': {
       // A voice note, a photo or a location has no text; a call record gets
@@ -210,27 +308,27 @@ function compose(n: Row, actor: string, lang: Lang, extra: { unread?: number } =
       };
     }
     case 'follow':
-      return { title: fill(S.follow, a), body: '', route: profile, channel: 'social' };
+      return grouped({ title: t('follow', 'followN'), body: '', route: many ? '/notifications' : profile, channel: 'social' });
     case 'follow_request':
-      return { title: fill(S.followRequest, a), body: '', route: '/follow-requests', channel: 'social' };
+      return grouped({ title: t('followRequest', 'followRequestN'), body: '', route: '/follow-requests', channel: 'social' });
     case 'like': {
       // A comment like reuses 'like' (0072); send-push wrote kind 'comment', the web app 'comment_like'.
-      const onComment = p.kind === 'comment' || p.kind === 'comment_like';
-      return {
-        title: fill(onComment ? S.likeComment : S.likeVideo, a),
+      const onComment = isCommentLike(p);
+      return grouped({
+        title: onComment ? t('likeComment', 'likeCommentN') : t('likeVideo', 'likeVideoN'),
         body: short(p.excerpt),
         route: video ? (onComment ? `/comments/${video}` : `/v/${video}`) : '/notifications',
         channel: 'social',
-      };
+      });
     }
     case 'comment':
       // A reply is also a 'comment' and carries parent_id.
-      return {
-        title: fill(p.parent_id ? S.reply : S.comment, a),
+      return grouped({
+        title: p.parent_id ? t('reply', 'replyN') : t('comment', 'commentN'),
         body: short(p.text),
         route: video ? `/comments/${video}` : '/notifications',
         channel: 'social',
-      };
+      });
     case 'mention':
       // 0101: being tagged in a post is a mention with kind 'tag'.
       return {
@@ -238,22 +336,29 @@ function compose(n: Row, actor: string, lang: Lang, extra: { unread?: number } =
         body: short(p.text),
         route: video ? `/v/${video}` : '/notifications',
         channel: 'social',
+        thread: 'mentions',
       };
     case 'live': {
       const live = p.live_id || p.stream_id;
-      return { title: fill(S.live, a), body: short(p.title), route: live ? `/live/${live}` : '/home', channel: 'live' };
+      return { title: fill(S.live, a), body: short(p.title), route: live ? `/live/${live}` : '/home', channel: 'live', thread: 'live' };
     }
     case 'gift':
       // 0030 / 0104: { gift_id, amount }.
-      return { title: fill(S.gift, a), body: '', route: profile, channel: 'social' };
+      return { title: fill(S.gift, a), body: '', route: profile, channel: 'social', thread: 'gifts' };
     case 'system': {
       const kind = String(p.kind || '');
-      if (kind === 'follow_accepted') return { title: fill(S.followAccepted, a), body: '', route: profile, channel: 'social' };
+      if (kind === 'follow_accepted') return { title: fill(S.followAccepted, a), body: '', route: profile, channel: 'social', thread: 'follows' };
       // A deliberate test row, inserted by hand to prove the pipeline reaches a real phone.
       if (kind === 'push_test') return { title: S.pushTestTitle, body: S.pushTestBody, route: '/inbox', channel: 'default' };
       if (LIVE_GUEST[kind]) {
         const live = p.live_id || p.stream_id;
-        return { title: fill(S[LIVE_GUEST[kind]], a), body: short(p.title), route: live ? `/live/${live}` : '/home', channel: 'live' };
+        return { title: fill(S[LIVE_GUEST[kind]], a), body: short(p.title), route: live ? `/live/${live}` : '/home', channel: 'live', thread: 'live' };
+      }
+      if (PAYOUT[kind]) {
+        const [title, body] = PAYOUT[kind];
+        const amount = Number(p.amount_sar);
+        const n = Number.isFinite(amount) ? amount.toFixed(2) : '';
+        return { title: S[title], body: fill(S[body], { n }), route: '/wallet', channel: 'default', thread: 'wallet' };
       }
       if (kind === 'incoming_call') {
         return {
@@ -289,7 +394,8 @@ function fcmNotification(msg: Msg, data: Record<string, string>) {
 function apnsAlert(msg: Msg, data: Record<string, string>) {
   const aps: Record<string, unknown> = { alert: { title: msg.title, body: msg.body } };
   if (msg.channel !== 'social') aps.sound = 'default';
-  if (msg.group) aps['thread-id'] = msg.group;
+  const thread = msg.group ?? msg.thread;
+  if (thread) aps['thread-id'] = thread;
   return { aps, ...data };
 }
 
@@ -429,8 +535,14 @@ async function actorOf(db: Db, id: string | null): Promise<{ name: string; avata
   return { name: String(name), avatar: String((a && a.avatar_url) || '') };
 }
 
+type FanOut = { sent: number; removed: number; errors: string[] };
+
 // Sends to every token; deletes the dead ones; reports.
 async function fanOut(db: Db, tokens: TokenRow[], send: (t: TokenRow) => Promise<Result>, tag: string) {
+  return json({ ok: true, ...(await fanOutCount(db, tokens, send, tag)) });
+}
+
+async function fanOutCount(db: Db, tokens: TokenRow[], send: (t: TokenRow) => Promise<Result>, tag: string): Promise<FanOut> {
   let sent = 0, removed = 0; const errors: string[] = [];
   for (const t of tokens) {
     let r: Result;
@@ -440,7 +552,7 @@ async function fanOut(db: Db, tokens: TokenRow[], send: (t: TokenRow) => Promise
     else if (r !== 'skip') errors.push(t.platform + ': ' + r);
   }
   if (errors.length) console.warn('send-push', tag, errors.join(' | '));
-  return json({ ok: true, sent, removed, errors });
+  return { sent, removed, errors };
 }
 
 async function handleCallEnded(db: Db, callId: string) {
@@ -503,13 +615,18 @@ async function handleNotification(db: Db, id: string) {
     unread = count ?? 0;
   }
 
+  // Repeated likes / comments / follows: one replacing notification that
+  // says how many people (see socialKey).
+  const sk = socialKey(row);
+  const recent = sk ? await socialRecent(db, row, sk) : { ids: [row.id], others: 0 };
+
   const cache = new Map<Lang, Msg | null>();
   const msgFor = (lang: Lang) => {
-    if (!cache.has(lang)) cache.set(lang, compose(row, actor.name, lang, { unread }));
+    if (!cache.has(lang)) cache.set(lang, compose(row, actor.name, lang, { unread, others: recent.others }));
     return cache.get(lang)!;
   };
 
-  return fanOut(db, tokens as TokenRow[], async (t) => {
+  const out = await fanOutCount(db, tokens as TokenRow[], async (t) => {
     const lang = normLang(t.lang);
     const msg = msgFor(lang);
     if (!msg) return 'skip';
@@ -517,10 +634,29 @@ async function handleNotification(db: Db, id: string) {
     const data: Record<string, string> = { route: msg.route, notification_id: row.id, type: row.type };
     if (p.kind) data.kind = String(p.kind);
     if (p.chat_id) data.chat_id = String(p.chat_id);
+    // A grouped push stands for several rows: a tap marks them all read
+    // (mobile/src/features/notifications/push.ts), so the next like starts a
+    // fresh count.
+    if (recent.ids.length > 1) data.notification_ids = recent.ids.join(',');
     if (t.platform === 'android') return fcmReady() ? await sendFcm(t.token, fcmNotification(msg, data)) : 'fcm not configured';
-    if (t.platform === 'ios') return apnsReady() ? await sendApns(t.token, apnsAlert(msg, data)) : 'apns not configured';
+    if (t.platform === 'ios') {
+      if (!apnsReady()) return 'apns not configured';
+      return await sendApns(t.token, apnsAlert(msg, data), msg.replace && msg.group ? { collapseId: msg.group } : {});
+    }
     return 'web: no channel';
   }, row.id);
+
+  // Two grey ticks with the recipient's app closed (client note 10, 0134):
+  // a message counts as delivered once FCM / APNs accepted its push for at
+  // least one of their devices. Best effort; the app stamps it as well.
+  let delivered: boolean | undefined;
+  if (row.type === 'message' && out.sent > 0) {
+    const { data: d, error } = await db.rpc('mark_delivered_by_push', { p_notification_id: row.id });
+    if (error) console.warn('send-push', row.id, 'mark_delivered_by_push:', error.message);
+    else delivered = d === true;
+  }
+
+  return json({ ok: true, ...out, ...(delivered === undefined ? {} : { delivered }) });
 }
 
 Deno.serve(async (req) => {

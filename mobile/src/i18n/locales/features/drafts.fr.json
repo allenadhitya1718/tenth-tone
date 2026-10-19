@@ -1,0 +1,19 @@
+{
+  "drafts": {
+    "title": "Brouillon",
+    "open": "Ouvrir le brouillon",
+    "postNow": "Publier maintenant",
+    "edit": "Modifier la légende et les réglages",
+    "delete": "Supprimer le brouillon",
+    "deleteTitle": "Supprimer ce brouillon ?",
+    "deleteBody": "Cette action est irréversible.",
+    "deleted": "Brouillon supprimé",
+    "save": "Enregistrer",
+    "saved": "Brouillon mis à jour",
+    "noCaption": "Aucune légende",
+    "togglePlay": "Lire ou mettre en pause l'aperçu",
+    "postFailed": "Impossible de publier ce brouillon. Réessayez.",
+    "saveFailed": "Impossible d'enregistrer vos modifications. Réessayez.",
+    "deleteFailed": "Impossible de supprimer ce brouillon. Réessayez."
+  }
+}

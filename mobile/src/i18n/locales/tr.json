@@ -193,7 +193,9 @@
     "delete": "Sil",
     "deleteTitle": "Bu yorum silinsin mi?",
     "sendFailed": "Yorum gönderilemedi",
-    "withdrawn": "Yorumun kaldırıldı"
+    "withdrawn": "Yorumun kaldırıldı",
+    "blocked": "Yorum paylaşılmadı",
+    "blockedBody": "Lütfen saygılı ol. FLYP'te hakaret ve kırıcı sözlere izin verilmez."
   },
   "time": {
     "now": "şimdi",

@@ -80,6 +80,12 @@
     "errSignedOut": "You are signed out. Sign in again and try once more.",
     "modeA11y": "Camera mode",
     "modeVideo": "Video",
-    "modeStory": "Story"
+    "modeStory": "Story",
+    "fromLibrary": "From your library",
+    "fromCamera": "Use the camera",
+    "takePhoto": "Take a photo",
+    "takePhotoHint": "Shown for 5 seconds, or 15 with a song",
+    "recordVideo": "Record a video",
+    "cameraDenied": "Allow camera access in Settings to take a story with the camera."
   }
 }

@@ -27,6 +27,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { isCommentBlocked } from '@/api/comments';
 import { giftKeys, subscribeToLiveGifts, type Gift } from '@/api/gifts';
 import {
   approveLiveGuest,
@@ -261,7 +262,9 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
       });
     } catch (e) {
       setText((v) => v || body);
-      Alert.alert(t(liveError(e, 'live.chat.sendFailed').key), serverDetail(e));
+      // Refused by the server's word filter (0135): the comments strings.
+      if (isCommentBlocked(e)) Alert.alert(t('comments.blocked'), t('comments.blockedBody'));
+      else Alert.alert(t(liveError(e, 'live.chat.sendFailed').key), serverDetail(e));
     } finally {
       setSending(false);
     }

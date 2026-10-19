@@ -193,7 +193,9 @@
     "delete": "Hapus",
     "deleteTitle": "Hapus komentar ini?",
     "sendFailed": "Tidak dapat mengirim komentar",
-    "withdrawn": "Komentarmu telah dihapus"
+    "withdrawn": "Komentarmu telah dihapus",
+    "blocked": "Komentar tidak diposting",
+    "blockedBody": "Harap tetap sopan. Hinaan dan kata-kata kasar tidak diizinkan di FLYP."
   },
   "time": {
     "now": "baru saja",

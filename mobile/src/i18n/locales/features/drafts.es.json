@@ -1,0 +1,19 @@
+{
+  "drafts": {
+    "title": "Borrador",
+    "open": "Abrir borrador",
+    "postNow": "Publicar ahora",
+    "edit": "Editar descripción y ajustes",
+    "delete": "Eliminar borrador",
+    "deleteTitle": "¿Eliminar este borrador?",
+    "deleteBody": "No se puede deshacer.",
+    "deleted": "Borrador eliminado",
+    "save": "Guardar cambios",
+    "saved": "Borrador actualizado",
+    "noCaption": "Sin descripción",
+    "togglePlay": "Reproducir o pausar la vista previa",
+    "postFailed": "No se pudo publicar este borrador. Inténtalo de nuevo.",
+    "saveFailed": "No se pudieron guardar los cambios. Inténtalo de nuevo.",
+    "deleteFailed": "No se pudo eliminar este borrador. Inténtalo de nuevo."
+  }
+}

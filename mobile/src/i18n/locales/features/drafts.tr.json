@@ -1,0 +1,19 @@
+{
+  "drafts": {
+    "title": "Taslak",
+    "open": "Taslağı aç",
+    "postNow": "Şimdi paylaş",
+    "edit": "Açıklamayı ve ayarları düzenle",
+    "delete": "Taslağı sil",
+    "deleteTitle": "Bu taslak silinsin mi?",
+    "deleteBody": "Bu işlem geri alınamaz.",
+    "deleted": "Taslak silindi",
+    "save": "Değişiklikleri kaydet",
+    "saved": "Taslak güncellendi",
+    "noCaption": "Açıklama yok",
+    "togglePlay": "Önizlemeyi oynat veya duraklat",
+    "postFailed": "Bu taslak paylaşılamadı. Tekrar dene.",
+    "saveFailed": "Değişiklikler kaydedilemedi. Tekrar dene.",
+    "deleteFailed": "Bu taslak silinemedi. Tekrar dene."
+  }
+}

@@ -190,6 +190,80 @@
       fail(error);
     },
 
+    // ---------- usage watcher: R2 + Agora (0129) ----------
+    usage: () => rpc('admin_v2_usage_overview'),
+    // For the banner on every page: [] whenever it cannot be read (0129 not
+    // applied yet, network), so a missing migration never breaks a page.
+    async usageOpenAlerts() {
+      try {
+        const d = await rpc('admin_v2_usage_open_alerts');
+        return Array.isArray(d) ? d : [];
+      } catch (e) { return []; }
+    },
+    // null leaves a value unchanged.
+    setUsageLimits: (p) => rpc('admin_v2_set_usage_limits', {
+      p_r2_storage_bytes: p.r2_storage_bytes ?? null,
+      p_r2_storage_baseline_bytes: p.r2_storage_baseline_bytes ?? null,
+      p_r2_class_a_ops: p.r2_class_a_ops ?? null,
+      p_r2_class_b_ops: p.r2_class_b_ops ?? null,
+      p_agora_minutes: p.agora_minutes ?? null,
+      p_alert_emails: p.alert_emails ?? null,
+    }),
+    // id null = acknowledge every open alert.
+    ackUsageAlert: (id) => rpc('admin_v2_ack_usage_alert', { p_id: id == null ? null : Number(id) }),
+
+    // ---------- creator payouts (0130) ----------
+    // Every function refuses unless is_admin() and writes admin_logs itself.
+    // The KYC / withdrawal tables have no grants for authenticated: RPCs only.
+    payoutOverview: () => rpc('admin_v2_payout_overview'),
+    // For the sidebar badges, the bell and the dashboard: {} whenever 0130 is
+    // not applied (or the network fails), so it never breaks a page.
+    async payoutCounts() {
+      try {
+        const o = await rpc('admin_v2_payout_overview');
+        if (!o) return {};
+        return {
+          payouts_waiting: Number((o.requested && o.requested.count) || 0) + Number((o.approved && o.approved.count) || 0),
+          kyc_pending: Number(o.kyc_pending || 0),
+        };
+      } catch (e) { return {}; }
+    },
+    kycList: (status, limit, offset) =>
+      rpc('admin_v2_kyc_list', { p_status: status || 'pending', p_limit: limit || 50, p_offset: offset || 0 }),
+    // ID photo: the RPC logs the view and returns the object path; the admin's
+    // own session signs a 120-second URL ("kyc admin read" storage policy).
+    // Never cached or put in a link.
+    async kycPhotoUrl(kycId) {
+      const doc = await rpc('admin_v2_kyc_document', { p_kyc_id: kycId });
+      if (!doc || !doc.path) throw new ApiError('NO_DOCUMENT', 'no_document');
+      const { data, error } = await sb.storage.from('kyc').createSignedUrl(doc.path, 120);
+      fail(error);
+      if (!data || !data.signedUrl) throw new ApiError('NO_DOCUMENT', 'no_document');
+      return data.signedUrl;
+    },
+    kycReview: (id, approve, reason) =>
+      rpc('admin_v2_kyc_review', { p_kyc_id: id, p_approve: !!approve, p_reason: reason || null }),
+    withdrawals: (status, limit, offset) =>
+      rpc('admin_v2_payout_withdrawals', { p_status: status || 'requested', p_limit: limit || 50, p_offset: offset || 0 }),
+    approveWithdrawal: (id, note) => rpc('admin_v2_payout_approve', { p_id: id, p_note: note || null }),
+    markWithdrawalPaid: (id, reference) => rpc('admin_v2_payout_mark_paid', { p_id: id, p_reference: reference }),
+    rejectWithdrawal: (id, reason) => rpc('admin_v2_payout_reject', { p_id: id, p_reason: reason }),
+    // Only the fields that change; null keeps the current value.
+    setPayoutConfig: (p) => rpc('admin_v2_payout_set_config', {
+      p_diamonds_per_coin: p.diamonds_per_coin ?? null,
+      p_sar_per_diamond: p.sar_per_diamond ?? null,
+      p_min_withdraw_sar: p.min_withdraw_sar ?? null,
+      p_hold_days: p.hold_days ?? null,
+      p_min_account_age_days: p.min_account_age_days ?? null,
+      p_min_age: p.min_age ?? null,
+      p_refund_lookback_days: p.refund_lookback_days ?? null,
+      p_active: p.active ?? null,
+    }),
+    payoutCreator: (userId) => rpc('admin_v2_payout_creator', { p_user: userId }),
+    payoutHold: (userId, hold, reason) => rpc('admin_v2_payout_hold', { p_user: userId, p_hold: !!hold, p_reason: reason || null }),
+    setEarning: (earningId, action, reason) => rpc('admin_v2_payout_set_earning', { p_earning_id: earningId, p_action: action, p_reason: reason || null }),
+    payoutBackfill: (sinceIso) => rpc('admin_v2_payout_backfill', { p_since: sinceIso }),
+
     // ---------- audit log ----------
     async logs(limit) {
       const { data, error } = await sb.from('admin_logs')

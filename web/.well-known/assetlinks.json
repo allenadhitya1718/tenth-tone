@@ -5,7 +5,17 @@
       "namespace": "android_app",
       "package_name": "com.flyp.app",
       "sha256_cert_fingerprints": [
-        "REPLACE_WITH_RELEASE_SIGNING_SHA256_FINGERPRINT"
+        "5A:53:1F:7C:B0:1C:E3:6F:CC:72:44:E3:B0:76:15:82:78:DA:6E:F2:4C:CB:8F:BC:3C:4B:80:DB:A0:C6:02:11"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.flyp.app",
+      "sha256_cert_fingerprints": [
+        "PLACEHOLDER_PLAY_APP_SIGNING_SHA256_from_Play_Console_App_integrity_App_signing"
       ]
     }
   }

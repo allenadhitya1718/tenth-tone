@@ -229,6 +229,7 @@
       "deleteLose2": "Chat dan pesanmu akan dihapus.",
       "deleteLose3": "Pengikutmu dan orang yang kamu ikuti akan hilang.",
       "deleteLose4": "Orang lain mungkin akan memakai nama penggunamu.",
+      "deleteLoseEarnings": "Penghasilan kreator yang belum kamu tarik ({{n}} 💎) akan hangus. Tarik dulu sebelum menghapus akunmu.",
       "deleteWhen": "Akunmu akan dihapus 30 hari dari sekarang. Sampai saat itu, akunmu disembunyikan dari semua orang. Jika kamu masuk dalam 30 hari tersebut, penghapusan dibatalkan dan semuanya tetap tersimpan.",
       "deleteCta": "Hapus akunku",
       "deleteConfirm": "Akunmu beserta semua isinya akan dihapus dalam 30 hari. Kamu akan dikeluarkan sekarang. Masuk dalam 30 hari untuk membatalkan.",
@@ -237,7 +238,13 @@
       "pendingBody_other": "Tersisa {{count}} hari. Kamu bisa membatalkan penghapusan sekarang dan menyimpan semuanya.",
       "keepCta": "Batalkan penghapusan dan pertahankan akunku",
       "cancelledTitle": "Penghapusan dibatalkan",
-      "cancelledBody": "Akunmu aman dan tidak ada yang akan dihapus."
+      "cancelledBody": "Akunmu aman dan tidak ada yang akan dihapus.",
+      "deactivatedTitle": "Akunmu dinonaktifkan",
+      "deactivatedBody": "Akunmu disembunyikan dari semua orang. Aktifkan kembali agar profil, video, dan komentarmu terlihat lagi.",
+      "reactivateCta": "Aktifkan kembali akunku",
+      "bannedTitle": "Akunmu ditangguhkan",
+      "appealRow": "Ajukan banding atas keputusan",
+      "appealRowHint": "Minta kami meninjau penangguhan atau konten yang dihapus"
     },
     "activity": {
       "title": "Aktivitasmu",
@@ -321,6 +328,71 @@
       "discardBody": "Perubahanmu belum disimpan. Perubahan akan hilang jika kamu keluar sekarang.",
       "discard": "Buang",
       "keepEditing": "Lanjut mengedit"
+    },
+    "appeals": {
+      "gate": {
+        "welcomeBack": "Selamat datang kembali — akunmu aktif lagi",
+        "deletionCancelled": "Selamat datang kembali — penghapusan akunmu dibatalkan dan akunmu aktif lagi"
+      },
+      "title": "Ajukan banding atas keputusan",
+      "intro": "Jika menurutmu kami keliru, beri tahu alasannya. Setiap banding ditinjau oleh manusia, dan kamu akan menerima notifikasi berisi keputusannya.",
+      "itemsTitle": "Keputusan yang bisa kamu bandingkan",
+      "none": "Tidak ada yang perlu dibanding",
+      "noneSub": "Akunmu tidak memiliki penangguhan atau konten yang dihapus.",
+      "historyTitle": "Bandingmu",
+      "type": {
+        "ban": "Penangguhan akun",
+        "video_hidden": "Video disembunyikan",
+        "video_removed": "Video dihapus",
+        "comment_hidden": "Komentar disembunyikan",
+        "comment_removed": "Komentar dihapus",
+        "story_removed": "Story dihapus",
+        "live_comment_removed": "Pesan obrolan live dihapus",
+        "live_stream": "Siaran live dihentikan moderator"
+      },
+      "actionedOn": "Pada {{date}}",
+      "sentOn": "Dikirim pada {{date}}",
+      "moderatorReason": "Alasan: {{reason}}",
+      "reasonAuto": "Disembunyikan otomatis setelah beberapa laporan",
+      "appealCta": "Ajukan banding",
+      "status_open": "Sedang ditinjau",
+      "status_accepted": "Diterima",
+      "status_rejected": "Ditolak",
+      "adminNote": "Catatan peninjau: {{note}}",
+      "final": "Keputusan ini bersifat final.",
+      "limitReached": "Ada {{n}} banding yang sedang ditinjau. Kamu bisa mengirim lagi setelah salah satunya diputuskan.",
+      "form": {
+        "title": "Bandingmu",
+        "label": "Mengapa kami perlu meninjau ini?",
+        "placeholder": "Jelaskan apa yang terjadi dan mengapa menurutmu keputusannya salah.",
+        "hint": "Ini akan dibaca oleh manusia. Tulis dengan jelas dan sopan.",
+        "tooShort": "Tulis minimal {{n}} karakter.",
+        "send": "Kirim banding",
+        "sent": "Banding terkirim. Kami akan memberitahumu keputusannya.",
+        "missing": "Ini tidak bisa dibanding lagi."
+      },
+      "errors": {
+        "appeal_not_eligible": "Ini tidak bisa dibanding lagi.",
+        "appeal_already_open": "Kamu sudah punya banding yang sedang ditinjau untuk ini.",
+        "appeal_already_decided": "Banding untuk ini sudah diputuskan.",
+        "appeal_limit_open": "Ada 3 banding yang sedang ditinjau. Tunggu keputusan sebelum mengirim yang lain.",
+        "appeal_reason_required": "Tulis alasan bandingmu.",
+        "appeal_reason_too_long": "Maksimal 1000 karakter.",
+        "appeals_unavailable": "Banding belum tersedia. Coba lagi nanti."
+      },
+      "banned": {
+        "title": "Akunmu ditangguhkan",
+        "until": "Sampai {{date}}",
+        "permanent": "Penangguhan ini permanen.",
+        "reason": "Alasan: {{reason}}",
+        "body": "Kamu tidak bisa memakai FLYP selama akunmu ditangguhkan. Jika menurutmu ini kesalahan, ajukan banding dan seseorang akan meninjaunya.",
+        "appealCta": "Ajukan banding",
+        "appealOpen": "Bandingmu sedang ditinjau. Kami akan memberitahumu keputusannya.",
+        "checkAgain": "Periksa lagi",
+        "stillBanned": "Akunmu masih ditangguhkan.",
+        "lifted": "Akunmu tidak lagi ditangguhkan",
+        "signOut": "Keluar"
+      }
     }
   }
 }

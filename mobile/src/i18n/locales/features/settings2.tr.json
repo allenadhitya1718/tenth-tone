@@ -230,6 +230,7 @@
       "deleteLose2": "Sohbetlerin ve mesajların silinecek.",
       "deleteLose3": "Takipçilerini ve takip ettiğin kişileri kaybedeceksin.",
       "deleteLose4": "Kullanıcı adını başka biri alabilir.",
+      "deleteLoseEarnings": "Çekilmemiş içerik üretici kazançların ({{n}} 💎) kaybolacak. Hesabını silmeden önce bunları çek.",
       "deleteWhen": "Hesabın bugünden 30 gün sonra silinecek. O zamana kadar herkesten gizlenir. Bu 30 gün içinde giriş yaparsan silme işlemi iptal edilir ve her şey korunur.",
       "deleteCta": "Hesabımı sil",
       "deleteConfirm": "Hesabın ve içindeki her şey 30 gün içinde silinecek. Şimdi oturumun kapatılacak. İptal etmek için 30 gün içinde giriş yap.",
@@ -239,7 +240,13 @@
       "pendingBody_other": "{{count}} gün kaldı. Silme işlemini şimdi iptal edip her şeyi koruyabilirsin.",
       "keepCta": "Silmeyi iptal et ve hesabımı koru",
       "cancelledTitle": "Silme işlemi iptal edildi",
-      "cancelledBody": "Hesabın güvende ve hiçbir şey silinmeyecek."
+      "cancelledBody": "Hesabın güvende ve hiçbir şey silinmeyecek.",
+      "deactivatedTitle": "Hesabın devre dışı",
+      "deactivatedBody": "Hesabın herkesten gizli. Profilinin, videolarının ve yorumlarının yeniden görünmesi için hesabını yeniden etkinleştir.",
+      "reactivateCta": "Hesabımı yeniden etkinleştir",
+      "bannedTitle": "Hesabın askıya alındı",
+      "appealRow": "Bir karara itiraz et",
+      "appealRowHint": "Bir askıya almanın veya kaldırılan içeriğin incelenmesini iste"
     },
     "activity": {
       "title": "Etkinliğin",
@@ -323,6 +330,71 @@
       "discardBody": "Değişikliklerin kaydedilmedi. Şimdi çıkarsan kaybolacak.",
       "discard": "Sil",
       "keepEditing": "Düzenlemeye devam et"
+    },
+    "appeals": {
+      "gate": {
+        "welcomeBack": "Tekrar hoş geldin — hesabın yeniden etkin",
+        "deletionCancelled": "Tekrar hoş geldin — hesap silme işlemin iptal edildi ve hesabın yeniden etkin"
+      },
+      "title": "Bir karara itiraz et",
+      "intro": "Bir hata yaptığımızı düşünüyorsan nedenini bize anlat. Her itirazı bir kişi inceler ve karar sana bildirimle iletilir.",
+      "itemsTitle": "İtiraz edebileceğin kararlar",
+      "none": "İtiraz edilecek bir şey yok",
+      "noneSub": "Hesabında askıya alma veya kaldırılan içerik yok.",
+      "historyTitle": "İtirazların",
+      "type": {
+        "ban": "Hesap askıya alma",
+        "video_hidden": "Video gizlendi",
+        "video_removed": "Video kaldırıldı",
+        "comment_hidden": "Yorum gizlendi",
+        "comment_removed": "Yorum kaldırıldı",
+        "story_removed": "Hikâye kaldırıldı",
+        "live_comment_removed": "Canlı sohbet mesajı kaldırıldı",
+        "live_stream": "Canlı yayın moderatörlerce sonlandırıldı"
+      },
+      "actionedOn": "{{date}}",
+      "sentOn": "{{date}} tarihinde gönderildi",
+      "moderatorReason": "Neden: {{reason}}",
+      "reasonAuto": "Birkaç şikâyetten sonra otomatik olarak gizlendi",
+      "appealCta": "İtiraz et",
+      "status_open": "İnceleniyor",
+      "status_accepted": "Kabul edildi",
+      "status_rejected": "Reddedildi",
+      "adminNote": "İnceleyenin notu: {{note}}",
+      "final": "Bu karar kesindir.",
+      "limitReached": "İncelenmekte olan {{n}} itirazın var. Biri sonuçlandığında yenisini gönderebilirsin.",
+      "form": {
+        "title": "İtirazın",
+        "label": "Bunu neden yeniden incelemeliyiz?",
+        "placeholder": "Ne olduğunu ve kararın neden yanlış olduğunu düşündüğünü açıkla.",
+        "hint": "Bunu bir kişi okuyacak. Net ve nazik ol.",
+        "tooShort": "En az {{n}} karakter yaz.",
+        "send": "İtirazı gönder",
+        "sent": "İtiraz gönderildi. Kararı sana bildireceğiz.",
+        "missing": "Buna artık itiraz edilemez."
+      },
+      "errors": {
+        "appeal_not_eligible": "Buna artık itiraz edilemez.",
+        "appeal_already_open": "Bunun için incelenmekte olan bir itirazın zaten var.",
+        "appeal_already_decided": "Bununla ilgili bir itiraz zaten sonuçlandı.",
+        "appeal_limit_open": "İncelenmekte olan 3 itirazın var. Yenisini göndermeden önce bir kararı bekle.",
+        "appeal_reason_required": "İtirazının nedenini yaz.",
+        "appeal_reason_too_long": "1000 karakterin altında tut.",
+        "appeals_unavailable": "İtirazlar henüz kullanılamıyor. Daha sonra tekrar dene."
+      },
+      "banned": {
+        "title": "Hesabın askıya alındı",
+        "until": "{{date}} tarihine kadar",
+        "permanent": "Bu askıya alma kalıcıdır.",
+        "reason": "Neden: {{reason}}",
+        "body": "Hesabın askıdayken FLYP'i kullanamazsın. Bunun bir hata olduğunu düşünüyorsan itiraz et, bir kişi inceleyecek.",
+        "appealCta": "İtiraz et",
+        "appealOpen": "İtirazın inceleniyor. Kararı sana bildireceğiz.",
+        "checkAgain": "Tekrar kontrol et",
+        "stillBanned": "Hesabın hâlâ askıda.",
+        "lifted": "Hesabın artık askıda değil",
+        "signOut": "Çıkış yap"
+      }
     }
   }
 }

@@ -117,15 +117,25 @@ export function StoryComposer() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  async function pick(kind: StoryKind) {
+  // `camera`: take the photo or record the clip now, instead of choosing
+  // one from the library. The camera stops itself at MAX_VIDEO_S.
+  async function pick(kind: StoryKind, source: 'library' | 'camera' = 'library') {
     if (busy || preparing) return;
     try {
-      const res = await ImagePicker.launchImageLibraryAsync({
+      if (source === 'camera') {
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert(t('stories.cameraDenied'));
+          return;
+        }
+      }
+      const opts: ImagePicker.ImagePickerOptions = {
         mediaTypes: kind === 'image' ? ['images'] : ['videos'],
         quality: 1,
         allowsMultipleSelection: false,
         videoMaxDuration: MAX_VIDEO_S,
-      });
+      };
+      const res = source === 'camera' ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts);
       if (res.canceled || !res.assets?.[0]) return;
       const a = res.assets[0];
       if (kind === 'video' && a.duration && a.duration / 1000 > MAX_VIDEO_S + 0.5) {
@@ -222,7 +232,7 @@ export function StoryComposer() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>
         <TopBar title={t('stories.newStory')} onBack={leave} />
-        <View style={styles.chooseWrap}>
+        <ScrollView contentContainerStyle={styles.chooseWrap}>
           <AppText variant="title" center accessibilityRole="header">
             {t('stories.chooseTitle')}
           </AppText>
@@ -235,17 +245,39 @@ export function StoryComposer() {
               <AppText muted>{t('stories.preparing')}</AppText>
             </View>
           ) : (
-            <View style={styles.chooseRow}>
-              <ChooseCard icon="image-outline" label={t('stories.photo')} hint={t('stories.photoHint')} onPress={() => void pick('image')} />
-              <ChooseCard
-                icon="videocam-outline"
-                label={t('stories.video')}
-                hint={t('stories.videoHint', { n: MAX_VIDEO_S })}
-                onPress={() => void pick('video')}
-              />
-            </View>
+            <>
+              <AppText variant="small" muted style={styles.sourceLabel}>
+                {t('stories.fromLibrary')}
+              </AppText>
+              <View style={styles.chooseRow}>
+                <ChooseCard icon="image-outline" label={t('stories.photo')} hint={t('stories.photoHint')} onPress={() => void pick('image')} />
+                <ChooseCard
+                  icon="videocam-outline"
+                  label={t('stories.video')}
+                  hint={t('stories.videoHint', { n: MAX_VIDEO_S })}
+                  onPress={() => void pick('video')}
+                />
+              </View>
+              <AppText variant="small" muted style={styles.sourceLabel}>
+                {t('stories.fromCamera')}
+              </AppText>
+              <View style={styles.chooseRow}>
+                <ChooseCard
+                  icon="camera-outline"
+                  label={t('stories.takePhoto')}
+                  hint={t('stories.takePhotoHint')}
+                  onPress={() => void pick('image', 'camera')}
+                />
+                <ChooseCard
+                  icon="radio-button-on-outline"
+                  label={t('stories.recordVideo')}
+                  hint={t('stories.videoHint', { n: MAX_VIDEO_S })}
+                  onPress={() => void pick('video', 'camera')}
+                />
+              </View>
+            </>
           )}
-        </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -492,8 +524,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 const styles = StyleSheet.create({
-  chooseWrap: { flex: 1, justifyContent: 'center', paddingHorizontal: 22, gap: 8 },
-  chooseRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
+  chooseWrap: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 22, paddingVertical: 16, gap: 8 },
+  chooseRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  sourceLabel: { marginTop: 14, fontWeight: '700' },
   chooseCard: {
     flex: 1,
     alignItems: 'center',

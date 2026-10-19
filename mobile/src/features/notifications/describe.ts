@@ -20,6 +20,13 @@ const short = (v: unknown, max = 80) => {
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 };
 
+// "150.00" from a SAR amount (numeric in jsonb, sometimes a string), or ''
+// when there is none.
+const sar = (v: unknown) => {
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() ? Number(v) : NaN;
+  return Number.isFinite(n) && n > 0 ? n.toFixed(2) : '';
+};
+
 export function payloadOf(n: Pick<Notification, 'payload'>): Record<string, unknown> {
   return n.payload ?? {};
 }
@@ -125,6 +132,53 @@ function describeSystem(p: Record<string, unknown>, kind: string): Described {
       return { key: 'liveGuestApproved', withActor: true, icon: 'radio' };
     case 'live_guest_removed':
       return { key: 'liveGuestRemoved', withActor: true, icon: 'radio' };
+    // Creator payouts (0130, payout_notify): about you, no actor. The payload
+    // also carries an Arabic title / English body for older app versions;
+    // these keys replace them. amount_sar is set on every withdrawal kind,
+    // reason on both rejections (required by the admin RPCs).
+    case 'payout_kyc_approved':
+      return { key: 'payoutKycApproved', withActor: false, icon: 'id-card' };
+    case 'payout_kyc_rejected': {
+      const reason = short(p.reason, 120);
+      return reason
+        ? { key: 'payoutKycRejected', params: { reason }, withActor: false, icon: 'id-card' }
+        : { key: 'payoutKycRejectedPlain', withActor: false, icon: 'id-card' };
+    }
+    case 'payout_withdrawal_approved': {
+      const amount = sar(p.amount_sar);
+      return amount
+        ? { key: 'payoutWithdrawalApproved', params: { amount }, withActor: false, icon: 'cash' }
+        : { key: 'payoutWithdrawalApprovedPlain', withActor: false, icon: 'cash' };
+    }
+    case 'payout_withdrawal_paid': {
+      const amount = sar(p.amount_sar);
+      return amount
+        ? { key: 'payoutWithdrawalPaid', params: { amount }, withActor: false, icon: 'cash' }
+        : { key: 'payoutWithdrawalPaidPlain', withActor: false, icon: 'cash' };
+    }
+    case 'payout_withdrawal_rejected': {
+      const amount = sar(p.amount_sar);
+      const reason = short(p.reason, 120);
+      return amount && reason
+        ? { key: 'payoutWithdrawalRejected', params: { amount, reason }, withActor: false, icon: 'cash' }
+        : { key: 'payoutWithdrawalRejectedPlain', withActor: false, icon: 'cash' };
+    }
+    // Admins only (0129 check_usage_alerts): actor_id is the admin, so the
+    // sentence stands alone. metric: r2_storage | r2_class_a | r2_class_b |
+    // agora_minutes.
+    case 'usage_alert': {
+      const pct = Math.round(Number(p.pct) || 0);
+      const metric = str(p.metric);
+      const key =
+        metric === 'agora_minutes'
+          ? 'usageAlertAgora'
+          : metric === 'r2_storage'
+            ? 'usageAlertR2Storage'
+            : metric === 'r2_class_a' || metric === 'r2_class_b'
+              ? 'usageAlertR2Ops'
+              : 'usageAlert';
+      return { key, params: { pct }, withActor: false, icon: 'warning' };
+    }
   }
   // The admin broadcast composer writes { title, body }, not { text }.
   const title = str(p.title);
@@ -176,6 +230,9 @@ export function destinationFor(n: Notification): string | null {
         return live ? `/live/${enc(live)}` : null;
       }
       if (kind === 'new_login') return '/settings';
+      // The wallet holds earnings, verification and withdrawals.
+      if (kind.startsWith('payout_')) return '/wallet';
+      // usage_alert (admins): the detail lives in the web admin panel.
       return null;
     default:
       return null;

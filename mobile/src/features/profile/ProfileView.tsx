@@ -35,6 +35,7 @@ import { fetchUserSounds, type Sound, soundKeys } from '@/api/sounds';
 import { fetchDrafts, fetchSavedVideos, fetchUserVideos, videoKeys, type VideoTile } from '@/api/videos';
 import { tagKeys } from '@/api/tags';
 import { Button } from '@/components/ui';
+import { DraftSheet } from '@/features/drafts/DraftSheet';
 import { ProfilePlacesMap } from '@/features/map/ProfilePlacesMap';
 import { formatCount } from '@/features/feed/format';
 import { ProfileStoryAvatar } from '@/features/stories/ProfileStoryAvatar';
@@ -50,6 +51,8 @@ export function ProfileView({ userId, isMe }: { userId: string; isMe: boolean })
   const { width } = useWindowDimensions();
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>('videos');
+  // Client note 2: a draft opens its own sheet, never the For You feed.
+  const [openDraft, setOpenDraft] = useState<VideoTile | null>(null);
 
   const profile = useQuery({ queryKey: profileKeys.profile(userId), queryFn: () => fetchProfile(userId) });
   const tabs: Tab[] = isMe ? ['videos', 'audio', 'map', 'saved', 'drafts'] : ['videos', 'audio', 'map'];
@@ -114,8 +117,9 @@ export function ProfileView({ userId, isMe }: { userId: string; isMe: boolean })
           renderItem={({ item }) => (
             <Pressable
               style={{ width: tile, height: tile * 1.33, backgroundColor: colors.bg3 }}
-              onPress={() => router.push(`/video/${item.id}`)}
+              onPress={() => (tab === 'drafts' ? setOpenDraft(item) : router.push(`/video/${item.id}`))}
               accessibilityRole="button"
+              accessibilityLabel={tab === 'drafts' ? t('drafts.open') : undefined}
             >
               {item.thumbnail && !/\.(mp4|mov|webm)(\?|$)/i.test(item.thumbnail) ? (
                 <Image source={{ uri: item.thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -147,6 +151,7 @@ export function ProfileView({ userId, isMe }: { userId: string; isMe: boolean })
           renderItem={({ item }) => <SoundRow sound={item} />}
         />
       )}
+      {isMe ? <DraftSheet draft={openDraft} onClose={() => setOpenDraft(null)} /> : null}
     </SafeAreaView>
   );
 }

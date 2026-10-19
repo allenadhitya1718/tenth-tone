@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { type Href, router } from 'expo-router';
+import { type Href, router, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -40,7 +40,7 @@ import {
   type Readiness,
 } from './callSession';
 import { LocalPip } from './LocalPip';
-import { callPath, leaveCallScreen, markCallScreen, type DialParams } from './nav';
+import { callPath, markCallScreen, type DialParams } from './nav';
 
 // The full-screen call: outgoing ring, incoming ring (Accept / Decline), and
 // the call itself. Port of V.call and the incoming card in web/js/views.js.
@@ -53,6 +53,9 @@ const RED = '#EF4444';
 const GREEN = '#22C55E';
 // How long the end of a call stays on screen before it closes.
 const CLOSE_AFTER_MS = 1600;
+// CALLS-08: never a bare spinner. If the call has not loaded by then, say so
+// and offer Close.
+const LOAD_TIMEOUT_MS = 8000;
 
 type Props = { callId: string; dial?: undefined } | { callId?: undefined; dial: DialParams & { nonce: string } };
 
@@ -64,6 +67,20 @@ export function CallScreen(props: Props) {
   const [refusal, setRefusal] = useState<Refusal | null>(null);
   const dialReq = props.dial;
   const routeId = props.callId;
+  const navigation = useNavigation();
+
+  // Closes THIS screen. navigation.goBack() from the screen's own navigation
+  // object removes this route, wherever it is in the stack; router.back()
+  // (leaveCallScreen) pops whatever is on top. With two screens for one call
+  // (a push tap and the realtime ring both opening it) the first one to
+  // close popped the other, and the survivor sat on a spinner (CALLS-08).
+  const left = useRef(false);
+  const leave = useCallback(() => {
+    if (left.current) return;
+    left.current = true;
+    if (navigation.canGoBack()) navigation.goBack();
+    else router.replace('/');
+  }, [navigation]);
 
   // ---------- start or pick up the session ----------
   useEffect(() => {
@@ -90,6 +107,42 @@ export function CallScreen(props: Props) {
   }, []);
 
   const mine = routeId ? s.callId === routeId : !!dialReq && s.dialNonce === dialReq.nonce;
+  const busy = !mine && isCallActive(s) && !!routeId && s.callId !== routeId;
+
+  // The session this screen was showing went away under it: dismissed by
+  // another screen for the same call, or replaced. Close, and if it had
+  // ended say how ("Missed call") on the way out.
+  const wasMine = useRef(false);
+  const lastReason = useRef<string | null>(null);
+  useEffect(() => {
+    if (mine) {
+      wasMine.current = true;
+      if (s.phase === 'ended') lastReason.current = s.endReason ?? 'ended';
+      return;
+    }
+    if (!wasMine.current || left.current) return;
+    if (lastReason.current) showToast(t(`call.endReason.${lastReason.current}`), 'call');
+    leave();
+  }, [mine, s.phase, s.endReason, leave, t]);
+
+  // Still loading after LOAD_TIMEOUT_MS: show an error with Close instead.
+  const loading = !refusal && !busy && (!mine || s.phase === 'loading');
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    if (!loading) return;
+    const id = setTimeout(() => setStuck(true), LOAD_TIMEOUT_MS);
+    return () => clearTimeout(id);
+  }, [loading]);
+  const closeStuck = useCallback(() => {
+    // A session still loading this call would otherwise count as a call in
+    // progress and refuse the next one.
+    const st = getCallState();
+    if (st.phase === 'loading' && routeId && st.callId === routeId) {
+      hangUp('failed');
+      dismissEnded();
+    }
+    leave();
+  }, [leave, routeId]);
 
   // The dial screen registers under the call id once it has one, so a push
   // for this call does not open a second screen on top.
@@ -97,18 +150,17 @@ export function CallScreen(props: Props) {
     if (dialReq && mine && s.callId) return markCallScreen(s.callId);
   }, [dialReq, mine, s.callId]);
 
-  if (refusal) return <Refused refusal={refusal} />;
-  if (!mine) {
-    // Another call holds the session (or this one is still loading).
-    if (isCallActive(s) && routeId && s.callId !== routeId) return <Busy s={s} />;
-    return <Loading label={t('call.loading')} />;
-  }
-  return <CallView s={s} />;
+  if (refusal) return <Refused refusal={refusal} onClose={leave} />;
+  if (busy) return <Busy s={s} onClose={leave} />;
+  if (loading && stuck) return <Refused refusal={{ error: { key: 'call.errors.generic' } }} onClose={closeStuck} hideReturn />;
+  // This call is still loading.
+  if (!mine) return <Loading label={t('call.loading')} />;
+  return <CallView s={s} leave={leave} />;
 }
 
 // ---------- The call ----------
 
-function CallView({ s }: { s: CallState }) {
+function CallView({ s, leave }: { s: CallState; leave: () => void }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [acceptError, setAcceptError] = useState<Refusal | null>(null);
@@ -125,17 +177,18 @@ function CallView({ s }: { s: CallState }) {
     const id = setTimeout(() => {
       if (closed.current) return;
       closed.current = true;
+      // Leave first: dismissing first re-renders this screen as "not mine".
+      leave();
       dismissEnded();
-      leaveCallScreen();
     }, CLOSE_AFTER_MS);
     return () => clearTimeout(id);
-  }, [s.phase]);
+  }, [s.phase, leave]);
 
   // ---------- leaving without hanging up ----------
   const minimise = useCallback(() => {
     showToast(t('call.minimised'), 'call');
-    leaveCallScreen();
-  }, [t]);
+    leave();
+  }, [t, leave]);
 
   const confirmCancel = useCallback(() => {
     Alert.alert(t('call.cancelTitle'), t('call.cancelBody', { name }), [
@@ -161,15 +214,15 @@ function CallView({ s }: { s: CallState }) {
       if (st.phase === 'ended') {
         if (!closed.current) {
           closed.current = true;
+          leave();
           dismissEnded();
-          leaveCallScreen();
         }
         return true;
       }
       return false;
     });
     return () => sub.remove();
-  }, [confirmCancel, minimise]);
+  }, [confirmCancel, minimise, leave]);
 
   // ---------- the other side switching to video ----------
   const announced = useRef(s.kind);
@@ -429,7 +482,7 @@ function Loading({ label }: { label: string }) {
   );
 }
 
-function Refused({ refusal }: { refusal: Refusal }) {
+function Refused({ refusal, onClose, hideReturn }: { refusal: Refusal; onClose: () => void; hideReturn?: boolean }) {
   const { t } = useTranslation();
   const s = useCallState();
   const insets = useSafeAreaInsets();
@@ -438,7 +491,7 @@ function Refused({ refusal }: { refusal: Refusal }) {
       <Ionicons name="call-outline" size={44} color={INK_SOFT} />
       <Text style={styles.refusedTitle}>{t(refusal.error.key, refusal.error.params)}</Text>
       {refusal.openSettings ? <SettingsLink /> : null}
-      {isCallActive(s) && s.callId ? (
+      {!hideReturn && isCallActive(s) && s.callId ? (
         <Pressable
           onPress={() => s.callId && openActive(s.callId)}
           style={styles.settingsBtn}
@@ -447,15 +500,15 @@ function Refused({ refusal }: { refusal: Refusal }) {
           <Text style={styles.settingsText}>{t('call.returnToCall')}</Text>
         </Pressable>
       ) : null}
-      <Pressable onPress={leaveCallScreen} style={styles.closeBtn} accessibilityRole="button">
+      <Pressable onPress={onClose} style={styles.closeBtn} accessibilityRole="button">
         <Text style={styles.closeText}>{t('call.close')}</Text>
       </Pressable>
     </View>
   );
 }
 
-function Busy({ s }: { s: CallState }) {
-  return <Refused refusal={{ error: { key: 'call.errors.already_in_call' } }} key={s.callId ?? 'busy'} />;
+function Busy({ s, onClose }: { s: CallState; onClose: () => void }) {
+  return <Refused refusal={{ error: { key: 'call.errors.already_in_call' } }} onClose={onClose} key={s.callId ?? 'busy'} />;
 }
 
 function openActive(callId: string) {

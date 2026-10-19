@@ -23,6 +23,7 @@ export const tagKeys = {
   videoTags: (videoId: Uuid) => ['videoTags', videoId] as const,
   taggedVideos: (userId: Uuid) => ['taggedVideos', userId] as const,
   profilePlaces: (userId: Uuid) => ['profilePlaces', userId] as const,
+  postExtras: (videoId: Uuid) => ['postExtras', videoId] as const,
 };
 
 export type TagRefusal = { userId: Uuid; reason: string; message?: string };
@@ -148,4 +149,29 @@ export async function fetchProfilePlaces(userId: Uuid, limit = 200): Promise<Pro
     throw error;
   }
   return (data ?? []) as ProfilePlace[];
+}
+
+// What a feed card shows under the caption (client note 21): the post's
+// place and the people tagged in it. The feed RPCs do not return either, so
+// the card asks for them once it is on screen. Two reads in parallel; each
+// degrades to empty on its own (a database without 0101, a hidden row), so a
+// missing place never hides the tags or the other way round.
+export type PostPlace = { name: string; lat: number | null; lng: number | null };
+export type PostExtras = { place: PostPlace | null; tags: UserSummary[] };
+
+export async function fetchPostExtras(videoId: Uuid): Promise<PostExtras> {
+  const [placeRes, tags] = await Promise.all([
+    supabase.from('videos').select('place_name, lat, lng').eq('id', videoId).maybeSingle(),
+    fetchVideoTags(videoId).catch(() => [] as UserSummary[]),
+  ]);
+  let place: PostPlace | null = null;
+  if (!placeRes.error && placeRes.data) {
+    const r = placeRes.data as { place_name: string | null; lat: number | null; lng: number | null };
+    const name = (r.place_name ?? '').trim();
+    if (name) {
+      const ok = typeof r.lat === 'number' && typeof r.lng === 'number';
+      place = { name, lat: ok ? r.lat : null, lng: ok ? r.lng : null };
+    }
+  }
+  return { place, tags };
 }

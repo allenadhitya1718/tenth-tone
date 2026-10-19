@@ -229,6 +229,7 @@
       "deleteLose2": "你的聊天和消息将被删除。",
       "deleteLose3": "你的粉丝和你关注的人将会丢失。",
       "deleteLose4": "你的用户名可能会被他人使用。",
+      "deleteLoseEarnings": "你未提现的创作者收益（{{n}} 💎）将会作废。请在注销账号前先提现。",
       "deleteWhen": "你的账号将在 30 天后被删除，在此之前将对所有人隐藏。如果你在这 30 天内登录，注销将被取消，所有内容都会保留。",
       "deleteCta": "注销我的账号",
       "deleteConfirm": "你的账号及其所有内容将在 30 天后被删除。你现在将退出登录。在 30 天内登录即可取消。",
@@ -237,7 +238,13 @@
       "pendingBody_other": "还剩 {{count}} 天。你现在可以取消注销并保留所有内容。",
       "keepCta": "取消注销并保留我的账号",
       "cancelledTitle": "已取消注销",
-      "cancelledBody": "你的账号安全无虞，不会删除任何内容。"
+      "cancelledBody": "你的账号安全无虞，不会删除任何内容。",
+      "deactivatedTitle": "你的账号已停用",
+      "deactivatedBody": "你的账号已对所有人隐藏。重新启用后，你的个人资料、视频和评论将重新显示。",
+      "reactivateCta": "重新启用我的账号",
+      "bannedTitle": "你的账号已被封禁",
+      "appealRow": "对处理决定提出申诉",
+      "appealRowHint": "请求我们复核封禁或被移除的内容"
     },
     "activity": {
       "title": "你的动态",
@@ -321,6 +328,71 @@
       "discardBody": "你的更改尚未保存，现在离开将会丢失。",
       "discard": "放弃",
       "keepEditing": "继续编辑"
+    },
+    "appeals": {
+      "gate": {
+        "welcomeBack": "欢迎回来——你的账号已重新启用",
+        "deletionCancelled": "欢迎回来——已取消删除你的账号，账号已重新启用"
+      },
+      "title": "对处理决定提出申诉",
+      "intro": "如果你认为我们处理有误，请告诉我们原因。每一项申诉都由人工复核，结果会通过通知告诉你。",
+      "itemsTitle": "可申诉的处理决定",
+      "none": "没有可申诉的内容",
+      "noneSub": "你的账号没有封禁记录，也没有被移除的内容。",
+      "historyTitle": "你的申诉",
+      "type": {
+        "ban": "账号封禁",
+        "video_hidden": "视频已隐藏",
+        "video_removed": "视频已移除",
+        "comment_hidden": "评论已隐藏",
+        "comment_removed": "评论已移除",
+        "story_removed": "快拍已移除",
+        "live_comment_removed": "直播聊天消息已移除",
+        "live_stream": "直播被管理员终止"
+      },
+      "actionedOn": "{{date}}",
+      "sentOn": "提交于 {{date}}",
+      "moderatorReason": "原因：{{reason}}",
+      "reasonAuto": "因多次被举报而自动隐藏",
+      "appealCta": "申诉",
+      "status_open": "审核中",
+      "status_accepted": "已通过",
+      "status_rejected": "已驳回",
+      "adminNote": "审核员备注：{{note}}",
+      "final": "此决定为最终决定。",
+      "limitReached": "你有 {{n}} 项申诉正在审核中。等其中一项有结果后才能再次提交。",
+      "form": {
+        "title": "你的申诉",
+        "label": "为什么需要我们复核？",
+        "placeholder": "说明发生了什么，以及你认为处理有误的原因。",
+        "hint": "会有人工阅读你的内容，请具体并保持礼貌。",
+        "tooShort": "请至少写 {{n}} 个字符。",
+        "send": "提交申诉",
+        "sent": "申诉已提交。结果出来后我们会通知你。",
+        "missing": "此项已无法申诉。"
+      },
+      "errors": {
+        "appeal_not_eligible": "此项已无法申诉。",
+        "appeal_already_open": "你已对此提交过申诉，正在审核中。",
+        "appeal_already_decided": "此项的申诉已有结果。",
+        "appeal_limit_open": "你有 3 项申诉正在审核中。请等待结果后再提交新的申诉。",
+        "appeal_reason_required": "请填写申诉理由。",
+        "appeal_reason_too_long": "请控制在 1000 个字符以内。",
+        "appeals_unavailable": "申诉功能暂不可用，请稍后再试。"
+      },
+      "banned": {
+        "title": "你的账号已被封禁",
+        "until": "截至 {{date}}",
+        "permanent": "此封禁为永久封禁。",
+        "reason": "原因：{{reason}}",
+        "body": "账号被封禁期间无法使用 FLYP。如果你认为这是误判，可以提出申诉，我们会安排人工复核。",
+        "appealCta": "申诉",
+        "appealOpen": "你的申诉正在审核中。结果出来后我们会通知你。",
+        "checkAgain": "重新检查",
+        "stillBanned": "你的账号仍处于封禁状态。",
+        "lifted": "你的账号已解除封禁",
+        "signOut": "退出登录"
+      }
     }
   }
 }

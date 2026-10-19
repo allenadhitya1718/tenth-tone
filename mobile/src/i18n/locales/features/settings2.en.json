@@ -230,6 +230,7 @@
       "deleteLose2": "Your chats and messages will be deleted.",
       "deleteLose3": "Your followers and the people you follow will be lost.",
       "deleteLose4": "Someone else may take your username.",
+      "deleteLoseEarnings": "Your unwithdrawn creator earnings ({{n}} 💎) will be lost. Withdraw them before you delete your account.",
       "deleteWhen": "Your account is deleted 30 days from now. Until then it is hidden from everyone. If you sign in during those 30 days, the deletion is cancelled and everything is kept.",
       "deleteCta": "Delete my account",
       "deleteConfirm": "Your account and everything in it will be deleted in 30 days. You'll be signed out now. Sign in within 30 days to cancel.",
@@ -239,7 +240,13 @@
       "pendingBody_other": "{{count}} days left. You can cancel the deletion now and keep everything.",
       "keepCta": "Cancel deletion and keep my account",
       "cancelledTitle": "Deletion cancelled",
-      "cancelledBody": "Your account is safe and nothing will be deleted."
+      "cancelledBody": "Your account is safe and nothing will be deleted.",
+      "deactivatedTitle": "Your account is deactivated",
+      "deactivatedBody": "It's hidden from everyone. Reactivate it to show your profile, videos and comments again.",
+      "reactivateCta": "Reactivate my account",
+      "bannedTitle": "Your account is suspended",
+      "appealRow": "Appeal a decision",
+      "appealRowHint": "Ask us to review a suspension or removed content"
     },
     "activity": {
       "title": "Your activity",
@@ -323,6 +330,71 @@
       "discardBody": "Your changes haven't been saved. They'll be lost if you leave now.",
       "discard": "Discard",
       "keepEditing": "Keep editing"
+    },
+    "appeals": {
+      "gate": {
+        "welcomeBack": "Welcome back — your account is active again",
+        "deletionCancelled": "Welcome back — your account deletion was cancelled and your account is active again"
+      },
+      "title": "Appeal a decision",
+      "intro": "If you think we got something wrong, tell us why. A person reviews every appeal, and you'll get a notification with the decision.",
+      "itemsTitle": "Decisions you can appeal",
+      "none": "Nothing to appeal",
+      "noneSub": "Your account has no suspensions or removed content.",
+      "historyTitle": "Your appeals",
+      "type": {
+        "ban": "Account suspension",
+        "video_hidden": "Video hidden",
+        "video_removed": "Video removed",
+        "comment_hidden": "Comment hidden",
+        "comment_removed": "Comment removed",
+        "story_removed": "Story removed",
+        "live_comment_removed": "Live chat message removed",
+        "live_stream": "Live stream ended by moderators"
+      },
+      "actionedOn": "On {{date}}",
+      "sentOn": "Sent on {{date}}",
+      "moderatorReason": "Reason: {{reason}}",
+      "reasonAuto": "Hidden automatically after several reports",
+      "appealCta": "Appeal",
+      "status_open": "Under review",
+      "status_accepted": "Accepted",
+      "status_rejected": "Rejected",
+      "adminNote": "Reviewer's note: {{note}}",
+      "final": "This decision is final.",
+      "limitReached": "You have {{n}} appeals under review. You can send another once one is decided.",
+      "form": {
+        "title": "Your appeal",
+        "label": "Why should we review this?",
+        "placeholder": "Explain what happened and why you think the decision was wrong.",
+        "hint": "A person will read this. Be specific and polite.",
+        "tooShort": "Write at least {{n}} characters.",
+        "send": "Send appeal",
+        "sent": "Appeal sent. We'll notify you of the decision.",
+        "missing": "This can no longer be appealed."
+      },
+      "errors": {
+        "appeal_not_eligible": "This can no longer be appealed.",
+        "appeal_already_open": "You already have an appeal under review for this.",
+        "appeal_already_decided": "An appeal for this has already been decided.",
+        "appeal_limit_open": "You have 3 appeals under review. Wait for a decision before sending another.",
+        "appeal_reason_required": "Write a reason for your appeal.",
+        "appeal_reason_too_long": "Keep it under 1000 characters.",
+        "appeals_unavailable": "Appeals aren't available yet. Try again later."
+      },
+      "banned": {
+        "title": "Your account is suspended",
+        "until": "Until {{date}}",
+        "permanent": "This suspension is permanent.",
+        "reason": "Reason: {{reason}}",
+        "body": "You can't use FLYP while your account is suspended. If you think this is a mistake, appeal and a person will review it.",
+        "appealCta": "Appeal",
+        "appealOpen": "Your appeal is under review. We'll notify you of the decision.",
+        "checkAgain": "Check again",
+        "stillBanned": "Your account is still suspended.",
+        "lifted": "Your account is no longer suspended",
+        "signOut": "Sign out"
+      }
     }
   }
 }

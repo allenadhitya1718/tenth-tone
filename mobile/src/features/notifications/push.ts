@@ -303,9 +303,14 @@ function openResponse(r: Notifications.NotificationResponse, onRead: () => void)
     // second screen when the realtime ring already opened one.
     openCallScreen(callId);
   } else go(appPathFor(data.route));
-  if (typeof data.notification_id === 'string') {
-    markNotificationsRead([data.notification_id]).then(onRead, () => {});
+  // A grouped social push ("Sara and 4 more liked your video") stands for
+  // several rows: send-push lists them all in notification_ids.
+  const ids = new Set<string>();
+  if (typeof data.notification_id === 'string') ids.add(data.notification_id);
+  if (typeof data.notification_ids === 'string') {
+    for (const id of data.notification_ids.split(',')) if (/^[0-9a-f-]{36}$/i.test(id)) ids.add(id);
   }
+  if (ids.size) markNotificationsRead([...ids].slice(0, 50)).then(onRead, () => {});
 }
 
 // ---------- The hook ----------
