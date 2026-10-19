@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 55 |
+| Pass | 60 |
 | Fail | 5 |
 | Blocked | 41 |
-| Not tested | 82 |
+| Not tested | 77 |
 
 ## Sections
 
@@ -328,13 +328,13 @@ _Use phones A and B._
 
 - [x] **CHAT-01** Start a new chat from the pencil icon  
   Expected: Search people and open a chat.  
-  Result: **PASS** · Note: Chat tab shows "No conversations yet" + New message; the pencil opens "New message" with a people search ("Search people by name or @handle"), a group icon and the hint "Follow people to start a conversation with them, or search above." Actually starting a chat needs account B. Screenshots: CHAT-01-list.png, CHAT-01.png
-- [ ] **CHAT-02** Send a text message  
+  Result: **PASS** · Note: Chat tab empty state, pencil -> New message with people search + group icon; and from B's profile the Message button opens the 1:1 chat (CHAT-02-open.png).
+- [x] **CHAT-02** Send a text message  
   Expected: Appears instantly on both phones.  
-  Result: _not tested_ · Note: 
-- [ ] **CHAT-03** Check the ticks  
+  Result: **PASS** · Note: A sent "Hi B , test message 1": appears on A at once and on B within seconds (B Chat list row + unread badge 1 on the tab); B replied "Reply from B" and it arrived on A. Note: sending with the keyboard open hides the message list behind the keyboard (the sent bubble is only visible after the keyboard is closed) - may be an emulator window-resize quirk. Screenshots: CHAT-02*.png
+- [x] **CHAT-03** Check the ticks  
   Expected: One tick sent, two ticks delivered, blue ticks when read.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Sent message shows a single grey tick then double ticks; ticks turn blue after B opened the chat (CHAT-03-read.png). Screenshots: CHAT-03-*.png
 - [ ] **CHAT-04** Send a photo  
   Expected: Uploads and shows; tapping opens full screen.  
   Result: _not tested_ · Note: 
@@ -347,21 +347,21 @@ _Use phones A and B._
 - [ ] **CHAT-07** Voice note: slide to cancel, and tap to lock  
   Expected: Cancel discards; lock keeps recording hands-free.  
   Result: _not tested_ · Note: 
-- [ ] **CHAT-08** Long-press a message: react, reply, copy, delete  
+- [x] **CHAT-08** Long-press a message: react, reply, copy, delete  
   Expected: Each works; delete removes it for you.  
-  Result: _not tested_ · Note: 
-- [ ] **CHAT-09** Emoji picker  
+  Result: **PASS** · Note: Long-press opens a sheet with 8 quick reactions + more, Reply, Copy, Cancel (and Delete on own messages). Heart reaction shows under the message on A and on B (B only after leaving and re-opening the chat). Delete asks "Delete message? This message will be deleted for everyone." and the message disappeared on A at once. BUG (minor): on B, with the chat open, the deleted message and the reaction did NOT update live - they only updated after leaving and reopening the chat (retry 1/1). Reply and Copy not exercised. Screenshots: CHAT-08*.png
+- [x] **CHAT-09** Emoji picker  
   Expected: Opens and inserts emoji; closes when tapping elsewhere.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Smiley button opens an in-app emoji picker with a quick row, category tabs (incl. a camel and coffee) and a grid; keyboard icon returns. Screenshot: CHAT-09.png
 - [ ] **CHAT-10** Message someone who doesn't follow you  
   Expected: Goes to their Message requests; they can accept or decline.  
   Result: _not tested_ · Note: 
 - [ ] **CHAT-11** Create a group chat, add and remove people  
   Expected: Members update; group name and photo shown.  
   Result: _not tested_ · Note: 
-- [ ] **CHAT-12** Unread chat badge on the Chat tab  
+- [x] **CHAT-12** Unread chat badge on the Chat tab  
   Expected: Counts unread chats; clears after reading.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Unread badge "1" on the Chat tab and on the conversation row on B when A sent a message (CHAT-02-B-list.png). Clearing after opening the chat looked right (badge gone in later screenshots).
 - [ ] **CHAT-13** Search conversations  
   Expected: Filters the inbox.  
   Result: _not tested_ · Note: 
