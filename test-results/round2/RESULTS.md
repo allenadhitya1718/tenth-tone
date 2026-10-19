@@ -20,7 +20,8 @@ Build: APK from run 39224436812 (commit 18a22bc). Emulators A (@devesh19) and B 
 | R1-BLOCKED | Round-1 blocked checks (91) | NOT RUN | Not re-run this session; most need a second signed-in account plus seeded data and time |
 | REAL-PHONE | Camera quality, push, background mic, voice notes, filters, torch | NEEDS REAL PHONE | Emulator limits, as in round 1 |
 
-## Summary (updated)
-Pass 7 (EN rude comments rejected, normal comment, missed-call return, Story from Create, Story from profile, place picker, tag picker), Fail 3 (Discover map, Wallet earnings/payouts, Current location), Blocked 8 (Arabic comment, sign-up/forgot-password code, sound count, reactivation, appeals, drafts, post with place/tag), Not run: the 91 round-1 blocked checks. Needs real phone: camera quality, push, background mic, voice notes, filters, torch.
-
-Login/sign-up screens (welcome, login, forgot password, sign-up steps 1-2, post-login) are in the separate folder login-flow next to the repo (not committed).
+## Summary (final for this session)
+Pass 12, Fail 3 (Discover map, Wallet earnings/payouts, place picker Current location), Blocked 8, Not run: remaining round-1 blocked checks listed above plus message-request Delete.
+Newly verified this pass (A and B): follow/unfollow with counts on both sides, opening another profile, non-follower message goes to Requests, accept + reply, stories from Create and from the profile photo, place and tag pickers, EN comment filter.
+Needs real phone: camera quality, push, background mic, voice notes, filters, torch, Current location, Maps.
+Login/sign-up screens are in D:\Downloads\FLYP\login-flow (outside the repo).
