@@ -11,15 +11,16 @@ import { useTheme } from '@/providers/ThemeProvider';
 // pre-login screens, which stay light whatever the theme (as on the web app).
 // With nine languages a row of buttons no longer fits, so the pill shows the
 // current one and opens a list.
-export function LanguageSwitch({ onLight }: { onLight?: boolean }) {
+export function LanguageSwitch({ onLight, onDark }: { onLight?: boolean; onDark?: boolean }) {
   const { i18n } = useTranslation();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const current = LANGUAGES.find((l) => l.code === i18n.language) ?? LANGUAGES[0];
-  const wrapBg = onLight ? 'rgba(20,20,26,0.06)' : colors.bg2;
-  const wrapBorder = onLight ? 'rgba(20,20,26,0.08)' : colors.border;
-  const fg = onLight ? '#2b2b36' : colors.text;
+  // `onDark` is for the dark entry screens, which ignore the theme.
+  const wrapBg = onDark ? 'rgba(255,255,255,0.08)' : onLight ? 'rgba(20,20,26,0.06)' : colors.bg2;
+  const wrapBorder = onDark ? 'rgba(255,255,255,0.15)' : onLight ? 'rgba(20,20,26,0.08)' : colors.border;
+  const fg = onDark ? '#FFFFFF' : onLight ? '#2b2b36' : colors.text;
 
   return (
     <>
