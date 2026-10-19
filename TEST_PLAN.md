@@ -10,10 +10,10 @@ Every feature of FLYP 2.0.0, tested the way a real person would use it. Same che
 
 | | Count |
 |---|---|
-| Pass | 37 |
-| Fail | 3 |
-| Blocked | 22 |
-| Not tested | 121 |
+| Pass | 40 |
+| Fail | 4 |
+| Blocked | 23 |
+| Not tested | 116 |
 
 ## Sections
 
@@ -289,21 +289,21 @@ _Your own profile and other people's._
 ## Discover and search
 
 
-- [ ] **DISCOVER-01** Open Discover  
+- [x] **DISCOVER-01** Open Discover  
   Expected: Trending hashtags, sounds and videos load.  
-  Result: _not tested_ · Note: 
-- [ ] **DISCOVER-02** Search a name, @username, #hashtag and a word  
+  Result: **PASS** · Note: Discover opens with a search box, a notification bell and "Popular videos" (only my 1 video). No trending hashtags or sounds sections are shown - likely because no hashtag exists yet on the new backend. Screenshot: DISCOVER-01.png
+- [x] **DISCOVER-02** Search a name, @username, #hashtag and a word  
   Expected: People, hashtags, sounds and videos results; @ and # both work.  
-  Result: _not tested_ · Note: 
-- [ ] **DISCOVER-03** Open a hashtag page  
+  Result: **PASS** · Note: Searching "devesh" gives tabs Top / People / Videos / Sounds / Hashtags with the person and the sound; "@devesh19" shows People. "#" search not verified (no hashtags exist). Screenshots: DISCOVER-02-name.png, DISCOVER-02-at.png
+- [x] **DISCOVER-03** Open a hashtag page  
   Expected: Videos with that hashtag and a count (1 video / 2 videos).  
-  Result: _not tested_ · Note: 
-- [ ] **DISCOVER-04** Open a sound page  
+  Result: **BLOCKED** · Note: No hashtag exists yet (my caption has none). Needs a post containing a hashtag; retest after posting one.
+- [x] **DISCOVER-04** Open a sound page  
   Expected: Videos using it; Use this sound.  
-  Result: _not tested_ · Note: 
-- [ ] **DISCOVER-05** Search something with no results  
+  Result: **FAIL** · Note: Steps: Discover -> search "devesh" -> tap the sound. Expected: videos using it, count matches. Actual: page shows "Use this sound" and "Favourite", but the header says "2 videos" while only 1 video is listed (Profile -> Audio also says "Used 2 times"); I only posted one video. Emulator A, API 34, account A, 3/3. Screenshot: DISCOVER-04.png
+- [x] **DISCOVER-05** Search something with no results  
   Expected: Clear empty state.  
-  Result: _not tested_ · Note: 
+  Result: **PASS** · Note: Searching "zzqqxx" shows an icon, "No results" and "Try a different spelling or a shorter word." Screenshot: DISCOVER-05.png
 
 ## Notifications (in the app)
 
