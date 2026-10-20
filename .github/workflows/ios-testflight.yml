@@ -75,6 +75,22 @@ jobs:
           EXPO_APPLE_TEAM_TYPE: COMPANY_OR_ORGANIZATION
         run: eas build --platform ios --profile production --local --non-interactive --output ${{ github.workspace }}/flyp.ipa
 
+      # eas submit only takes an App Store Connect key from eas.json when it runs
+      # unattended, so the key's location and ids are added to the runner's copy
+      # of eas.json here (never committed).
+      - name: Point eas submit at the API key
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          KEY_PATH: ${{ runner.temp }}/asc_api_key.p8
+        run: |
+          node -e '
+            const fs = require("fs");
+            const e = JSON.parse(fs.readFileSync("eas.json", "utf8"));
+            e.submit.production.ios = { ...e.submit.production.ios, ascApiKeyPath: process.env.KEY_PATH, ascApiKeyId: process.env.KEY_ID, ascApiKeyIssuerId: process.env.ISSUER_ID };
+            fs.writeFileSync("eas.json", JSON.stringify(e, null, 2));
+          '
+
       - name: Upload to TestFlight
         env:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc_api_key.p8

@@ -1,0 +1,54 @@
+# Upload an already-built FLYP .ipa to TestFlight without rebuilding: give it
+# the run id of an "iOS TestFlight" run whose flyp-ios-ipa artifact you want.
+name: iOS submit only
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Run id of the iOS TestFlight build that produced flyp-ios-ipa'
+        required: true
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.0
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: flyp-ios-ipa
+          run-id: ${{ github.event.inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: ${{ runner.temp }}/ipa
+
+      - name: Write App Store Connect API key and point eas submit at it
+        env:
+          KEY_B64: ${{ secrets.APP_STORE_CONNECT_KEY_BASE64 }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          KEY_PATH: ${{ runner.temp }}/asc_api_key.p8
+        run: |
+          printf '%s' "$KEY_B64" | base64 --decode > "$KEY_PATH"
+          node -e '
+            const fs = require("fs");
+            const e = JSON.parse(fs.readFileSync("eas.json", "utf8"));
+            e.submit.production.ios = { ...e.submit.production.ios, ascApiKeyPath: process.env.KEY_PATH, ascApiKeyId: process.env.KEY_ID, ascApiKeyIssuerId: process.env.ISSUER_ID };
+            fs.writeFileSync("eas.json", JSON.stringify(e, null, 2));
+          '
+
+      - name: Upload to TestFlight
+        run: eas submit --platform ios --profile production --path "$RUNNER_TEMP/ipa/flyp.ipa" --non-interactive
