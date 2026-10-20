@@ -11,6 +11,12 @@ import { useAuth } from '@/providers/AuthProvider';
 
 type FeedData = InfiniteData<Video[], number>;
 
+// Videos deleted in this session. A pinned clip (opened from a profile grid,
+// a notification or a link) that was just deleted must not turn into the
+// "Video not found" page: FeedList drops such a pin and shows the feed.
+const deletedIds = new Set<string>();
+export const wasDeletedHere = (id: string) => deletedIds.has(id);
+
 // "Delete video" for the owner's own posts: confirm, delete (row + R2 media,
 // see deleteVideo), then take it out of every cache that shows it. Returns
 // the confirm function plus the id currently being deleted (loading state).
@@ -29,6 +35,7 @@ export function useDeleteVideo(onDeleted?: (id: string) => void) {
       setBusyId(id);
       try {
         await deleteVideo(id);
+        deletedIds.add(id);
         for (const tab of ['foryou', 'following'] as const) {
           qc.setQueryData<FeedData>(videoKeys.feed(tab), (data) =>
             data ? { ...data, pages: data.pages.map((p) => p.filter((v) => v.id !== id)) } : data,

@@ -12,12 +12,15 @@ import {
   View,
 } from 'react-native';
 
+import { fetchProfile, profileKeys } from '@/api/profiles';
 import type { Video } from '@/api/types';
 import { type FeedTab, fetchVideo, videoKeys } from '@/api/videos';
 import { NotFoundState } from '@/components/NotFoundState';
 import { Button } from '@/components/ui';
+import { useAuth } from '@/providers/AuthProvider';
 
 import { useFeed } from './useFeed';
+import { wasDeletedHere } from './useDeleteVideo';
 import { VideoCard } from './VideoCard';
 
 type ViewToken = { isViewable: boolean; index?: number | null };
@@ -31,7 +34,7 @@ export type Pin = { id: string; at: string };
 // web app had to rebuild by hand on top of scroll-snap.
 export function FeedList({
   tab,
-  pin,
+  pin: pinProp,
   height,
   focused,
   muted,
@@ -46,6 +49,9 @@ export function FeedList({
   onToggleMute: () => void;
 }) {
   const { t } = useTranslation();
+  // A pinned clip the user has just deleted is dropped (the normal feed
+  // shows) rather than turning into "Video not found".
+  const pin = pinProp && !wasDeletedHere(pinProp.id) ? pinProp : undefined;
   const q = useFeed(tab);
   const [index, setIndex] = useState(0);
   const list = useRef<FlatList<Video>>(null);
@@ -55,6 +61,16 @@ export function FeedList({
     enabled: !!pin,
   });
   const feed = q.data?.pages;
+  // An empty Following tab: "follow people" only when you follow nobody;
+  // when you do but none of them has posted, say that instead (run 9).
+  const { session } = useAuth();
+  const me = session?.user.id;
+  const followsSomeone = useQuery({
+    queryKey: profileKeys.profile(me ?? ''),
+    queryFn: () => fetchProfile(me),
+    enabled: tab === 'following' && !!me && q.isSuccess && !(feed?.some((p) => p.length) ?? false),
+    select: (p) => (p?.following_count ?? 0) > 0,
+  });
   const videos = useMemo(() => {
     const all = feed?.flat() ?? [];
     const first = pin && pinned.data?.id === pin.id ? pinned.data : null;
@@ -122,7 +138,9 @@ export function FeedList({
   if (!videos.length) {
     return (
       <View style={[styles.center, { height }]}>
-        <Text style={styles.msg}>{t(tab === 'following' ? 'feed.emptyFollowing' : 'feed.empty')}</Text>
+        <Text style={styles.msg}>
+          {t(tab !== 'following' ? 'feed.empty' : followsSomeone.data ? 'polish.feed.followingNoPosts' : 'feed.emptyFollowing')}
+        </Text>
       </View>
     );
   }

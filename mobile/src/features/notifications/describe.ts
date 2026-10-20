@@ -102,7 +102,7 @@ function describeSystem(p: Record<string, unknown>, kind: string): Described {
     case 'live_ended':
       return {
         key: 'liveEnded',
-        params: { duration: duration(Number(p.seconds) || 0), peak: Number(p.peak) || 0 },
+        params: { duration: duration(Number(p.seconds) || 0), count: Number(p.peak) || 0, peak: Number(p.peak) || 0 },
         withActor: false,
         icon: 'radio',
       };

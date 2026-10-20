@@ -46,9 +46,10 @@ const Thumbs: typeof import('./thumbs') | null = FilteredMod
   : null;
 
 const MAX_SECONDS = 60;
-const BIT_RATE = 6_000_000;
-// The front sensor is softer, so it gets more bits to keep what detail there
-// is. 7 Mbps * 60 s is ~53 MB, still under the 60 MB upload ceiling.
+// Both cameras record at the most the upload ceiling allows: the native camera
+// passes this to CameraX as-is (it replaces the phone's CamcorderProfile rate),
+// and 7 Mbps * 60 s is ~53 MB, still under the 60 MB upload ceiling.
+const BIT_RATE = 7_000_000;
 const FRONT_BIT_RATE = 7_000_000;
 // If the Skia preview has not delivered a frame by then, fall back a step.
 const SKIA_FIRST_FRAME_MS = 4000;
@@ -57,6 +58,9 @@ const NATIVE_FIRST_FRAME_MS = 5000;
 // Strip geometry, also used by getItemLayout so scrollToIndex is exact.
 const ITEM_WIDTH = 62;
 const ITEM_GAP = 14;
+// Space before the first and after the last thumbnail (start/end, so RTL
+// mirrors it).
+const STRIP_PAD = 20;
 // A horizontal swipe on the preview this far (or this fast) changes the look.
 const SWIPE_DISTANCE = 50;
 const SWIPE_VELOCITY = 500;
@@ -340,14 +344,24 @@ export function CameraScreen() {
     [recording, baking, panel, look, fx, selectLook, selectFx],
   );
 
-  // Keep the active thumbnail of the open strip centred in it.
+  // Keep the active thumbnail of the open strip centred in it. The scroll
+  // waits for the strip's own layout: scrollToIndex with viewPosition 0.5
+  // ran before the list knew its width, so it centred the item on x = 0 and
+  // left it half off the start edge (run 9). The offset is worked out here
+  // from the measured width and clamped to the scrollable range.
   const stripFocus = panel === 'effects' ? (fx ? `fx:${fx}` : 'none') : look !== 'normal' ? `look:${look}` : 'none';
+  const [stripLayout, setStripLayout] = useState<{ panel: Panel; width: number } | null>(null);
+  const stripWidth = stripLayout && stripLayout.panel === panel ? stripLayout.width : 0;
   useEffect(() => {
-    if (!panel) return;
+    if (!panel || !stripWidth) return;
     const list = panel === 'effects' ? FX_STRIP : FILTER_STRIP;
     const i = list.findIndex((s) => s.key === stripFocus);
-    if (i >= 0) strip.current?.scrollToIndex({ index: Math.min(i, list.length - 1), viewPosition: 0.5, animated: true });
-  }, [stripFocus, panel]);
+    if (i < 0) return;
+    const content = STRIP_PAD * 2 + list.length * ITEM_WIDTH + (list.length - 1) * ITEM_GAP;
+    const centre = STRIP_PAD + i * (ITEM_WIDTH + ITEM_GAP) + ITEM_WIDTH / 2;
+    const offset = Math.max(0, Math.min(content - stripWidth, centre - stripWidth / 2));
+    strip.current?.scrollToOffset({ offset, animated: true });
+  }, [stripFocus, panel, stripWidth]);
 
   // Swipe left for the next look, right for the previous (mirrored in RTL,
   // where the strip runs the other way). Stops at either end like Instagram.
@@ -717,8 +731,12 @@ export function CameraScreen() {
             style={styles.stripWrap}
             key={openPanel}
             extraData={stripFocus + look + String(fx) + Object.keys(thumbs).length}
-            getItemLayout={(_, index) => ({ length: ITEM_WIDTH + ITEM_GAP, offset: 16 + index * (ITEM_WIDTH + ITEM_GAP), index })}
+            getItemLayout={(_, index) => ({ length: ITEM_WIDTH + ITEM_GAP, offset: STRIP_PAD + index * (ITEM_WIDTH + ITEM_GAP), index })}
             onScrollToIndexFailed={() => {}}
+            onLayout={(e) => {
+              const width = e.nativeEvent.layout.width;
+              if (openPanel) setStripLayout((l) => (l && l.panel === openPanel && l.width === width ? l : { panel: openPanel, width }));
+            }}
             ItemSeparatorComponent={StripGap}
             renderItem={({ item }) => {
               const on = item.kind === 'none' ? (openPanel === 'effects' ? fx == null : look === 'normal') : item.kind === 'fx' ? item.id === fx : item.id === look;
@@ -926,7 +944,7 @@ const styles = StyleSheet.create({
   modeTextOn: { color: '#fff', fontWeight: '800' },
   modeDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#fff' },
   stripWrap: { alignSelf: 'stretch', flexGrow: 0 },
-  strip: { paddingHorizontal: 16 },
+  strip: { paddingStart: STRIP_PAD, paddingEnd: STRIP_PAD },
   filterItem: { alignItems: 'center', width: ITEM_WIDTH, gap: 4 },
   swatch: { width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)', overflow: 'hidden' },
   swatchOn: { borderWidth: 3, borderColor: '#fff', transform: [{ scale: 1.08 }] },

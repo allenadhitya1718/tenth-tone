@@ -4,9 +4,9 @@ import { useEventListener } from 'expo';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Animated, AppState, Platform, Pressable, Share, StyleSheet, Text, View, ScrollView } from 'react-native';
 
@@ -149,7 +149,19 @@ function Overlay({
   const [reportOpen, setReportOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [descLines, setDescLines] = useState(0);
-  const del = useDeleteVideo();
+  // After deleting a clip that was opened on its own (profile grid,
+  // notification, link: the Home route's `v` param), go to your profile,
+  // which is where the grid lives; the "Video deleted" toast comes from
+  // useDeleteVideo. Deleted from the normal feed, the next clip just plays.
+  const { v: pinnedId } = useLocalSearchParams<{ v?: string }>();
+  const del = useDeleteVideo(
+    useCallback(
+      (id: string) => {
+        if (pinnedId === id) router.replace('/profile');
+      },
+      [pinnedId],
+    ),
+  );
 
   function toggleLike(next = !video.liked) {
     if (next === video.liked) return;
@@ -337,12 +349,21 @@ function Overlay({
           )
         ) : null}
         <PostPlaceTags videoId={video.id} active={active} />
-        <View style={styles.soundRow}>
+        {/* The sound line opens the sound's page (its videos, "Use this
+            sound") when the clip has a sound row. */}
+        <Pressable
+          style={styles.soundRow}
+          onPress={video.sound_id ? () => router.push(`/sound/${video.sound_id}`) : undefined}
+          disabled={!video.sound_id}
+          hitSlop={8}
+          accessibilityRole={video.sound_id ? 'link' : 'text'}
+          accessibilityHint={video.sound_id ? t('polish.feed.openSoundHint') : undefined}
+        >
           <Ionicons name="musical-notes" size={13} color="#fff" />
           <Text style={styles.sound} numberOfLines={1}>
             {video.music || t('feed.originalSound', { handle: video.user?.handle ?? '' })}
           </Text>
-        </View>
+        </Pressable>
       </View>
     </View>
   );
@@ -425,6 +446,6 @@ const styles = StyleSheet.create({
   descProbe: { position: 'absolute', start: 0, end: 0, opacity: 0 },
   descScroll: { maxHeight: 200 },
   descMore: { color: 'rgba(255,255,255,0.78)', fontSize: 14, lineHeight: 20, fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 4 },
-  soundRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  soundRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2, alignSelf: 'flex-start' },
   sound: { color: '#fff', fontSize: 13, flexShrink: 1 },
 });

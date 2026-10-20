@@ -261,16 +261,29 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
     );
   }
 
+  // a11y: the sheet is a transparent modal route over the feed. The root
+  // must not be collapsed away and the panel is the modal region (iOS
+  // accessibilityViewIsModal); the feed underneath hides itself from
+  // accessibility while it is blurred (HomeFeed). The dimmed backdrop is a
+  // duplicate of the header's close button, so it is left out of the tree.
   return (
-    <View style={styles.backdrop}>
-    <Pressable style={{ flex: 1 }} onPress={() => router.back()} accessibilityLabel={t('legal.close')} />
+    <View style={styles.backdrop} collapsable={false} importantForAccessibility="auto">
+    <Pressable
+      style={{ flex: 1 }}
+      onPress={() => router.back()}
+      accessible={false}
+      importantForAccessibility="no"
+      accessibilityElementsHidden
+    />
     <SafeAreaView
       style={[styles.panel, { height: Math.min(height * 0.75, height - kbHeight - 120), marginBottom: kbHeight, backgroundColor: colors.bg }]}
       edges={kbHeight ? [] : ['bottom']}
+      accessibilityViewIsModal
+      collapsable={false}
     >
       <View style={[styles.grabber, { backgroundColor: colors.muted2 }]} />
       <View style={[styles.header, { borderBottomColor: colors.border }]} onTouchStart={closeInputs}>
-        <Text style={[styles.title, { color: colors.text }]}>
+        <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
           {t('comments.title', { count: comments.length })}
         </Text>
         <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('legal.close')}>

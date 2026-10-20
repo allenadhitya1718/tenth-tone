@@ -32,7 +32,10 @@ const MAX_LEN = 2000;
 // How far the finger travels toward the start edge before the note is dropped.
 const CANCEL_PX = 110;
 // How far the finger travels up before the recording locks (hands-free).
-const LOCK_PX = 80;
+// 80 dp was too far: a 75 dp slide released early sent the note (run 9).
+// 50 dp locks sooner; the lock pill grows as the finger rises so the target
+// is obvious before it is reached. Release below it still sends.
+const LOCK_PX = 50;
 const MIC_ACTIONS = [{ name: 'activate' as const }];
 
 type Props = {
@@ -226,6 +229,7 @@ export const Composer = memo(function Composer({
     extrapolate: 'clamp',
   });
   const lockLift = lift.interpolate({ inputRange: [0, LOCK_PX], outputRange: [0, -LOCK_PX * 0.7], extrapolate: 'clamp' });
+  const lockGrow = lift.interpolate({ inputRange: [0, LOCK_PX], outputRange: [1, 1.25], extrapolate: 'clamp' });
   const hintFade = slide.interpolate({ inputRange: [0, CANCEL_PX], outputRange: [1, 0.2], extrapolate: 'clamp' });
 
   const hasText = text.trim().length > 0;
@@ -393,7 +397,7 @@ export const Composer = memo(function Composer({
           <Animated.View
             pointerEvents="none"
             importantForAccessibility="no-hide-descendants"
-            style={[styles.lockPill, { backgroundColor: colors.bg2, borderColor: colors.border, transform: [{ translateY: lockLift }] }]}
+            style={[styles.lockPill, { backgroundColor: colors.bg2, borderColor: colors.border, transform: [{ translateY: lockLift }, { scale: lockGrow }] }]}
           >
             <Ionicons name={lockArmed ? 'lock-closed' : 'lock-open-outline'} size={18} color={lockArmed ? colors.primary2 : colors.muted} />
             <Ionicons name="chevron-up" size={14} color={colors.muted} />

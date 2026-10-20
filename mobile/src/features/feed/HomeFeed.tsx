@@ -41,7 +41,16 @@ export function HomeFeed({ pin }: { pin?: Pin }) {
   }, [pinKey]);
 
   return (
-    <View style={styles.root} onLayout={(e) => setHeight(e.nativeEvent.layout.height)}>
+    // While a sheet route (comments, share...) is open over the feed this
+    // screen is blurred: hide it from TalkBack / VoiceOver (and uiautomator)
+    // so the sheet on top is what accessibility services read, not the
+    // playing video underneath.
+    <View
+      style={styles.root}
+      onLayout={(e) => setHeight(e.nativeEvent.layout.height)}
+      importantForAccessibility={screenFocused ? 'auto' : 'no-hide-descendants'}
+      accessibilityElementsHidden={!screenFocused}
+    >
       <PagerView
         ref={pager}
         style={StyleSheet.absoluteFill}

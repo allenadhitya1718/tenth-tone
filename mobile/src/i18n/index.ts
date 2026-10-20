@@ -53,6 +53,15 @@ import fix4Fr from './locales/features/fix4.fr.json';
 import fix4Es from './locales/features/fix4.es.json';
 import fix4Tr from './locales/features/fix4.tr.json';
 import fix4Id from './locales/features/fix4.id.json';
+import polishAr from './locales/features/polish.ar.json';
+import polishEn from './locales/features/polish.en.json';
+import polishZh from './locales/features/polish.zh.json';
+import polishHi from './locales/features/polish.hi.json';
+import polishUr from './locales/features/polish.ur.json';
+import polishFr from './locales/features/polish.fr.json';
+import polishEs from './locales/features/polish.es.json';
+import polishTr from './locales/features/polish.tr.json';
+import polishId from './locales/features/polish.id.json';
 import zh from './locales/zh.json';
 import hi from './locales/hi.json';
 import ur from './locales/ur.json';
@@ -152,15 +161,15 @@ import draftsId from './locales/features/drafts.id.json';
 // Each feature keeps its strings in its own namespace file
 // (locales/features/<name>.<lang>.json, top-level key = the namespace), so
 // features can be worked on without editing one shared file.
-const AR = { ...ar, ...chatAr, ...discoverAr, ...liveAr, ...mapAr, ...settings2Ar, ...storiesAr, ...hashtagsAr, ...walkieAr, ...callAr, ...camera2Ar, ...notifyAr, ...draftsAr, ...placeAr, ...ugcAr, ...fix4Ar };
-const EN = { ...en, ...chatEn, ...discoverEn, ...liveEn, ...mapEn, ...settings2En, ...storiesEn, ...hashtagsEn, ...walkieEn, ...callEn, ...camera2En, ...notifyEn, ...draftsEn, ...placeEn, ...ugcEn, ...fix4En };
-const ZH = { ...zh, ...chatZh, ...discoverZh, ...liveZh, ...mapZh, ...settings2Zh, ...storiesZh, ...notifyZh, ...hashtagsZh, ...walkieZh, ...callZh, ...camera2Zh, ...draftsZh, ...placeZh, ...ugcZh, ...fix4Zh };
-const HI = { ...hi, ...chatHi, ...discoverHi, ...liveHi, ...mapHi, ...settings2Hi, ...storiesHi, ...notifyHi, ...hashtagsHi, ...walkieHi, ...callHi, ...camera2Hi, ...draftsHi, ...placeHi, ...ugcHi, ...fix4Hi };
-const UR = { ...ur, ...chatUr, ...discoverUr, ...liveUr, ...mapUr, ...settings2Ur, ...storiesUr, ...notifyUr, ...hashtagsUr, ...walkieUr, ...callUr, ...camera2Ur, ...draftsUr, ...placeUr, ...ugcUr, ...fix4Ur };
-const FR = { ...fr, ...chatFr, ...discoverFr, ...liveFr, ...mapFr, ...settings2Fr, ...storiesFr, ...notifyFr, ...hashtagsFr, ...walkieFr, ...callFr, ...camera2Fr, ...draftsFr, ...placeFr, ...ugcFr, ...fix4Fr };
-const ES = { ...es, ...chatEs, ...discoverEs, ...liveEs, ...mapEs, ...settings2Es, ...storiesEs, ...notifyEs, ...hashtagsEs, ...walkieEs, ...callEs, ...camera2Es, ...draftsEs, ...placeEs, ...ugcEs, ...fix4Es };
-const TR = { ...tr, ...chatTr, ...discoverTr, ...liveTr, ...mapTr, ...settings2Tr, ...storiesTr, ...notifyTr, ...hashtagsTr, ...walkieTr, ...callTr, ...camera2Tr, ...draftsTr, ...placeTr, ...ugcTr, ...fix4Tr };
-const ID = { ...id, ...chatId, ...discoverId, ...liveId, ...mapId, ...settings2Id, ...storiesId, ...notifyId, ...hashtagsId, ...walkieId, ...callId, ...camera2Id, ...draftsId, ...placeId, ...ugcId, ...fix4Id };
+const AR = { ...ar, ...chatAr, ...discoverAr, ...liveAr, ...mapAr, ...settings2Ar, ...storiesAr, ...hashtagsAr, ...walkieAr, ...callAr, ...camera2Ar, ...notifyAr, ...draftsAr, ...placeAr, ...ugcAr, ...fix4Ar, ...polishAr };
+const EN = { ...en, ...chatEn, ...discoverEn, ...liveEn, ...mapEn, ...settings2En, ...storiesEn, ...hashtagsEn, ...walkieEn, ...callEn, ...camera2En, ...notifyEn, ...draftsEn, ...placeEn, ...ugcEn, ...fix4En, ...polishEn };
+const ZH = { ...zh, ...chatZh, ...discoverZh, ...liveZh, ...mapZh, ...settings2Zh, ...storiesZh, ...notifyZh, ...hashtagsZh, ...walkieZh, ...callZh, ...camera2Zh, ...draftsZh, ...placeZh, ...ugcZh, ...fix4Zh, ...polishZh };
+const HI = { ...hi, ...chatHi, ...discoverHi, ...liveHi, ...mapHi, ...settings2Hi, ...storiesHi, ...notifyHi, ...hashtagsHi, ...walkieHi, ...callHi, ...camera2Hi, ...draftsHi, ...placeHi, ...ugcHi, ...fix4Hi, ...polishHi };
+const UR = { ...ur, ...chatUr, ...discoverUr, ...liveUr, ...mapUr, ...settings2Ur, ...storiesUr, ...notifyUr, ...hashtagsUr, ...walkieUr, ...callUr, ...camera2Ur, ...draftsUr, ...placeUr, ...ugcUr, ...fix4Ur, ...polishUr };
+const FR = { ...fr, ...chatFr, ...discoverFr, ...liveFr, ...mapFr, ...settings2Fr, ...storiesFr, ...notifyFr, ...hashtagsFr, ...walkieFr, ...callFr, ...camera2Fr, ...draftsFr, ...placeFr, ...ugcFr, ...fix4Fr, ...polishFr };
+const ES = { ...es, ...chatEs, ...discoverEs, ...liveEs, ...mapEs, ...settings2Es, ...storiesEs, ...notifyEs, ...hashtagsEs, ...walkieEs, ...callEs, ...camera2Es, ...draftsEs, ...placeEs, ...ugcEs, ...fix4Es, ...polishEs };
+const TR = { ...tr, ...chatTr, ...discoverTr, ...liveTr, ...mapTr, ...settings2Tr, ...storiesTr, ...notifyTr, ...hashtagsTr, ...walkieTr, ...callTr, ...camera2Tr, ...draftsTr, ...placeTr, ...ugcTr, ...fix4Tr, ...polishTr };
+const ID = { ...id, ...chatId, ...discoverId, ...liveId, ...mapId, ...settings2Id, ...storiesId, ...notifyId, ...hashtagsId, ...walkieId, ...callId, ...camera2Id, ...draftsId, ...placeId, ...ugcId, ...fix4Id, ...polishId };
 
 // Every language the app offers (client note 14). `native` is the name in
 // its own script, `english` the name shown beside it for anyone who cannot

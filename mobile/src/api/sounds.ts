@@ -93,7 +93,7 @@ export async function fetchSound(soundId: Uuid): Promise<Sound | null> {
 export async function fetchSoundVideos(soundId: Uuid, limit = 60): Promise<VideoTile[]> {
   const { data, error } = await supabase
     .from('videos')
-    .select('id, description, thumbnail, video_url, likes_count, created_at')
+    .select('id, description, thumbnail, video_url, likes_count, views_count, created_at')
     .eq('sound_id', soundId)
     .eq('is_draft', false)
     .eq('is_hidden', false)
@@ -171,7 +171,7 @@ export async function fetchHashtagVideos(tag: string, limit = 60): Promise<Video
     // Before 0025 there is no join table: fall back to the caption search.
     const { data } = await supabase
       .from('videos')
-      .select('id, description, thumbnail, video_url, likes_count, created_at')
+      .select('id, description, thumbnail, video_url, likes_count, views_count, created_at')
       .ilike('description', `%#${clean}%`)
       .eq('is_draft', false)
       .limit(limit);

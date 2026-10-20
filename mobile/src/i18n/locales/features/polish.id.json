@@ -1,0 +1,42 @@
+{
+  "polish": {
+    "mute": {
+      "onAction": "Bisukan",
+      "offAction": "Batalkan bisukan",
+      "onHint": "Sembunyikan videonya dari feed kamu. Dia tidak diberi tahu.",
+      "offHint": "Videonya bisa muncul lagi di feed kamu.",
+      "onTitle": "Bisukan {{name}}?",
+      "onBody": "Videonya tidak akan muncul di feed kamu. Kamu tetap mengikutinya dan dia tidak diberi tahu. Kamu bisa membatalkannya di sini atau di Pengaturan > Akun yang dibisukan.",
+      "onConfirm": "Bisukan",
+      "onDone": "{{name}} dibisukan",
+      "offTitle": "Batalkan bisukan {{name}}?",
+      "offBody": "Videonya bisa muncul lagi di feed kamu.",
+      "offConfirm": "Batalkan bisukan",
+      "offDone": "{{name}} tidak lagi dibisukan",
+      "failed": "Tidak bisa memperbarui. Coba lagi."
+    },
+    "restrict": {
+      "onAction": "Batasi",
+      "offAction": "Hapus batasan",
+      "onHint": "Komentarnya di videomu hanya terlihat olehnya, dan dia tidak bisa mengirimimu pesan.",
+      "offHint": "Komentar dan pesannya berfungsi normal lagi.",
+      "onTitle": "Batasi {{name}}?",
+      "onBody": "Dia tidak diberi tahu. Komentar barunya di videomu hanya terlihat olehnya, dan dia tidak bisa mengirimimu pesan. Kamu bisa membatalkannya di sini atau di Pengaturan > Akun yang dibatasi.",
+      "onConfirm": "Batasi",
+      "onDone": "{{name}} dibatasi",
+      "offTitle": "Hapus batasan {{name}}?",
+      "offBody": "Komentarnya di videomu akan terlihat oleh semua orang lagi, dan dia bisa mengirimimu pesan.",
+      "offConfirm": "Hapus batasan",
+      "offDone": "{{name}} tidak lagi dibatasi",
+      "failed": "Tidak bisa memperbarui. Coba lagi."
+    },
+    "caption": {
+      "tagList": "Saran tagar",
+      "tagUses_other": "{{n}} video"
+    },
+    "feed": {
+      "openSoundHint": "Membuka halaman suara",
+      "followingNoPosts": "Orang yang kamu ikuti belum memposting apa pun"
+    }
+  }
+}

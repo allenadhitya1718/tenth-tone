@@ -594,7 +594,7 @@ export async function unsave(videoId: Uuid): Promise<true> {
 }
 
 const EMBEDDED_TILE = `
-  id, description, thumbnail, video_url, likes_count, created_at,
+  id, description, thumbnail, video_url, likes_count, views_count, created_at,
   user:profiles!videos_user_id_fkey ( id, name, handle, avatar_url )
 `;
 

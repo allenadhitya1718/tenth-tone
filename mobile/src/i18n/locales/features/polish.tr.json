@@ -1,0 +1,43 @@
+{
+  "polish": {
+    "mute": {
+      "onAction": "Sessize al",
+      "offAction": "Sesini aç",
+      "onHint": "Videolarını akışlarından gizle. Kişiye bildirilmez.",
+      "offHint": "Videoları akışlarında yeniden görünebilir.",
+      "onTitle": "{{name}} sessize alınsın mı?",
+      "onBody": "Videoları akışlarında görünmez. Takip etmeye devam edersin ve kişiye bildirilmez. Bunu burada veya Ayarlar > Sessize alınan hesaplar bölümünde geri alabilirsin.",
+      "onConfirm": "Sessize al",
+      "onDone": "{{name}} sessize alındı",
+      "offTitle": "{{name}} için sessiz kaldırılsın mı?",
+      "offBody": "Videoları akışlarında yeniden görünebilir.",
+      "offConfirm": "Sesini aç",
+      "offDone": "{{name}} artık sessizde değil",
+      "failed": "Güncellenemedi. Tekrar dene."
+    },
+    "restrict": {
+      "onAction": "Kısıtla",
+      "offAction": "Kısıtlamayı kaldır",
+      "onHint": "Videolarına yaptığı yorumları yalnızca kendisi görür ve sana mesaj gönderemez.",
+      "offHint": "Yorumları ve mesajları yeniden normal çalışır.",
+      "onTitle": "{{name}} kısıtlansın mı?",
+      "onBody": "Kişiye bildirilmez. Videolarına yaptığı yeni yorumları yalnızca kendisi görür ve sana mesaj gönderemez. Bunu burada veya Ayarlar > Kısıtlanan hesaplar bölümünde geri alabilirsin.",
+      "onConfirm": "Kısıtla",
+      "onDone": "{{name}} kısıtlandı",
+      "offTitle": "{{name}} için kısıtlama kaldırılsın mı?",
+      "offBody": "Videolarına yaptığı yorumlar yeniden herkese görünür ve sana mesaj gönderebilir.",
+      "offConfirm": "Kısıtlamayı kaldır",
+      "offDone": "{{name}} artık kısıtlı değil",
+      "failed": "Güncellenemedi. Tekrar dene."
+    },
+    "caption": {
+      "tagList": "Hashtag önerileri",
+      "tagUses_one": "{{n}} video",
+      "tagUses_other": "{{n}} video"
+    },
+    "feed": {
+      "openSoundHint": "Ses sayfasını açar",
+      "followingNoPosts": "Takip ettiğin kişiler henüz bir şey paylaşmadı"
+    }
+  }
+}

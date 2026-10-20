@@ -22,6 +22,7 @@ import { PlacePicker } from '@/features/place/PlacePicker';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
+import { applyCaptionPick, CaptionSuggestions, captionToken } from './CaptionSuggestions';
 import { publishErrorKey } from './publishError';
 import { clearPendingSound, usePendingSound } from './pendingSound';
 import { Avatar, TagPeoplePicker } from './TagPeoplePicker';
@@ -155,7 +156,22 @@ export function PublishScreen({
     Alert.alert(t('place.refusedTitle'), lines.join('\n'));
   }
 
-  const insert = (s: string) => setCaption((c) => (c + (c && !c.endsWith(' ') ? ' ' : '') + s).slice(0, MAX_CAPTION));
+  // The # / @ chips append the sign; typing after it opens the suggestion
+  // list under the caption (CAMERA-14 "inserts and suggests").
+  const [cursor, setCursor] = useState(0);
+  const insert = (s: string) => {
+    const next = (caption + (caption && !caption.endsWith(' ') ? ' ' : '') + s).slice(0, MAX_CAPTION);
+    setCaption(next);
+    setCursor(next.length);
+  };
+  const token = captionToken(caption, cursor);
+  const pickSuggestion = (value: string) => {
+    if (!token) return;
+    const r = applyCaptionPick(caption, token, value, MAX_CAPTION);
+    if (!r) return;
+    setCaption(r.text);
+    setCursor(r.cursor);
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>
@@ -181,11 +197,13 @@ export function PublishScreen({
             <TextInput
               value={caption}
               onChangeText={(v) => setCaption(v.slice(0, MAX_CAPTION))}
+              onSelectionChange={(e) => setCursor(e.nativeEvent.selection.end)}
               placeholder={t('publish.captionPlaceholder')}
               placeholderTextColor={colors.muted}
               multiline
               style={[styles.caption, { color: colors.text, textAlign: I18nManager.isRTL ? 'right' : 'left' }]}
             />
+            <CaptionSuggestions token={busy ? null : token} onPick={pickSuggestion} />
             <View style={styles.chips}>
               <Chip label="# " text={t('publish.hashtag')} onPress={() => insert('#')} />
               <Chip label="@ " text={t('publish.mention')} onPress={() => insert('@')} />

@@ -112,7 +112,7 @@ export async function fetchTaggedVideos(userId: Uuid, limit = 60): Promise<Video
     .select(
       `created_at,
        video:videos!video_tags_video_id_fkey!inner (
-         id, description, thumbnail, video_url, likes_count, created_at,
+         id, description, thumbnail, video_url, likes_count, views_count, created_at,
          user:profiles!videos_user_id_fkey ( id, name, handle, avatar_url )
        )`,
     )

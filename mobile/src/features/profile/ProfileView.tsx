@@ -44,6 +44,7 @@ import { formatCount } from '@/features/feed/format';
 import { BottomSheet } from '@/features/safety/BottomSheet';
 import { ReportSheet } from '@/features/safety/ReportSheet';
 import { useBlock } from '@/features/safety/useBlock';
+import { useMuteRestrict } from '@/features/safety/useMuteRestrict';
 import { ProfileStoryAvatar } from '@/features/stories/ProfileStoryAvatar';
 import { atHandle } from '@/lib/handle';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -202,6 +203,9 @@ function ProfileHeader({ profile, userId, isMe, loading }: { profile: Profile | 
     setMenuOpen(false);
     if (await confirmBlock(userId, shownName)) router.back();
   }
+  // Mute (hide their videos from your feeds) and restrict (their comments on
+  // your videos are only shown to them, no messages); both reversible here.
+  const limits = useMuteRestrict(userId, !isMe && !!profile);
 
   return (
     <View>
@@ -243,6 +247,44 @@ function ProfileHeader({ profile, userId, isMe, loading }: { profile: Profile | 
             >
               <Ionicons name="flag-outline" size={22} color={colors.text} />
               <Text style={[styles.menuText, { color: colors.text }]}>{t('ugc.reportUser')}</Text>
+            </Pressable>
+            <Pressable
+              style={styles.menuRow}
+              accessibilityRole="button"
+              accessibilityHint={t(limits.isMuted ? 'polish.mute.offHint' : 'polish.mute.onHint')}
+              onPress={() => {
+                setMenuOpen(false);
+                void limits.toggleMute(shownName);
+              }}
+            >
+              <Ionicons name={limits.isMuted ? 'volume-high-outline' : 'volume-mute-outline'} size={22} color={colors.text} />
+              <View style={styles.menuTextCol}>
+                <Text style={[styles.menuText, { color: colors.text }]}>
+                  {t(limits.isMuted ? 'polish.mute.offAction' : 'polish.mute.onAction')}
+                </Text>
+                <Text style={[styles.menuSub, { color: colors.muted }]}>
+                  {t(limits.isMuted ? 'polish.mute.offHint' : 'polish.mute.onHint')}
+                </Text>
+              </View>
+            </Pressable>
+            <Pressable
+              style={styles.menuRow}
+              accessibilityRole="button"
+              accessibilityHint={t(limits.isRestricted ? 'polish.restrict.offHint' : 'polish.restrict.onHint')}
+              onPress={() => {
+                setMenuOpen(false);
+                void limits.toggleRestrict(shownName);
+              }}
+            >
+              <Ionicons name={limits.isRestricted ? 'lock-open-outline' : 'hand-left-outline'} size={22} color={colors.text} />
+              <View style={styles.menuTextCol}>
+                <Text style={[styles.menuText, { color: colors.text }]}>
+                  {t(limits.isRestricted ? 'polish.restrict.offAction' : 'polish.restrict.onAction')}
+                </Text>
+                <Text style={[styles.menuSub, { color: colors.muted }]}>
+                  {t(limits.isRestricted ? 'polish.restrict.offHint' : 'polish.restrict.onHint')}
+                </Text>
+              </View>
             </Pressable>
             <Pressable style={styles.menuRow} accessibilityRole="button" onPress={() => void onBlock()}>
               <Ionicons name="ban-outline" size={22} color="#ff453a" />
@@ -417,7 +459,9 @@ const styles = StyleSheet.create({
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 48 },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 16 },
-  menuText: { fontSize: 16, fontWeight: '600' },
+  menuText: { fontSize: 16, fontWeight: '600', textAlign: 'left' },
+  menuTextCol: { flex: 1 },
+  menuSub: { fontSize: 13, marginTop: 2, textAlign: 'left' },
   topHandle: { fontSize: 16, fontWeight: '800', flex: 1, textAlign: 'center' },
   top: { alignItems: 'center', paddingHorizontal: 20, paddingBottom: 14 },
   avatarWrap: { marginTop: 2 },

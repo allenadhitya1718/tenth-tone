@@ -94,7 +94,9 @@ export const VideoTileCell = memo(function VideoTileCell({
   const { t } = useTranslation();
   const { colors } = useTheme();
   const th = useThemed();
-  const count = formatCount(video.views_count ?? video.likes_count);
+  // Plays are views_count everywhere (Discover and search used to differ:
+  // search rows had no views_count and fell back to likes).
+  const count = formatCount(video.views_count ?? 0);
   return (
     <Pressable
       style={[size, th.tileBg]}
@@ -103,7 +105,7 @@ export const VideoTileCell = memo(function VideoTileCell({
         go(videoPath(video.id));
       }}
       accessibilityRole="button"
-      accessibilityLabel={[video.description?.trim() || t('discover.common.video'), t('discover.common.plays', { n: count, count: Number(video.views_count ?? video.likes_count ?? 0) })].join(', ')}
+      accessibilityLabel={[video.description?.trim() || t('discover.common.video'), t('discover.common.plays', { n: count, count: Number(video.views_count ?? 0) })].join(', ')}
     >
       {isImageUrl(video.thumbnail) ? (
         <Image source={{ uri: video.thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" recyclingKey={video.id} transition={120} />

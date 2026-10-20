@@ -51,6 +51,9 @@ export const NotificationRow = memo(function NotificationRow({
       <Pressable
         onPress={avatarTarget ? () => go(avatarTarget) : undefined}
         disabled={!avatarTarget}
+        // Without a target it is decoration: a Pressable is accessible by
+        // default and would otherwise announce the icon-font glyph.
+        accessible={!!avatarTarget}
         accessibilityRole={avatarTarget ? 'button' : undefined}
         accessibilityLabel={avatarTarget ? t('discover.notif.openProfile', { name: actorName }) : undefined}
         importantForAccessibility={avatarTarget ? 'yes' : 'no-hide-descendants'}

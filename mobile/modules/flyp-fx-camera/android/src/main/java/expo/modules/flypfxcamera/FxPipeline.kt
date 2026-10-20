@@ -59,8 +59,15 @@ void main() {
 }
 """
 
+// highp where the GPU has it: with mediump (fp16 on Adreno/Mali) a texture
+// coordinate near 1.0 only resolves ~1/2048, about one texel of a 1920-wide
+// frame, so every pixel was re-sampled half a texel off (a visible blur).
 private const val COPY_FRAGMENT = """#extension GL_OES_EGL_image_external : require
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
 uniform samplerExternalOES uTexSampler;
 uniform mat4 uTexMat;
 varying vec2 vTexSamplingCoord;
@@ -183,7 +190,9 @@ internal class FxProcessor(
   private var fragmentSource: String? = null
   private var fragmentDirty = false
   private var uniforms: FloatArray? = null // 24 floats: uA uBal uSh uHi uFx uBty
-  private var quality = 0 // 0 full, 1 lite shader, 2 lite shader and no beauty
+  // 0 full, 1 lite beauty/bloom taps, 2 lite and no beauty. Only ever changes
+  // the look shader's beauty and bloom; never the resolution or the plain copy.
+  private var quality = 0
 
   // Face effect state.
   private var fxIndex = -1
@@ -199,10 +208,16 @@ internal class FxProcessor(
   @Volatile var faceFrame: FaceFrame? = null
   @Volatile var geometry: OutputGeometry? = null
 
+  /** The camera stream the effect receives, and the buffer it draws (for the size log). */
+  @Volatile var inputSize: String? = null
+  @Volatile var outputSize: String? = null
+
   // Adaptive quality: average time a render call takes (it blocks when the GPU is behind).
   private var avgMs = 16f
   private var frames = 0
   private var slowStreak = 0
+  private var fastStreak = 0
+  private var recoverAfter = RECOVER_FRAMES
 
   private val reported = HashSet<String>()
 
@@ -261,6 +276,8 @@ internal class FxProcessor(
       val st = SurfaceTexture(tex[0])
       val size = request.resolution
       st.setDefaultBufferSize(size.width, size.height)
+      inputSize = "${size.width}x${size.height}"
+      Log.i(TAG, "effect input ${size.width}x${size.height}")
       val surface = Surface(st)
       val inp = Input(request, tex[0], st, surface)
       input = inp
@@ -289,6 +306,8 @@ internal class FxProcessor(
       if (es == null || es == EGL14.EGL_NO_SURFACE) throw IllegalStateException("eglCreateWindowSurface failed: 0x${Integer.toHexString(EGL14.eglGetError())}")
       val size = surfaceOutput.size
       val geo = OutputGeometry(surfaceOutput.sensorToBufferTransform, size.width, size.height)
+      outputSize = "${size.width}x${size.height}"
+      Log.i(TAG, "effect output ${size.width}x${size.height}")
       output?.let { destroyOutput(it) }
       output = Output(surfaceOutput, es, geo)
       geometry = geo
@@ -554,17 +573,45 @@ internal class FxProcessor(
     if (ids.isNotEmpty()) GLES20.glDeleteTextures(ids.size, ids, 0)
   }
 
-  /** Slow GPUs (Mali-G52 class) get the cheaper beauty/bloom, then no beauty, instead of dropping frames. */
+  /** True when the current look runs the taps quality can cut (beauty smoothing or bloom). */
+  private fun heavyLook(): Boolean {
+    val u = uniforms ?: return false
+    if (lookProg == null) return false
+    return u[UNIFORM_BEAUTY] > 0.001f || u[UNIFORM_BLOOM] > 0.001f
+  }
+
+  /**
+   * Slow GPUs (Mali-G52 / Adreno 610 class) get fewer beauty/bloom taps, then no
+   * beauty, instead of dropping frames; and get them back once the load drops.
+   * The plain picture and the cheap looks are never measured, since there is
+   * nothing to cut (a slow swap there used to push the level down for nothing).
+   * Each drop after a recovery waits twice as long before trying again, so it
+   * cannot flip-flop.
+   */
   private fun adapt(ms: Float) {
+    if (!heavyLook()) {
+      slowStreak = 0
+      fastStreak = 0
+      return
+    }
     frames++
     avgMs += (ms - avgMs) * 0.1f
     if (frames < 30) return
-    if (avgMs > 26f) slowStreak++ else slowStreak = 0
+    if (avgMs > SLOW_MS) slowStreak++ else slowStreak = 0
+    if (avgMs < FAST_MS) fastStreak++ else fastStreak = 0
     if (slowStreak > 45 && quality < 2) {
       quality++
       slowStreak = 0
+      fastStreak = 0
       avgMs = 16f
-      Log.w(TAG, "render is slow: quality level $quality")
+      Log.w(TAG, "render is slow (beauty/bloom only): quality level $quality")
+      if (fragmentSource != null) fragmentDirty = true
+    } else if (quality > 0 && fastStreak > recoverAfter) {
+      quality--
+      fastStreak = 0
+      slowStreak = 0
+      recoverAfter = (recoverAfter * 2).coerceAtMost(RECOVER_FRAMES_MAX)
+      Log.i(TAG, "render recovered: quality level $quality")
       if (fragmentSource != null) fragmentDirty = true
     }
   }
@@ -599,6 +646,17 @@ internal class FxProcessor(
 
 /** The uniforms JS sends, in this order (looks.ts LOOK_UNIFORM_NAMES without uDim and uT). */
 internal val LOOK_UNIFORMS = arrayOf("uA", "uBal", "uSh", "uHi", "uFx", "uBty")
+
+// Indexes into those 24 floats: uFx.z (bloom) and uBty.x (skin smoothing).
+private const val UNIFORM_BLOOM = 4 * 4 + 2
+private const val UNIFORM_BEAUTY = 5 * 4
+
+// A render call (it blocks while the GPU is behind) is "slow" above SLOW_MS on
+// average (a 30 fps frame is 33 ms) and has room again below FAST_MS.
+private const val SLOW_MS = 28f
+private const val FAST_MS = 18f
+private const val RECOVER_FRAMES = 300 // ~10 s at 30 fps
+private const val RECOVER_FRAMES_MAX = 3600
 
 /**
  * A cheaper variant of the shared look shader for slow GPUs: only the four

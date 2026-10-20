@@ -1,0 +1,43 @@
+{
+  "polish": {
+    "mute": {
+      "onAction": "Mute",
+      "offAction": "Unmute",
+      "onHint": "Hide their videos from your feeds. They aren't told.",
+      "offHint": "Their videos can appear in your feeds again.",
+      "onTitle": "Mute {{name}}?",
+      "onBody": "Their videos won't appear in your feeds. You still follow them and they aren't told. You can unmute them here or in Settings > Muted accounts.",
+      "onConfirm": "Mute",
+      "onDone": "{{name}} is muted",
+      "offTitle": "Unmute {{name}}?",
+      "offBody": "Their videos can appear in your feeds again.",
+      "offConfirm": "Unmute",
+      "offDone": "{{name}} is unmuted",
+      "failed": "Couldn't update. Try again."
+    },
+    "restrict": {
+      "onAction": "Restrict",
+      "offAction": "Unrestrict",
+      "onHint": "Their comments on your videos are only visible to them, and they can't message you.",
+      "offHint": "Their comments and messages work normally again.",
+      "onTitle": "Restrict {{name}}?",
+      "onBody": "They aren't told. Their new comments on your videos are only visible to them, and they can't message you. You can unrestrict them here or in Settings > Restricted accounts.",
+      "onConfirm": "Restrict",
+      "onDone": "{{name}} is restricted",
+      "offTitle": "Unrestrict {{name}}?",
+      "offBody": "Their comments on your videos will be visible to everyone again, and they can message you.",
+      "offConfirm": "Unrestrict",
+      "offDone": "{{name}} is no longer restricted",
+      "failed": "Couldn't update. Try again."
+    },
+    "caption": {
+      "tagList": "Hashtag suggestions",
+      "tagUses_one": "{{n}} video",
+      "tagUses_other": "{{n}} videos"
+    },
+    "feed": {
+      "openSoundHint": "Opens the sound page",
+      "followingNoPosts": "People you follow haven't posted yet"
+    }
+  }
+}

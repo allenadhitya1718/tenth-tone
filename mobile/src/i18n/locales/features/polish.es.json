@@ -1,0 +1,44 @@
+{
+  "polish": {
+    "mute": {
+      "onAction": "Silenciar",
+      "offAction": "Dejar de silenciar",
+      "onHint": "Oculta sus videos de tus feeds. No se le avisa.",
+      "offHint": "Sus videos pueden volver a aparecer en tus feeds.",
+      "onTitle": "¿Silenciar a {{name}}?",
+      "onBody": "Sus videos no aparecerán en tus feeds. Sigues siguiéndole y no se le avisa. Puedes deshacerlo aquí o en Ajustes > Cuentas silenciadas.",
+      "onConfirm": "Silenciar",
+      "onDone": "{{name}} está silenciado",
+      "offTitle": "¿Dejar de silenciar a {{name}}?",
+      "offBody": "Sus videos pueden volver a aparecer en tus feeds.",
+      "offConfirm": "Dejar de silenciar",
+      "offDone": "{{name}} ya no está silenciado",
+      "failed": "No se pudo actualizar. Inténtalo de nuevo."
+    },
+    "restrict": {
+      "onAction": "Restringir",
+      "offAction": "Quitar restricción",
+      "onHint": "Sus comentarios en tus videos solo los ve esa persona, y no puede enviarte mensajes.",
+      "offHint": "Sus comentarios y mensajes vuelven a funcionar con normalidad.",
+      "onTitle": "¿Restringir a {{name}}?",
+      "onBody": "No se le avisa. Sus nuevos comentarios en tus videos solo los verá esa persona, y no podrá enviarte mensajes. Puedes deshacerlo aquí o en Ajustes > Cuentas restringidas.",
+      "onConfirm": "Restringir",
+      "onDone": "{{name}} está restringido",
+      "offTitle": "¿Quitar la restricción a {{name}}?",
+      "offBody": "Sus comentarios en tus videos volverán a ser visibles para todos, y podrá enviarte mensajes.",
+      "offConfirm": "Quitar restricción",
+      "offDone": "{{name}} ya no está restringido",
+      "failed": "No se pudo actualizar. Inténtalo de nuevo."
+    },
+    "caption": {
+      "tagList": "Sugerencias de hashtags",
+      "tagUses_one": "{{n}} video",
+      "tagUses_many": "{{n}} videos",
+      "tagUses_other": "{{n}} videos"
+    },
+    "feed": {
+      "openSoundHint": "Abre la página del sonido",
+      "followingNoPosts": "Las personas que sigues aún no han publicado nada"
+    }
+  }
+}

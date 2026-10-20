@@ -111,7 +111,7 @@
         "message": "给你发了一条消息",
         "followAccepted": "通过了你的关注请求",
         "liveStarted": "你的直播已开始",
-        "liveEnded": "你的直播已结束 · {{duration}} · 最高 {{peak}} 人观看",
+        "liveEnded_other": "你的直播已结束 · {{duration}} · 最高 {{count}} 人观看",
         "storage": "存储空间已用 {{pct}}%。达到上限后将无法上传。",
         "locationRequest": "请求查看你的位置",
         "locationApproved": "同意了你的位置请求",

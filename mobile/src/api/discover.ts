@@ -40,25 +40,64 @@ export async function fetchTrendingHashtags(limit = 8): Promise<Hashtag[]> {
   return (data ?? []) as Hashtag[];
 }
 
+// Hashtags starting with `prefix` (no '#'), most used first: the caption
+// composer's # suggestions. An empty prefix gives the trending tags.
+// Never throws.
+export async function searchHashtags(prefix: string, limit = 6): Promise<Hashtag[]> {
+  const p = prefix.replace(/^#+/, '').trim().toLowerCase();
+  if (!p) return fetchTrendingHashtags(limit);
+  const { data, error } = await supabase
+    .from('hashtags')
+    .select('tag, usage_count')
+    .ilike('tag', `${p.replace(/[\\%_]/g, '\\$&')}%`)
+    .order('usage_count', { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return (data ?? []) as Hashtag[];
+}
+
 // Most-followed creators, excluding yourself and anyone either of you has
 // blocked. The list is ordered by follower count, so a blocked account with a
 // large following used to sit near the top permanently. suggested_profiles
 // (0065) filters both directions in the database; the plain query is only a
 // fallback for before 0065.
+//
+// "Suggested for you" also leaves out people you already follow or have a
+// pending follow request to (run 9 listed them with "Following" /
+// "Requested"): a wider page is fetched and those are filtered here.
 export async function fetchSuggestedProfiles(limit = 12): Promise<PersonResult[]> {
-  const { data, error } = await supabase.rpc('suggested_profiles', { p_limit: limit });
-  if (!error) return (data ?? []) as PersonResult[];
+  const wide = Math.min(50, limit * 4);
+  const { data, error } = await supabase.rpc('suggested_profiles', { p_limit: wide });
+  if (!error) return (await notAlreadyFollowed((data ?? []) as PersonResult[])).slice(0, limit);
   console.warn('suggested_profiles unavailable (is 0065 applied?):', error.message);
   const me = await uid();
   let q = supabase
     .from('profiles')
     .select('id, name, handle, avatar_url, bio, verified, followers_count')
     .order('followers_count', { ascending: false })
-    .limit(limit);
+    .limit(wide);
   if (me) q = q.neq('id', me);
   const r = await q;
   if (r.error) return [];
-  return withoutBlocked((r.data ?? []) as PersonResult[]);
+  return (await notAlreadyFollowed(await withoutBlocked((r.data ?? []) as PersonResult[]))).slice(0, limit);
+}
+
+// Drops the people the viewer follows or has asked to follow. Best effort:
+// if either lookup fails the list is returned as it was.
+async function notAlreadyFollowed(rows: PersonResult[]): Promise<PersonResult[]> {
+  const me = await uid();
+  if (!me || !rows.length) return rows;
+  const ids = rows.map((r) => r.id);
+  const [following, requested] = await Promise.all([
+    supabase.from('follows').select('followed_id').eq('follower_id', me).in('followed_id', ids),
+    supabase.from('follow_requests').select('target_id').eq('requester_id', me).in('target_id', ids),
+  ]);
+  if (following.error || requested.error) return rows;
+  const skip = new Set<string>([
+    ...((following.data ?? []) as { followed_id: string }[]).map((r) => r.followed_id),
+    ...((requested.data ?? []) as { target_id: string }[]).map((r) => r.target_id),
+  ]);
+  return rows.filter((r) => !skip.has(r.id));
 }
 
 // Most-engaged public videos. Never throws.
@@ -107,8 +146,33 @@ export type SearchResults = {
   sounds: Sound[];
 };
 
+// "Original sound" in every app language (mockSound / originalSound in the
+// locale files). Original sounds are stored with the Arabic title
+// 'صوت أصلي' (0023), so searching "original" in English found nothing: a
+// query that names the label in any language also matches original sounds.
+const ORIGINAL_SOUND_LABELS = [
+  'original sound',
+  'صوت أصلي',
+  'الصوت الأصلي',
+  '原声',
+  'ओरिजिनल साउंड',
+  'मूल ध्वनि',
+  'اوریجنل ساؤنڈ',
+  'son original',
+  'sonido original',
+  'orijinal ses',
+  'suara asli',
+];
+export function namesOriginalSound(query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (q.length < 2 || (/^[a-z ]+$/.test(q) && q.length < 4)) return false;
+  return ORIGINAL_SOUND_LABELS.some((l) => l.includes(q) || q.includes(l));
+}
+
 export async function searchAll(query: string): Promise<SearchResults> {
   const term = likePattern(query.trim());
+  const soundFilter = [`title.ilike.${orValue(term)}`, `author_name.ilike.${orValue(term)}`];
+  if (namesOriginalSound(query)) soundFilter.push('is_original.eq.true');
   // Hashtags are first-class results: typing a trending tag used to find the
   // ACCOUNT with a similar name and never the tag. The leading '#' is
   // stripped so both '#city' and 'city' work.
@@ -117,11 +181,11 @@ export async function searchAll(query: string): Promise<SearchResults> {
     searchPeople(query, 20),
     supabase
       .from('videos')
-      .select('id, description, thumbnail, video_url, likes_count, created_at, user:profiles!videos_user_id_fkey(id,name,handle,avatar_url,is_private)')
+      .select('id, description, thumbnail, video_url, likes_count, views_count, created_at, user:profiles!videos_user_id_fkey(id,name,handle,avatar_url,is_private)')
       .ilike('description', term)
       .eq('is_draft', false)
       .limit(20),
-    supabase.from('sounds').select('*').or(`title.ilike.${orValue(term)},author_name.ilike.${orValue(term)}`).limit(20),
+    supabase.from('sounds').select('*').or(soundFilter.join(',')).limit(20),
     supabase.from('hashtags').select('tag, usage_count').ilike('tag', tagTerm).order('usage_count', { ascending: false }).limit(12),
   ]);
   return {

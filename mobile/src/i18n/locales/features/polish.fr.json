@@ -1,0 +1,44 @@
+{
+  "polish": {
+    "mute": {
+      "onAction": "Masquer",
+      "offAction": "Réafficher",
+      "onHint": "Masquer ses vidéos de vos fils. Cette personne n'est pas prévenue.",
+      "offHint": "Ses vidéos peuvent de nouveau apparaître dans vos fils.",
+      "onTitle": "Masquer {{name}} ?",
+      "onBody": "Ses vidéos n'apparaîtront plus dans vos fils. Vous restez abonné et cette personne n'est pas prévenue. Vous pouvez annuler ici ou dans Paramètres > Comptes masqués.",
+      "onConfirm": "Masquer",
+      "onDone": "{{name}} est masqué",
+      "offTitle": "Réafficher {{name}} ?",
+      "offBody": "Ses vidéos peuvent de nouveau apparaître dans vos fils.",
+      "offConfirm": "Réafficher",
+      "offDone": "{{name}} n'est plus masqué",
+      "failed": "Mise à jour impossible. Réessayez."
+    },
+    "restrict": {
+      "onAction": "Restreindre",
+      "offAction": "Ne plus restreindre",
+      "onHint": "Ses commentaires sur vos vidéos ne sont visibles que par elle, et elle ne peut pas vous écrire.",
+      "offHint": "Ses commentaires et messages fonctionnent de nouveau normalement.",
+      "onTitle": "Restreindre {{name}} ?",
+      "onBody": "Cette personne n'est pas prévenue. Ses nouveaux commentaires sur vos vidéos ne seront visibles que par elle, et elle ne pourra pas vous écrire. Vous pouvez annuler ici ou dans Paramètres > Comptes restreints.",
+      "onConfirm": "Restreindre",
+      "onDone": "{{name}} est restreint",
+      "offTitle": "Ne plus restreindre {{name}} ?",
+      "offBody": "Ses commentaires sur vos vidéos seront de nouveau visibles par tous, et elle pourra vous écrire.",
+      "offConfirm": "Ne plus restreindre",
+      "offDone": "{{name}} n'est plus restreint",
+      "failed": "Mise à jour impossible. Réessayez."
+    },
+    "caption": {
+      "tagList": "Suggestions de hashtags",
+      "tagUses_one": "{{n}} vidéo",
+      "tagUses_many": "{{n}} vidéos",
+      "tagUses_other": "{{n}} vidéos"
+    },
+    "feed": {
+      "openSoundHint": "Ouvre la page du son",
+      "followingNoPosts": "Les personnes que vous suivez n'ont encore rien publié"
+    }
+  }
+}

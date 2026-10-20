@@ -111,7 +111,7 @@
         "message": "mengirimimu pesan",
         "followAccepted": "menerima permintaan mengikutimu",
         "liveStarted": "LIVE kamu sudah dimulai",
-        "liveEnded": "LIVE kamu berakhir · {{duration}} · puncak {{peak}} penonton",
+        "liveEnded_other": "LIVE kamu berakhir · {{duration}} · puncak {{count}} penonton",
         "storage": "Penyimpanan sudah terisi {{pct}}%. Unggahan berhenti saat mencapai batas.",
         "locationRequest": "meminta untuk melihat lokasimu",
         "locationApproved": "menyetujui permintaan lokasimu",

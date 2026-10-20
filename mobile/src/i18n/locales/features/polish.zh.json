@@ -1,0 +1,42 @@
+{
+  "polish": {
+    "mute": {
+      "onAction": "静音",
+      "offAction": "取消静音",
+      "onHint": "在你的推荐中隐藏其视频，对方不会收到通知。",
+      "offHint": "其视频可再次出现在你的推荐中。",
+      "onTitle": "要将 {{name}} 静音吗？",
+      "onBody": "其视频将不会出现在你的推荐中。你仍然关注对方，对方不会收到通知。你可以在这里或在“设置 > 已静音的账号”中取消静音。",
+      "onConfirm": "静音",
+      "onDone": "已将 {{name}} 静音",
+      "offTitle": "要取消 {{name}} 的静音吗？",
+      "offBody": "其视频可再次出现在你的推荐中。",
+      "offConfirm": "取消静音",
+      "offDone": "已取消 {{name}} 的静音",
+      "failed": "无法更新，请重试。"
+    },
+    "restrict": {
+      "onAction": "限制",
+      "offAction": "取消限制",
+      "onHint": "对方在你视频下的评论仅其本人可见，且无法给你发消息。",
+      "offHint": "对方的评论和消息将恢复正常。",
+      "onTitle": "要限制 {{name}} 吗？",
+      "onBody": "对方不会收到通知。其在你视频下的新评论仅其本人可见，且无法给你发消息。你可以在这里或在“设置 > 受限账号”中取消限制。",
+      "onConfirm": "限制",
+      "onDone": "已限制 {{name}}",
+      "offTitle": "要取消限制 {{name}} 吗？",
+      "offBody": "其在你视频下的评论将再次对所有人可见，并且可以给你发消息。",
+      "offConfirm": "取消限制",
+      "offDone": "已取消限制 {{name}}",
+      "failed": "无法更新，请重试。"
+    },
+    "caption": {
+      "tagList": "话题标签建议",
+      "tagUses_other": "{{n}} 个视频"
+    },
+    "feed": {
+      "openSoundHint": "打开声音页面",
+      "followingNoPosts": "你关注的人还没有发布视频"
+    }
+  }
+}
