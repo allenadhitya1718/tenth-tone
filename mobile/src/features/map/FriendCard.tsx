@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Alert } from '@/components/Dialog';
 import { openOrCreateDm } from '@/api/chat';
 import {
   fetchPermitStatus,

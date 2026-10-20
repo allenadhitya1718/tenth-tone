@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Alert } from '@/components/Dialog';
 import { locationKeys, respondToLocationPermit } from '@/api/location';
 import type { Notification } from '@/api/notifications';
 import { FollowButton } from '@/features/discover/FollowButton';

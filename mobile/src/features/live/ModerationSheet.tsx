@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Alert } from '@/components/Dialog';
 import { report, type ReportTarget } from '@/api/moderation';
 import { blockUser } from '@/api/safety';
 import type { UserSummary } from '@/api/types';

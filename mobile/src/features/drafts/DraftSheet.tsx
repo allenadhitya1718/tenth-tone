@@ -4,7 +4,6 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   I18nManager,
   KeyboardAvoidingView,
   Modal,
@@ -20,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Alert } from '@/components/Dialog';
 import { ApiError } from '@/api/client';
 import type { Privacy } from '@/api/types';
 import { deleteVideo, fetchVideo, publishDraft, videoKeys, type VideoTile } from '@/api/videos';

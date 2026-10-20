@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
 
+import { Alert } from '@/components/Dialog';
 import type { Comment } from '@/api/comments';
 import { profileKeys } from '@/api/profiles';
 import { blockUser, safetyKeys } from '@/api/safety';

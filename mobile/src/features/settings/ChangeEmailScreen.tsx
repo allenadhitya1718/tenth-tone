@@ -2,8 +2,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { Alert } from '@/components/Dialog';
 import { OtpInput } from '@/components/OtpInput';
 import { AppText, Button, ErrorBox, LinkText, Screen, TextField, TopBar, type ErrorMsg } from '@/components/ui';
 import { toErrorMsg } from '@/hooks/useAuthError';

@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next';
 import {
   AccessibilityInfo,
   ActivityIndicator,
-  Alert,
   FlatList,
   I18nManager,
   KeyboardAvoidingView,
@@ -32,6 +31,7 @@ import {
   type Tick,
   tickFor,
 } from '@/api/chat';
+import { Alert } from '@/components/Dialog';
 import { ApiError } from '@/api/client';
 import type { LocalMedia } from '@/api/upload';
 import { Button } from '@/components/ui';

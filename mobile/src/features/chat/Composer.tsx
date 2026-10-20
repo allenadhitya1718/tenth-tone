@@ -3,7 +3,6 @@ import { type ComponentRef, memo, useCallback, useEffect, useMemo, useRef, useSt
 import { useTranslation } from 'react-i18next';
 import {
   type AccessibilityActionEvent,
-  Alert,
   Animated,
   I18nManager,
   Keyboard,
@@ -16,6 +15,7 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
+import { Alert } from '@/components/Dialog';
 import type { LocalMedia } from '@/api/upload';
 import { EmojiPanel, QuickEmojis } from '@/components/emoji/EmojiPanel';
 import { useTheme } from '@/providers/ThemeProvider';

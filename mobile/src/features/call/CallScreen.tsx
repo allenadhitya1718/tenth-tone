@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   BackHandler,
   Linking,
   Pressable,
@@ -17,6 +16,7 @@ import { RenderModeType, RtcSurfaceView } from 'react-native-agora';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Alert } from '@/components/Dialog';
 import type { ErrorMsg } from '@/components/ui';
 import { showToast } from '@/components/Toast';
 import { Avatar } from '@/features/chat/Avatar';

@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   I18nManager,
   Linking,
@@ -19,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Alert } from '@/components/Dialog';
 import type { VideoPlace } from '@/api/videos';
 import { useDebouncedValue } from '@/features/discover/useDebouncedValue';
 import { useTheme } from '@/providers/ThemeProvider';

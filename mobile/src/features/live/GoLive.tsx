@@ -6,8 +6,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useState, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Alert } from '@/components/Dialog';
 import { liveKeys, startLive, uploadLiveThumbnail, type LivePrivacy } from '@/api/live';
 import type { LocalMedia } from '@/api/upload';
 import { AppText, Button, ErrorBox, Screen, TextField, TopBar, type ErrorMsg } from '@/components/ui';

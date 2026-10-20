@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { type Href, router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
+import { Alert } from '@/components/Dialog';
 import type { CallKind } from '@/api/calls';
 import type { UserSummary, Uuid } from '@/api/types';
 import { useTheme } from '@/providers/ThemeProvider';

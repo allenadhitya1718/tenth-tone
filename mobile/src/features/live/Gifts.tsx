@@ -4,8 +4,9 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Animated, FlatList, I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, FlatList, I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { Alert } from '@/components/Dialog';
 import { fetchGifts, giftKeys, sendGift, type Gift } from '@/api/gifts';
 import type { UserSummary } from '@/api/types';
 import { fetchWallet, walletKeys } from '@/api/wallet';

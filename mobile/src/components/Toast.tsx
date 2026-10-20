@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/providers/ThemeProvider';
 
-type Toast = { id: number; text: string; icon: keyof typeof Ionicons.glyphMap };
+type Toast = { id: number; text: string; icon: keyof typeof Ionicons.glyphMap; tone: 'success' | 'error' };
 
 // A short confirmation that slides in under the status bar and leaves on
 // its own, in place of the system alert box ("Posted" / OK) that looked out
@@ -15,8 +15,8 @@ type Toast = { id: number; text: string; icon: keyof typeof Ionicons.glyphMap };
 let push: ((t: Toast) => void) | null = null;
 let nextId = 1;
 
-export function showToast(text: string, icon: Toast['icon'] = 'checkmark-circle') {
-  push?.({ id: nextId++, text, icon });
+export function showToast(text: string, icon: Toast['icon'] = 'checkmark-circle', tone: Toast['tone'] = 'success') {
+  push?.({ id: nextId++, text, icon, tone });
 }
 
 const VISIBLE_MS = 2200;
@@ -40,7 +40,7 @@ export function ToastHost() {
 
   useEffect(() => {
     if (!toast) return;
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    void Haptics.notificationAsync(toast.tone === 'error' ? Haptics.NotificationFeedbackType.Error : Haptics.NotificationFeedbackType.Success);
     AccessibilityInfo.announceForAccessibility(toast.text);
     shown.set(
       withSequence(
@@ -64,7 +64,7 @@ export function ToastHost() {
           pillStyle,
         ]}
       >
-        <Ionicons name={toast.icon} size={22} color={colors.success} />
+        <Ionicons name={toast.icon} size={22} color={toast.tone === 'error' ? colors.danger : colors.success} />
         <Text style={[styles.text, { color: colors.text }]} numberOfLines={2}>
           {toast.text}
         </Text>

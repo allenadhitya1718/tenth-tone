@@ -7,8 +7,9 @@ import { router, type Href } from 'expo-router';
 import type { TFunction } from 'i18next';
 import { Children, Fragment, type ComponentProps, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, I18nManager, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, I18nManager, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
+import { Alert } from '@/components/Dialog';
 import { ApiError } from '@/api/client';
 import { AppText, Button } from '@/components/ui';
 import { useTheme } from '@/providers/ThemeProvider';

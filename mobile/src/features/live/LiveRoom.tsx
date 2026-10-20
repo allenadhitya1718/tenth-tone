@@ -11,7 +11,6 @@ import { useTranslation } from 'react-i18next';
 import {
   AccessibilityInfo,
   ActivityIndicator,
-  Alert,
   BackHandler,
   FlatList,
   I18nManager,
@@ -27,6 +26,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Alert } from '@/components/Dialog';
 import { isCommentBlocked } from '@/api/comments';
 import { giftKeys, subscribeToLiveGifts, type Gift } from '@/api/gifts';
 import {

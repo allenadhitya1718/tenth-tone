@@ -11,7 +11,6 @@ import { useTranslation } from 'react-i18next';
 import {
   AccessibilityInfo,
   ActivityIndicator,
-  Alert,
   Animated,
   AppState,
   Easing,
@@ -35,6 +34,7 @@ import {
   type StoryTrayEntry,
   type UserStory,
 } from '@/api/stories';
+import { Alert } from '@/components/Dialog';
 import { fetchProfile, profileKeys } from '@/api/profiles';
 import { timeAgo } from '@/lib/timeAgo';
 import { useAuth } from '@/providers/AuthProvider';

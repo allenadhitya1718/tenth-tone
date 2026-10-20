@@ -1,8 +1,9 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, I18nManager, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, I18nManager, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Alert } from '@/components/Dialog';
 import { report, type ReportTarget } from '@/api/moderation';
 import { useTheme } from '@/providers/ThemeProvider';
 

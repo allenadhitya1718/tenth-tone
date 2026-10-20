@@ -8,8 +8,9 @@
 // So: ask once, explain why, offer the settings page, never nag.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { TFunction } from 'i18next';
-import { Alert, Linking, Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import notifee, { AndroidNotificationSetting } from 'react-native-notify-kit';
+import { Alert } from '@/components/Dialog';
 
 const ASKED_KEY = 'tt-fsi-asked';
 

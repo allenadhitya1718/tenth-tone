@@ -5,7 +5,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   AppState,
   I18nManager,
   Linking,
@@ -22,6 +21,7 @@ import {
   locationKeys,
   requestLocationPermit,
 } from '@/api/location';
+import { Alert } from '@/components/Dialog';
 import { fetchProfile, profileKeys } from '@/api/profiles';
 import { AppText, Button } from '@/components/ui';
 import { useAuth } from '@/providers/AuthProvider';

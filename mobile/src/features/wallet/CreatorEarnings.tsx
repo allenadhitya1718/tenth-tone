@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import {
   cancelWithdrawal,
@@ -15,6 +15,7 @@ import {
   type PayoutBlockReason,
   type WithdrawalStatus,
 } from '@/api/wallet';
+import { Alert } from '@/components/Dialog';
 import { showToast } from '@/components/Toast';
 import { AppText, Button } from '@/components/ui';
 import { useSar } from '@/features/wallet/format';

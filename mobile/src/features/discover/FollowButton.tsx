@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
 import {
   cancelFollowRequest,
@@ -11,6 +11,7 @@ import {
   profileKeys,
   unfollow,
 } from '@/api/profiles';
+import { Alert } from '@/components/Dialog';
 import { videoKeys } from '@/api/videos';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';

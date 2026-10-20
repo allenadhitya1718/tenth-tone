@@ -6,10 +6,11 @@ import * as VideoThumbnails from 'expo-video-thumbnails';
 import { type VideoPlayer, useVideoPlayer, VideoView } from 'expo-video';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, I18nManager, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { I18nManager, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Alert } from '@/components/Dialog';
 import { ApiError } from '@/api/client';
 import type { TagRefusal } from '@/api/tags';
 import type { Privacy, UserSummary } from '@/api/types';

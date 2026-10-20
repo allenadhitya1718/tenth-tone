@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -14,6 +14,7 @@ import {
   stopSharingLocation,
   type LocationSettings,
 } from '@/api/location';
+import { Alert } from '@/components/Dialog';
 import { AppText, Button } from '@/components/ui';
 import { useTheme } from '@/providers/ThemeProvider';
 

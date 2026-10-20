@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
+import { Alert } from '@/components/Dialog';
 import type { WhoCan } from '@/api/settings';
 import { Screen, TopBar } from '@/components/ui';
 

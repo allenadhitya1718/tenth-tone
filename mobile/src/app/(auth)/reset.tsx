@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
+import { Alert } from '@/components/Dialog';
 import { OtpInput } from '@/components/OtpInput';
 import { PasswordRules } from '@/components/PasswordRules';
 import { AppText, Button, ErrorBox, LinkText, Screen, TextField, TopBar, type ErrorMsg } from '@/components/ui';

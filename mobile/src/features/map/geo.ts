@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
-import { Alert, Linking, Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
+import { Alert } from '@/components/Dialog';
 
 export type LatLng = { latitude: number; longitude: number };
 

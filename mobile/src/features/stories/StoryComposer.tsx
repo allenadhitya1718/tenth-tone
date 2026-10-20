@@ -11,7 +11,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   I18nManager,
   KeyboardAvoidingView,
   Platform,
@@ -23,6 +22,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Alert } from '@/components/Dialog';
 import type { Sound } from '@/api/sounds';
 import { createStory, storyKeys, type StoryAudience, type StoryKind } from '@/api/stories';
 import type { LocalMedia } from '@/api/upload';

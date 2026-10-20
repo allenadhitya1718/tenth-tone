@@ -6,7 +6,6 @@ import { type ComponentRef, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   I18nManager,
   Keyboard,
@@ -33,6 +32,7 @@ import {
   searchMentions,
   unlikeComment,
 } from '@/api/comments';
+import { Alert } from '@/components/Dialog';
 import { ApiError } from '@/api/client';
 import { videoKeys } from '@/api/videos';
 import { EmojiPanel, QuickEmojis } from '@/components/emoji/EmojiPanel';

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
 
+import { Alert } from '@/components/Dialog';
 import { approveFollowRequest, declineFollowRequest, type FollowRequest, profileKeys } from '@/api/profiles';
 import { useAuth } from '@/providers/AuthProvider';
 

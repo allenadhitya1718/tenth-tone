@@ -3,7 +3,7 @@ import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, I18nManager, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { I18nManager, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import {
   createSupportTicket,
@@ -12,6 +12,7 @@ import {
   type SupportCategory,
   type SupportTicket,
 } from '@/api/settings';
+import { Alert } from '@/components/Dialog';
 import { LegalSheet } from '@/components/LegalSheet';
 import { AppText, Button, Screen, TopBar } from '@/components/ui';
 import { timeAgo } from '@/lib/timeAgo';

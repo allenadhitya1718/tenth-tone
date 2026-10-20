@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import {
   cancelAccountDeletion,
@@ -12,6 +12,7 @@ import {
   scheduleAccountDeletion,
   settingsKeys,
 } from '@/api/settings';
+import { Alert } from '@/components/Dialog';
 import { isPermanentBan } from '@/api/appeals';
 import { creatorKeys, fetchCreatorEarnings } from '@/api/wallet';
 import { showToast } from '@/components/Toast';

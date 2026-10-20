@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   BackHandler,
   FlatList,
   I18nManager,
@@ -20,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Alert } from '@/components/Dialog';
 import { ApiError } from '@/api/client';
 import { fetchProfile, profileKeys, updateProfile, uploadAvatar, type Profile, type ProfilePatch } from '@/api/profiles';
 import { fetchMyPrivateDetails, saveMyPrivateDetails, settingsKeys, type Gender } from '@/api/settings';
