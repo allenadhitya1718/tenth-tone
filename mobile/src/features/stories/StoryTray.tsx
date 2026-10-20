@@ -59,7 +59,6 @@ export function StoryTray({ variant = 'surface', style }: Props) {
 
   const overlay = variant === 'overlay';
   const textColor = overlay ? '#fff' : colors.text;
-  const gap = overlay ? 'rgba(0,0,0,0.35)' : colors.bg;
 
   const renderItem = useCallback(
     ({ item }: { item: Item }) => {
@@ -77,14 +76,13 @@ export function StoryTray({ variant = 'surface', style }: Props) {
             avatar={profile.data?.avatar_url ?? null}
             name={profile.data?.name ?? null}
             textColor={textColor}
-            gap={gap}
             overlay={overlay}
           />
         );
       }
-      return <TrayItem entry={item.entry} textColor={textColor} gap={gap} overlay={overlay} />;
+      return <TrayItem entry={item.entry} textColor={textColor} overlay={overlay} />;
     },
-    [profile.data?.avatar_url, profile.data?.name, textColor, gap, overlay, colors.bg3],
+    [profile.data?.avatar_url, profile.data?.name, textColor, overlay, colors.bg3],
   );
 
   return (
@@ -108,14 +106,12 @@ const MyStory = memo(function MyStory({
   avatar,
   name,
   textColor,
-  gap,
   overlay,
 }: {
   entry: StoryTrayEntry | null;
   avatar: string | null;
   name: string | null;
   textColor: string;
-  gap: string;
   overlay: boolean;
 }) {
   const { t } = useTranslation();
@@ -129,7 +125,7 @@ const MyStory = memo(function MyStory({
         accessibilityRole="button"
         accessibilityLabel={has ? t('stories.viewYourStory') : t('stories.addStory')}
       >
-        <StoryRing uri={entry?.avatar_url ?? avatar} name={entry?.name ?? name} size={SIZE} kind={has ? 'seen' : 'none'} gap={gap} />
+        <StoryRing uri={entry?.avatar_url ?? avatar} name={entry?.name ?? name} size={SIZE} kind={has ? 'unseen' : 'none'} />
       </Pressable>
       <Pressable
         onPress={() => router.push(NEW_STORY_HREF)}
@@ -150,12 +146,10 @@ const MyStory = memo(function MyStory({
 const TrayItem = memo(function TrayItem({
   entry,
   textColor,
-  gap,
   overlay,
 }: {
   entry: StoryTrayEntry;
   textColor: string;
-  gap: string;
   overlay: boolean;
 }) {
   const { t } = useTranslation();
@@ -168,7 +162,7 @@ const TrayItem = memo(function TrayItem({
       accessibilityRole="button"
       accessibilityLabel={t(entry.has_unseen ? 'stories.itemA11yNew' : 'stories.itemA11ySeen', { name })}
     >
-      <StoryRing uri={entry.avatar_url} name={name} size={SIZE} kind={kind} gap={gap} />
+      <StoryRing uri={entry.avatar_url} name={name} size={SIZE} kind={kind} />
       <Text
         style={[styles.name, { color: textColor, opacity: entry.has_unseen ? 1 : 0.75 }, overlay && styles.shadow]}
         numberOfLines={1}

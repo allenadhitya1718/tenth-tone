@@ -8,13 +8,13 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Animated, AppState, Platform, Pressable, Share, StyleSheet, Text, View, ScrollView } from 'react-native';
+import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View, ScrollView } from 'react-native';
 
-import { countShare, videoLink } from '@/api/discover';
 import type { Video } from '@/api/types';
 import { trackEngagement } from '@/api/videos';
 import { PostPlaceTags } from '@/features/place/PostPlaceTags';
 import { ReportSheet } from '@/features/safety/ReportSheet';
+import { SendToSheet } from '@/features/share/SendToSheet';
 import { useAuth } from '@/providers/AuthProvider';
 
 import { patchVideoEverywhere } from './cache';
@@ -188,29 +188,13 @@ function Overlay({
     }, 290);
   }
 
-  // Only a completed share counts. iOS says so (sharedAction vs
-  // dismissedAction). Android's Share.share resolves "shared" even when the
-  // chooser is cancelled, so there a share counts only if the app really went
-  // to the background, which is what picking a target app does and cancelling
-  // the chooser does not.
-  async function share() {
-    let wentAway = false;
-    const sub = AppState.addEventListener('change', (s) => {
-      if (s === 'background' || s === 'inactive') wentAway = true;
-    });
-    try {
-      const res = await Share.share({ message: videoLink(video.id) });
-      const done = res.action === Share.sharedAction && (Platform.OS !== 'android' || wentAway);
-      if (done) {
-        void countShare(video.id);
-        patchVideoEverywhere(qc, video.id, (v) => ({ ...v, shares_count: (v.shares_count ?? 0) + 1 }));
-      }
-    } catch {
-      /* a failed share sheet is not a share */
-    } finally {
-      sub.remove();
-    }
-  }
+  // The share button opens the in-app "Send to" sheet (chats, Copy link,
+  // Share to other apps). The sheet counts a completed share on the server;
+  // this bumps the number on screen.
+  const [shareOpen, setShareOpen] = useState(false);
+  const onShared = useCallback(() => {
+    patchVideoEverywhere(qc, video.id, (v) => ({ ...v, shares_count: (v.shares_count ?? 0) + 1 }));
+  }, [qc, video.id]);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -284,7 +268,7 @@ function Overlay({
           a11y={t(video.saved ? 'feed.unsave' : 'feed.save')}
           onPress={() => saveM.mutate({ id: video.id, next: !video.saved })}
         />
-        <RailButton icon="arrow-redo" label={formatCount(video.shares_count)} a11y={t('feed.share')} onPress={share} />
+        <RailButton icon="arrow-redo" label={formatCount(video.shares_count)} a11y={t('feed.share')} onPress={() => setShareOpen(true)} />
         {!isMine ? <RailButton icon="flag-outline" label={t('ugc.report')} a11y={t('ugc.report')} onPress={() => setReportOpen(true)} /> : null}
         {isMine ? (
           <RailButton
@@ -297,6 +281,9 @@ function Overlay({
         ) : null}
       </View>
       <ReportSheet visible={reportOpen} onClose={() => setReportOpen(false)} targetType="video" targetId={video.id} />
+      {shareOpen ? (
+        <SendToSheet videoId={video.id} visible={shareOpen} onClose={() => setShareOpen(false)} onShared={onShared} />
+      ) : null}
 
       <View style={styles.caption} pointerEvents="box-none">
         {/* Profile photo in place of the "@", like the client asked. */}

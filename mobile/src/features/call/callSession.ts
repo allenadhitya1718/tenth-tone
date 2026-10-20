@@ -25,6 +25,7 @@ import {
   ConnectionStateType,
   createAgoraRtcEngine,
   ErrorCodeType,
+  RemoteAudioStateReason,
   RemoteVideoState,
   UserOfflineReasonType,
   type IRtcEngine,
@@ -38,11 +39,15 @@ import {
   declineCall,
   endCall,
   fetchCall,
+  fetchCallGroup,
+  inviteToCall,
+  isGroupRoot,
   leaveCall,
   missCallIfRinging,
   setCallKind,
   setMyAgoraUid,
   startCall,
+  startGroupCall,
   subscribeToCall,
   type Call,
   type CallKind,
@@ -105,6 +110,12 @@ export type EndReason =
 export type MediaStatus = 'idle' | 'joining' | 'joined' | 'reconnecting';
 export type PeerStatus = 'absent' | 'present' | 'dropped' | 'left';
 
+// One other person in the Agora channel. A 1:1 call has one; a group call
+// (0092) one per person who is in. Keyed by Agora uid, which the server
+// derives from the account (agoraUidFor), so a call_members row maps to its
+// tile without waiting for agora_uid to be written.
+export type RemotePeer = { video: boolean; muted: boolean; dropped: boolean };
+
 export type CallState = {
   phase: CallPhase;
   callId: Uuid | null;
@@ -115,6 +126,10 @@ export type CallState = {
   me: Uuid | null;
   peer: UserSummary | null;
   isCaller: boolean;
+  // A call started from a group chat (0145): which group, and its name for
+  // the screens. Null for a call between people.
+  groupChatId: Uuid | null;
+  groupName: string | null;
   kind: CallKind;
   channel: string | null;
   localUid: number | null;
@@ -124,6 +139,10 @@ export type CallState = {
   peerStatus: PeerStatus;
   remoteUid: number | null;
   remoteVideo: boolean;
+  // Everyone else in the channel (remoteUid is the first of them).
+  remotes: Record<number, RemotePeer>;
+  // Agora uids heard speaking just now; 0 is this phone.
+  speaking: number[];
   muted: boolean;
   speaker: boolean;
   cameraOn: boolean;
@@ -147,6 +166,8 @@ const INITIAL: CallState = {
   me: null,
   peer: null,
   isCaller: false,
+  groupChatId: null,
+  groupName: null,
   kind: 'audio',
   channel: null,
   localUid: null,
@@ -155,6 +176,8 @@ const INITIAL: CallState = {
   peerStatus: 'absent',
   remoteUid: null,
   remoteVideo: false,
+  remotes: {},
+  speaking: [],
   muted: false,
   speaker: false,
   cameraOn: false,
@@ -278,6 +301,9 @@ export function callError(e: unknown): NonNullable<ErrorMsg> {
   if (code === 'cannot_call_yourself') return { key: 'call.errors.self' };
   if (code === 'not_signed_in') return { key: 'call.errors.not_signed_in' };
   if (code === 'agora_forbidden') return { key: 'call.errors.forbidden' };
+  if (code === 'group_calls_unavailable') return { key: 'call.group.errors.unavailable' };
+  if (/no one in this group/i.test(text)) return { key: 'call.group.errors.nobody' };
+  if (/not in this group|no such group/i.test(text)) return { key: 'call.group.errors.not_in_group' };
   if (code.startsWith('agora_')) return { key: 'call.errors.media_unavailable' };
   if (/blocked/i.test(text)) return { key: 'call.errors.blocked' };
   if (/too many/i.test(text)) return { key: 'call.errors.rate_limited' };
@@ -375,8 +401,79 @@ export async function dial(req: DialRequest): Promise<Readiness> {
   return ready;
 }
 
+// ---------- Calling a group chat (0145) ----------
+
+export type GroupDialRequest = {
+  nonce: string;
+  chatId: Uuid;
+  kind: CallKind;
+  name?: string | null;
+  photo?: string | null;
+};
+
+export type GroupDialResult = Readiness & { skipped?: number };
+
+/**
+ * Calls a group chat: every member who may be rung rings at once (the server
+ * skips, and counts, those who may not). Shown as "Calling…" under the
+ * group's name until the first person answers; ends by itself when nobody
+ * has answered after the ring time.
+ */
+export async function dialGroup(req: GroupDialRequest): Promise<GroupDialResult> {
+  if (state.dialNonce === req.nonce) return { ok: true, cameraOn: state.cameraOn, notice: state.notice };
+  const ready = await checkReady(req.kind);
+  if (!ready.ok) return ready;
+
+  const g = ++gen;
+  resetResources();
+  state = INITIAL;
+  set({
+    phase: 'dialing',
+    dialNonce: req.nonce,
+    isCaller: true,
+    kind: req.kind,
+    groupChatId: req.chatId,
+    groupName: req.name ?? null,
+    peer: { id: req.chatId, name: req.name ?? null, handle: null, avatar_url: req.photo ?? null },
+    cameraOn: ready.cameraOn,
+    notice: ready.notice,
+    speaker: req.kind === 'video',
+  });
+  keepAwake(true);
+
+  let row: Call;
+  let skipped = 0;
+  try {
+    const me = await currentUid();
+    const r = await startGroupCall({ chatId: req.chatId, kind: req.kind });
+    row = r.call;
+    skipped = r.skipped;
+    if (g !== gen) {
+      void endCall(row.id).catch(() => {});
+      return ready;
+    }
+    set({ me, row, call: row, callId: row.id, channel: row.channel, phase: 'outgoing' });
+  } catch (e) {
+    if (g !== gen) return ready;
+    console.warn('call: group start failed:', errorText(e));
+    finish('failed', callError(e));
+    return { ok: false, error: callError(e) };
+  }
+
+  watchRows(row, row);
+  setTimer('ring', RING_TIMEOUT_MS, () => void ringTimedOut(g));
+  void joinMedia(g);
+  return { ...ready, skipped };
+}
+
 async function ringTimedOut(g: number) {
   if (g !== gen || state.phase !== 'outgoing' || !state.call) return;
+  // A group call's root never rings anybody; nobody has answered any of its
+  // invites, so it is over (ending the root marks every invite missed).
+  if (isGroupRoot(state.call)) {
+    hangUp('no_answer');
+    return;
+  }
   const id = state.call.id;
   try {
     // Only while still ringing: an answer racing the timer wins.
@@ -417,13 +514,22 @@ export async function openCall(callId: Uuid): Promise<void> {
     const root = row.root_id ? ((await fetchCall(row.root_id)) ?? row) : row;
     if (g !== gen) return;
     const isCaller = row.caller_id === me;
-    const peer = (isCaller ? row.callee : row.caller) ?? null;
+    const groupChatId = root.group_chat_id ?? null;
+    const group = groupChatId ? await fetchCallGroup(groupChatId) : null;
+    if (g !== gen) return;
+    // My own group call: the "other side" is the group, not a person.
+    const peer =
+      isGroupRoot(row) && isCaller
+        ? { id: groupChatId!, name: group?.name ?? null, handle: null, avatar_url: group?.photo_url ?? null }
+        : ((isCaller ? row.callee : row.caller) ?? null);
     set({
       me,
       row,
       call: root,
       peer,
       isCaller,
+      groupChatId,
+      groupName: group?.name ?? null,
       kind: root.kind,
       channel: root.channel,
       speaker: root.kind === 'video',
@@ -471,7 +577,11 @@ export async function openCall(callId: Uuid): Promise<void> {
     }
     set({ cameraOn: ready.cameraOn, notice: ready.notice });
     keepAwake(true);
-    if (root.status === 'ringing') {
+    // A group call I started that is still inside its ring time counts as
+    // ringing: its root is 'accepted' from the start.
+    const groupRinging =
+      isGroupRoot(root) && isCaller && Date.now() - Date.parse(root.created_at) < RING_TIMEOUT_MS;
+    if (root.status === 'ringing' || groupRinging) {
       set({ phase: 'outgoing' });
       const left = RING_TIMEOUT_MS - (Date.now() - Date.parse(root.created_at));
       setTimer('ring', Math.max(3_000, left), () => void ringTimedOut(g));
@@ -678,6 +788,64 @@ export async function toggleCamera(): Promise<ErrorMsg> {
   return null;
 }
 
+// ---------- Adding people (group calls, 0092) ----------
+
+// The most people in one call, this phone included. The server has no cap
+// (0092 / 0114 only require the inviter to be in the call), so this is the
+// app's: every extra person is one more Agora stream to pay for and, on
+// video, one more picture for a phone to decode.
+export const GROUP_LIMIT: Record<CallKind, number> = { audio: 8, video: 4 };
+
+// Invites this phone sent in the current call: who, which row, when.
+const invites = new Map<Uuid, { rowId: Uuid; at: number }>();
+
+/** When this phone rang `userId` into the current call (ms epoch), if it did. */
+export const inviteSentAt = (userId: Uuid): number | null => invites.get(userId)?.at ?? null;
+
+export type InviteResult = { ok: true } | { ok: false; error: NonNullable<ErrorMsg> };
+
+export function inviteError(e: unknown): NonNullable<ErrorMsg> {
+  const text = errorText(e);
+  if (/blocked/i.test(text)) return { key: 'call.group.errors.blocked' };
+  if (/too many/i.test(text)) return { key: 'call.group.errors.rate_limited' };
+  if (/already ended/i.test(text)) return { key: 'call.errors.call_gone' };
+  if (/not in this call/i.test(text)) return { key: 'call.group.errors.not_in_call' };
+  if (/network|fetch|timeout/i.test(text)) return { key: 'call.errors.offline' };
+  return { key: 'call.group.errors.generic' };
+}
+
+/**
+ * Rings `userId` into the call this phone is in. `inCall` is how many people
+ * are in it or being rung right now, this phone included. The invite is a
+ * calls row pointing at the root (inviteToCall); the server refuses it across
+ * a block, past someone's "who can contact me", or over the rate limit. An
+ * invite nobody answers is marked missed after the usual ring time, so a
+ * phone that never saw the ring does not stay "Ringing…" on every screen.
+ */
+export async function invitePerson(userId: Uuid, inCall: number): Promise<InviteResult> {
+  const g = gen;
+  const root = state.call;
+  if (state.phase !== 'connected' || !root) return { ok: false, error: { key: 'call.group.errors.not_connected' } };
+  const max = GROUP_LIMIT[state.kind];
+  if (inCall >= max) return { ok: false, error: { key: 'call.group.errors.full', params: { max } } };
+  try {
+    const row = await inviteToCall({ root: { id: root.id, channel: root.channel, kind: state.kind }, userId });
+    if (g !== gen) {
+      // The call ended while the invite was being written: take it back.
+      void missCallIfRinging(row.id).catch(() => {});
+      return { ok: false, error: { key: 'call.errors.call_gone' } };
+    }
+    invites.set(userId, { rowId: row.id, at: Date.now() });
+    setTimer('invite:' + userId, RING_TIMEOUT_MS, () => {
+      if (g === gen) void missCallIfRinging(row.id).catch(() => {});
+    });
+    return { ok: true };
+  } catch (e) {
+    console.warn('call: invite failed:', errorText(e));
+    return { ok: false, error: inviteError(e) };
+  }
+}
+
 // ---------- Rows ----------
 
 function reasonFor(status: CallStatus, isCaller: boolean, wasRingingHere: boolean): EndReason {
@@ -716,7 +884,9 @@ function onRow(r: Call, g: number) {
       finish('answered_elsewhere');
       return;
     }
-    if (state.phase === 'outgoing') {
+    // A group call's root is 'accepted' from the start; it is answered when
+    // someone joins (onUserJoined), not by this row.
+    if (state.phase === 'outgoing' && !isGroupRoot(state.call)) {
       clearTimer('ring');
       set({ phase: state.peerStatus === 'present' ? 'connected' : 'connecting' });
       if (state.peerStatus === 'present' && !state.startedAt) set({ startedAt: Date.now() });
@@ -818,8 +988,15 @@ async function joinMedia(g: number) {
       clearTimer('peer');
       clearTimer('peerQuit');
       const answered = state.call?.status === 'accepted' || state.phase === 'connecting';
+      const prev = state.remotes[remoteUid];
+      const remotes = { ...state.remotes, [remoteUid]: { video: prev?.video ?? false, muted: prev?.muted ?? false, dropped: false } };
+      // The first person in stays the "primary" remote (the 1:1 picture);
+      // someone added later only takes over once the primary is gone.
+      const primary = state.remoteUid != null && remotes[state.remoteUid] ? state.remoteUid : remoteUid;
       set({
-        remoteUid,
+        remotes,
+        remoteUid: primary,
+        remoteVideo: remotes[primary]?.video ?? false,
         peerStatus: 'present',
         ...(answered || state.phase === 'outgoing'
           ? { phase: 'connected' as const, startedAt: state.startedAt ?? Date.now() }
@@ -829,28 +1006,80 @@ async function joinMedia(g: number) {
       clearTimer('ring');
     },
     onUserOffline: (_c, remoteUid, reason) => {
-      if (g !== gen || remoteUid !== state.remoteUid) return;
+      if (g !== gen || !state.remotes[remoteUid]) return;
+      const remotes = { ...state.remotes };
       if (reason === UserOfflineReasonType.UserOfflineDropped) {
-        set({ peerStatus: 'dropped', remoteVideo: false });
+        remotes[remoteUid] = { ...remotes[remoteUid], video: false, dropped: true };
+      } else {
+        delete remotes[remoteUid];
+      }
+      const uids = Object.keys(remotes).map(Number);
+      const reachable = uids.filter((u) => !remotes[u].dropped);
+      // The primary moves to someone still here, so a group call does not
+      // lose its picture when the first person goes.
+      const primary =
+        state.remoteUid != null && remotes[state.remoteUid] && !remotes[state.remoteUid].dropped
+          ? state.remoteUid
+          : (reachable[0] ?? uids[0] ?? state.remoteUid);
+      const patch: Partial<CallState> = {
+        remotes,
+        remoteUid: primary,
+        remoteVideo: primary != null ? (remotes[primary]?.video ?? false) : false,
+        speaking: state.speaking.filter((u) => u !== remoteUid),
+      };
+      if (reachable.length) {
+        // Others are still here: the call goes on for this phone.
+        set({ ...patch, peerStatus: 'present' });
+        return;
+      }
+      if (uids.length) {
+        // Everyone left in the channel has a bad connection.
+        set({ ...patch, peerStatus: 'dropped' });
         setTimer('peer', NETWORK_GIVE_UP_MS, () => {
           if (g === gen && state.peerStatus === 'dropped') hangUp('network');
         });
         return;
       }
-      // They hung up. Their row update normally lands within a moment and
-      // says how; if it does not, the call ends here anyway.
-      set({ peerStatus: 'left', remoteVideo: false });
+      // The last other person hung up. Their row update normally lands within
+      // a moment and says how; if it does not, the call ends here anyway.
+      set({ ...patch, peerStatus: 'left' });
       setTimer('peerQuit', PEER_QUIT_GRACE_MS, () => {
         if (g === gen && state.peerStatus === 'left') hangUp('ended');
       });
     },
     onRemoteVideoStateChanged: (_c, remoteUid, st) => {
-      if (g !== gen || remoteUid !== state.remoteUid) return;
-      if (st === RemoteVideoState.RemoteVideoStateStarting || st === RemoteVideoState.RemoteVideoStateDecoding) {
-        if (!state.remoteVideo) set({ remoteVideo: true });
-      } else if (st === RemoteVideoState.RemoteVideoStateStopped || st === RemoteVideoState.RemoteVideoStateFailed) {
-        if (state.remoteVideo) set({ remoteVideo: false });
-      }
+      if (g !== gen) return;
+      const r = state.remotes[remoteUid];
+      if (!r) return;
+      let video = r.video;
+      if (st === RemoteVideoState.RemoteVideoStateStarting || st === RemoteVideoState.RemoteVideoStateDecoding) video = true;
+      else if (st === RemoteVideoState.RemoteVideoStateStopped || st === RemoteVideoState.RemoteVideoStateFailed) video = false;
+      if (video === r.video) return;
+      set({
+        remotes: { ...state.remotes, [remoteUid]: { ...r, video } },
+        ...(remoteUid === state.remoteUid ? { remoteVideo: video } : {}),
+      });
+    },
+    onUserMuteAudio: (_c, remoteUid, muted) => {
+      if (g !== gen) return;
+      setRemoteMuted(remoteUid, muted);
+    },
+    onRemoteAudioStateChanged: (_c, remoteUid, _st, reason) => {
+      if (g !== gen) return;
+      if (reason === RemoteAudioStateReason.RemoteAudioReasonRemoteMuted) setRemoteMuted(remoteUid, true);
+      else if (reason === RemoteAudioStateReason.RemoteAudioReasonRemoteUnmuted) setRemoteMuted(remoteUid, false);
+    },
+    // Who is talking, for the ring around a tile. Only stored when the set
+    // changes, so a quiet call does not re-render twice a second.
+    onAudioVolumeIndication: (_c, speakers) => {
+      if (g !== gen) return;
+      const now = (speakers ?? [])
+        .filter((v) => (v.volume ?? 0) >= SPEAKING_VOLUME && !(v.uid === 0 && state.muted))
+        .map((v) => v.uid ?? 0)
+        .sort((a, b) => a - b);
+      const before = state.speaking;
+      if (now.length === before.length && now.every((u, i) => u === before[i])) return;
+      set({ speaking: now });
     },
     onAudioRoutingChanged: (routing) => {
       if (g !== gen) return;
@@ -868,6 +1097,8 @@ async function joinMedia(g: number) {
 
   try {
     e.enableAudio();
+    // Speaking indicators for group calls: every 400 ms, smoothed.
+    e.enableAudioVolumeIndication(400, 3, false);
     e.setDefaultAudioRouteToSpeakerphone(state.kind === 'video');
     if (state.kind === 'video') {
       e.enableVideo();
@@ -907,6 +1138,15 @@ async function joinMedia(g: number) {
     hangUp('failed');
     set({ error: msg });
   }
+}
+
+// Agora volume runs 0-255; below this is breathing and room noise.
+const SPEAKING_VOLUME = 28;
+
+function setRemoteMuted(remoteUid: number, muted: boolean) {
+  const r = state.remotes[remoteUid];
+  if (!r || r.muted === muted) return;
+  set({ remotes: { ...state.remotes, [remoteUid]: { ...r, muted } } });
 }
 
 function releaseEngine() {
@@ -950,6 +1190,7 @@ function resetResources() {
   unsubs = [];
   tokenFor = null;
   acceptedHere = false;
+  invites.clear();
   releaseEngine();
   stopRinging();
   keepAwake(false);
@@ -973,6 +1214,8 @@ function finish(reason: EndReason, error: ErrorMsg = null) {
     media: 'idle',
     engineReady: false,
     remoteVideo: false,
+    remotes: {},
+    speaking: [],
     ...(error ? { error } : {}),
   });
 }

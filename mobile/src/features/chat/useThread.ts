@@ -199,7 +199,13 @@ export function useThread(chatId: string, me: string | undefined, info: ChatInfo
   // realtime echo can arrive before sendMessage resolves (see api/chat.ts).
   // Resolves false on failure, after taking the bubble back.
   const send = useCallback(
-    async (input: { text: string; type?: MessageType; media?: LocalMedia | null; replyTo?: Message | null }) => {
+    async (input: {
+      text: string;
+      type?: MessageType;
+      media?: LocalMedia | null;
+      attachmentUrl?: string | null;
+      replyTo?: Message | null;
+    }) => {
       if (!me) return false;
       const type = input.type ?? 'text';
       const localId = `local-${Date.now()}-${++localSeq}`;
@@ -209,7 +215,7 @@ export function useThread(chatId: string, me: string | undefined, info: ChatInfo
         pending: true,
         type,
         text: input.text,
-        attachment_url: input.media?.uri ?? null,
+        attachment_url: input.media?.uri ?? input.attachmentUrl ?? null,
         from_user_id: me,
         created_at: new Date().toISOString(),
         reply_to_id: input.replyTo?.id ?? null,
@@ -224,6 +230,7 @@ export function useThread(chatId: string, me: string | undefined, info: ChatInfo
           text: input.text,
           type,
           media: input.media ?? null,
+          attachmentUrl: input.attachmentUrl ?? null,
           replyToId: input.replyTo?.id ?? null,
         });
         qc.setQueryData<ThreadMessage[]>(key, (list = []) => {

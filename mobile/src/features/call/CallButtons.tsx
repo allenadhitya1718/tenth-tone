@@ -82,6 +82,75 @@ export function CallButtons({ peer, chatId, size = 24 }: { peer: UserSummary; ch
   );
 }
 
+// The voice and video buttons for a GROUP chat header (0145): every member
+// who may be rung rings at once; the call screen shows them as they answer.
+export function GroupCallButtons({
+  chatId,
+  title,
+  photo,
+  size = 24,
+}: {
+  chatId: Uuid;
+  title: string;
+  photo?: string | null;
+  size?: number;
+}) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const [checking, setChecking] = useState(false);
+
+  const start = useCallback(
+    async (kind: CallKind) => {
+      if (checking) return;
+      const s = getCallState();
+      // Already in this group's call: back to it.
+      if (isCallActive(s) && s.callId && s.groupChatId === chatId) {
+        openCallScreen(s.callId);
+        return;
+      }
+      setChecking(true);
+      try {
+        const ready = await checkReady(kind);
+        if (!ready.ok) {
+          const buttons: { text: string; style?: 'cancel'; onPress?: () => void }[] = [{ text: t('call.ok'), style: 'cancel' }];
+          if (ready.openSettings) buttons.push({ text: t('call.openSettings'), onPress: () => void Linking.openSettings() });
+          Alert.alert(t('call.cantCallTitle'), t(ready.error.key, ready.error.params), buttons);
+          return;
+        }
+        router.push(dialPath({ to: chatId, kind, chat: chatId, name: title, avatar: photo ?? null, group: true }) as Href);
+      } finally {
+        setChecking(false);
+      }
+    },
+    [checking, chatId, title, photo, t],
+  );
+
+  return (
+    <View style={styles.row}>
+      <Pressable
+        onPress={() => void start('audio')}
+        hitSlop={6}
+        style={styles.btn}
+        accessibilityRole="button"
+        accessibilityLabel={t('call.group.startVoice', { name: title })}
+        disabled={checking}
+      >
+        <Ionicons name="call-outline" size={size} color={colors.text} />
+      </Pressable>
+      <Pressable
+        onPress={() => void start('video')}
+        hitSlop={6}
+        style={styles.btn}
+        accessibilityRole="button"
+        accessibilityLabel={t('call.group.startVideo', { name: title })}
+        disabled={checking}
+      >
+        <Ionicons name="videocam-outline" size={size + 2} color={colors.text} />
+      </Pressable>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
   btn: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },

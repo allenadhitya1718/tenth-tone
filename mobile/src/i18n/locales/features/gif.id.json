@@ -1,0 +1,23 @@
+{
+  "gif": {
+    "tabEmoji": "Emoji",
+    "tabGif": "GIF",
+    "search": "Cari GIF",
+    "trending": "Sedang tren",
+    "loading": "Memuat GIF",
+    "empty": "Tidak ada GIF untuk “{{q}}”",
+    "emptyTrending": "Belum ada GIF untuk ditampilkan",
+    "error": "Tidak dapat memuat GIF",
+    "unavailable": "GIF sedang tidak tersedia",
+    "rateLimited": "Terlalu banyak pencarian. Coba lagi dalam beberapa menit.",
+    "retry": "Coba lagi",
+    "clear": "Hapus pencarian",
+    "poweredBy": "Didukung oleh Tenor",
+    "preview": "GIF",
+    "a11y": "GIF: {{description}}",
+    "a11yPlain": "GIF",
+    "sendHint": "Mengirim GIF ini",
+    "postHint": "Memposting GIF ini sebagai komentar",
+    "openHint": "Membuka GIF layar penuh"
+  }
+}

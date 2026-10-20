@@ -1,0 +1,23 @@
+{
+  "gif": {
+    "tabEmoji": "Emoji",
+    "tabGif": "GIF",
+    "search": "GIF ara",
+    "trending": "Trend olanlar",
+    "loading": "GIF'ler yükleniyor",
+    "empty": "“{{q}}” için GIF yok",
+    "emptyTrending": "Şu anda gösterilecek GIF yok",
+    "error": "GIF'ler yüklenemedi",
+    "unavailable": "GIF'ler şu anda kullanılamıyor",
+    "rateLimited": "Çok fazla arama. Birkaç dakika sonra tekrar deneyin.",
+    "retry": "Tekrar dene",
+    "clear": "Aramayı temizle",
+    "poweredBy": "Tenor tarafından desteklenmektedir",
+    "preview": "GIF",
+    "a11y": "GIF: {{description}}",
+    "a11yPlain": "GIF",
+    "sendHint": "Bu GIF'i gönderir",
+    "postHint": "Bu GIF'i yorum olarak paylaşır",
+    "openHint": "GIF'i tam ekran açar"
+  }
+}

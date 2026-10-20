@@ -1,0 +1,23 @@
+{
+  "gif": {
+    "tabEmoji": "表情",
+    "tabGif": "GIF",
+    "search": "搜索 GIF",
+    "trending": "热门",
+    "loading": "正在加载 GIF",
+    "empty": "没有与“{{q}}”相关的 GIF",
+    "emptyTrending": "暂时没有可显示的 GIF",
+    "error": "无法加载 GIF",
+    "unavailable": "GIF 暂时不可用",
+    "rateLimited": "搜索过于频繁，请几分钟后再试。",
+    "retry": "重试",
+    "clear": "清除搜索",
+    "poweredBy": "由 Tenor 提供",
+    "preview": "GIF",
+    "a11y": "GIF：{{description}}",
+    "a11yPlain": "GIF",
+    "sendHint": "发送此 GIF",
+    "postHint": "将此 GIF 发布为评论",
+    "openHint": "全屏打开此 GIF"
+  }
+}

@@ -34,9 +34,11 @@ import {
   unlikeComment,
 } from '@/api/comments';
 import { ApiError } from '@/api/client';
+import { type Gif, gifStoredUrl, parseGifUrl } from '@/api/gifs';
 import { videoKeys } from '@/api/videos';
 import { NotFoundState } from '@/components/NotFoundState';
-import { EmojiPanel, QuickEmojis } from '@/components/emoji/EmojiPanel';
+import { EmojiGifPanel } from '@/components/emoji/EmojiGifPanel';
+import { QuickEmojis } from '@/components/emoji/EmojiPanel';
 import { patchVideoEverywhere } from '@/features/feed/cache';
 import { formatCount } from '@/features/feed/format';
 import { ReportSheet } from '@/features/safety/ReportSheet';
@@ -107,6 +109,14 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
   const [reporting, setReporting] = useState<string | null>(null);
   const [cursor, setCursor] = useState(0);
   const [prefix, setPrefix] = useState('');
+  // The GIF tab's search field has the keyboard: keep the panel open and
+  // make room for it (the quick-emoji row steps aside).
+  const [gifSearching, setGifSearching] = useState(false);
+  const gifSearchingRef = useRef(false);
+  const onGifSearchFocus = (focused: boolean) => {
+    gifSearchingRef.current = focused;
+    setGifSearching(focused);
+  };
 
   const key = commentKeys.thread(videoId);
   const q = useQuery({ queryKey: key, queryFn: () => fetchComments(videoId) });
@@ -161,7 +171,7 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
   // Note 29: the emoji panel gives way to the keyboard.
   useEffect(() => {
     const sub = Keyboard.addListener('keyboardDidShow', (e) => {
-      setEmojiOpen(false);
+      if (!gifSearchingRef.current) setEmojiOpen(false);
       // endCoordinates.height leaves out the navigation-bar inset on edge-to-edge
       // Android (measured: the composer sat ~24 px under the keyboard), so add it.
       setKbHeight(e.endCoordinates.height + insets.bottom);
@@ -174,7 +184,7 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
   }, [insets.bottom]);
 
   const send = useMutation({
-    mutationFn: ({ body, parentId }: { body: string; parentId: string | null }) =>
+    mutationFn: ({ body, parentId, gifUrl }: { body: string; parentId: string | null; gifUrl?: string | null }) =>
       postComment(
         videoId,
         body,
@@ -186,6 +196,7 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
           Alert.alert(t('comments.withdrawn'), t('comments.blockedBody'));
         },
         parentId,
+        gifUrl ?? null,
       ),
     onSuccess: (comment) => {
       // A comment with one of MY hidden words stays out of my thread, as it
@@ -201,6 +212,12 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
       if (isCommentBlocked(e)) {
         setText((v) => v || body);
         Alert.alert(t('comments.blocked'), t('comments.blockedBody'));
+        return;
+      }
+      // A GIF before 0144 is applied (no gif_url column yet).
+      if (e instanceof ApiError && e.code === 'gif_unavailable') {
+        setText((v) => v || body);
+        Alert.alert(t('comments.sendFailed'), t('gif.unavailable'));
         return;
       }
       const why = commentRefusalKey(e);
@@ -226,6 +243,18 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
     // Note 8: the keyboard stays open after sending, so a second comment
     // does not need another tap on the field.
     input.current?.focus();
+  }
+
+  // A GIF posts at once, with whatever text is in the box as its caption
+  // (owner request). The panel closes so a stray second tap posts nothing.
+  function pickGif(gif: Gif) {
+    if (send.isPending) return;
+    send.mutate({ body: text.trim(), parentId: replyTo?.parentId ?? null, gifUrl: gifStoredUrl(gif) });
+    setText('');
+    setReplyTo(null);
+    setCursor(0);
+    setEmojiOpen(false);
+    if (Keyboard.isVisible()) Keyboard.dismiss();
   }
 
   function addEmoji(e: string) {
@@ -392,7 +421,7 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
                 </Pressable>
               </View>
             ) : null}
-            <QuickEmojis onPick={addEmoji} />
+            {gifSearching ? null : <QuickEmojis onPick={addEmoji} />}
             <View style={[styles.composer, { borderTopColor: colors.border, backgroundColor: colors.bg }]}>
               <Pressable onPress={toggleEmoji} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('comments.emoji')}>
                 <Ionicons name={emojiOpen ? 'keypad-outline' : 'happy-outline'} size={26} color={colors.muted} />
@@ -431,7 +460,15 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
             </View>
           </>
         )}
-        {emojiOpen && !off ? <EmojiPanel onPick={addEmoji} /> : null}
+        {emojiOpen && !off ? (
+          <EmojiGifPanel
+            onPickEmoji={addEmoji}
+            onPickGif={pickGif}
+            gifPickHint={t('gif.postHint')}
+            onGifSearchFocusChange={onGifSearchFocus}
+            compactHeight={180}
+          />
+        ) : null}
       </View>
     </SafeAreaView>
     <ReportSheet visible={!!reporting} onClose={() => setReporting(null)} targetType="comment" targetId={reporting ?? ''} />
@@ -497,6 +534,7 @@ function CommentRow({
   }
 
   const name = comment.user?.name ?? comment.user?.handle ?? '';
+  const gif = parseGifUrl(comment.gif_url);
   return (
     <Pressable onLongPress={mine ? confirmDelete : undefined} style={[styles.row, reply && styles.replyRow]}>
       <Pressable onPress={() => comment.user?.id && router.push(`/user/${comment.user.id}`)}>
@@ -512,17 +550,31 @@ function CommentRow({
         <Text style={[styles.name, { color: colors.muted }]}>
           {name} · {timeAgo(comment.created_at, t, locale)}
         </Text>
-        <Text style={[styles.body, { color: colors.text }]}>
-          {comment.text.split(/(@[A-Za-z0-9_][A-Za-z0-9_.]*)/g).map((part, i) =>
-            part.startsWith('@') ? (
-              <Text key={i} style={{ color: colors.primary2, fontWeight: '600' }}>
-                {atHandle(part)}
-              </Text>
-            ) : (
-              part
-            ),
-          )}
-        </Text>
+        {comment.text ? (
+          <Text style={[styles.body, { color: colors.text }]}>
+            {comment.text.split(/(@[A-Za-z0-9_][A-Za-z0-9_.]*)/g).map((part, i) =>
+              part.startsWith('@') ? (
+                <Text key={i} style={{ color: colors.primary2, fontWeight: '600' }}>
+                  {atHandle(part)}
+                </Text>
+              ) : (
+                part
+              ),
+            )}
+          </Text>
+        ) : null}
+        {gif ? (
+          <Image
+            source={{ uri: gif.uri }}
+            style={[styles.gif, { aspectRatio: gif.aspect, backgroundColor: colors.bg3 }]}
+            contentFit="cover"
+            autoplay
+            recyclingKey={comment.id}
+            accessible
+            accessibilityRole="image"
+            accessibilityLabel={t('gif.a11yPlain')}
+          />
+        ) : null}
         <View style={styles.actions}>
           <Pressable onPress={onReply} hitSlop={8} accessibilityRole="button">
             <Text style={[styles.action, { color: colors.muted }]}>{t('ugc.reply')}</Text>
@@ -578,6 +630,8 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 13, fontWeight: '600', flex: 1 },
   name: { fontSize: 12.5, fontWeight: '600', marginBottom: 2 },
   body: { fontSize: 15, lineHeight: 21 },
+  // Height follows the GIF's aspect ratio; the width keeps tall GIFs short.
+  gif: { width: 170, maxWidth: '100%', borderRadius: 10, marginTop: 4 },
   like: { alignItems: 'center', minWidth: 30 },
   likeN: { fontSize: 11, marginTop: 1 },
   composer: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth },

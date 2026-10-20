@@ -17,6 +17,9 @@ export type Strings = {
   location: string;
   file: string;
   sticker: string;
+  gif: string;
+  // 0146: a video sent from the feed's "Send to" sheet
+  videoShare: string;
   follow: string;
   followRequest: string;
   likeVideo: string;
@@ -70,6 +73,8 @@ const en: Strings = {
   location: '📍 Location',
   file: '📎 File',
   sticker: '💟 Sticker',
+  gif: '🎞️ GIF',
+  videoShare: '🎬 Shared a video',
   follow: '{a} started following you',
   followRequest: '{a} requested to follow you',
   likeVideo: '{a} liked your video',
@@ -122,6 +127,8 @@ const ar: Strings = {
   location: '📍 موقع',
   file: '📎 ملف',
   sticker: '💟 ملصق',
+  gif: '🎞️ GIF',
+  videoShare: '🎬 شارك فيديو',
   follow: '{a} بدأ بمتابعتك',
   followRequest: '{a} طلب متابعتك',
   likeVideo: '{a} أعجب بفيديوك',
@@ -174,6 +181,8 @@ const zh: Strings = {
   location: '📍 位置',
   file: '📎 文件',
   sticker: '💟 贴纸',
+  gif: '🎞️ GIF',
+  videoShare: '🎬 分享了一个视频',
   follow: '{a} 关注了你',
   followRequest: '{a} 请求关注你',
   likeVideo: '{a} 赞了你的视频',
@@ -226,6 +235,8 @@ const hi: Strings = {
   location: '📍 लोकेशन',
   file: '📎 फ़ाइल',
   sticker: '💟 स्टिकर',
+  gif: '🎞️ GIF',
+  videoShare: '🎬 एक वीडियो शेयर किया',
   follow: '{a} ने आपको फ़ॉलो करना शुरू किया',
   followRequest: '{a} ने आपको फ़ॉलो करने का अनुरोध भेजा',
   likeVideo: '{a} को आपका वीडियो पसंद आया',
@@ -278,6 +289,8 @@ const ur: Strings = {
   location: '📍 مقام',
   file: '📎 فائل',
   sticker: '💟 اسٹیکر',
+  gif: '🎞️ GIF',
+  videoShare: '🎬 ایک ویڈیو شیئر کی',
   follow: '{a} نے آپ کو فالو کرنا شروع کیا',
   followRequest: '{a} نے آپ کو فالو کرنے کی درخواست بھیجی',
   likeVideo: '{a} نے آپ کی ویڈیو پسند کی',
@@ -330,6 +343,8 @@ const fr: Strings = {
   location: '📍 Position',
   file: '📎 Fichier',
   sticker: '💟 Sticker',
+  gif: '🎞️ GIF',
+  videoShare: '🎬 A partagé une vidéo',
   follow: '{a} a commencé à vous suivre',
   followRequest: '{a} souhaite vous suivre',
   likeVideo: '{a} a aimé votre vidéo',
@@ -382,6 +397,8 @@ const es: Strings = {
   location: '📍 Ubicación',
   file: '📎 Archivo',
   sticker: '💟 Sticker',
+  gif: '🎞️ GIF',
+  videoShare: '🎬 Compartió un video',
   follow: '{a} comenzó a seguirte',
   followRequest: '{a} quiere seguirte',
   likeVideo: 'A {a} le gustó tu video',
@@ -434,6 +451,8 @@ const tr: Strings = {
   location: '📍 Konum',
   file: '📎 Dosya',
   sticker: '💟 Çıkartma',
+  gif: '🎞️ GIF',
+  videoShare: '🎬 Bir video paylaştı',
   follow: '{a} seni takip etmeye başladı',
   followRequest: '{a} seni takip etmek istiyor',
   likeVideo: '{a} videonu beğendi',
@@ -486,6 +505,8 @@ const id: Strings = {
   location: '📍 Lokasi',
   file: '📎 File',
   sticker: '💟 Stiker',
+  gif: '🎞️ GIF',
+  videoShare: '🎬 Membagikan video',
   follow: '{a} mulai mengikutimu',
   followRequest: '{a} ingin mengikutimu',
   likeVideo: '{a} menyukai videomu',

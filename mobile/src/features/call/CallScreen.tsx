@@ -1,22 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { type Href, router, useNavigation } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
   BackHandler,
+  type LayoutChangeEvent,
   Linking,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { RenderModeType, RtcSurfaceView } from 'react-native-agora';
+import { RenderModeType, RtcSurfaceView, RtcTextureView } from 'react-native-agora';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { CallMemberWithProfile } from '@/api/calls';
+import type { UserSummary } from '@/api/types';
 import type { ErrorMsg } from '@/components/ui';
 import { showToast } from '@/components/Toast';
 import { Avatar } from '@/features/chat/Avatar';
@@ -26,6 +30,7 @@ import {
   accept,
   decline,
   dial,
+  dialGroup,
   dismissEnded,
   flipCamera,
   getCallState,
@@ -39,8 +44,17 @@ import {
   type CallState,
   type Readiness,
 } from './callSession';
+import { AddPeopleSheet } from './AddPeopleSheet';
 import { LocalPip } from './LocalPip';
 import { callPath, markCallScreen, type DialParams } from './nav';
+import {
+  isActiveMember,
+  memberAgoraUid,
+  memberName,
+  useCallMembers,
+  useMarkRinging,
+  useMemberToasts,
+} from './useCallMembers';
 
 // The full-screen call: outgoing ring, incoming ring (Accept / Decline), and
 // the call itself. Port of V.call and the incoming card in web/js/views.js.
@@ -89,6 +103,21 @@ export function CallScreen(props: Props) {
       return markCallScreen(routeId);
     }
     if (!dialReq) return;
+    if (dialReq.group) {
+      dialGroup({
+        nonce: dialReq.nonce,
+        chatId: dialReq.to,
+        kind: dialReq.kind,
+        name: dialReq.name ?? null,
+        photo: dialReq.avatar ?? null,
+      })
+        .then((r) => {
+          if (!r.ok) setRefusal({ error: r.error, openSettings: r.openSettings });
+          else if (r.skipped) showToast(t('call.group.skipped', { count: r.skipped }), 'information-circle');
+        })
+        .catch(() => setRefusal({ error: { key: 'call.errors.generic' } }));
+      return;
+    }
     // The other person's name and photo come in with the route, so the
     // ringing screen is complete before the row is even written.
     dial({
@@ -165,10 +194,43 @@ function CallView({ s, leave }: { s: CallState; leave: () => void }) {
   const insets = useSafeAreaInsets();
   const [acceptError, setAcceptError] = useState<Refusal | null>(null);
   const [accepting, setAccepting] = useState(false);
-  const name = s.peer?.name || s.peer?.handle || t('call.someone');
   const video = s.kind === 'video';
   const live = s.phase === 'connecting' || s.phase === 'connected';
   const ringingOut = s.phase === 'dialing' || s.phase === 'outgoing';
+
+  // ---------- who is in it (group calls, 0092) ----------
+  const members = useCallMembers(s.channel, live || ringingOut || s.phase === 'incoming');
+  const markRinging = useMarkRinging(s.channel);
+  useMemberToasts(members, s.me, s.phase === 'connected');
+  // Three or more people (counting anyone being rung in) is a group call; a
+  // call back down to two is shown as the usual one-to-one screen, with
+  // whoever is actually left in it.
+  const { others, joinedOthers, group, peer } = useMemo(() => {
+    const o = members.filter((m) => m.user_id !== s.me && isActiveMember(m));
+    const j = o.filter((m) => m.status === 'joined');
+    const g = live && o.length >= 2;
+    const p: UserSummary | null = live && !g && j.length === 1 && j[0].profile ? j[0].profile : s.peer;
+    return { others: o, joinedOthers: j, group: g, peer: p };
+  }, [members, s.me, s.peer, live]);
+  const name = peer?.name || peer?.handle || t('call.someone');
+  const invite = !!s.row?.root_id && s.phase === 'incoming';
+  // Rung into a call already under way: who else is in it, beside the inviter.
+  const alsoIn = invite
+    ? joinedOthers.filter((m) => m.user_id !== s.row?.caller_id).map((m) => memberName(m, t('call.someone')))
+    : [];
+  const groupCall = !!s.groupChatId;
+  const title = group ? (s.groupName ?? groupTitle(others, t)) : name;
+  const [adding, setAdding] = useState(false);
+  // A fresh sheet (empty search, no old errors) each time it opens.
+  const [sheetKey, setSheetKey] = useState(0);
+  const canAdd = s.phase === 'connected' && !!s.call && members.length > 0;
+  const onInvited = useCallback((u: UserSummary) => markRinging(u, s.me), [markRinging, s.me]);
+
+  // The grid sits between the top bar and the controls, whatever they measure.
+  const [topH, setTopH] = useState(0);
+  const [bottomH, setBottomH] = useState(0);
+  const onTopLayout = useCallback((e: LayoutChangeEvent) => setTopH(e.nativeEvent.layout.height), []);
+  const onBottomLayout = useCallback((e: LayoutChangeEvent) => setBottomH(e.nativeEvent.layout.height), []);
 
   // ---------- closing when it is over ----------
   const closed = useRef(false);
@@ -251,14 +313,31 @@ function CallView({ s, leave }: { s: CallState; leave: () => void }) {
   }, [t]);
 
   // ---------- what is on screen ----------
-  const showRemote = live && video && s.remoteVideo && s.remoteUid != null && s.engineReady;
+  const showRemote = !group && live && video && s.remoteVideo && s.remoteUid != null && s.engineReady;
   // A video call that is ringing out shows this phone's camera full screen,
   // as FaceTime does; once the other picture arrives it moves to the corner.
-  const localFull = video && s.cameraOn && s.engineReady && !showRemote && (ringingOut || live);
-  const localPip = video && s.cameraOn && s.engineReady && showRemote;
+  const localFull = !group && video && s.cameraOn && s.engineReady && !showRemote && (ringingOut || live);
+  // In a group call this phone's camera is always the small window.
+  const localPip = video && s.cameraOn && s.engineReady && (showRemote || group);
   const overVideo = showRemote || localFull;
+  const compact = overVideo || group;
 
-  const status = statusLine(s, name, t);
+  // Rung into a group chat's call: the group is the headline, the person
+  // who rang under it ("Family" / "Group voice call from Allen").
+  const headName = invite && s.groupName ? s.groupName : name;
+  const status = invite
+    ? s.groupName
+      ? t(video ? 'call.group.groupVideoFrom' : 'call.group.groupVoiceFrom', { name })
+      : t(video ? 'call.group.incomingVideo' : 'call.group.incomingVoice')
+    : statusLine(s, name, t);
+
+  // Calling a group: once every member has declined or missed, stop ringing
+  // nobody (the ring timeout would otherwise wait out the full 45 s).
+  const ringingNobody = groupCall && s.isCaller && s.phase === 'outgoing' && members.length > 1 && others.length === 0;
+  const anyDeclined = members.some((m) => m.user_id !== s.me && m.status === 'declined');
+  useEffect(() => {
+    if (ringingNobody) hangUp(anyDeclined ? 'declined' : 'no_answer');
+  }, [ringingNobody, anyDeclined]);
 
   return (
     <View style={styles.root}>
@@ -287,29 +366,51 @@ function CallView({ s, leave }: { s: CallState; leave: () => void }) {
       ) : null}
       {overVideo ? <View style={[StyleSheet.absoluteFill, styles.videoShade]} pointerEvents="none" /> : null}
 
+      {group ? (
+        <GroupGrid others={others} s={s} top={topH + 8} bottom={bottomH + 8} />
+      ) : null}
+
       {/* Top: minimise, then who and how it is going. */}
-      <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
+      <View style={[styles.top, { paddingTop: insets.top + 8 }]} onLayout={onTopLayout}>
         <View style={styles.topRow}>
-          {live || ringingOut ? (
-            <RoundIcon
-              icon="chevron-down"
-              label={t('call.minimise')}
-              onPress={ringingOut ? confirmCancel : minimise}
-              small
-            />
-          ) : (
-            <View style={styles.topSpacer} />
-          )}
+          <View style={styles.topSide}>
+            {live || ringingOut ? (
+              <RoundIcon
+                icon="chevron-down"
+                label={t('call.minimise')}
+                onPress={ringingOut ? confirmCancel : minimise}
+                small
+              />
+            ) : null}
+          </View>
           <Text style={styles.kindTag} accessibilityElementsHidden importantForAccessibility="no">
             {video ? t('call.videoCall') : t('call.voiceCall')}
           </Text>
-          <View style={styles.topSpacer} />
+          <View style={[styles.topSide, styles.topEnd]}>
+            {canAdd ? (
+              <Pressable
+                onPress={() => {
+                  setSheetKey((k) => k + 1);
+                  setAdding(true);
+                }}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('call.group.addA11y')}
+                style={({ pressed }) => [styles.addPill, pressed && { opacity: 0.6 }]}
+              >
+                <Ionicons name="person-add" size={16} color={INK} />
+                <Text style={styles.addPillText} numberOfLines={1}>
+                  {t('call.group.add')}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
         </View>
 
-        {overVideo ? (
+        {compact ? (
           <View style={styles.compactHead}>
-            <Text style={styles.compactName} numberOfLines={1}>
-              {name}
+            <Text style={styles.compactName} numberOfLines={1} accessibilityRole="header">
+              {title}
             </Text>
             <Text style={styles.sub} accessibilityLiveRegion="polite">
               {status}
@@ -321,11 +422,16 @@ function CallView({ s, leave }: { s: CallState; leave: () => void }) {
               <Avatar uri={s.peer?.avatar_url} name={name} size={112} />
             </Pulse>
             <Text style={styles.name} numberOfLines={2} accessibilityRole="header">
-              {name}
+              {headName}
             </Text>
             <Text style={styles.sub} accessibilityLiveRegion="polite">
               {status}
             </Text>
+            {alsoIn.length ? (
+              <Text style={styles.withLine} numberOfLines={2}>
+                {t('call.group.withNames', { names: alsoIn.join(t('call.group.listSep')) })}
+              </Text>
+            ) : null}
           </View>
         )}
 
@@ -333,11 +439,15 @@ function CallView({ s, leave }: { s: CallState; leave: () => void }) {
       </View>
 
       {localPip ? (
-        <LocalPip top={insets.top + 120} bottom={insets.bottom + 200} label={t('call.a11y.localVideo')} />
+        <LocalPip
+          top={group ? topH + 16 : insets.top + 120}
+          bottom={group ? bottomH + 16 : insets.bottom + 200}
+          label={t('call.a11y.localVideo')}
+        />
       ) : null}
 
       {/* Bottom: the controls for this phase. */}
-      <View style={[styles.bottom, { paddingBottom: insets.bottom + 24 }]}>
+      <View style={[styles.bottom, { paddingBottom: insets.bottom + 24 }]} onLayout={onBottomLayout}>
         {s.phase === 'incoming' ? (
           <View style={styles.answerRow}>
             <BigButton icon="call" color={RED} label={t('call.decline')} onPress={decline} rotate />
@@ -387,9 +497,107 @@ function CallView({ s, leave }: { s: CallState; leave: () => void }) {
                 />
               ) : null}
             </View>
-            <BigButton icon="call" color={RED} label={ringingOut ? t('call.cancel') : t('call.end')} onPress={() => hangUp()} rotate />
+            <BigButton
+              icon="call"
+              color={RED}
+              label={ringingOut ? t('call.cancel') : group ? t('call.group.leave') : t('call.end')}
+              onPress={() => hangUp()}
+              rotate
+            />
           </>
         )}
+      </View>
+
+      <AddPeopleSheet
+        key={sheetKey}
+        visible={adding && s.phase === 'connected'}
+        onClose={() => setAdding(false)}
+        members={members}
+        me={s.me}
+        kind={s.kind}
+        onInvited={onInvited}
+      />
+    </View>
+  );
+}
+
+type T = (k: string, o?: Record<string, unknown>) => string;
+
+// "Devesh and Sara", "Devesh, Sara +2": the people on a group call, those in
+// it before those still being rung.
+function groupTitle(others: CallMemberWithProfile[], t: T): string {
+  const sorted = [...others].sort((a, b) => Number(b.status === 'joined') - Number(a.status === 'joined'));
+  const names = sorted.map((m) => memberName(m, t('call.someone')));
+  if (names.length <= 1) return names[0] ?? t('call.someone');
+  if (names.length === 2) return t('call.group.titleTwo', { a: names[0], b: names[1] });
+  return t('call.group.titleMore', { a: names[0], b: names[1], count: names.length - 2 });
+}
+
+// ---------- Group call: one tile per other person ----------
+
+function GroupGrid({ others, s, top, bottom }: { others: CallMemberWithProfile[]; s: CallState; top: number; bottom: number }) {
+  const n = others.length;
+  const cols = n <= 2 ? 1 : n <= 6 ? 2 : 3;
+  const rows: CallMemberWithProfile[][] = [];
+  // In the call first, then the people still ringing.
+  const sorted = [...others].sort((a, b) => Number(b.status === 'joined') - Number(a.status === 'joined'));
+  for (let i = 0; i < sorted.length; i += cols) rows.push(sorted.slice(i, i + cols));
+  const avatar = n <= 2 ? 96 : n <= 4 ? 72 : 56;
+  return (
+    <View style={[styles.grid, { top, bottom }]}>
+      {rows.map((row, i) => (
+        <View key={i} style={styles.gridRow}>
+          {row.map((m) => (
+            <GroupTile key={m.user_id} m={m} s={s} avatar={avatar} />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function GroupTile({ m, s, avatar }: { m: CallMemberWithProfile; s: CallState; avatar: number }) {
+  const { t } = useTranslation();
+  const uid = memberAgoraUid(m);
+  const remote = s.remotes[uid];
+  const name = memberName(m, t('call.someone'));
+  const speaking = !!remote && !remote.muted && s.speaking.includes(uid);
+  const showVideo = !!remote?.video && !remote.dropped && s.engineReady && m.status === 'joined';
+  let status = '';
+  if (m.status === 'ringing') status = t('call.group.ringing');
+  else if (!remote) status = t('call.connecting');
+  else if (remote.dropped) status = t('call.group.weak');
+  const a11y = [name, status, remote?.muted ? t('call.group.mutedA11y') : '', speaking ? t('call.group.speakingA11y') : '']
+    .filter(Boolean)
+    .join(', ');
+  const VideoView = Platform.OS === 'android' ? RtcTextureView : RtcSurfaceView;
+  return (
+    <View
+      style={[styles.tile, speaking && styles.tileSpeaking]}
+      accessible
+      accessibilityLabel={a11y}
+    >
+      {showVideo ? (
+        <VideoView
+          style={StyleSheet.absoluteFill}
+          canvas={{ uid, renderMode: RenderModeType.RenderModeHidden }}
+          connection={{ channelId: s.channel ?? '', localUid: s.localUid ?? 0 }}
+        />
+      ) : (
+        <View style={[styles.tileCenter, m.status === 'ringing' && styles.tileRinging]}>
+          <Avatar uri={m.profile?.avatar_url} name={name} size={avatar} />
+        </View>
+      )}
+      <View style={styles.tileLabel} pointerEvents="none">
+        {remote?.muted ? <Ionicons name="mic-off" size={14} color={INK} /> : null}
+        <Text style={styles.tileName} numberOfLines={1}>
+          {name}
+        </Text>
+        {status ? (
+          <Text style={styles.tileStatus} numberOfLines={1}>
+            {status}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -624,7 +832,50 @@ const styles = StyleSheet.create({
   videoShade: { backgroundColor: 'rgba(0,0,0,0.12)' },
   top: { paddingHorizontal: 16 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  topSpacer: { width: 40 },
+  topSide: { flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 40 },
+  topEnd: { justifyContent: 'flex-end' },
+  addPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  addPillText: { color: INK, fontSize: 14, fontWeight: '700' },
+  withLine: { color: INK_SOFT, fontSize: 14, textAlign: 'center' },
+  grid: { position: 'absolute', start: 8, end: 8, gap: 8 },
+  gridRow: { flex: 1, flexDirection: 'row', gap: 8 },
+  tile: {
+    flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 3,
+    borderColor: 'transparent',
+  },
+  tileSpeaking: { borderColor: GREEN },
+  tileCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  tileRinging: { opacity: 0.55 },
+  tileLabel: {
+    position: 'absolute',
+    start: 8,
+    end: 8,
+    bottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  tileName: {
+    color: INK,
+    fontSize: 13,
+    fontWeight: '700',
+    flexShrink: 1,
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowRadius: 4,
+  },
+  tileStatus: { color: INK_SOFT, fontSize: 12, textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 4 },
   kindTag: { color: INK_SOFT, fontSize: 13, fontWeight: '600' },
   head: { alignItems: 'center', marginTop: 48, gap: 10 },
   compactHead: { alignItems: 'center', marginTop: 8, gap: 2 },

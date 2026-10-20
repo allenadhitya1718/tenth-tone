@@ -14,7 +14,9 @@ type IconName = keyof typeof Ionicons.glyphMap;
 
 // The long-press sheet for one message: react, reply, copy, delete (own
 // messages only). A bubble still sending has no id yet, so it can only be
-// copied.
+// copied. A shared video (0146) offers Copy link instead of Copy text.
+// Without onReply (a message request, where there is no composer) there is
+// no Reply.
 export function MessageMenu({
   message,
   mine,
@@ -28,7 +30,7 @@ export function MessageMenu({
   mine: boolean;
   onClose: () => void;
   onReact: (m: ThreadMessage, emoji: string) => void;
-  onReply: (m: ThreadMessage) => void;
+  onReply?: (m: ThreadMessage) => void;
   onCopy: (m: ThreadMessage) => void;
   onDelete: (m: ThreadMessage) => void;
 }) {
@@ -43,7 +45,8 @@ export function MessageMenu({
 
   const m = message;
   const sent = !!m && !m.pending;
-  const canCopy = !!m?.text && m.type !== 'call' && m.type !== 'voice';
+  const isVideoShare = m?.type === 'video_share';
+  const canCopy = isVideoShare ? !!m?.attachment_url : !!m?.text && m.type !== 'call' && m.type !== 'voice' && m.type !== 'gif';
 
   return (
     <Modal visible={!!m} transparent animationType="fade" onRequestClose={close} statusBarTranslucent>
@@ -88,7 +91,7 @@ export function MessageMenu({
             />
           ) : (
             <View style={[styles.actions, { borderTopColor: colors.border }]}>
-              {sent ? (
+              {sent && onReply ? (
                 <Action
                   icon="arrow-undo-outline"
                   label={t('chat.reply')}
@@ -100,8 +103,8 @@ export function MessageMenu({
               ) : null}
               {canCopy ? (
                 <Action
-                  icon="copy-outline"
-                  label={t('chat.copy')}
+                  icon={isVideoShare ? 'link-outline' : 'copy-outline'}
+                  label={isVideoShare ? t('sendTo.copyLink') : t('chat.copy')}
                   onPress={() => {
                     onCopy(m);
                     close();

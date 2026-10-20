@@ -39,6 +39,9 @@ export type Call = {
   // Agora channel name, shared by every row of one (group) call.
   channel: string;
   root_id?: Uuid | null;
+  // The group chat a group call was started from (0145). Only on that call's
+  // root, whose caller and callee are both the person who called the group.
+  group_chat_id?: Uuid | null;
   created_at: Iso;
   answered_at: Iso | null;
   ended_at: Iso | null;
@@ -157,6 +160,45 @@ export async function inviteToCall({
   if (error) throw error;
   return data as Call;
 }
+
+// ---------- Calling a group chat (0145) ----------
+
+export type GroupCallStart = { call: Call; rung: number; skipped: number };
+
+// Rings every member of group chat `chatId` who may be rung, up to the group
+// size cap, in one round trip: start_group_call writes the root and one
+// invite per member, skipping (and counting) those the server refuses.
+// ApiError 'group_calls_unavailable' when 0145 is not applied yet.
+export async function startGroupCall({ chatId, kind }: { chatId: Uuid; kind: CallKind }): Promise<GroupCallStart> {
+  await requireUid();
+  const { data, error } = await supabase.rpc('start_group_call', { p_chat_id: chatId, p_kind: kind });
+  if (error) {
+    if (error.code === 'PGRST202' || error.code === '42883') throw new ApiError('group_calls_unavailable', error.message);
+    throw error;
+  }
+  const r = (data ?? {}) as { call_id?: Uuid; rung?: number; skipped?: number };
+  if (!r.call_id) throw new ApiError('group_calls_unavailable', 'no call id');
+  const { data: row, error: rowErr } = await supabase.from('calls').select().eq('id', r.call_id).single();
+  if (rowErr) throw rowErr;
+  return { call: row as Call, rung: r.rung ?? 0, skipped: r.skipped ?? 0 };
+}
+
+export type CallGroup = { id: Uuid; name: string | null; photo_url: string | null };
+
+// The name and photo of the group a call was started from. Null when it
+// cannot be read (not a member any more); never worth an error.
+export async function fetchCallGroup(chatId: Uuid): Promise<CallGroup | null> {
+  try {
+    const { data } = await supabase.from('chats').select('id, name, photo_url').eq('id', chatId).maybeSingle();
+    return (data as CallGroup | null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** A group call's root (0145): nobody's ring, the call itself. */
+export const isGroupRoot = (c: Pick<Call, 'group_chat_id' | 'root_id'> | null | undefined) =>
+  !!c?.group_chat_id && !c.root_id;
 
 // The inviter giving up on a ring nobody answered. Only while it is STILL
 // ringing, or an answered invite would be flagged missed.

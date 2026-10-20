@@ -33,6 +33,7 @@ import {
   tickFor,
 } from '@/api/chat';
 import { ApiError } from '@/api/client';
+import { type Gif, gifStoredUrl } from '@/api/gifs';
 import type { LocalMedia } from '@/api/upload';
 import { NotFoundState } from '@/components/NotFoundState';
 import { Button } from '@/components/ui';
@@ -46,11 +47,12 @@ import { dayKey, dayLabel, translateTitle } from './format';
 import { ImageViewer } from './ImageViewer';
 import { DaySeparator, MessageBubble } from './MessageBubble';
 import { MessageMenu } from './MessageMenu';
+import { useGroupLive } from './useGroupLive';
 import { type ThreadMessage, useThread } from './useThread';
 import { useWalkie } from './walkie/useWalkie';
 import { WalkieBanner } from './walkie/WalkieBanner';
 import { useActiveChat } from '@/features/notifications/push';
-import { CallButtons } from '@/features/call/CallButtons';
+import { CallButtons, GroupCallButtons } from '@/features/call/CallButtons';
 import { sendRefusalKey } from '@/lib/serverError';
 
 // Client note 26: live walkie-talkie voice (push-to-talk over an Agora
@@ -110,6 +112,8 @@ export function ChatThread({ chatId }: { chatId: string }) {
   }, []);
 
   const isGroup = info.data?.type === 'group';
+  // Name, photo and member count repaint when anyone changes the group (0147).
+  useGroupLive(chatId, isGroup);
   const other = !isGroup ? info.data?.others[0] : undefined;
   const title = translateTitle(info.data?.title ?? listed?.title ?? '', t);
   const photo = info.data?.photo || listed?.avatar || null;
@@ -182,6 +186,27 @@ export function ChatThread({ chatId }: { chatId: string }) {
 
   const sendVoice = useCallback((media: LocalMedia) => void sendMedia('voice', media), [sendMedia]);
 
+  // A GIF from the emoji panel's GIF tab. Its description travels as the
+  // text: the bubble's accessibility label, and what an older app shows.
+  const sendGif = useCallback(
+    async (gif: Gif) => {
+      const reply = replyTo;
+      setReplyTo(null);
+      try {
+        await send({ text: gif.description, type: 'gif', attachmentUrl: gifStoredUrl(gif), replyTo: reply });
+      } catch (e) {
+        // Before 0144 the database does not accept type 'gif'.
+        if (/messages_type_check|messages_gif_url_check/.test(String((e as Error)?.message ?? ''))) {
+          Alert.alert(t('chat.sendFailed'), t('gif.unavailable'));
+          return;
+        }
+        failSend(e);
+      }
+    },
+    [send, replyTo, failSend, t],
+  );
+  const onSendGif = useCallback((gif: Gif) => void sendGif(gif), [sendGif]);
+
   const pickImage = useCallback(async () => {
     setEmojiOpen(false);
     try {
@@ -216,6 +241,12 @@ export function ChatThread({ chatId }: { chatId: string }) {
 
   const onCopy = useCallback(
     (m: ThreadMessage) => {
+      // A shared video copies its link (0146), anything else its text.
+      if (m.type === 'video_share') {
+        if (!m.attachment_url) return;
+        void Clipboard.setStringAsync(m.attachment_url).then(() => showToast(t('sendTo.linkCopied')));
+        return;
+      }
       if (!m.text) return;
       void Clipboard.setStringAsync(m.text).then(() => showToast(t('chat.copied')));
     },
@@ -281,6 +312,15 @@ export function ChatThread({ chatId }: { chatId: string }) {
       { text: t('chat.decline'), style: 'destructive', onPress: () => decline.mutate() },
     ]);
 
+  // Swipe-to-reply (and the bubble's "Reply" accessibility action). The
+  // composer focuses its input when replyTo changes.
+  const swipeReply = useCallback((m: ThreadMessage) => {
+    setEmojiOpen(false);
+    // A new object each time, so swiping the same message again still
+    // brings the keyboard back.
+    setReplyTo({ ...m });
+  }, []);
+
   // ---------- Rendering ----------
 
   const renderItem = useCallback<ListRenderItem<Row>>(
@@ -297,9 +337,10 @@ export function ChatThread({ chatId }: { chatId: string }) {
           onMenu={openMenu}
           onOpenImage={setViewing}
           onQuotePress={scrollToMessage}
+          onReply={isRequest ? undefined : swipeReply}
         />
       ),
-    [me, openMenu, scrollToMessage],
+    [me, openMenu, scrollToMessage, isRequest, swipeReply],
   );
 
   const replyName = replyTo
@@ -325,13 +366,18 @@ export function ChatThread({ chatId }: { chatId: string }) {
         <Pressable onPress={goBack} hitSlop={10} style={styles.headerBtn} accessibilityRole="button" accessibilityLabel={t('chat.back')}>
           <Ionicons name={I18nManager.isRTL ? 'chevron-forward' : 'chevron-back'} size={28} color={colors.text} />
         </Pressable>
+        {/* A DM opens the other person's profile; a group opens Group Info
+            (rename, photo, members, leave). */}
         <Pressable
-          onPress={() => other && router.push(`/user/${other.id}`)}
-          disabled={!other}
+          onPress={() => {
+            if (other) router.push(`/user/${other.id}`);
+            else if (isGroup) router.push(`/chat-info/${chatId}` as Href);
+          }}
+          disabled={!other && !isGroup}
           style={styles.identity}
-          accessibilityRole={other ? 'button' : 'header'}
+          accessibilityRole={other || isGroup ? 'button' : 'header'}
           accessibilityLabel={title}
-          accessibilityHint={other ? t('chat.openProfileHint') : undefined}
+          accessibilityHint={other ? t('chat.openProfileHint') : isGroup ? t('groupInfo.openHint') : undefined}
         >
           <Avatar uri={photo} name={title} size={38} />
           <View style={styles.identityText}>
@@ -349,8 +395,11 @@ export function ChatThread({ chatId }: { chatId: string }) {
             ) : null}
           </View>
         </Pressable>
-        {/* Calling is one-to-one: a group has nobody single to ring. */}
         {other && !isRequest ? <CallButtons peer={other} chatId={chatId} /> : null}
+        {/* A group call rings every member who may be rung (0145). */}
+        {isGroup && !isRequest && (info.data?.memberCount ?? 0) >= 2 ? (
+          <GroupCallButtons chatId={chatId} title={title} photo={photo} />
+        ) : null}
       </View>
 
       <KeyboardAvoidingView style={styles.flex} behavior="padding">
@@ -438,6 +487,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
             onSendText={sendText}
             onPickImage={pickImage}
             onSendVoice={sendVoice}
+            onSendGif={onSendGif}
             walkie={walkie}
           />
         )}
@@ -448,7 +498,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
         mine={!!menuFor && menuFor.from_user_id === me}
         onClose={() => setMenuFor(null)}
         onReact={onReact}
-        onReply={setReplyTo}
+        onReply={isRequest ? undefined : setReplyTo}
         onCopy={onCopy}
         onDelete={onDelete}
       />

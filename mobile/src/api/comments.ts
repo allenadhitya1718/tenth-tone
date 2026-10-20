@@ -27,20 +27,32 @@ export type Comment = {
   user: Pick<UserSummary, 'id' | 'name' | 'handle' | 'avatar_url'> | null;
   // Whether I liked it. Absent when signed out or the lookup failed.
   liked?: boolean;
+  // 0144: a Tenor GIF (api/gifs.ts stored form). text may then be ''.
+  // Absent before 0144 is applied.
+  gif_url?: string | null;
 };
+
+// Before 0144 the column does not exist and naming it fails the whole
+// select (42703 from Postgres, PGRST204 from PostgREST's schema cache).
+function isMissingGifColumn(e: PostgrestError | null): boolean {
+  return !!e && (e.code === '42703' || e.code === 'PGRST204') && /gif_url/.test(e.message ?? '');
+}
 
 export async function fetchComments(videoId: Uuid): Promise<Comment[]> {
   const me = await uid();
-  const { data, error } = await supabase
-    .from('comments')
-    .select(
-      `
-      id, text, likes_count, created_at, user_id, parent_id,
+  const q = (gif: boolean) =>
+    supabase
+      .from('comments')
+      .select(
+        `
+      id, text, likes_count, created_at, user_id, parent_id,${gif ? ' gif_url,' : ''}
       user:profiles!comments_user_id_fkey ( id, name, handle, avatar_url )
     `,
-    )
-    .eq('video_id', videoId)
-    .order('created_at', { ascending: false });
+      )
+      .eq('video_id', videoId)
+      .order('created_at', { ascending: false });
+  let { data, error } = await q(true);
+  if (isMissingGifColumn(error)) ({ data, error } = await q(false));
   if (error) throw error;
   let rows = (data ?? []) as unknown as Comment[];
   if (!me) return rows;
@@ -148,21 +160,33 @@ export async function postComment(
   text: string,
   onWithdrawn?: OnCommentWithdrawn,
   parentId?: Uuid | null,
+  // 0144: a Tenor GIF posted with (or instead of) the text.
+  gifUrl?: string | null,
 ): Promise<PostedComment> {
   const me = await requireUid();
-  const screening = checkText('comment', text).catch(() => null);
+  // A GIF-only comment has no text to screen (the server does not hold it
+  // either, 0144).
+  const screening = text.trim() ? checkText('comment', text).catch(() => null) : Promise.resolve(null);
   const hiddenWords = myHiddenWords(me);
 
   const { data, error } = await supabase
     .from('comments')
-    .insert({ video_id: videoId, user_id: me, text, ...(parentId ? { parent_id: parentId } : {}) })
+    .insert({
+      video_id: videoId,
+      user_id: me,
+      text,
+      ...(parentId ? { parent_id: parentId } : {}),
+      // Only sent when set, so text comments still work before 0144.
+      ...(gifUrl ? { gif_url: gifUrl } : {}),
+    })
     .select(
       `
-      id, text, likes_count, created_at, parent_id,
+      id, text, likes_count, created_at, parent_id,${gifUrl ? ' gif_url,' : ''}
       user:profiles!comments_user_id_fkey ( id, name, handle, avatar_url )
     `,
     )
     .single();
+  if (isMissingGifColumn(error)) throw new ApiError('gif_unavailable', error?.message);
   if (error) throw asCommentError(error);
   const row = data as unknown as Comment;
 
@@ -274,19 +298,22 @@ export async function searchMentions(prefix: string, limit = 5): Promise<Mention
 
 // ---------- Your activity ----------
 
-export type MyComment = { id: Uuid; text: string; created_at: Iso; video_id: Uuid };
+export type MyComment = { id: Uuid; text: string; created_at: Iso; video_id: Uuid; gif_url?: string | null };
 
 export async function fetchMyComments(limit = 60): Promise<MyComment[]> {
   const me = await uid();
   if (!me) return [];
-  const { data, error } = await supabase
-    .from('comments')
-    .select('id, text, created_at, video_id')
-    .eq('user_id', me)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  const q = (gif: boolean) =>
+    supabase
+      .from('comments')
+      .select(gif ? 'id, text, created_at, video_id, gif_url' : 'id, text, created_at, video_id')
+      .eq('user_id', me)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+  let { data, error } = await q(true);
+  if (isMissingGifColumn(error)) ({ data, error } = await q(false));
   if (error) throw error;
-  return (data ?? []) as MyComment[];
+  return (data ?? []) as unknown as MyComment[];
 }
 
 export async function deleteMyComment(id: Uuid): Promise<void> {

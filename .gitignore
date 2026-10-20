@@ -78,3 +78,4 @@ __pycache__/
 *.old-backup
 supabase/.temp/
 mobile/.env.testaccount
+builds/

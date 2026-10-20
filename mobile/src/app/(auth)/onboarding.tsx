@@ -78,8 +78,10 @@ export default function Onboarding() {
 
       <View style={styles.top}>
         <LanguageSwitch onDark />
-        <Pressable onPress={finish} hitSlop={12} style={{ opacity: last ? 0 : 1 }} disabled={last} accessibilityRole="button">
-          <Text style={styles.skip}>{t('onboarding.skip')}</Text>
+        <Pressable onPress={finish} hitSlop={12} style={[styles.skipBtn, { opacity: last ? 0 : 1 }]} disabled={last} accessibilityRole="button">
+          <Text style={styles.skip} numberOfLines={1} maxFontSizeMultiplier={1.3}>
+            {t('onboarding.skip')}
+          </Text>
         </Pressable>
       </View>
 
@@ -124,8 +126,11 @@ export default function Onboarding() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: BG, paddingHorizontal: 22 },
-  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 50 },
-  skip: { color: '#94A3B8', fontSize: 15, fontWeight: '600', padding: 8 },
+  // The language pill may shrink (and truncate) but Skip never does, and the
+  // gap keeps them apart in both directions.
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 50, gap: 12 },
+  skipBtn: { flexShrink: 0 },
+  skip: { color: '#94A3B8', fontSize: 15, lineHeight: 22, fontWeight: '600', padding: 8 },
   stage: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 12 },
   // Pulled up over the faded bottom edge of the frame.
   dock: { alignItems: 'center', marginTop: -28 },

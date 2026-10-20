@@ -1,0 +1,23 @@
+{
+  "gif": {
+    "tabEmoji": "ایموجی",
+    "tabGif": "GIF",
+    "search": "GIF تلاش کریں",
+    "trending": "ٹرینڈنگ",
+    "loading": "GIF لوڈ ہو رہے ہیں",
+    "empty": "“{{q}}” کے لیے کوئی GIF نہیں",
+    "emptyTrending": "ابھی دکھانے کے لیے کوئی GIF نہیں",
+    "error": "GIF لوڈ نہیں ہو سکے",
+    "unavailable": "GIF ابھی دستیاب نہیں ہیں",
+    "rateLimited": "بہت زیادہ تلاش۔ چند منٹ بعد دوبارہ کوشش کریں۔",
+    "retry": "دوبارہ کوشش کریں",
+    "clear": "تلاش صاف کریں",
+    "poweredBy": "Tenor کے تعاون سے",
+    "preview": "GIF",
+    "a11y": "GIF: {{description}}",
+    "a11yPlain": "GIF",
+    "sendHint": "یہ GIF بھیجتا ہے",
+    "postHint": "یہ GIF بطور تبصرہ پوسٹ کرتا ہے",
+    "openHint": "GIF کو پوری اسکرین پر کھولتا ہے"
+  }
+}

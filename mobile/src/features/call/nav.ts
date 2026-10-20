@@ -15,6 +15,9 @@ export type DialParams = {
   name?: string | null;
   handle?: string | null;
   avatar?: string | null;
+  // Calling a group chat (0145): `to` and `chat` are then the group's id, and
+  // name / avatar are the group's. Only ever from dialPath(), never a link.
+  group?: boolean;
 };
 
 // /call/dial is also reachable from OUTSIDE the app (flyp://call/dial?to=...),

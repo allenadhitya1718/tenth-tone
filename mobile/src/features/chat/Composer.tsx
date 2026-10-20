@@ -17,8 +17,10 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
+import type { Gif } from '@/api/gifs';
 import type { LocalMedia } from '@/api/upload';
-import { EmojiPanel, QuickEmojis } from '@/components/emoji/EmojiPanel';
+import { EmojiGifPanel } from '@/components/emoji/EmojiGifPanel';
+import { QuickEmojis } from '@/components/emoji/EmojiPanel';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { formatDuration, previewText } from './format';
@@ -48,6 +50,8 @@ type Props = {
   onSendText: (text: string) => Promise<boolean>;
   onPickImage: () => void;
   onSendVoice: (media: LocalMedia) => void;
+  // A GIF picked in the emoji panel's GIF tab: sent at once.
+  onSendGif: (gif: Gif) => void;
   // Live push-to-talk (client note 26); null where it is not offered.
   walkie?: WalkieControls | null;
 };
@@ -61,6 +65,7 @@ export const Composer = memo(function Composer({
   onSendText,
   onPickImage,
   onSendVoice,
+  onSendGif,
   walkie = null,
 }: Props) {
   const { t } = useTranslation();
@@ -102,11 +107,34 @@ export const Composer = memo(function Composer({
   );
   const rec = useVoiceRecorder(events);
 
-  // Note 29: the emoji panel gives way to the keyboard.
+  // Note 29: the emoji panel gives way to the keyboard, except the keyboard
+  // the GIF tab's own search field opens.
+  const gifSearching = useRef(false);
   useEffect(() => {
-    const sub = Keyboard.addListener('keyboardDidShow', () => setEmojiOpen(false));
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      if (!gifSearching.current) setEmojiOpen(false);
+    });
     return () => sub.remove();
   }, [setEmojiOpen]);
+  useEffect(() => {
+    if (!emojiOpen) gifSearching.current = false;
+  }, [emojiOpen]);
+  const onGifSearchFocus = useCallback((focused: boolean) => {
+    gifSearching.current = focused;
+  }, []);
+
+  // A GIF goes at once (owner request, as in Instagram); the panel closes so
+  // a second stray tap cannot send another.
+  const pickGif = useCallback(
+    (gif: Gif) => {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      gifSearching.current = false;
+      Keyboard.dismiss();
+      setEmojiOpen(false);
+      onSendGif(gif);
+    },
+    [onSendGif, setEmojiOpen],
+  );
 
   // Choosing "reply" brings the keyboard up on the reply.
   useEffect(() => {
@@ -409,7 +437,12 @@ export const Composer = memo(function Composer({
       {emojiOpen ? (
         <View style={{ backgroundColor: colors.bg2 }}>
           <QuickEmojis onPick={addEmoji} />
-          <EmojiPanel onPick={addEmoji} />
+          <EmojiGifPanel
+            onPickEmoji={addEmoji}
+            onPickGif={pickGif}
+            gifPickHint={t('gif.sendHint')}
+            onGifSearchFocusChange={onGifSearchFocus}
+          />
         </View>
       ) : null}
     </View>

@@ -116,7 +116,8 @@ export function ActivityScreen() {
                 accessibilityHint={t('settings2.activity.openVideo')}
               >
                 <Text style={{ color: colors.text, fontSize: 14.5, textAlign: 'left' }} numberOfLines={3}>
-                  {c.text}
+                  {/* 0144: a GIF comment may have no text of its own. */}
+                  {c.gif_url ? [c.text.trim(), t('gif.preview')].filter(Boolean).join(' · ') : c.text}
                 </Text>
                 <Text style={{ color: colors.muted, fontSize: 12, marginTop: 3, textAlign: 'left' }}>
                   {timeAgo(c.created_at, t, i18n.language)}

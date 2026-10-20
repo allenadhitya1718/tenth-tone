@@ -1,0 +1,23 @@
+{
+  "gif": {
+    "tabEmoji": "Emoji",
+    "tabGif": "GIF",
+    "search": "Search GIFs",
+    "trending": "Trending",
+    "loading": "Loading GIFs",
+    "empty": "No GIFs for “{{q}}”",
+    "emptyTrending": "No GIFs to show right now",
+    "error": "Couldn't load GIFs",
+    "unavailable": "GIFs aren't available right now",
+    "rateLimited": "Too many searches. Try again in a few minutes.",
+    "retry": "Try again",
+    "clear": "Clear search",
+    "poweredBy": "Powered by Tenor",
+    "preview": "GIF",
+    "a11y": "GIF: {{description}}",
+    "a11yPlain": "GIF",
+    "sendHint": "Sends this GIF",
+    "postHint": "Posts this GIF as a comment",
+    "openHint": "Opens the GIF full screen"
+  }
+}

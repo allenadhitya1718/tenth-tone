@@ -1,15 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type AccessibilityActionEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { type AccessibilityActionEvent, type AccessibilityActionInfo, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Tick } from '@/api/chat';
+import { parseGifUrl } from '@/api/gifs';
 import { useTheme } from '@/providers/ThemeProvider';
 import { light } from '@/theme/colors';
 
 import { callLabel, clockTime, formatDuration, parseCall, previewText } from './format';
 import type { ThreadMessage } from './useThread';
+import { SwipeToReply } from './SwipeToReply';
+import { VideoShareCard } from './VideoShareCard';
 import { VoiceNote } from './VoiceNote';
 
 // Read ticks sit on MY bubble, which is brand blue (#1E56D6) in both themes,
@@ -18,7 +21,6 @@ import { VoiceNote } from './VoiceNote';
 // the better home for it.
 const TICK_READ = light.tickRead;
 
-const A11Y_ACTIONS = [{ name: 'longpress' as const }];
 
 type Props = {
   item: ThreadMessage;
@@ -30,6 +32,9 @@ type Props = {
   onMenu: (m: ThreadMessage) => void;
   onOpenImage: (uri: string) => void;
   onQuotePress: (id: string) => void;
+  // Swipe-to-reply and the "Reply" accessibility action. Absent where a
+  // reply is not possible (a message request, a bubble still sending).
+  onReply?: (m: ThreadMessage) => void;
 };
 
 export const MessageBubble = memo(function MessageBubble({
@@ -41,6 +46,7 @@ export const MessageBubble = memo(function MessageBubble({
   onMenu,
   onOpenImage,
   onQuotePress,
+  onReply,
 }: Props) {
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
@@ -54,6 +60,15 @@ export const MessageBubble = memo(function MessageBubble({
     [mine, colors],
   );
   const voiceTone = useMemo(() => ({ fg: tone.fg, track: tone.track }), [tone]);
+
+  // Swiping is not available to a screen reader, so "Reply" is also an
+  // accessibility action next to the menu (long press).
+  const canReply = !!onReply && !item.pending && item.type !== 'call' && item.type !== 'system';
+  const a11yActions = useMemo<AccessibilityActionInfo[]>(
+    () => (canReply ? [{ name: 'longpress' }, { name: 'reply', label: t('chat.reply') }] : [{ name: 'longpress' }]),
+    [canReply, t],
+  );
+  const reply = useCallback(() => onReply?.(item), [onReply, item]);
 
   // Calls and system rows are centred records, not bubbles.
   if (item.type === 'call' || item.type === 'system') {
@@ -82,7 +97,13 @@ export const MessageBubble = memo(function MessageBubble({
 
   const isImage = (item.type === 'image' || item.type === 'video') && !!item.attachment_url;
   const isVoice = item.type === 'voice' && !!item.attachment_url;
-  const hasInteractive = isImage || isVoice || !!item.reply_to;
+  // 0144: a Tenor GIF, drawn at its own aspect ratio and animated.
+  const gif = item.type === 'gif' ? parseGifUrl(item.attachment_url) : null;
+  // 0146: a video sent from the "Send to" sheet; text is only its link.
+  const isVideoShare = item.type === 'video_share';
+  const isMedia = isImage || !!gif || isVideoShare;
+  const hasInteractive = isMedia || isVoice || !!item.reply_to;
+  const gifLabel = item.text ? t('gif.a11y', { description: item.text }) : t('gif.a11yPlain');
 
   const tickLabel =
     tick === 'read' ? t('chat.tickRead') : tick === 'delivered' ? t('chat.tickDelivered') : tick ? t('chat.tickSent') : '';
@@ -92,6 +113,7 @@ export const MessageBubble = memo(function MessageBubble({
 
   const onA11yAction = (e: AccessibilityActionEvent) => {
     if (e.nativeEvent.actionName === 'longpress') onMenu(item);
+    else if (e.nativeEvent.actionName === 'reply') reply();
   };
 
   const reactions = groupReactions(item.reactions, myId);
@@ -102,6 +124,8 @@ export const MessageBubble = memo(function MessageBubble({
     (name ? t('chat.replyingTo', { name }) : t('fix4.quotedMessage')) + ': ' + (item.reply_to ? previewText(item.reply_to, t) : '');
 
   return (
+    <View>
+    <SwipeToReply enabled={canReply} onReply={reply}>
     <View style={[styles.wrap, mine ? styles.wrapMine : styles.wrapTheirs]}>
       <Pressable
         onLongPress={() => onMenu(item)}
@@ -109,13 +133,13 @@ export const MessageBubble = memo(function MessageBubble({
         accessible={!hasInteractive}
         accessibilityLabel={hasInteractive ? undefined : a11yLabel}
         accessibilityHint={hasInteractive ? undefined : t('chat.messageHint')}
-        accessibilityActions={hasInteractive ? undefined : A11Y_ACTIONS}
+        accessibilityActions={hasInteractive ? undefined : a11yActions}
         onAccessibilityAction={hasInteractive ? undefined : onA11yAction}
         style={[
           styles.bubble,
           { backgroundColor: tone.bg },
           mine ? styles.bubbleMine : styles.bubbleTheirs,
-          isImage && styles.bubbleMedia,
+          isMedia && styles.bubbleMedia,
           item.pending && styles.pending,
         ]}
       >
@@ -161,7 +185,7 @@ export const MessageBubble = memo(function MessageBubble({
             accessibilityRole="imagebutton"
             accessibilityLabel={`${who}, ${t('chat.photo')}, ${time}${status ? `, ${status}` : ''}`}
             accessibilityHint={t('chat.openPhotoHint')}
-            accessibilityActions={A11Y_ACTIONS}
+            accessibilityActions={a11yActions}
             onAccessibilityAction={onA11yAction}
           >
             <Image
@@ -174,19 +198,54 @@ export const MessageBubble = memo(function MessageBubble({
           </Pressable>
         ) : null}
 
+        {gif ? (
+          <Pressable
+            onPress={() => onOpenImage(gif.uri)}
+            onLongPress={() => onMenu(item)}
+            delayLongPress={300}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={`${who}, ${gifLabel}, ${time}${status ? `, ${status}` : ''}`}
+            accessibilityHint={t('gif.openHint')}
+            accessibilityActions={a11yActions}
+            onAccessibilityAction={onA11yAction}
+          >
+            <Image
+              source={{ uri: gif.uri }}
+              style={[styles.gif, { aspectRatio: gif.aspect, backgroundColor: colors.bg3 }]}
+              contentFit="cover"
+              autoplay
+              transition={150}
+              recyclingKey={item.localId ?? item.id}
+              accessible={false}
+            />
+          </Pressable>
+        ) : null}
+
+        {isVideoShare ? (
+          <VideoShareCard
+            url={item.attachment_url}
+            fg={tone.fg}
+            sub={tone.sub}
+            a11yPrefix={[who, time, status].filter(Boolean).join(', ')}
+            actions={a11yActions}
+            onAction={onA11yAction}
+            onLongPress={() => onMenu(item)}
+          />
+        ) : null}
+
         {isVoice && item.attachment_url ? <VoiceNote uri={item.attachment_url} tone={voiceTone} /> : null}
 
-        {item.text && item.type !== 'voice' && item.type !== 'location' ? (
+        {item.text && item.type !== 'voice' && item.type !== 'location' && item.type !== 'gif' && !isVideoShare ? (
           <Text style={[styles.text, { color: tone.fg }, isImage && styles.captionPad]} selectable={false}>
             {item.text}
           </Text>
         ) : null}
 
         <View
-          style={[styles.meta, isImage && styles.captionPad]}
+          style={[styles.meta, isMedia && styles.captionPad]}
           accessible={hasInteractive}
           accessibilityLabel={hasInteractive ? a11yLabel : undefined}
-          accessibilityActions={hasInteractive ? A11Y_ACTIONS : undefined}
+          accessibilityActions={hasInteractive ? a11yActions : undefined}
           onAccessibilityAction={hasInteractive ? onA11yAction : undefined}
         >
           <Text style={[styles.time, { color: tone.sub }]}>{time}</Text>
@@ -210,6 +269,8 @@ export const MessageBubble = memo(function MessageBubble({
           ))}
         </View>
       ) : null}
+    </View>
+    </SwipeToReply>
     </View>
   );
 });
@@ -270,6 +331,8 @@ const styles = StyleSheet.create({
   quoteText: { fontSize: 13, textAlign: 'left' },
   italic: { fontStyle: 'italic' },
   image: { width: 230, height: 270, borderRadius: 14 },
+  // Width fixed, height from the GIF's own aspect ratio (clamped in parseGifUrl).
+  gif: { width: 220, borderRadius: 14 },
   text: { fontSize: 16, lineHeight: 22, textAlign: 'left', writingDirection: 'auto' },
   captionPad: { paddingHorizontal: 8 },
   meta: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: 3, marginTop: 2 },

@@ -278,7 +278,8 @@ const PAYOUT: Record<string, [keyof Strings, keyof Strings]> = {
 
 // A message's kind (0093 payload.kind) shown instead of an empty body.
 const KIND_LABEL: Record<string, keyof Strings> = {
-  voice: 'voice', image: 'image', video: 'video', location: 'location', file: 'file', sticker: 'sticker',
+  voice: 'voice', image: 'image', video: 'video', location: 'location', file: 'file', sticker: 'sticker', gif: 'gif',
+  video_share: 'videoShare',
 };
 
 function compose(n: Row, actor: string, lang: Lang, extra: { unread?: number; others?: number } = {}): Msg | null {

@@ -31,9 +31,11 @@ export function LanguageSwitch({ onLight, onDark }: { onLight?: boolean; onDark?
         hitSlop={6}
         style={[styles.pill, { backgroundColor: wrapBg, borderColor: wrapBorder }]}
       >
-        <Ionicons name="globe-outline" size={16} color={fg} />
-        <Text style={[styles.pillText, { color: fg }]}>{current.native}</Text>
-        <Ionicons name="chevron-down" size={14} color={fg} />
+        <Ionicons name="globe-outline" size={16} color={fg} style={styles.pillIcon} />
+        <Text style={[styles.pillText, { color: fg }]} numberOfLines={1} maxFontSizeMultiplier={1.3}>
+          {current.native}
+        </Text>
+        <Ionicons name="chevron-down" size={14} color={fg} style={styles.pillIcon} />
       </Pressable>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)} statusBarTranslucent>
@@ -70,11 +72,31 @@ export function LanguageSwitch({ onLight, onDark }: { onLight?: boolean; onDark?
 }
 
 const styles = StyleSheet.create({
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 20, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 7 },
-  pillText: { fontWeight: '700', fontSize: 13 },
+  // Sized by its content (no fixed width). flexDirection 'row' and the
+  // start/end paddings follow the layout direction, so in Arabic and Urdu the
+  // globe sits on the right and the chevron on the left. Arabic, Urdu and
+  // Hindi glyphs are taller and wider than Latin ones: the text gets a roomy
+  // line height and a little horizontal padding so iOS never lets the last
+  // glyph run into the chevron, and long names truncate instead of pushing
+  // into the button next to the pill.
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    maxWidth: 210,
+    minHeight: 34,
+    gap: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingStart: 11,
+    paddingEnd: 10,
+    paddingVertical: 4,
+  },
+  pillIcon: { flexShrink: 0 },
+  pillText: { flexShrink: 1, fontWeight: '700', fontSize: 13, lineHeight: 20, paddingHorizontal: 2, writingDirection: 'auto' },
   sheet: { position: 'absolute', start: 0, end: 0, bottom: 0, maxHeight: '75%', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 8 },
   grabber: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 8 },
   row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, gap: 12 },
-  rowNative: { fontSize: 16, fontWeight: '600' },
+  rowNative: { fontSize: 16, lineHeight: 24, fontWeight: '600' },
   rowEnglish: { fontSize: 13, marginTop: 2 },
 });

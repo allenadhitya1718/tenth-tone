@@ -32,6 +32,7 @@ export default function DialRoute() {
         name: intent.name ?? null,
         handle: intent.handle ?? null,
         avatar: intent.avatar ?? null,
+        group: !!intent.group,
       }}
     />
   );

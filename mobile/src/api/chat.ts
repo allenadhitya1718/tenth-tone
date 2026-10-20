@@ -48,7 +48,13 @@ export type MessageType =
   | 'system'
   | 'file'
   | 'location'
-  | 'call';
+  | 'call'
+  // 0144: a Tenor GIF. attachment_url is the Tenor CDN URL with its size in
+  // the fragment (api/gifs.ts), text is the GIF's description.
+  | 'gif'
+  // 0146: a video sent from the "Send to" sheet. attachment_url (and text,
+  // for older apps) is the video's share link (api/videoShare.ts).
+  | 'video_share';
 
 export type Chat = {
   id: Uuid;
@@ -755,12 +761,15 @@ export async function sendMessage({
   text,
   type = 'text',
   media = null,
+  attachmentUrl = null,
   replyToId = null,
 }: {
   chatId: Uuid;
   text: string;
   type?: MessageType;
   media?: LocalMedia | null;
+  // An attachment that is already hosted (a Tenor GIF): stored as is, no upload.
+  attachmentUrl?: string | null;
   replyToId?: Uuid | null;
 }): Promise<MessageRow> {
   const me = await requireUid();
@@ -776,6 +785,7 @@ export async function sendMessage({
   // Only sent when set, so a database without 0042 still accepts messages.
   if (replyToId) row.reply_to_id = replyToId;
   if (media) row.attachment_url = await uploadChatAttachment(chatId, media);
+  else if (attachmentUrl) row.attachment_url = attachmentUrl;
 
   const { data, error } = await supabase.from('messages').insert(row).select().single();
   if (error) throw error;

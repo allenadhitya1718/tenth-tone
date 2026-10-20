@@ -32,7 +32,7 @@ export const ProfileStoryAvatar = memo(function ProfileStoryAvatar({
   isMe: boolean;
   uri: string | null | undefined;
   name: string | null | undefined;
-  // Outer size including the ring; the photo is size - 8.
+  // Outer size including the ring and the gap around the photo.
   size?: number;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -87,7 +87,7 @@ export const ProfileStoryAvatar = memo(function ProfileStoryAvatar({
         accessibilityRole={pressable ? 'button' : 'image'}
         accessibilityLabel={pressable ? a11y : label}
       >
-        <StoryRing uri={uri} name={name} size={size} kind={kind} gap={colors.bg} />
+        <StoryRing uri={uri} name={name} size={size} kind={kind} />
       </Pressable>
       {isMe ? (
         <Pressable

@@ -1,0 +1,23 @@
+{
+  "gif": {
+    "tabEmoji": "الرموز",
+    "tabGif": "GIF",
+    "search": "ابحث عن صور GIF",
+    "trending": "الأكثر رواجًا",
+    "loading": "جارٍ تحميل صور GIF",
+    "empty": "لا توجد صور GIF لـ «{{q}}»",
+    "emptyTrending": "لا توجد صور GIF لعرضها الآن",
+    "error": "تعذّر تحميل صور GIF",
+    "unavailable": "صور GIF غير متاحة حاليًا",
+    "rateLimited": "عمليات بحث كثيرة. حاول بعد بضع دقائق.",
+    "retry": "حاول مجددًا",
+    "clear": "مسح البحث",
+    "poweredBy": "مدعوم من Tenor",
+    "preview": "صورة GIF",
+    "a11y": "صورة GIF: {{description}}",
+    "a11yPlain": "صورة GIF",
+    "sendHint": "يرسل صورة GIF هذه",
+    "postHint": "ينشر صورة GIF هذه كتعليق",
+    "openHint": "يفتح صورة GIF بملء الشاشة"
+  }
+}
