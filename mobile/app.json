@@ -10,7 +10,7 @@
     "backgroundColor": "#000421",
     "ios": {
       "bundleIdentifier": "com.flyp.social",
-      "supportsTablet": false,
+      "supportsTablet": true,
       "usesAppleSignIn": true,
       "infoPlist": {
         "CFBundleAllowMixedLocalizations": true,
