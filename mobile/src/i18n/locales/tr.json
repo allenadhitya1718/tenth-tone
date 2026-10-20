@@ -191,7 +191,10 @@
     "addComment": "Yorum ekle…",
     "originalSound": "Orijinal ses · @{{handle}}",
     "seeMore": "Daha fazla",
-    "seeLess": "Daha az"
+    "seeLess": "Daha az",
+    "caughtUpTitle": "Hepsini gördün",
+    "caughtUpBody": "En yeni videoları izledin. Keşfet'te daha fazla kişi ve video bul.",
+    "caughtUpCta": "Keşfet'i aç"
   },
   "comments": {
     "title": "Yorumlar ({{count}})",

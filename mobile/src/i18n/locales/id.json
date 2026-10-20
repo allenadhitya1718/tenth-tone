@@ -191,7 +191,10 @@
     "addComment": "Tambahkan komentar…",
     "originalSound": "Suara asli · @{{handle}}",
     "seeMore": "Lihat selengkapnya",
-    "seeLess": "Lihat lebih sedikit"
+    "seeLess": "Lihat lebih sedikit",
+    "caughtUpTitle": "Kamu sudah melihat semuanya",
+    "caughtUpBody": "Kamu sudah menonton video terbaru. Temukan lebih banyak orang dan video di Jelajahi.",
+    "caughtUpCta": "Buka Jelajahi"
   },
   "comments": {
     "title": "Komentar ({{count}})",

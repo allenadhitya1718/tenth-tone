@@ -191,7 +191,10 @@
     "addComment": "Ajouter un commentaire…",
     "originalSound": "Son original · @{{handle}}",
     "seeMore": "Voir plus",
-    "seeLess": "Voir moins"
+    "seeLess": "Voir moins",
+    "caughtUpTitle": "Vous êtes à jour",
+    "caughtUpBody": "Vous avez vu les dernières vidéos. Trouvez d'autres personnes et vidéos dans Découvrir.",
+    "caughtUpCta": "Ouvrir Découvrir"
   },
   "comments": {
     "title": "Commentaires ({{count}})",

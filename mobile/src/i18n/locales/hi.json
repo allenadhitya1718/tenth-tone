@@ -191,7 +191,10 @@
     "addComment": "कमेंट जोड़ें…",
     "originalSound": "ओरिजिनल साउंड · @{{handle}}",
     "seeMore": "और देखें",
-    "seeLess": "कम देखें"
+    "seeLess": "कम देखें",
+    "caughtUpTitle": "आपने सब देख लिया",
+    "caughtUpBody": "आपने नवीनतम वीडियो देख लिए। डिस्कवर में और लोग और वीडियो खोजें।",
+    "caughtUpCta": "डिस्कवर खोलें"
   },
   "comments": {
     "title": "कमेंट ({{count}})",

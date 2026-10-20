@@ -68,7 +68,7 @@ export async function fetchPopularVideos(limit = 12): Promise<VideoTile[]> {
     .select(
       `
       id, description, thumbnail, video_url, likes_count, comments_count, views_count, created_at,
-      user:profiles!videos_user_id_fkey ( id, name, handle, avatar_url )
+      user:profiles!videos_user_id_fkey ( id, name, handle, avatar_url, is_private )
     `,
     )
     .eq('is_draft', false)
@@ -77,7 +77,25 @@ export async function fetchPopularVideos(limit = 12): Promise<VideoTile[]> {
     .order('likes_count', { ascending: false })
     .limit(limit);
   if (error) return [];
-  return (data ?? []) as unknown as VideoTile[];
+  return onlyPublicAccounts((data ?? []) as unknown as VideoTile[]);
+}
+
+// Discover and search show what any normal user would see. The database lets
+// admins read everything (for moderation), so without this an admin account
+// would see videos from private accounts it does not follow here, while the
+// feed (which applies the account rule itself) correctly leaves them out.
+async function onlyPublicAccounts(tiles: VideoTile[]): Promise<VideoTile[]> {
+  type WithPrivacy = VideoTile & { user?: { id?: string; is_private?: boolean | null } | null };
+  const list = tiles as WithPrivacy[];
+  const privateOwners = [...new Set(list.filter((v) => v.user?.is_private && v.user.id).map((v) => v.user!.id!))];
+  if (!privateOwners.length) return tiles;
+  const me = await uid();
+  let followed = new Set<string>();
+  if (me) {
+    const { data } = await supabase.from('follows').select('followed_id').eq('follower_id', me).in('followed_id', privateOwners);
+    followed = new Set((data ?? []).map((r: { followed_id: string }) => r.followed_id));
+  }
+  return list.filter((v) => !v.user?.is_private || v.user.id === me || (v.user.id && followed.has(v.user.id)));
 }
 
 // ---------- Search ----------
@@ -99,7 +117,7 @@ export async function searchAll(query: string): Promise<SearchResults> {
     searchPeople(query, 20),
     supabase
       .from('videos')
-      .select('id, description, thumbnail, video_url, likes_count, created_at, user:profiles!videos_user_id_fkey(id,name,handle,avatar_url)')
+      .select('id, description, thumbnail, video_url, likes_count, created_at, user:profiles!videos_user_id_fkey(id,name,handle,avatar_url,is_private)')
       .ilike('description', term)
       .eq('is_draft', false)
       .limit(20),
@@ -111,7 +129,7 @@ export async function searchAll(query: string): Promise<SearchResults> {
     profiles: profiles ?? [],
     // Videos already obey blocking: can_see_posts_of (0049) refuses across a
     // block in either direction and the videos policy goes through it.
-    videos: (videosRes.data ?? []) as unknown as VideoTile[],
+    videos: await onlyPublicAccounts((videosRes.data ?? []) as unknown as VideoTile[]),
     sounds: (soundsRes.data ?? []) as Sound[],
   };
 }

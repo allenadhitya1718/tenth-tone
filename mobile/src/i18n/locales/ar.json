@@ -201,7 +201,10 @@
     "addComment": "أضف تعليقًا…",
     "originalSound": "الصوت الأصلي · @{{handle}}",
     "seeMore": "عرض المزيد",
-    "seeLess": "عرض أقل"
+    "seeLess": "عرض أقل",
+    "caughtUpTitle": "لقد شاهدت كل شيء",
+    "caughtUpBody": "شاهدت أحدث الفيديوهات. اكتشف المزيد من الأشخاص والفيديوهات في استكشاف.",
+    "caughtUpCta": "افتح استكشاف"
   },
   "comments": {
     "title": "التعليقات ({{count}})",

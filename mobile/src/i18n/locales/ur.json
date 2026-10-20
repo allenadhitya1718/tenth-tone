@@ -191,7 +191,10 @@
     "addComment": "کمنٹ لکھیں…",
     "originalSound": "اوریجنل ساؤنڈ · @{{handle}}",
     "seeMore": "مزید دیکھیں",
-    "seeLess": "کم دکھائیں"
+    "seeLess": "کم دکھائیں",
+    "caughtUpTitle": "آپ نے سب دیکھ لیا",
+    "caughtUpBody": "آپ نے تازہ ترین ویڈیوز دیکھ لیں۔ ڈسکور میں مزید لوگ اور ویڈیوز تلاش کریں۔",
+    "caughtUpCta": "ڈسکور کھولیں"
   },
   "comments": {
     "title": "کمنٹس ({{count}})",

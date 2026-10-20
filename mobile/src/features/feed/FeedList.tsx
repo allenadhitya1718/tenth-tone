@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -143,6 +145,18 @@ export function FeedList({
       removeClippedSubviews
       onEndReachedThreshold={2}
       onEndReached={() => q.hasNextPage && !q.isFetchingNextPage && q.fetchNextPage()}
+      // A full-height last page, so a swipe past the final video always lands
+      // somewhere and says why there is nothing more (like Instagram).
+      ListFooterComponent={
+        q.hasNextPage ? undefined : (
+          <View style={[styles.center, { height }]}>
+            <Ionicons name="checkmark-circle-outline" size={56} color="#fff" />
+            <Text style={styles.endTitle}>{t('feed.caughtUpTitle')}</Text>
+            <Text style={styles.msg}>{t('feed.caughtUpBody')}</Text>
+            <Button title={t('feed.caughtUpCta')} onPress={() => router.navigate('/discover')} style={{ paddingHorizontal: 28 }} />
+          </View>
+        )
+      }
       refreshControl={
         <RefreshControl
           refreshing={q.isRefetching && !q.isFetchingNextPage}
@@ -161,4 +175,5 @@ export function FeedList({
 const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', gap: 14, paddingHorizontal: 32, backgroundColor: '#000' },
   msg: { color: '#fff', fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  endTitle: { color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
 });

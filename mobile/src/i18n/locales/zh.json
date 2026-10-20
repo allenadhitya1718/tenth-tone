@@ -191,7 +191,10 @@
     "addComment": "添加评论…",
     "originalSound": "原声 · @{{handle}}",
     "seeMore": "查看更多",
-    "seeLess": "收起"
+    "seeLess": "收起",
+    "caughtUpTitle": "你已看完所有内容",
+    "caughtUpBody": "你已看过最新视频。去发现页找更多人和视频。",
+    "caughtUpCta": "去发现"
   },
   "comments": {
     "title": "评论（{{count}}）",
