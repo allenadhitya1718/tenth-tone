@@ -97,7 +97,7 @@ export function previewText(
   if (kind === 'image') return `📷 ${t('chat.photo')}`;
   if (kind === 'video') return `🎥 ${t('chat.video')}`;
   if (kind === 'location') return `📍 ${t('chat.location')}`;
-  // The text of a GIF is Tenor's description, not something anyone wrote.
+  // The text of a GIF is the GIF's title from KLIPY, not something anyone wrote.
   if (kind === 'gif') return t('gif.preview');
   // 0146: a shared video's text is only its link.
   if (kind === 'video_share') return `🎬 ${t('sendTo.sharedVideo')}`;

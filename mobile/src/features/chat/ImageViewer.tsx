@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { isTenorUrl } from '@/api/gifs';
+import { isGifUrl } from '@/api/gifs';
 
 // A photo (or a GIF, 0144) from the thread, full screen. The surface is black in both themes
 // (a photo viewer), hence the fixed colours.
@@ -18,7 +18,7 @@ export function ImageViewer({ uri, onClose }: { uri: string | null; onClose: () 
             source={{ uri }}
             style={StyleSheet.absoluteFill}
             contentFit="contain"
-            accessibilityLabel={isTenorUrl(uri) ? t('gif.a11yPlain') : t('chat.photo')}
+            accessibilityLabel={isGifUrl(uri) ? t('gif.a11yPlain') : t('chat.photo')}
             accessible
           />
         ) : null}

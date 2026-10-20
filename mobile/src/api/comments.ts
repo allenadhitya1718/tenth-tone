@@ -27,7 +27,7 @@ export type Comment = {
   user: Pick<UserSummary, 'id' | 'name' | 'handle' | 'avatar_url'> | null;
   // Whether I liked it. Absent when signed out or the lookup failed.
   liked?: boolean;
-  // 0144: a Tenor GIF (api/gifs.ts stored form). text may then be ''.
+  // 0144: a GIF (api/gifs.ts stored form). text may then be ''.
   // Absent before 0144 is applied.
   gif_url?: string | null;
 };
@@ -160,7 +160,7 @@ export async function postComment(
   text: string,
   onWithdrawn?: OnCommentWithdrawn,
   parentId?: Uuid | null,
-  // 0144: a Tenor GIF posted with (or instead of) the text.
+  // 0144: a GIF posted with (or instead of) the text.
   gifUrl?: string | null,
 ): Promise<PostedComment> {
   const me = await requireUid();

@@ -2,34 +2,39 @@
 // gif-search
 //
 // The GIF tab of the emoji panel (chat composer and comments sheet). A thin,
-// signed-in-only proxy in front of Google's Tenor API v2, so the Tenor key
-// never ships inside the app and every account is metered.
+// signed-in-only proxy in front of the KLIPY GIF API, so the KLIPY key never
+// ships inside the app and every account is metered. (It was Tenor until
+// Google shut the Tenor API down on 30 June 2026; migration 0148.)
 //
 // ── Request ──
 //   POST { q?: string, pos?: string, limit?: number, lang?: string }
-//   q      the search text, at most 100 characters. Empty -> Tenor 'featured'
-//          (trending); otherwise Tenor 'search'.
-//   pos    Tenor's opaque paging cursor from the previous answer's `next`.
-//   limit  1..24 (default 24).
-//   lang   the app language (ar, en, zh, hi, ur, fr, es, tr, id); picks the
-//          Tenor locale. Anything else reads English.
+//   q      the search text, at most 100 characters. Empty -> KLIPY trending;
+//          otherwise KLIPY search.
+//   pos    the paging cursor from the previous answer's `next` (a page
+//          number as a string; opaque to the app).
+//   limit  8..24 (default 24; KLIPY's per_page minimum is 8).
+//   lang   the app language (ar, en, zh, hi, ur, fr, es, tr, id); sent to
+//          KLIPY as its locale. Anything else reads English.
 //
-// Always sent to Tenor: country=SA, contentfilter=high (Tenor's strictest
-// rating, roughly G), media_filter=tinygif,mediumgif,gif (the smallest set
-// the app needs: a low-res preview for the grid and one size for the bubble).
+// Always sent to KLIPY: content_filter=high (the strictest rating), and
+// customer_id = a SHA-256 of the user id (KLIPY wants a stable per-user id;
+// it never sees the real one). If KLIPY refuses the optional locale or
+// content_filter (a 4xx other than auth or quota), the call is made once
+// more without them rather than failing.
 //
 // ── Response ──
 //   200 { results: Gif[], next: string | null }
 //       Gif = { id, preview_url, url, width, height, description }
-//       preview_url  tinygif (about 220 px wide), for the picker grid
-//       url          mediumgif, else gif: what gets stored and shown
+//       preview_url  the small size, for the picker grid
+//       url          the medium size, else small / hd: what gets stored
 //       width/height the pixel size of `url`
-//       Every URL is on media.tenor.com or media1.tenor.com; anything else is
-//       dropped here, because migration 0144 only accepts those hosts.
+//       Every URL is https on klipy.com or a subdomain; anything else is
+//       dropped here, because migration 0148 only accepts those hosts.
+//       KLIPY ad items are skipped.
 //   400 { error: 'bad_request' }
 //   401 { error: 'unauthorized' }
 //   429 { error: 'rate_limited' }
-//   503 { error: 'gif_unavailable', reason }   no key, Tenor down, limit
+//   503 { error: 'gif_unavailable', reason }   no key, KLIPY down, limit
 //                                              table missing. The app hides
 //                                              the GIF tab.
 //
@@ -40,12 +45,11 @@
 // be checked the key is not spent unmetered.
 //
 // ── Secrets ──
-//   TENOR_API_KEY  a Google Cloud API key with the Tenor API enabled,
-//                  restricted to that API. NEW: set it before deploying.
+//   KLIPY_API_KEY  the app key from KLIPY's Partner Panel (partner.klipy.com).
 //   SUPABASE_URL / SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY are injected.
 //
 // ── Deploy WITH jwt verification (the default) ──
-//   npx supabase secrets set TENOR_API_KEY=...
+//   npx supabase secrets set KLIPY_API_KEY=...
 //   npx supabase functions deploy gif-search
 // Never --no-verify-jwt: the rate limit is per user.
 // =============================================================
@@ -53,30 +57,20 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const env = (k: string) => (Deno.env.get(k) ?? '').trim();
 
-const TENOR_API_KEY = env('TENOR_API_KEY');
+const KLIPY_API_KEY = env('KLIPY_API_KEY');
 const SUPABASE_URL = env('SUPABASE_URL');
 const SERVICE_KEY = env('SUPABASE_SERVICE_ROLE_KEY');
 const ANON_KEY = env('SUPABASE_ANON_KEY');
 
-const TENOR = 'https://tenor.googleapis.com/v2';
-const CLIENT_KEY = 'flyp_app';
+const KLIPY = 'https://api.klipy.com/api/v1';
 const MAX_LIMIT = 24;
+const MIN_LIMIT = 8;
 const MAX_Q = 100;
-const MAX_POS = 200;
-// Must match the CHECK constraints in 0144_gifs.sql.
-const ALLOWED_HOSTS = new Set(['media.tenor.com', 'media1.tenor.com']);
+const MAX_PAGE = 500;
+// Must match the CHECK constraints in 0148_gifs_klipy.sql.
+const isAllowedHost = (host: string) => host === 'klipy.com' || /^([a-z0-9-]+\.)+klipy\.com$/.test(host);
 
-const LOCALES: Record<string, string> = {
-  ar: 'ar_SA',
-  en: 'en_US',
-  zh: 'zh_CN',
-  hi: 'hi_IN',
-  ur: 'ur_PK',
-  fr: 'fr_FR',
-  es: 'es_ES',
-  tr: 'tr_TR',
-  id: 'id_ID',
-};
+const LANGS = new Set(['ar', 'en', 'zh', 'hi', 'ur', 'fr', 'es', 'tr', 'id']);
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -99,12 +93,15 @@ function json(body: unknown, status = 200, cacheSeconds = 0) {
 
 const unavailable = (reason: string) => json({ error: 'gif_unavailable', reason }, 503);
 
-type TenorFormat = { url?: string; dims?: number[] };
-type TenorResult = {
-  id?: string;
+// KLIPY: file.<size>.<format> = { url, width, height }, size hd/md/sm/xs.
+type KlipyFormat = { url?: string; width?: number | string; height?: number | string };
+type KlipySize = Record<string, KlipyFormat | undefined>;
+type KlipyItem = {
+  id?: string | number;
+  slug?: string;
   title?: string;
-  content_description?: string;
-  media_formats?: Record<string, TenorFormat | undefined>;
+  type?: string;
+  file?: Record<string, KlipySize | undefined>;
 };
 
 type Gif = {
@@ -117,38 +114,50 @@ type Gif = {
 };
 
 function allowedUrl(u: unknown): string | null {
-  if (typeof u !== 'string' || !u.startsWith('https://')) return null;
+  if (typeof u !== 'string' || !u.startsWith('https://') || u.length > 560) return null;
   try {
     const parsed = new URL(u);
-    return parsed.protocol === 'https:' && ALLOWED_HOSTS.has(parsed.hostname) ? parsed.toString() : null;
+    return parsed.protocol === 'https:' && isAllowedHost(parsed.hostname) ? parsed.toString() : null;
   } catch {
     return null;
   }
 }
 
-function dims(f: TenorFormat | undefined): [number, number] {
-  const w = Math.round(Number(f?.dims?.[0]) || 0);
-  const h = Math.round(Number(f?.dims?.[1]) || 0);
-  return [w, h];
+const gifOf = (f: KlipyItem['file'], size: string) => f?.[size]?.gif;
+
+function toGif(r: KlipyItem): Gif | null {
+  if (!r || r.type === 'ad' || r.id == null) return null;
+  const f = r.file;
+  const main = [gifOf(f, 'md'), gifOf(f, 'sm'), gifOf(f, 'hd')].find((g) => allowedUrl(g?.url));
+  const small = [gifOf(f, 'sm'), gifOf(f, 'xs'), main].find((g) => allowedUrl(g?.url));
+  const url = allowedUrl(main?.url);
+  const preview = allowedUrl(small?.url);
+  if (!url || !preview) return null;
+  const width = Math.round(Number(main?.width) || 0);
+  const height = Math.round(Number(main?.height) || 0);
+  if (!width || !height) return null;
+  const description = String(r.title || r.slug?.replace(/-/g, ' ') || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+  return { id: String(r.id), preview_url: preview, url, width, height, description };
 }
 
-function toGif(r: TenorResult): Gif | null {
-  const mf = r.media_formats ?? {};
-  const main = mf.mediumgif?.url ? mf.mediumgif : mf.gif;
-  const url = allowedUrl(main?.url);
-  const preview = allowedUrl(mf.tinygif?.url) ?? url;
-  if (!r.id || !url || !preview) return null;
-  let [width, height] = dims(main);
-  if (!width || !height) [width, height] = dims(mf.tinygif);
-  if (!width || !height) return null;
-  const description = String(r.content_description || r.title || '').replace(/\s+/g, ' ').trim().slice(0, 120);
-  return { id: String(r.id), preview_url: preview, url, width, height, description };
+async function sha256(text: string) {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+// { data: { data: [...], has_next, current_page } } per KLIPY's examples;
+// a flat { data: [...] } is read too.
+function readPage(payload: unknown): { items: KlipyItem[]; hasNext: boolean } {
+  const outer = (payload as { data?: unknown })?.data;
+  if (Array.isArray(outer)) return { items: outer as KlipyItem[], hasNext: false };
+  const inner = outer as { data?: unknown; has_next?: unknown } | undefined;
+  return { items: Array.isArray(inner?.data) ? (inner.data as KlipyItem[]) : [], hasNext: inner?.has_next === true };
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
-  if (!TENOR_API_KEY) return unavailable('no_key');
+  if (!KLIPY_API_KEY) return unavailable('no_key');
   if (!SUPABASE_URL || !SERVICE_KEY || !ANON_KEY) return unavailable('not_configured');
 
   // ── Who is asking ──
@@ -169,11 +178,12 @@ Deno.serve(async (req) => {
   if (typeof body !== 'object' || Array.isArray(body)) return json({ error: 'bad_request' }, 400);
 
   const q = typeof body.q === 'string' ? body.q.normalize('NFKC').replace(/\s+/g, ' ').trim().slice(0, MAX_Q) : '';
-  const pos = typeof body.pos === 'string' ? body.pos.trim().slice(0, MAX_POS) : '';
+  const pageRaw = Math.floor(Number(typeof body.pos === 'string' ? body.pos : 1) || 1);
+  const page = Math.min(MAX_PAGE, Math.max(1, pageRaw));
   const limitRaw = Math.floor(Number(body.limit) || MAX_LIMIT);
-  const limit = Math.min(MAX_LIMIT, Math.max(1, limitRaw));
-  const lang = String(body.lang ?? '').toLowerCase().slice(0, 2);
-  const locale = LOCALES[lang] ?? LOCALES.en;
+  const limit = Math.min(MAX_LIMIT, Math.max(MIN_LIMIT, limitRaw));
+  const langRaw = String(body.lang ?? '').toLowerCase().slice(0, 2);
+  const lang = LANGS.has(langRaw) ? langRaw : 'en';
 
   // ── Rate limit (0120) ──
   const db = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
@@ -192,35 +202,36 @@ Deno.serve(async (req) => {
     }
   }
 
-  const params = new URLSearchParams({
-    key: TENOR_API_KEY,
-    client_key: CLIENT_KEY,
-    limit: String(limit),
-    locale,
-    country: 'SA',
-    contentfilter: 'high',
-    media_filter: 'tinygif,mediumgif,gif',
-    ar_range: 'all',
+  const base = new URLSearchParams({
+    page: String(page),
+    per_page: String(limit),
+    customer_id: await sha256(`flyp:${user.id}`),
   });
-  if (pos) params.set('pos', pos);
-  if (q) params.set('q', q);
-  const endpoint = `${TENOR}/${q ? 'search' : 'featured'}?${params.toString()}`;
+  if (q) base.set('q', q);
+  const extras = new URLSearchParams(base);
+  extras.set('locale', lang);
+  extras.set('content_filter', 'high');
+  const path = `${KLIPY}/${encodeURIComponent(KLIPY_API_KEY)}/gifs/${q ? 'search' : 'trending'}`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8_000);
   try {
-    const res = await fetch(endpoint, { signal: controller.signal });
-    if (!res.ok) {
+    let res = await fetch(`${path}?${extras.toString()}`, { signal: controller.signal });
+    if (res.status >= 400 && res.status < 500 && ![401, 403, 429].includes(res.status)) {
       // Never log the URL: it carries the key.
+      console.warn('[gif-search] KLIPY refused the extras:', res.status, (await res.text()).slice(0, 200));
+      res = await fetch(`${path}?${base.toString()}`, { signal: controller.signal });
+    }
+    if (!res.ok) {
       const detail = (await res.text()).slice(0, 200);
-      console.warn('[gif-search] Tenor', res.status, detail);
+      console.warn('[gif-search] KLIPY', res.status, detail);
       if (res.status === 429) return unavailable('quota');
-      if (res.status === 400 || res.status === 403) return unavailable(/key/i.test(detail) ? 'bad_key' : `http_${res.status}`);
+      if (res.status === 401 || res.status === 403) return unavailable('bad_key');
       return unavailable(`http_${res.status}`);
     }
-    const payload = (await res.json()) as { results?: TenorResult[]; next?: string };
-    const results = (payload.results ?? []).map(toGif).filter((g): g is Gif => !!g);
-    const next = typeof payload.next === 'string' && payload.next && payload.next !== '0' && results.length ? payload.next : null;
+    const { items, hasNext } = readPage(await res.json());
+    const results = items.map(toGif).filter((g): g is Gif => !!g);
+    const next = hasNext && results.length && page < MAX_PAGE ? String(page + 1) : null;
     // Trending changes slowly; a search answer is stable for a while too.
     return json({ results, next }, 200, q ? 300 : 600);
   } catch (e) {

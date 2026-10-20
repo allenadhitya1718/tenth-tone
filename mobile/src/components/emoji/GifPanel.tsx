@@ -185,7 +185,7 @@ export const GifPanel = memo(function GifPanel({ height, onPick, onSearchFocusCh
         </Text>
       ) : null}
       <View style={styles.flex}>{body}</View>
-      {/* Tenor's terms require visible attribution. */}
+      {/* KLIPY's terms require visible attribution. */}
       <Text style={[styles.attribution, { color: colors.muted }]}>{t('gif.poweredBy')}</Text>
     </View>
   );

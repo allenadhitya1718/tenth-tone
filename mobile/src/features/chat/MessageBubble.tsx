@@ -97,7 +97,7 @@ export const MessageBubble = memo(function MessageBubble({
 
   const isImage = (item.type === 'image' || item.type === 'video') && !!item.attachment_url;
   const isVoice = item.type === 'voice' && !!item.attachment_url;
-  // 0144: a Tenor GIF, drawn at its own aspect ratio and animated.
+  // 0144: a GIF, drawn at its own aspect ratio and animated.
   const gif = item.type === 'gif' ? parseGifUrl(item.attachment_url) : null;
   // 0146: a video sent from the "Send to" sheet; text is only its link.
   const isVideoShare = item.type === 'video_share';

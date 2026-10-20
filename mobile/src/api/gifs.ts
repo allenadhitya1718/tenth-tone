@@ -1,28 +1,29 @@
-// GIFs from Tenor, for the GIF tab of the emoji panel (chat and comments).
+// GIFs from KLIPY, for the GIF tab of the emoji panel (chat and comments).
 // The thin client end of the `gif-search` Edge Function, which holds the
-// Tenor key, meters each account and returns a compact list.
+// KLIPY key, meters each account and returns a compact list. (Tenor until
+// Google shut its API down in June 2026; GIFs sent before then stay valid.)
 //
-// A chosen GIF is stored as its Tenor CDN URL with the pixel size in the
-// fragment ('https://media.tenor.com/.../x.gif#w=220&h=180'), so a bubble can
-// take the right shape before the image loads. 0144 only accepts URLs on
-// media.tenor.com / media1.tenor.com. The fragment is stripped before the
-// URL is loaded.
+// A chosen GIF is stored as its CDN URL with the pixel size in the fragment
+// ('https://static.klipy.com/.../x.gif#w=220&h=180'), so a bubble can take
+// the right shape before the image loads. 0148 only accepts URLs on
+// klipy.com (and subdomains) or, for old GIFs, media/media1.tenor.com. The
+// fragment is stripped before the URL is loaded.
 //
 // ApiError codes:
 //   rate_limited     this account searched too often; try again later
-//   gif_unavailable  not deployed, no TENOR_API_KEY, Tenor down. The panel
+//   gif_unavailable  not deployed, no KLIPY_API_KEY, KLIPY down. The panel
 //                    hides the GIF tab.
 import { ApiError, supabase } from './client';
 
 export type Gif = {
   id: string;
-  /** Low-res tinygif for the picker grid. */
+  /** The small size, for the picker grid. */
   preview_url: string;
   /** The size that is sent and shown in a bubble or comment. */
   url: string;
   width: number;
   height: number;
-  /** Tenor's description; the accessibility label. May be empty. */
+  /** KLIPY's title; the accessibility label. May be empty. */
   description: string;
 };
 
@@ -34,7 +35,8 @@ export const gifKeys = {
 
 export const GIF_PAGE = 24;
 const TIMEOUT_MS = 12_000;
-const TENOR_URL = /^https:\/\/(media|media1)\.tenor\.com\/\S+$/;
+// Must match the CHECK constraints in 0148_gifs_klipy.sql.
+const GIF_URL = /^https:\/\/((media|media1)\.tenor\.com|([a-z0-9-]+\.)*klipy\.com)\/\S+$/;
 
 type FunctionsErrorLike = { message?: string; context?: Response };
 type ErrorBody = { error?: string; reason?: string };
@@ -64,8 +66,8 @@ export async function searchGifs({ q, pos, lang }: { q: string; pos?: string | n
       (g): g is Gif =>
         !!g &&
         typeof g.id === 'string' &&
-        isTenorUrl(g.url) &&
-        isTenorUrl(g.preview_url) &&
+        isGifUrl(g.url) &&
+        isGifUrl(g.preview_url) &&
         Number(g.width) > 0 &&
         Number(g.height) > 0,
     );
@@ -78,8 +80,8 @@ export async function searchGifs({ q, pos, lang }: { q: string; pos?: string | n
   }
 }
 
-export function isTenorUrl(url: unknown): url is string {
-  return typeof url === 'string' && url.length <= 600 && TENOR_URL.test(url);
+export function isGifUrl(url: unknown): url is string {
+  return typeof url === 'string' && url.length <= 600 && GIF_URL.test(url);
 }
 
 /** The URL to store: the GIF's URL with its size in the fragment. */

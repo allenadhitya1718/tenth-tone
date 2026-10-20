@@ -49,7 +49,7 @@ export type MessageType =
   | 'file'
   | 'location'
   | 'call'
-  // 0144: a Tenor GIF. attachment_url is the Tenor CDN URL with its size in
+  // 0144/0148: a GIF (KLIPY; older ones Tenor). attachment_url is the CDN URL with its size in
   // the fragment (api/gifs.ts), text is the GIF's description.
   | 'gif'
   // 0146: a video sent from the "Send to" sheet. attachment_url (and text,
@@ -768,7 +768,7 @@ export async function sendMessage({
   text: string;
   type?: MessageType;
   media?: LocalMedia | null;
-  // An attachment that is already hosted (a Tenor GIF): stored as is, no upload.
+  // An attachment that is already hosted (a KLIPY GIF): stored as is, no upload.
   attachmentUrl?: string | null;
   replyToId?: Uuid | null;
 }): Promise<MessageRow> {
