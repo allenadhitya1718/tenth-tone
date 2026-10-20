@@ -1,5 +1,7 @@
 import type { TFunction } from 'i18next';
-import { Alert, Linking, Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
+
+import { showAlert } from '@/components/Dialog';
 
 export type LatLng = { latitude: number; longitude: number };
 
@@ -36,9 +38,9 @@ const coord = (p: LatLng) => `${p.latitude.toFixed(6)},${p.longitude.toFixed(6)}
 export function openDirections(to: LatLng, t: TFunction) {
   const dest = coord(to);
   const google = `https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`;
-  const fail = () => Alert.alert(t('map.directionsFailed'));
+  const fail = () => showAlert(t('map.directionsFailed'));
   if (Platform.OS === 'ios') {
-    Alert.alert(t('map.directionsWith'), undefined, [
+    showAlert(t('map.directionsWith'), undefined, [
       {
         text: t('map.appleMaps'),
         onPress: () => Linking.openURL(`https://maps.apple.com/?daddr=${dest}&dirflg=d`).catch(fail),

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -14,6 +14,7 @@ import {
   stopSharingLocation,
   type LocationSettings,
 } from '@/api/location';
+import { showAlert } from '@/components/Dialog';
 import { AppText, Button } from '@/components/ui';
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -36,7 +37,7 @@ export function MapSettingsSheet({ visible, settings, onClose, onTurnOn }: Props
   const qc = useQueryClient();
   const tint = isDark ? colors.primary2 : colors.primary;
   const sharing = !!settings?.sharing_enabled;
-  const fail = (e: unknown) => Alert.alert(t('map.errTitle'), t(locationErrorKey(e)));
+  const fail = (e: unknown) => showAlert(t('map.errTitle'), t(locationErrorKey(e)));
 
   const incoming = useQuery({
     queryKey: locationKeys.incomingPermits(),
@@ -73,13 +74,13 @@ export function MapSettingsSheet({ visible, settings, onClose, onTurnOn }: Props
   });
 
   const confirmStop = () =>
-    Alert.alert(t('map.stopSharingQ'), t('map.stopSharingBody'), [
+    showAlert(t('map.stopSharingQ'), t('map.stopSharingBody'), [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('map.stopSharing'), style: 'destructive', onPress: () => stop.mutate() },
     ]);
 
   const approve = (id: string, name: string) =>
-    Alert.alert(t('map.approveQ', { name }), t('map.approveBody'), [
+    showAlert(t('map.approveQ', { name }), t('map.approveBody'), [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('map.approve'), onPress: () => respond.mutate({ id, d: 'approved' }) },
     ]);
@@ -201,7 +202,7 @@ export function MapSettingsSheet({ visible, settings, onClose, onTurnOn }: Props
                     <SmallButton
                       label={t('map.stopTracking')}
                       onPress={() =>
-                        Alert.alert(t('map.stopTrackingQ', { name }), undefined, [
+                        showAlert(t('map.stopTrackingQ', { name }), undefined, [
                           { text: t('common.cancel'), style: 'cancel' },
                           { text: t('map.confirm'), style: 'destructive', onPress: () => revoke.mutate(l.user_id) },
                         ])

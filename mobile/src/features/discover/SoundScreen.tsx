@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -17,6 +17,7 @@ import {
   soundKeys,
   unfavoriteSound,
 } from '@/api/sounds';
+import { showAlert } from '@/components/Dialog';
 import { Button, TopBar } from '@/components/ui';
 import { formatCount } from '@/features/feed/format';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -147,7 +148,7 @@ function FavoriteButton({ soundId }: { soundId: string }) {
     },
     onError: (_e, _on, ctx) => {
       qc.setQueryData(key, ctx?.before ?? false);
-      Alert.alert(t('discover.sound.favoriteFailed'));
+      showAlert(t('discover.sound.favoriteFailed'));
     },
   });
 

@@ -1,9 +1,10 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, I18nManager, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, I18nManager, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { report, type ReportTarget } from '@/api/moderation';
+import { showAlert } from '@/components/Dialog';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { BottomSheet } from './BottomSheet';
@@ -51,9 +52,9 @@ export function ReportSheet({ visible, onClose, targetType, targetId }: Props) {
     },
     onSuccess: () => {
       close();
-      Alert.alert(t('ugc.reportSent'));
+      showAlert(t('ugc.reportSent'));
     },
-    onError: () => Alert.alert(t('ugc.reportFailed')),
+    onError: () => showAlert(t('ugc.reportFailed')),
   });
 
   return (

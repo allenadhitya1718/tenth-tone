@@ -2,8 +2,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { showAlert } from '@/components/Dialog';
 import { OtpInput } from '@/components/OtpInput';
 import { AppText, Button, ErrorBox, LinkText, Screen, TextField, TopBar, type ErrorMsg } from '@/components/ui';
 import { toErrorMsg } from '@/hooks/useAuthError';
@@ -85,7 +86,7 @@ export function ChangeEmailScreen() {
       const now = (await currentEmail())?.toLowerCase();
       if (now === target) {
         qc.invalidateQueries({ queryKey: ['mySettings'] });
-        Alert.alert(t('settings2.email.doneTitle'), t('settings2.email.doneBody', { email: target }));
+        showAlert(t('settings2.email.doneTitle'), t('settings2.email.doneBody', { email: target }));
         router.back();
         return;
       }
@@ -94,7 +95,7 @@ export function ChangeEmailScreen() {
         setStep('old');
         setCode('');
       } else {
-        Alert.alert(t('settings2.email.pendingTitle'), t('settings2.email.pendingBody'));
+        showAlert(t('settings2.email.pendingTitle'), t('settings2.email.pendingBody'));
         router.back();
       }
     } catch (e) {

@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next';
 import {
   AccessibilityInfo,
   ActivityIndicator,
-  Alert,
   FlatList,
   I18nManager,
   KeyboardAvoidingView,
@@ -35,6 +34,7 @@ import {
 import { ApiError } from '@/api/client';
 import { type Gif, gifStoredUrl } from '@/api/gifs';
 import type { LocalMedia } from '@/api/upload';
+import { showAlert } from '@/components/Dialog';
 import { NotFoundState } from '@/components/NotFoundState';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/providers/AuthProvider';
@@ -152,7 +152,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
       const quota = e instanceof ApiError && e.code === 'quota_exceeded';
       const why = quota ? 'chat.errQuota' : sendRefusalKey(e);
       if (!why) console.warn('chat: send failed:', (e as Error)?.message ?? e);
-      Alert.alert(t('chat.sendFailed'), why ? t(why) : undefined);
+      showAlert(t('chat.sendFailed'), why ? t(why) : undefined);
     },
     [t],
   );
@@ -197,7 +197,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
       } catch (e) {
         // Before 0144 the database does not accept type 'gif'.
         if (/messages_type_check|messages_gif_url_check/.test(String((e as Error)?.message ?? ''))) {
-          Alert.alert(t('chat.sendFailed'), t('gif.unavailable'));
+          showAlert(t('chat.sendFailed'), t('gif.unavailable'));
           return;
         }
         failSend(e);
@@ -257,7 +257,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
     (m: ThreadMessage) => {
       // Messages are deleted outright (own messages only), so it is gone for
       // everyone in the chat; the dialog says exactly that.
-      Alert.alert(t('fix4.chatDeleteTitle'), t('fix4.chatDeleteBody'), [
+      showAlert(t('fix4.chatDeleteTitle'), t('fix4.chatDeleteBody'), [
         { text: t('chat.cancel'), style: 'cancel' },
         {
           text: t('fix4.chatDeleteConfirm'),
@@ -293,7 +293,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
       void qc.invalidateQueries({ queryKey: chatKeys.chats(), exact: true });
       showToast(t('chat.requestAccepted'));
     },
-    onError: () => Alert.alert(t('chat.acceptFailed')),
+    onError: () => showAlert(t('chat.acceptFailed')),
   });
 
   const decline = useMutation({
@@ -303,11 +303,11 @@ export function ChatThread({ chatId }: { chatId: string }) {
       void qc.invalidateQueries({ queryKey: chatKeys.chats(), exact: true });
       goBack();
     },
-    onError: () => Alert.alert(t('chat.declineFailed')),
+    onError: () => showAlert(t('chat.declineFailed')),
   });
 
   const confirmDecline = () =>
-    Alert.alert(t('chat.declineTitle'), t('chat.declineBody'), [
+    showAlert(t('chat.declineTitle'), t('chat.declineBody'), [
       { text: t('chat.cancel'), style: 'cancel' },
       { text: t('chat.decline'), style: 'destructive', onPress: () => decline.mutate() },
     ]);

@@ -9,7 +9,7 @@ import { parseGifUrl } from '@/api/gifs';
 import { useTheme } from '@/providers/ThemeProvider';
 import { light } from '@/theme/colors';
 
-import { callLabel, clockTime, formatDuration, parseCall, previewText } from './format';
+import { callLabel, clockTime, formatDuration, parseCall, previewText, systemLabel } from './format';
 import type { ThreadMessage } from './useThread';
 import { SwipeToReply } from './SwipeToReply';
 import { VideoShareCard } from './VideoShareCard';
@@ -74,7 +74,7 @@ export const MessageBubble = memo(function MessageBubble({
   if (item.type === 'call' || item.type === 'system') {
     const info = item.type === 'call' ? parseCall(item.text) : null;
     const missed = info?.status === 'missed' || info?.status === 'declined';
-    const label = info ? callLabel(info, t) : item.text || '';
+    const label = info ? callLabel(info, t) : systemLabel(item.text, t);
     const secs = Number(info?.seconds) || 0;
     return (
       <View style={styles.centerRow} accessible accessibilityLabel={`${label}, ${time}`}>

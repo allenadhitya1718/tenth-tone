@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   BackHandler,
   type LayoutChangeEvent,
   Linking,
@@ -21,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { CallMemberWithProfile } from '@/api/calls';
 import type { UserSummary } from '@/api/types';
+import { showAlert } from '@/components/Dialog';
 import type { ErrorMsg } from '@/components/ui';
 import { showToast } from '@/components/Toast';
 import { Avatar } from '@/features/chat/Avatar';
@@ -253,7 +253,7 @@ function CallView({ s, leave }: { s: CallState; leave: () => void }) {
   }, [t, leave]);
 
   const confirmCancel = useCallback(() => {
-    Alert.alert(t('call.cancelTitle'), t('call.cancelBody', { name }), [
+    showAlert(t('call.cancelTitle'), t('call.cancelBody', { name }), [
       { text: t('call.keepCalling'), style: 'cancel' },
       { text: t('call.cancelCall'), style: 'destructive', onPress: () => hangUp() },
     ]);

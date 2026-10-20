@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import {
   cancelWithdrawal,
@@ -15,6 +15,7 @@ import {
   type PayoutBlockReason,
   type WithdrawalStatus,
 } from '@/api/wallet';
+import { showAlert } from '@/components/Dialog';
 import { showToast } from '@/components/Toast';
 import { AppText, Button } from '@/components/ui';
 import { useSar } from '@/features/wallet/format';
@@ -210,7 +211,7 @@ export function CreatorEarnings() {
             date={date}
             busy={cancel.isPending && cancel.variables === w.id}
             onCancel={() =>
-              Alert.alert(t('live.wallet.creator.cancelTitle'), t('live.wallet.creator.cancelBody'), [
+              showAlert(t('live.wallet.creator.cancelTitle'), t('live.wallet.creator.cancelBody'), [
                 { text: t('live.wallet.creator.keep'), style: 'cancel' },
                 { text: t('live.wallet.creator.cancel'), style: 'destructive', onPress: () => cancel.mutate(w.id) },
               ])

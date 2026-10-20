@@ -4,11 +4,12 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Animated, FlatList, I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, FlatList, I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { fetchGifts, giftKeys, sendGift, type Gift } from '@/api/gifts';
 import type { UserSummary } from '@/api/types';
 import { fetchWallet, walletKeys } from '@/api/wallet';
+import { showAlert } from '@/components/Dialog';
 import { Button } from '@/components/ui';
 import { formatCount } from '@/features/feed/format';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -73,13 +74,13 @@ export function GiftTray({
     onError: (e) => {
       void qc.invalidateQueries({ queryKey: walletKeys.balance() });
       if (errorCode(e) === 'insufficient_balance') {
-        Alert.alert(t('live.gifts.lowTitle'), t('live.gifts.lowBody'), [
+        showAlert(t('live.gifts.lowTitle'), t('live.gifts.lowBody'), [
           { text: t('live.cancel'), style: 'cancel' },
           { text: t('live.gifts.topUp'), onPress: openWallet },
         ]);
         return;
       }
-      Alert.alert(t('live.gifts.failed'), t(liveError(e).key));
+      showAlert(t('live.gifts.failed'), t(liveError(e).key));
     },
   });
 

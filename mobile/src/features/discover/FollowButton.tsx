@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 
 import {
   cancelFollowRequest,
@@ -12,6 +12,7 @@ import {
   unfollow,
 } from '@/api/profiles';
 import { videoKeys } from '@/api/videos';
+import { showAlert } from '@/components/Dialog';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -65,7 +66,7 @@ export const FollowButton = memo(function FollowButton({ userId, name }: { userI
         void qc.invalidateQueries({ queryKey: profileKeys.following(me) });
       }
     },
-    onError: () => Alert.alert(t('discover.follow.failed')),
+    onError: () => showAlert(t('discover.follow.failed')),
   });
 
   // Colour styles are built once per theme, not on every render of every row.
@@ -93,7 +94,7 @@ export const FollowButton = memo(function FollowButton({ userId, name }: { userI
         // Withdrawing a request is not undone by tapping again (it is only
         // asked again from scratch), so it is confirmed first.
         if (settled === 'requested') {
-          Alert.alert(t('discover.follow.cancelRequestTitle'), t('discover.follow.cancelRequestBody', { name: name ?? '' }), [
+          showAlert(t('discover.follow.cancelRequestTitle'), t('discover.follow.cancelRequestBody', { name: name ?? '' }), [
             { text: t('discover.follow.cancelRequestKeep'), style: 'cancel' },
             { text: t('discover.follow.cancelRequestConfirm'), style: 'destructive', onPress: () => toggle.mutate(settled) },
           ]);

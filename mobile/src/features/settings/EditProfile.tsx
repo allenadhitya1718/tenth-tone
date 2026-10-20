@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   BackHandler,
   FlatList,
   I18nManager,
@@ -24,6 +23,7 @@ import { ApiError } from '@/api/client';
 import { fetchProfile, profileKeys, updateProfile, uploadAvatar, type Profile, type ProfilePatch } from '@/api/profiles';
 import { fetchMyPrivateDetails, saveMyPrivateDetails, settingsKeys, type Gender } from '@/api/settings';
 import type { LocalMedia } from '@/api/upload';
+import { showAlert } from '@/components/Dialog';
 import { AppText, Screen, TopBar } from '@/components/ui';
 import { cleanHandle, useHandleCheck } from '@/hooks/useHandleCheck';
 import { HANDLE_RE } from '@/lib/auth';
@@ -156,7 +156,7 @@ function EditForm({ myId, profile, baseline }: { myId: string; profile: Profile;
       });
     }
     options.push({ text: t('common.cancel'), style: 'cancel' });
-    Alert.alert(t('settings2.edit.changePhoto'), undefined, options);
+    showAlert(t('settings2.edit.changePhoto'), undefined, options);
   }
 
   async function pick(source: 'library' | 'camera') {
@@ -165,7 +165,7 @@ function EditForm({ myId, profile, baseline }: { myId: string; profile: Profile;
       const r = await pickAvatar(source);
       if (!r) return;
       if ('denied' in r) {
-        Alert.alert(t('settings2.edit.cameraDeniedTitle'), t('settings2.edit.cameraDenied'), [
+        showAlert(t('settings2.edit.cameraDeniedTitle'), t('settings2.edit.cameraDenied'), [
           { text: t('common.cancel'), style: 'cancel' },
           { text: t('settings2.edit.openSettings'), onPress: () => Linking.openSettings().catch(() => {}) },
         ]);

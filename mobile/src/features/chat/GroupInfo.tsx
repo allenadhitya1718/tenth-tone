@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import {
   AccessibilityInfo,
   ActivityIndicator,
-  Alert,
   FlatList,
   I18nManager,
   Linking,
@@ -36,6 +35,7 @@ import {
   setGroupPhoto,
 } from '@/api/groups';
 import type { LocalMedia } from '@/api/upload';
+import { showAlert } from '@/components/Dialog';
 import { NotFoundState } from '@/components/NotFoundState';
 import { showToast } from '@/components/Toast';
 import { Button, Screen, TopBar } from '@/components/ui';
@@ -97,7 +97,7 @@ export function GroupInfo({ chatId }: { chatId: string }) {
     (e: unknown) => {
       const key = groupErrorKey(e);
       if (key === 'groupInfo.err.generic') console.warn('group info: action failed:', (e as Error)?.message ?? e);
-      Alert.alert(t(key));
+      showAlert(t(key));
       if (key === 'groupInfo.err.gone' || key === 'groupInfo.err.notAdmin' || key === 'groupInfo.err.targetGone') refresh();
     },
     [t, refresh],
@@ -147,7 +147,7 @@ export function GroupInfo({ chatId }: { chatId: string }) {
     },
     onError: (e) => {
       const key = groupErrorKey(e);
-      Alert.alert(key === 'groupInfo.err.generic' ? t('groupInfo.err.photoFailed') : t(key));
+      showAlert(key === 'groupInfo.err.generic' ? t('groupInfo.err.photoFailed') : t(key));
     },
   });
 
@@ -157,7 +157,7 @@ export function GroupInfo({ chatId }: { chatId: string }) {
       const r = await pickAvatar(source);
       if (!r) return;
       if ('denied' in r) {
-        Alert.alert(t('groupInfo.cameraDeniedTitle'), t('groupInfo.cameraDenied'), [
+        showAlert(t('groupInfo.cameraDeniedTitle'), t('groupInfo.cameraDenied'), [
           { text: t('groupInfo.cancel'), style: 'cancel' },
           { text: t('groupInfo.openSettings'), onPress: () => Linking.openSettings().catch(() => {}) },
         ]);
@@ -165,7 +165,7 @@ export function GroupInfo({ chatId }: { chatId: string }) {
       }
       photo.mutate(r.media);
     } catch {
-      Alert.alert(t('groupInfo.err.photoFailed'));
+      showAlert(t('groupInfo.err.photoFailed'));
     }
   };
 
@@ -186,7 +186,7 @@ export function GroupInfo({ chatId }: { chatId: string }) {
     ...(data?.photo_url
       ? [{ key: 'rm', label: t('groupInfo.removePhoto'), icon: 'trash-outline' as const, destructive: true, onPress: () => {
           setPhotoMenu(false);
-          Alert.alert(t('groupInfo.removePhotoTitle'), undefined, [
+          showAlert(t('groupInfo.removePhotoTitle'), undefined, [
             { text: t('groupInfo.cancel'), style: 'cancel' },
             { text: t('groupInfo.removePhotoConfirm'), style: 'destructive', onPress: () => photo.mutate(null) },
           ]);
@@ -229,7 +229,7 @@ export function GroupInfo({ chatId }: { chatId: string }) {
 
   const confirmRemove = (m: GroupMember) => {
     const name = m.name || m.handle || t('groupInfo.sys.someone');
-    Alert.alert(t('groupInfo.removeTitle', { name }), t('groupInfo.removeBody'), [
+    showAlert(t('groupInfo.removeTitle', { name }), t('groupInfo.removeBody'), [
       { text: t('groupInfo.cancel'), style: 'cancel' },
       { text: t('groupInfo.removeConfirm'), style: 'destructive', onPress: () => memberAction.mutate({ kind: 'remove', m }) },
     ]);
@@ -304,14 +304,14 @@ export function GroupInfo({ chatId }: { chatId: string }) {
         : owner && heir
           ? t('groupInfo.leaveBodyOwner', { heir: heir.name || heir.handle || t('groupInfo.sys.someone') })
           : t('groupInfo.leaveBody');
-    Alert.alert(t('groupInfo.leaveTitle', { name: title }), body, [
+    showAlert(t('groupInfo.leaveTitle', { name: title }), body, [
       { text: t('groupInfo.cancel'), style: 'cancel' },
       { text: t('groupInfo.leaveConfirm'), style: 'destructive', onPress: () => leave.mutate() },
     ]);
   };
 
   const confirmDelete = () =>
-    Alert.alert(t('groupInfo.deleteTitle', { name: title }), t('groupInfo.deleteBody'), [
+    showAlert(t('groupInfo.deleteTitle', { name: title }), t('groupInfo.deleteBody'), [
       { text: t('groupInfo.cancel'), style: 'cancel' },
       { text: t('groupInfo.deleteConfirm'), style: 'destructive', onPress: () => remove.mutate() },
     ]);

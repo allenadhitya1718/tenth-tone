@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { locationKeys, respondToLocationPermit } from '@/api/location';
 import type { Notification } from '@/api/notifications';
+import { showAlert } from '@/components/Dialog';
 import { FollowButton } from '@/features/discover/FollowButton';
 import { go } from '@/features/discover/nav';
 import { Avatar } from '@/features/discover/parts';
@@ -135,7 +136,7 @@ function PermitActions({ permitId, name }: { permitId: string; name: string }) {
   const respond = useMutation({
     mutationFn: (decision: 'approved' | 'denied') => respondToLocationPermit(permitId, decision),
     onSuccess: () => void qc.invalidateQueries({ queryKey: locationKeys.all() }),
-    onError: () => Alert.alert(t('discover.notif.permitFailed')),
+    onError: () => showAlert(t('discover.notif.permitFailed')),
   });
 
   if (respond.isSuccess) {

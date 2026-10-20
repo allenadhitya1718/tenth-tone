@@ -6,7 +6,6 @@ import { type ComponentRef, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   I18nManager,
   Keyboard,
@@ -36,6 +35,7 @@ import {
 import { ApiError } from '@/api/client';
 import { type Gif, gifStoredUrl, parseGifUrl } from '@/api/gifs';
 import { videoKeys } from '@/api/videos';
+import { showAlert } from '@/components/Dialog';
 import { NotFoundState } from '@/components/NotFoundState';
 import { EmojiGifPanel } from '@/components/emoji/EmojiGifPanel';
 import { QuickEmojis } from '@/components/emoji/EmojiPanel';
@@ -193,7 +193,7 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
           // The server's message is Arabic only; ours follows the app language.
           qc.setQueryData<Comment[]>(key, (list) => list?.filter((c) => c.id !== id));
           bumpCount(-1);
-          Alert.alert(t('comments.withdrawn'), t('comments.blockedBody'));
+          showAlert(t('comments.withdrawn'), t('comments.blockedBody'));
         },
         parentId,
         gifUrl ?? null,
@@ -211,18 +211,18 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
       // the app's language, and give the text back so it can be reworded.
       if (isCommentBlocked(e)) {
         setText((v) => v || body);
-        Alert.alert(t('comments.blocked'), t('comments.blockedBody'));
+        showAlert(t('comments.blocked'), t('comments.blockedBody'));
         return;
       }
       // A GIF before 0144 is applied (no gif_url column yet).
       if (e instanceof ApiError && e.code === 'gif_unavailable') {
         setText((v) => v || body);
-        Alert.alert(t('comments.sendFailed'), t('gif.unavailable'));
+        showAlert(t('comments.sendFailed'), t('gif.unavailable'));
         return;
       }
       const why = commentRefusalKey(e);
       if (!why && !(e instanceof ApiError)) console.warn('comments: send failed:', (e as Error)?.message ?? e);
-      Alert.alert(
+      showAlert(
         t('comments.sendFailed'),
         e instanceof ApiError && e.code === 'content_blocked'
           ? (e.message ?? undefined)
@@ -512,7 +512,7 @@ function CommentRow({
   });
 
   function confirmDelete() {
-    Alert.alert(t('comments.deleteTitle'), undefined, [
+    showAlert(t('comments.deleteTitle'), undefined, [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('comments.delete'),

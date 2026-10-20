@@ -1,11 +1,11 @@
 import { type InfiniteData, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
 
 import { profileKeys } from '@/api/profiles';
 import type { Video } from '@/api/types';
 import { deleteVideo, videoKeys, type VideoTile } from '@/api/videos';
+import { showAlert } from '@/components/Dialog';
 import { showToast } from '@/components/Toast';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -55,7 +55,7 @@ export function useDeleteVideo(onDeleted?: (id: string) => void) {
         showToast(t('fix4.videoDeleted'), 'trash');
         onDeleted?.(id);
       } catch {
-        Alert.alert(t('fix4.deleteVideoFailed'));
+        showAlert(t('fix4.deleteVideoFailed'));
       } finally {
         inFlight.current = false;
         setBusyId(null);
@@ -67,7 +67,7 @@ export function useDeleteVideo(onDeleted?: (id: string) => void) {
   const confirm = useCallback(
     (id: string) => {
       if (inFlight.current) return;
-      Alert.alert(t('fix4.deleteVideoTitle'), t('fix4.deleteVideoBody'), [
+      showAlert(t('fix4.deleteVideoTitle'), t('fix4.deleteVideoBody'), [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('fix4.deleteVideo'), style: 'destructive', onPress: () => void run(id) },
       ]);

@@ -4,7 +4,6 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert,
   I18nManager,
   KeyboardAvoidingView,
   Modal,
@@ -23,6 +22,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ApiError } from '@/api/client';
 import type { Privacy } from '@/api/types';
 import { deleteVideo, fetchVideo, publishDraft, videoKeys, type VideoTile } from '@/api/videos';
+import { showAlert } from '@/components/Dialog';
 import { showToast } from '@/components/Toast';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/providers/AuthProvider';
@@ -97,7 +97,7 @@ function DraftBody({ draft, onClose }: { draft: VideoTile; onClose: () => void }
   };
 
   const failure = (title: string, e: unknown) =>
-    Alert.alert(title, e instanceof ApiError && e.code === 'content_blocked' ? (e.message ?? undefined) : undefined);
+    showAlert(title, e instanceof ApiError && e.code === 'content_blocked' ? (e.message ?? undefined) : undefined);
 
   async function postNow() {
     if (busy) return;
@@ -137,7 +137,7 @@ function DraftBody({ draft, onClose }: { draft: VideoTile; onClose: () => void }
 
   function confirmDelete() {
     if (busy) return;
-    Alert.alert(t('drafts.deleteTitle'), t('drafts.deleteBody'), [
+    showAlert(t('drafts.deleteTitle'), t('drafts.deleteBody'), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('drafts.delete'),

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import {
   cancelAccountDeletion,
@@ -14,6 +14,7 @@ import {
 } from '@/api/settings';
 import { isPermanentBan } from '@/api/appeals';
 import { creatorKeys, fetchCreatorEarnings } from '@/api/wallet';
+import { showAlert } from '@/components/Dialog';
 import { showToast } from '@/components/Toast';
 import { AppText, Button, Screen, TopBar } from '@/components/ui';
 import { isBanned } from '@/features/appeals/accountGate';
@@ -86,7 +87,7 @@ export function AccountStatusScreen() {
     try {
       await cancelAccountDeletion();
       await qc.invalidateQueries({ queryKey: settingsKeys.accountStatus() });
-      Alert.alert(t('settings2.status.cancelledTitle'), t('settings2.status.cancelledBody'));
+      showAlert(t('settings2.status.cancelledTitle'), t('settings2.status.cancelledBody'));
       setView('choices');
     } catch (e) {
       setError(errorText(e, t));

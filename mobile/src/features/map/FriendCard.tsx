@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { openOrCreateDm } from '@/api/chat';
 import {
@@ -11,6 +11,7 @@ import {
   requestLocationPermit,
   revokeLocationPermit,
 } from '@/api/location';
+import { showAlert } from '@/components/Dialog';
 import { AppText } from '@/components/ui';
 import { timeAgo } from '@/lib/timeAgo';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -49,19 +50,19 @@ export function FriendCard({ pin, me, now, following, bottomInset, onFollow, onC
     mutationFn: () => requestLocationPermit(pin.id),
     onSuccess: () => {
       refreshPermit();
-      Alert.alert(t('map.permitSent'), t('map.permitSentBody', { name: pin.name }));
+      showAlert(t('map.permitSent'), t('map.permitSentBody', { name: pin.name }));
     },
-    onError: (e) => Alert.alert(t('map.errTitle'), t(locationErrorKey(e))),
+    onError: (e) => showAlert(t('map.errTitle'), t(locationErrorKey(e))),
   });
   const revoke = useMutation({
     mutationFn: () => revokeLocationPermit(pin.id),
     onSuccess: refreshPermit,
-    onError: (e) => Alert.alert(t('map.errTitle'), t(locationErrorKey(e))),
+    onError: (e) => showAlert(t('map.errTitle'), t(locationErrorKey(e))),
   });
   const dm = useMutation({
     mutationFn: () => openOrCreateDm(pin.id),
     onSuccess: (chatId) => router.push(`/chat/${chatId}`),
-    onError: () => Alert.alert(t('map.errTitle'), t('map.dmFailed')),
+    onError: () => showAlert(t('map.errTitle'), t('map.dmFailed')),
   });
 
   const status = permit.data?.status;
@@ -73,13 +74,13 @@ export function FriendCard({ pin, me, now, following, bottomInset, onFollow, onC
 
   function permitAction() {
     if (status === 'approved' || status === 'pending') {
-      Alert.alert(t(status === 'approved' ? 'map.stopTrackingQ' : 'map.withdrawQ', { name: pin.name }), undefined, [
+      showAlert(t(status === 'approved' ? 'map.stopTrackingQ' : 'map.withdrawQ', { name: pin.name }), undefined, [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('map.confirm'), style: 'destructive', onPress: () => revoke.mutate() },
       ]);
       return;
     }
-    Alert.alert(t('map.askTrackQ', { name: pin.name }), t('map.askTrackBody'), [
+    showAlert(t('map.askTrackQ', { name: pin.name }), t('map.askTrackBody'), [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('map.send'), onPress: () => ask.mutate() },
     ]);

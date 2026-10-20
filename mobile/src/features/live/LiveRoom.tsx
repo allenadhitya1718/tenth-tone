@@ -11,7 +11,6 @@ import { useTranslation } from 'react-i18next';
 import {
   AccessibilityInfo,
   ActivityIndicator,
-  Alert,
   BackHandler,
   FlatList,
   I18nManager,
@@ -28,6 +27,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isCommentBlocked } from '@/api/comments';
+import { showAlert } from '@/components/Dialog';
 import { refusalKind } from '@/lib/serverError';
 import { giftKeys, subscribeToLiveGifts, type Gift } from '@/api/gifts';
 import {
@@ -189,11 +189,11 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
     if (prev === myStatus || isHost) return;
     if (myStatus === 'accepted') {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(t('live.guest.onStageTitle'), t('live.guest.onStageBody'));
+      showAlert(t('live.guest.onStageTitle'), t('live.guest.onStageBody'));
     } else if (prev === 'accepted' && myStatus === 'removed') {
-      Alert.alert(t('live.guest.removedTitle'), t('live.guest.removedBody'));
+      showAlert(t('live.guest.removedTitle'), t('live.guest.removedBody'));
     } else if (prev === 'requested' && myStatus === 'removed') {
-      Alert.alert(t('live.guest.declinedTitle'));
+      showAlert(t('live.guest.declinedTitle'));
     }
   }, [myStatus, isHost, t]);
 
@@ -207,7 +207,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
         await qc.invalidateQueries({ queryKey: liveKeys.guests(liveId) });
         return true;
       } catch (e) {
-        Alert.alert(refusalKind(e) === 'rate' ? t('errors.slowDown') : t('live.errors.title'), t(liveError(e).key));
+        showAlert(refusalKind(e) === 'rate' ? t('errors.slowDown') : t('live.errors.title'), t(liveError(e).key));
         return false;
       } finally {
         setBusyId(null);
@@ -222,7 +222,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
   function onHandPress() {
     if (!me) return;
     if (myStatus === 'requested') {
-      Alert.alert(t('live.guest.requestedTitle'), t('live.guest.requestedBody'), [
+      showAlert(t('live.guest.requestedTitle'), t('live.guest.requestedBody'), [
         { text: t('live.guest.keepRequest'), style: 'cancel' },
         { text: t('live.guest.withdraw'), style: 'destructive', onPress: () => void guestAction(me, () => leaveLiveStage(liveId)) },
       ]);
@@ -237,7 +237,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
 
   function onLeaveStage() {
     if (!me) return;
-    Alert.alert(t('live.guest.leaveTitle'), undefined, [
+    showAlert(t('live.guest.leaveTitle'), undefined, [
       { text: t('live.cancel'), style: 'cancel' },
       { text: t('live.guest.leave'), style: 'destructive', onPress: () => void guestAction(me, () => leaveLiveStage(liveId)) },
     ]);
@@ -260,13 +260,13 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
       // The realtime feed echoes it back; nothing is appended here.
       await postLiveComment(liveId, body, (id, message) => {
         chat.remove(id);
-        Alert.alert(t('live.chat.withdrawn'), message ?? undefined);
+        showAlert(t('live.chat.withdrawn'), message ?? undefined);
       });
     } catch (e) {
       setText((v) => v || body);
       // Refused by the server's word filter (0135): the comments strings.
-      if (isCommentBlocked(e)) Alert.alert(t('comments.blocked'), t('comments.blockedBody'));
-      else Alert.alert(t(liveError(e, 'live.chat.sendFailed').key), serverDetail(e));
+      if (isCommentBlocked(e)) showAlert(t('comments.blocked'), t('comments.blockedBody'));
+      else showAlert(t(liveError(e, 'live.chat.sendFailed').key), serverDetail(e));
     } finally {
       setSending(false);
     }
@@ -389,7 +389,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
   const [ending, setEnding] = useState(false);
 
   const confirmEnd = useCallback(() => {
-    Alert.alert(t('live.end.title'), t('live.end.body'), [
+    showAlert(t('live.end.title'), t('live.end.body'), [
       { text: t('live.cancel'), style: 'cancel' },
       {
         text: t('live.end.confirm'),
@@ -402,7 +402,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
               old ? { ...old, status: 'ended', ended_at: new Date().toISOString() } : old,
             );
           } catch {
-            Alert.alert(t('live.end.failed'));
+            showAlert(t('live.end.failed'));
           } finally {
             setEnding(false);
           }

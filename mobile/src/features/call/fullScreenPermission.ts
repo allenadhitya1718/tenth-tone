@@ -8,8 +8,10 @@
 // So: ask once, explain why, offer the settings page, never nag.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { TFunction } from 'i18next';
-import { Alert, Linking, Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import notifee, { AndroidNotificationSetting } from 'react-native-notify-kit';
+
+import { showAlert } from '@/components/Dialog';
 
 const ASKED_KEY = 'tt-fsi-asked';
 
@@ -47,7 +49,7 @@ export async function maybeAskFullScreenCalls(t: TFunction): Promise<void> {
   } catch {
     return;
   }
-  Alert.alert(t('notify.fsi.title'), t('notify.fsi.body'), [
+  showAlert(t('notify.fsi.title'), t('notify.fsi.body'), [
     { text: t('notify.fsi.later'), style: 'cancel' },
     { text: t('notify.fsi.open'), onPress: () => void openFullScreenSettings() },
   ]);

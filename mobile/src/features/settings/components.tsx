@@ -7,9 +7,10 @@ import { router, type Href } from 'expo-router';
 import type { TFunction } from 'i18next';
 import { Children, Fragment, type ComponentProps, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, I18nManager, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { ActivityIndicator, I18nManager, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
+import { showAlert } from '@/components/Dialog';
 import { AppText, Button } from '@/components/ui';
 import { useTheme } from '@/providers/ThemeProvider';
 import { atHandle } from '@/lib/handle';
@@ -400,7 +401,7 @@ export function confirm({
   destructive?: boolean;
 }): Promise<boolean> {
   return new Promise((resolve) => {
-    Alert.alert(
+    showAlert(
       title,
       message,
       [
@@ -434,7 +435,7 @@ export function errorText(e: unknown, t: TFunction, fallbackKey = 'settings2.com
 }
 
 export function showError(t: TFunction, e: unknown, fallbackKey?: string) {
-  Alert.alert(t('settings2.common.errorTitle'), errorText(e, t, fallbackKey));
+  showAlert(t('settings2.common.errorTitle'), errorText(e, t, fallbackKey));
 }
 
 const styles = StyleSheet.create({

@@ -5,7 +5,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   AppState,
   I18nManager,
   Linking,
@@ -23,6 +22,7 @@ import {
   requestLocationPermit,
 } from '@/api/location';
 import { fetchProfile, profileKeys } from '@/api/profiles';
+import { showAlert } from '@/components/Dialog';
 import { AppText, Button } from '@/components/ui';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -65,7 +65,7 @@ export function FriendsMap({ focusUserId = null, requestUserId = null }: Props) 
   useEffect(() => {
     if (!requestUserId || requestHandled.current || requestUserId === me) return;
     requestHandled.current = true;
-    Alert.alert(t('map.askTrackQ', { name: t('map.thisPerson') }), t('map.askTrackBody'), [
+    showAlert(t('map.askTrackQ', { name: t('map.thisPerson') }), t('map.askTrackBody'), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('map.send'),
@@ -73,9 +73,9 @@ export function FriendsMap({ focusUserId = null, requestUserId = null }: Props) 
           requestLocationPermit(requestUserId)
             .then(() => {
               void qc.invalidateQueries({ queryKey: locationKeys.permit(requestUserId) });
-              Alert.alert(t('map.permitSent'));
+              showAlert(t('map.permitSent'));
             })
-            .catch((e) => Alert.alert(t('map.errTitle'), t(locationErrorKey(e)))),
+            .catch((e) => showAlert(t('map.errTitle'), t(locationErrorKey(e)))),
       },
     ]);
   }, [requestUserId, me, qc, t]);

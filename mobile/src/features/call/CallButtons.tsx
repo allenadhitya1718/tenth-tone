@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { type Href, router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import type { CallKind } from '@/api/calls';
 import type { UserSummary, Uuid } from '@/api/types';
+import { showAlert } from '@/components/Dialog';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { checkReady, getCallState, isCallActive } from './callSession';
@@ -36,7 +37,7 @@ export function CallButtons({ peer, chatId, size = 24 }: { peer: UserSummary; ch
         if (!ready.ok) {
           const buttons: { text: string; style?: 'cancel'; onPress?: () => void }[] = [{ text: t('call.ok'), style: 'cancel' }];
           if (ready.openSettings) buttons.push({ text: t('call.openSettings'), onPress: () => void Linking.openSettings() });
-          Alert.alert(t('call.cantCallTitle'), t(ready.error.key, ready.error.params), buttons);
+          showAlert(t('call.cantCallTitle'), t(ready.error.key, ready.error.params), buttons);
           return;
         }
         router.push(
@@ -114,7 +115,7 @@ export function GroupCallButtons({
         if (!ready.ok) {
           const buttons: { text: string; style?: 'cancel'; onPress?: () => void }[] = [{ text: t('call.ok'), style: 'cancel' }];
           if (ready.openSettings) buttons.push({ text: t('call.openSettings'), onPress: () => void Linking.openSettings() });
-          Alert.alert(t('call.cantCallTitle'), t(ready.error.key, ready.error.params), buttons);
+          showAlert(t('call.cantCallTitle'), t(ready.error.key, ready.error.params), buttons);
           return;
         }
         router.push(dialPath({ to: chatId, kind, chat: chatId, name: title, avatar: photo ?? null, group: true }) as Href);

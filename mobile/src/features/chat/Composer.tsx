@@ -4,7 +4,6 @@ import { type ComponentRef, memo, useCallback, useEffect, useMemo, useRef, useSt
 import { useTranslation } from 'react-i18next';
 import {
   type AccessibilityActionEvent,
-  Alert,
   Animated,
   I18nManager,
   Keyboard,
@@ -19,6 +18,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import type { Gif } from '@/api/gifs';
 import type { LocalMedia } from '@/api/upload';
+import { showAlert } from '@/components/Dialog';
 import { EmojiGifPanel } from '@/components/emoji/EmojiGifPanel';
 import { QuickEmojis } from '@/components/emoji/EmojiPanel';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -97,7 +97,7 @@ export const Composer = memo(function Composer({
       onTooShort: () => flash(t('chat.holdToRecord')),
       onPermissionAsked: () => flash(t('chat.holdToRecord')),
       onPermissionDenied: () =>
-        Alert.alert(t('chat.micDeniedTitle'), t('chat.micDeniedBody'), [
+        showAlert(t('chat.micDeniedTitle'), t('chat.micDeniedBody'), [
           { text: t('chat.cancel'), style: 'cancel' },
           { text: t('chat.openSettings'), onPress: () => void Linking.openSettings() },
         ]),

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import type { WhoCan } from '@/api/settings';
+import { showAlert } from '@/components/Dialog';
 import { Screen, TopBar } from '@/components/ui';
 
 import { ErrorView, LoadingView, Note, pgCode, RadioGroup, RadioRow, showError } from './components';
@@ -36,7 +37,7 @@ export function WhoCanScreen({ field }: { field: WhoField }) {
           // 23514: the check constraint still only allows the old values,
           // i.e. the migration that adds 'friends' has not run yet.
           if (v === 'friends' && pgCode(e) === '23514') {
-            Alert.alert(t('settings2.who.friendsUnavailableTitle'), t('settings2.who.friendsUnavailable'));
+            showAlert(t('settings2.who.friendsUnavailableTitle'), t('settings2.who.friendsUnavailable'));
             return;
           }
           showError(t, e, 'settings2.common.updateFailed');

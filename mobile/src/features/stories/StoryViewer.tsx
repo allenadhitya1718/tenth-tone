@@ -11,7 +11,6 @@ import { useTranslation } from 'react-i18next';
 import {
   AccessibilityInfo,
   ActivityIndicator,
-  Alert,
   Animated,
   AppState,
   Easing,
@@ -36,6 +35,7 @@ import {
   type UserStory,
 } from '@/api/stories';
 import { fetchProfile, profileKeys } from '@/api/profiles';
+import { showAlert } from '@/components/Dialog';
 import { timeAgo } from '@/lib/timeAgo';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -227,12 +227,12 @@ export function StoryViewer({ userId }: { userId: string }) {
       if (!left.length) close();
       else setPicked(Math.min(index, left.length - 1));
     },
-    onError: () => Alert.alert(t('stories.deleteFailed')),
+    onError: () => showAlert(t('stories.deleteFailed')),
   });
   const confirmDelete = () => {
     if (!story) return;
     setSheetOpen(true);
-    Alert.alert(t('stories.deleteQ'), t('stories.deleteBody'), [
+    showAlert(t('stories.deleteQ'), t('stories.deleteBody'), [
       { text: t('common.cancel'), style: 'cancel', onPress: () => setSheetOpen(false) },
       {
         text: t('stories.delete'),

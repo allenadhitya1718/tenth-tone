@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   I18nManager,
   Linking,
@@ -20,6 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { VideoPlace } from '@/api/videos';
+import { showAlert } from '@/components/Dialog';
 import { useDebouncedValue } from '@/features/discover/useDebouncedValue';
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -136,7 +136,7 @@ export function PlacePicker({
     if (!p?.granted) {
       p = await requestPerm();
       if (!p.granted) {
-        Alert.alert(t('place.permissionTitle'), t('place.permissionDenied'), [
+        showAlert(t('place.permissionTitle'), t('place.permissionDenied'), [
           { text: t('common.cancel'), style: 'cancel' },
           { text: t('place.openSettings'), onPress: () => void Linking.openSettings() },
         ]);
@@ -147,7 +147,7 @@ export function PlacePicker({
     try {
       pick(await qc.fetchQuery({ queryKey: placeKeys.here, queryFn: locateHere, staleTime: 2 * 60 * 1000 }));
     } catch {
-      Alert.alert(t('place.locateFailed'));
+      showAlert(t('place.locateFailed'));
     } finally {
       setBusy(false);
     }

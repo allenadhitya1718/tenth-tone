@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { report, type ReportTarget } from '@/api/moderation';
 import { blockUser } from '@/api/safety';
 import type { UserSummary } from '@/api/types';
+import { showAlert } from '@/components/Dialog';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { Avatar, OptionRow, Sheet } from './Sheet';
@@ -84,9 +85,9 @@ export function ModerationSheet({
         reason: `${reason.stored} — ${step.context}${step.detail ? `: ${step.detail.slice(0, 120)}` : ''}`,
       });
       close();
-      Alert.alert(t('live.report.thanks'));
+      showAlert(t('live.report.thanks'));
     } catch {
-      Alert.alert(t('live.report.failed'));
+      showAlert(t('live.report.failed'));
     } finally {
       setBusy(false);
     }
@@ -94,7 +95,7 @@ export function ModerationSheet({
 
   function confirmBlock() {
     if (!user) return;
-    Alert.alert(t('live.block.title', { name }), t('live.block.body'), [
+    showAlert(t('live.block.title', { name }), t('live.block.body'), [
       { text: t('live.cancel'), style: 'cancel' },
       {
         text: t('live.block.confirm'),
@@ -104,9 +105,9 @@ export function ModerationSheet({
             await blockUser(user.id);
             onBlocked?.(user.id);
             close();
-            Alert.alert(t('live.block.done', { name }));
+            showAlert(t('live.block.done', { name }));
           } catch {
-            Alert.alert(t('live.block.failed'));
+            showAlert(t('live.block.failed'));
           }
         },
       },

@@ -1,11 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
 
 import type { Comment } from '@/api/comments';
 import { chatKeys } from '@/api/chat';
 import { profileKeys } from '@/api/profiles';
 import { blockUser, safetyKeys } from '@/api/safety';
+import { showAlert } from '@/components/Dialog';
 import { removeCreatorFromFeeds } from '@/features/feed/cache';
 
 // Asks first, then blocks and hides the person's content straight away: their
@@ -42,7 +42,7 @@ export function useBlock() {
 
   return function confirmBlock(userId: string, name: string): Promise<boolean> {
     return new Promise((resolve) => {
-      Alert.alert(t('ugc.blockTitle', { name }), t('ugc.blockBody'), [
+      showAlert(t('ugc.blockTitle', { name }), t('ugc.blockBody'), [
         { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
         {
           text: t('ugc.blockConfirm'),
@@ -51,10 +51,10 @@ export function useBlock() {
             try {
               await blockUser(userId);
               hide(userId);
-              Alert.alert(t('ugc.blockedToast', { name }));
+              showAlert(t('ugc.blockedToast', { name }));
               resolve(true);
             } catch {
-              Alert.alert(t('ugc.blockFailed'));
+              showAlert(t('ugc.blockFailed'));
               resolve(false);
             }
           },

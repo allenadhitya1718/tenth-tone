@@ -15,6 +15,7 @@ import { initI18n, languageIsRtl } from '@/i18n';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { ThemeProvider, useTheme } from '@/providers/ThemeProvider';
 import { AnimatedSplash } from '@/components/AnimatedSplash';
+import { DialogHost } from '@/components/Dialog';
 import { ToastHost } from '@/components/Toast';
 import { CallPill, useIncomingCalls } from '@/features/call';
 
@@ -41,6 +42,7 @@ export default function RootLayout() {
             <AuthProvider>
               <RootNavigator />
               <ToastHost />
+              <DialogHost />
             </AuthProvider>
           </ThemeProvider>
         </QueryClientProvider>

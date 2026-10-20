@@ -6,10 +6,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useState, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { liveKeys, startLive, uploadLiveThumbnail, type LivePrivacy } from '@/api/live';
 import type { LocalMedia } from '@/api/upload';
+import { showAlert } from '@/components/Dialog';
 import { AppText, Button, ErrorBox, Screen, TextField, TopBar, type ErrorMsg } from '@/components/ui';
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -76,7 +77,7 @@ export function GoLive() {
     // stream exists, so nobody goes live silent.
     const mic = await ensureMic();
     if (mic !== 'granted') {
-      Alert.alert(t('live.go.micTitle'), t('live.go.micBody'), [
+      showAlert(t('live.go.micTitle'), t('live.go.micBody'), [
         { text: t('live.cancel'), style: 'cancel' },
         { text: t('live.openSettings'), onPress: () => void Linking.openSettings() },
       ]);

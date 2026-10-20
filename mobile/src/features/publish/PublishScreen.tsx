@@ -7,7 +7,7 @@ import * as VideoThumbnails from 'expo-video-thumbnails';
 import { type VideoPlayer, useVideoPlayer, VideoView } from 'expo-video';
 import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, I18nManager, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { I18nManager, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -17,6 +17,7 @@ import type { Privacy, UserSummary } from '@/api/types';
 import type { LocalMedia } from '@/api/upload';
 import { appendTag, captionTags, suggestTags, suggestTagsKeys, tagLangFor } from '@/api/suggestTags';
 import { publishVideo, videoKeys, type VideoPlace } from '@/api/videos';
+import { showAlert } from '@/components/Dialog';
 import { showToast } from '@/components/Toast';
 import { Button, TopBar } from '@/components/ui';
 import { PlacePicker } from '@/features/place/PlacePicker';
@@ -133,7 +134,7 @@ export function PublishScreen({
       const code = e instanceof ApiError ? e.code : '';
       const why = publishErrorKey(e);
       const message = code === 'content_blocked' ? (e as Error).message : why ? t(why) : t('publish.failedHint');
-      Alert.alert(t('publish.failed'), message, [
+      showAlert(t('publish.failed'), message, [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('feed.retry'), onPress: () => submit(asDraft) },
       ]);
@@ -154,7 +155,7 @@ export function PublishScreen({
           if (r.reason === 'tag_limit') return t('place.refusedLimit', { handle });
           return t('place.refusedFailed', { handle });
         });
-    Alert.alert(t('place.refusedTitle'), lines.join('\n'));
+    showAlert(t('place.refusedTitle'), lines.join('\n'));
   }
 
   // The # / @ chips append the sign; typing after it opens the suggestion

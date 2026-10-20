@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
 
 import { approveFollowRequest, declineFollowRequest, type FollowRequest, profileKeys } from '@/api/profiles';
+import { showAlert } from '@/components/Dialog';
 import { useAuth } from '@/providers/AuthProvider';
 
 export type Decision = 'approve' | 'decline';
@@ -27,7 +27,7 @@ export function useFollowRequestDecision(requesterId: string) {
       }
     },
     onError: () => {
-      Alert.alert(t('discover.requests.failed'));
+      showAlert(t('discover.requests.failed'));
       // It may have been handled on another device; show the real state.
       void qc.invalidateQueries({ queryKey: profileKeys.followRequests() });
     },

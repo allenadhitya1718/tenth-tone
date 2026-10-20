@@ -11,7 +11,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   I18nManager,
   KeyboardAvoidingView,
   Platform,
@@ -26,6 +25,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Sound } from '@/api/sounds';
 import { createStory, storyKeys, type StoryAudience, type StoryKind } from '@/api/stories';
 import type { LocalMedia } from '@/api/upload';
+import { showAlert } from '@/components/Dialog';
 import { AppText, Button, TopBar } from '@/components/ui';
 import { SuggestedHashtags } from '@/features/publish/PublishScreen';
 import { useAuth } from '@/providers/AuthProvider';
@@ -125,7 +125,7 @@ export function StoryComposer() {
       if (source === 'camera') {
         const perm = await ImagePicker.requestCameraPermissionsAsync();
         if (!perm.granted) {
-          Alert.alert(t('stories.cameraDenied'));
+          showAlert(t('stories.cameraDenied'));
           return;
         }
       }
@@ -139,7 +139,7 @@ export function StoryComposer() {
       if (res.canceled || !res.assets?.[0]) return;
       const a = res.assets[0];
       if (kind === 'video' && a.duration && a.duration / 1000 > MAX_VIDEO_S + 0.5) {
-        Alert.alert(t('stories.videoTooLong', { n: MAX_VIDEO_S }));
+        showAlert(t('stories.videoTooLong', { n: MAX_VIDEO_S }));
         return;
       }
       setPreparing(true);
@@ -148,7 +148,7 @@ export function StoryComposer() {
       if (p.kind === 'video') chooseSound(null);
     } catch (e) {
       console.warn('story pick:', (e as Error)?.message);
-      Alert.alert(t('stories.pickFailed'));
+      showAlert(t('stories.pickFailed'));
     } finally {
       setPreparing(false);
     }
@@ -204,12 +204,12 @@ export function StoryComposer() {
       void qc.invalidateQueries({ queryKey: storyKeys.tray() });
       const me = session?.user.id;
       if (me) void qc.invalidateQueries({ queryKey: storyKeys.user(me) });
-      Alert.alert(t('stories.posted'));
+      showAlert(t('stories.posted'));
       if (router.canGoBack()) router.back();
       else router.replace('/');
     } catch (e) {
       const { title, body } = storyError(e, t, i18n.language);
-      Alert.alert(title, body, [
+      showAlert(title, body, [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('stories.retry'), onPress: () => void post() },
       ]);
@@ -221,7 +221,7 @@ export function StoryComposer() {
   const leave = () => {
     if (busy) return;
     if (!picked) return router.canGoBack() ? router.back() : router.replace('/');
-    Alert.alert(t('stories.discardQ'), undefined, [
+    showAlert(t('stories.discardQ'), undefined, [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('stories.discard'), style: 'destructive', onPress: () => (router.canGoBack() ? router.back() : router.replace('/')) },
     ]);

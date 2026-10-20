@@ -6,7 +6,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   I18nManager,
   Linking,
@@ -35,6 +34,7 @@ import {
 import { fetchUserSounds, type Sound, soundKeys } from '@/api/sounds';
 import { fetchDrafts, fetchSavedVideos, fetchUserVideos, videoKeys, type VideoTile } from '@/api/videos';
 import { tagKeys } from '@/api/tags';
+import { showAlert } from '@/components/Dialog';
 import { NotFoundState } from '@/components/NotFoundState';
 import { Button } from '@/components/ui';
 import { DraftSheet } from '@/features/drafts/DraftSheet';
@@ -364,13 +364,13 @@ function OtherActions({ profile }: { profile: Profile }) {
       void qc.invalidateQueries({ queryKey: profileKeys.profile(profile.id) });
       void qc.invalidateQueries({ queryKey: videoKeys.feed('following') });
     },
-    onError: () => Alert.alert(t('profile.updateFailed')),
+    onError: () => showAlert(t('profile.updateFailed')),
   });
 
   function onFollowPress() {
     if (state === 'requested') {
       const name = profile.name ?? profile.handle ?? '';
-      Alert.alert(t('discover.follow.cancelRequestTitle'), t('discover.follow.cancelRequestBody', { name }), [
+      showAlert(t('discover.follow.cancelRequestTitle'), t('discover.follow.cancelRequestBody', { name }), [
         { text: t('discover.follow.cancelRequestKeep'), style: 'cancel' },
         { text: t('discover.follow.cancelRequestConfirm'), style: 'destructive', onPress: () => toggle.mutate() },
       ]);
@@ -379,7 +379,7 @@ function OtherActions({ profile }: { profile: Profile }) {
     // Leaving a private account means asking again and waiting, so only that
     // unfollow is confirmed.
     if (state === 'following' && profile.is_private) {
-      Alert.alert(t('profile.unfollowTitle'), t('profile.unfollowPrivate'), [
+      showAlert(t('profile.unfollowTitle'), t('profile.unfollowPrivate'), [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('profile.unfollow'), style: 'destructive', onPress: () => toggle.mutate() },
       ]);
@@ -391,7 +391,7 @@ function OtherActions({ profile }: { profile: Profile }) {
   const message = useMutation({
     mutationFn: () => openOrCreateDm(profile.id),
     onSuccess: (chatId) => router.push(`/chat/${chatId}`),
-    onError: () => Alert.alert(t('profile.chatFailed')),
+    onError: () => showAlert(t('profile.chatFailed')),
   });
 
   return (

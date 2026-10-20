@@ -4,7 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Alert, FlatList, I18nManager, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, I18nManager, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,7 @@ import {
   useVideoOutput,
 } from 'react-native-vision-camera';
 
+import { showAlert } from '@/components/Dialog';
 import { Button } from '@/components/ui';
 import { NEW_STORY_HREF } from '@/features/stories/StoryTray';
 
@@ -426,7 +427,7 @@ export function CameraScreen() {
       }
       router.push({ pathname: '/publish', params: { uri: baked, filter: rl.look, beauty: rl.beauty > 0 ? '1' : '0', fx: rl.fx ?? '' } });
     } catch (e) {
-      Alert.alert(t('camera2.applyFailed'), (e as Error).message, [
+      showAlert(t('camera2.applyFailed'), (e as Error).message, [
         { text: t('camera2.cancel'), style: 'cancel' },
         { text: t('camera2.postWithout'), onPress: () => router.push({ pathname: '/publish', params: { uri } }) },
       ]);
@@ -445,7 +446,7 @@ export function CameraScreen() {
       setRecording(false);
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       if (!r.ok || !r.path) {
-        Alert.alert(t('camera.recordFailed'), r.message ?? '');
+        showAlert(t('camera.recordFailed'), r.message ?? '');
         return;
       }
       const uri = r.path.startsWith('file://') ? r.path : `file://${r.path}`;
@@ -473,7 +474,7 @@ export function CameraScreen() {
     } catch (e) {
       nativeRec.current = false;
       nativeLook.current = null;
-      Alert.alert(t('camera.recordFailed'), (e as Error).message);
+      showAlert(t('camera.recordFailed'), (e as Error).message);
     } finally {
       starting.current = false;
     }
@@ -502,7 +503,7 @@ export function CameraScreen() {
           setRecording(false);
           recorder.current = null;
           fxRec?.end();
-          Alert.alert(t('camera.recordFailed'), err.message);
+          showAlert(t('camera.recordFailed'), err.message);
         },
       );
       if (faceLogged) fxRec?.started();
@@ -512,7 +513,7 @@ export function CameraScreen() {
     } catch (e) {
       recorder.current = null;
       fxRec?.end();
-      Alert.alert(t('camera.recordFailed'), (e as Error).message);
+      showAlert(t('camera.recordFailed'), (e as Error).message);
     } finally {
       starting.current = false;
     }
@@ -526,7 +527,7 @@ export function CameraScreen() {
     try {
       await recorder.current?.stopRecording();
     } catch (e) {
-      Alert.alert(t('camera.recordFailed'), (e as Error).message);
+      showAlert(t('camera.recordFailed'), (e as Error).message);
     }
   }
 

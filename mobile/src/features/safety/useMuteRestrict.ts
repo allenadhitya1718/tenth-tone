@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
 
 import {
   isMuted,
@@ -11,6 +10,7 @@ import {
   unmuteUser,
   unrestrictUser,
 } from '@/api/safety';
+import { showAlert } from '@/components/Dialog';
 import { removeCreatorFromFeeds } from '@/features/feed/cache';
 
 // Mute and restrict for someone else's profile menu. Each toggle explains
@@ -49,7 +49,7 @@ export function useMuteRestrict(userId: string, enabled: boolean) {
     const p = kind === 'muted' ? 'polish.mute' : 'polish.restrict';
     const verb = on ? 'off' : 'on';
     return new Promise((resolve) => {
-      Alert.alert(
+      showAlert(
         t(`${p}.${verb}Title`, { name }),
         t(`${p}.${verb}Body`),
         [
@@ -61,10 +61,10 @@ export function useMuteRestrict(userId: string, enabled: boolean) {
                 if (kind === 'muted') await (on ? unmuteUser(userId) : muteUser(userId));
                 else await (on ? unrestrictUser(userId) : restrictUser(userId));
                 refresh(kind, !on);
-                Alert.alert(t(`${p}.${verb}Done`, { name }));
+                showAlert(t(`${p}.${verb}Done`, { name }));
                 resolve(true);
               } catch {
-                Alert.alert(t(`${p}.failed`));
+                showAlert(t(`${p}.failed`));
                 resolve(false);
               }
             },
