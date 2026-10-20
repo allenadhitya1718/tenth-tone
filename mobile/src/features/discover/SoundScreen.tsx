@@ -86,7 +86,10 @@ function SoundHeader({ sound, count }: { sound: Sound; count: number }) {
         </View>
         <View style={styles.info}>
           <Text style={[styles.title, { color: colors.text }]} numberOfLines={2} accessibilityRole="header">
-            {sound.title || t('discover.sound.untitled')}
+            {/* Original sounds are stored with an Arabic title; show the label in the app's language, like the feed does. */}
+            {sound.is_original && creator?.handle
+              ? t('feed.originalSound', { handle: creator.handle })
+              : sound.title || t('discover.sound.untitled')}
           </Text>
           {creator ? (
             <Pressable

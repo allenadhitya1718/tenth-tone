@@ -30,7 +30,9 @@
           "voip"
         ],
         "NSCameraUsageDescription": "FLYP uses the camera to record videos and go live.",
-        "NSMicrophoneUsageDescription": "FLYP uses the microphone for videos, voice messages, live audio and calls."
+        "NSMicrophoneUsageDescription": "FLYP uses the microphone for videos, voice messages, live audio and calls.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryAddUsageDescription": "FLYP saves videos and photos you choose to your library."
       },
       "entitlements": {
         "com.apple.developer.usernotifications.time-sensitive": true

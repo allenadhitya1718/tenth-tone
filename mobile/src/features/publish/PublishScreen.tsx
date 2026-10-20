@@ -1,10 +1,11 @@
+import type React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { router } from 'expo-router';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { type VideoPlayer, useVideoPlayer, VideoView } from 'expo-video';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, I18nManager, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
@@ -159,10 +160,13 @@ export function PublishScreen({
   // The # / @ chips append the sign; typing after it opens the suggestion
   // list under the caption (CAMERA-14 "inserts and suggests").
   const [cursor, setCursor] = useState(0);
+  const captionInput = useRef<React.ComponentRef<typeof TextInput>>(null);
   const insert = (s: string) => {
     const next = (caption + (caption && !caption.endsWith(' ') ? ' ' : '') + s).slice(0, MAX_CAPTION);
     setCaption(next);
     setCursor(next.length);
+    // Put the cursor in the caption so typing right after the chip goes there.
+    captionInput.current?.focus();
   };
   const token = captionToken(caption, cursor);
   const pickSuggestion = (value: string) => {
@@ -195,6 +199,7 @@ export function PublishScreen({
           </Pressable>
           <View style={{ flex: 1 }}>
             <TextInput
+              ref={captionInput}
               value={caption}
               onChangeText={(v) => setCaption(v.slice(0, MAX_CAPTION))}
               onSelectionChange={(e) => setCursor(e.nativeEvent.selection.end)}

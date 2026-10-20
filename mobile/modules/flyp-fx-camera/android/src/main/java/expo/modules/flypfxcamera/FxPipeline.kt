@@ -218,6 +218,10 @@ internal class FxProcessor(
   private var slowStreak = 0
   private var fastStreak = 0
   private var recoverAfter = RECOVER_FRAMES
+  // Set once a level had to be dropped again after a recovery: this phone can't hold
+  // the higher level for this look, so stay down until the look changes (no flapping).
+  private var holdLevel = false
+  private var recoveredOnce = false
 
   private val reported = HashSet<String>()
 
@@ -592,6 +596,8 @@ internal class FxProcessor(
     if (!heavyLook()) {
       slowStreak = 0
       fastStreak = 0
+      holdLevel = false
+      recoveredOnce = false
       return
     }
     frames++
@@ -604,13 +610,15 @@ internal class FxProcessor(
       slowStreak = 0
       fastStreak = 0
       avgMs = 16f
-      Log.w(TAG, "render is slow (beauty/bloom only): quality level $quality")
+      if (recoveredOnce) holdLevel = true
+      Log.w(TAG, "render is slow (beauty/bloom only): quality level $quality" + if (holdLevel) " (held)" else "")
       if (fragmentSource != null) fragmentDirty = true
-    } else if (quality > 0 && fastStreak > recoverAfter) {
+    } else if (quality > 0 && !holdLevel && fastStreak > recoverAfter) {
       quality--
       fastStreak = 0
       slowStreak = 0
       recoverAfter = (recoverAfter * 2).coerceAtMost(RECOVER_FRAMES_MAX)
+      recoveredOnce = true
       Log.i(TAG, "render recovered: quality level $quality")
       if (fragmentSource != null) fragmentDirty = true
     }
