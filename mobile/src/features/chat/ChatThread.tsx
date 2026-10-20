@@ -51,6 +51,7 @@ import { useWalkie } from './walkie/useWalkie';
 import { WalkieBanner } from './walkie/WalkieBanner';
 import { useActiveChat } from '@/features/notifications/push';
 import { CallButtons } from '@/features/call/CallButtons';
+import { sendRefusalKey } from '@/lib/serverError';
 
 // Client note 26: live walkie-talkie voice (push-to-talk over an Agora
 // channel per chat, nothing stored) lives in ./walkie; the thread owns the
@@ -145,7 +146,9 @@ export function ChatThread({ chatId }: { chatId: string }) {
   const failSend = useCallback(
     (e: unknown) => {
       const quota = e instanceof ApiError && e.code === 'quota_exceeded';
-      Alert.alert(t('chat.sendFailed'), quota ? t('chat.errQuota') : undefined);
+      const why = quota ? 'chat.errQuota' : sendRefusalKey(e);
+      if (!why) console.warn('chat: send failed:', (e as Error)?.message ?? e);
+      Alert.alert(t('chat.sendFailed'), why ? t(why) : undefined);
     },
     [t],
   );

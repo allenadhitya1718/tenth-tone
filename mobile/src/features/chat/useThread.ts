@@ -16,6 +16,7 @@ import {
   type Receipt,
   type ReplyTarget,
   sendMessage,
+  subscribeToMessageChanges,
   subscribeToMessages,
   subscribeToReceipts,
   toggleMessageReaction,
@@ -154,6 +155,35 @@ export function useThread(chatId: string, me: string | undefined, info: ChatInfo
     });
     return unsub;
   }, [chatId, key, me, qc, markRead]);
+
+  // The other side reacted or deleted a message: patch the list at once.
+  // A deletion only names the id; a reaction event may name no message at all
+  // (a delete without replica identity), so then the list is refetched.
+  useEffect(() => {
+    if (!chatId || !me) return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const refetch = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => void qc.invalidateQueries({ queryKey: key }), 250);
+    };
+    const unsub = subscribeToMessageChanges(
+      (id) => {
+        const list = qc.getQueryData<ThreadMessage[]>(key);
+        if (!list?.some((m) => m.id === id)) return;
+        qc.setQueryData<ThreadMessage[]>(key, (cur = []) => cur.filter((m) => m.id !== id));
+        void qc.invalidateQueries({ queryKey: chatKeys.chats(), exact: true });
+      },
+      (id) => {
+        const list = qc.getQueryData<ThreadMessage[]>(key);
+        if (id && !list?.some((m) => m.id === id)) return;
+        refetch();
+      },
+    );
+    return () => {
+      if (timer) clearTimeout(timer);
+      unsub();
+    };
+  }, [chatId, key, me, qc]);
 
   useEffect(() => {
     if (!chatId) return;

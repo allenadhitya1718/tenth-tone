@@ -304,6 +304,8 @@ function OtherActions({ profile }: { profile: Profile }) {
   const requested = useQuery({
     queryKey: profileKeys.hasRequestedFollow(profile.id),
     queryFn: () => hasRequestedFollow(profile.id),
+    // Fallback to the realtime sync: a request answered elsewhere clears.
+    refetchInterval: (q) => (q.state.data ? 15_000 : false),
   });
   const state = following.data ? 'following' : requested.data ? 'requested' : 'none';
 

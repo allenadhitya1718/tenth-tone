@@ -109,7 +109,14 @@
     "rateLimited": "Trop de tentatives — réessayez plus tard",
     "network": "Échec de la connexion — vérifiez votre connexion Internet",
     "waitSeconds": "Patientez {{seconds}} secondes avant de demander un nouveau code",
-    "generic": "Une erreur s'est produite, réessayez"
+    "generic": "Une erreur s'est produite, réessayez",
+    "passwordWeak": "Ce mot de passe figure dans des fuites de données connues. Choisissez-en un autre.",
+    "samePassword": "Le nouveau mot de passe doit être différent de l'actuel.",
+    "sendDenied": "Vous ne pouvez pas écrire à cette personne pour le moment. Elle vous a peut-être bloqué ou a limité qui peut lui écrire.",
+    "commentDenied": "Vous ne pouvez pas commenter ici. Les commentaires sont peut-être désactivés pour cette vidéo, ou limités par son auteur.",
+    "slowDown": "Doucement",
+    "pageNotFoundTitle": "Cette page n'existe pas",
+    "pageNotFoundBody": "Le lien est peut-être ancien ou incorrect."
   },
   "tabs": {
     "home": "Accueil",
@@ -273,6 +280,12 @@
     "watchFull": "Regarder en plein écran",
     "closePreview": "Fermer l'aperçu",
     "play": "Lire",
-    "pause": "Pause"
+    "pause": "Pause",
+    "errFormat": "Le format de cette vidéo n'est pas pris en charge. Essayez de la filmer à nouveau.",
+    "errPending": "Des envois sont encore en cours. Patientez un instant puis réessayez.",
+    "errSignedOut": "Reconnectez-vous pour publier.",
+    "errUploadFailed": "L'envoi a été interrompu avant la fin. Réessayez avec une connexion plus stable.",
+    "errUnavailable": "L'envoi n'est pas disponible pour le moment. Réessayez dans quelques minutes.",
+    "errDenied": "Votre compte ne peut pas publier pour le moment."
   }
 }

@@ -40,6 +40,7 @@ import { EmojiPanel, QuickEmojis } from '@/components/emoji/EmojiPanel';
 import { patchVideoEverywhere } from '@/features/feed/cache';
 import { formatCount } from '@/features/feed/format';
 import { ReportSheet } from '@/features/safety/ReportSheet';
+import { commentRefusalKey } from '@/lib/serverError';
 import { timeAgo } from '@/lib/timeAgo';
 import { useAuth } from '@/providers/AuthProvider';
 import { atHandle } from '@/lib/handle';
@@ -202,9 +203,15 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
         Alert.alert(t('comments.blocked'), t('comments.blockedBody'));
         return;
       }
+      const why = commentRefusalKey(e);
+      if (!why && !(e instanceof ApiError)) console.warn('comments: send failed:', (e as Error)?.message ?? e);
       Alert.alert(
         t('comments.sendFailed'),
-        e instanceof ApiError && e.code === 'content_blocked' ? (e.message ?? undefined) : undefined,
+        e instanceof ApiError && e.code === 'content_blocked'
+          ? (e.message ?? undefined)
+          : why
+            ? t(why)
+            : undefined,
       );
     },
   });

@@ -109,7 +109,14 @@
     "rateLimited": "Demasiados intentos — inténtalo más tarde",
     "network": "Error de conexión — revisa tu internet",
     "waitSeconds": "Espera {{seconds}} segundos antes de pedir un código nuevo",
-    "generic": "Algo salió mal, inténtalo de nuevo"
+    "generic": "Algo salió mal, inténtalo de nuevo",
+    "passwordWeak": "Esta contraseña aparece en filtraciones de datos conocidas. Elige otra.",
+    "samePassword": "La nueva contraseña debe ser distinta de la actual.",
+    "sendDenied": "No puedes escribir a esta persona ahora. Puede que te haya bloqueado o limitado quién puede escribirle.",
+    "commentDenied": "No puedes comentar aquí. Los comentarios pueden estar desactivados en este vídeo o limitados por su autor.",
+    "slowDown": "Ve un poco más despacio",
+    "pageNotFoundTitle": "Esta página no existe",
+    "pageNotFoundBody": "Puede que el enlace sea antiguo o esté roto."
   },
   "tabs": {
     "home": "Inicio",
@@ -275,6 +282,12 @@
     "watchFull": "Ver en pantalla completa",
     "closePreview": "Cerrar vista previa",
     "play": "Reproducir",
-    "pause": "Pausar"
+    "pause": "Pausar",
+    "errFormat": "El formato de este vídeo no es compatible. Prueba a grabarlo de nuevo.",
+    "errPending": "Aún tienes subidas en curso. Espera un momento e inténtalo de nuevo.",
+    "errSignedOut": "Vuelve a iniciar sesión para publicar.",
+    "errUploadFailed": "La subida se interrumpió antes de terminar. Inténtalo con una conexión más estable.",
+    "errUnavailable": "La subida no está disponible ahora. Inténtalo de nuevo en unos minutos.",
+    "errDenied": "Tu cuenta no puede publicar ahora."
   }
 }

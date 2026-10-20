@@ -109,7 +109,14 @@
     "rateLimited": "Terlalu banyak percobaan — coba lagi nanti",
     "network": "Koneksi gagal — cek internetmu",
     "waitSeconds": "Tunggu {{seconds}} detik sebelum meminta kode baru",
-    "generic": "Terjadi kesalahan, coba lagi"
+    "generic": "Terjadi kesalahan, coba lagi",
+    "passwordWeak": "Kata sandi ini pernah muncul dalam kebocoran data yang diketahui. Silakan pilih yang lain.",
+    "samePassword": "Kata sandi baru harus berbeda dari kata sandi saat ini.",
+    "sendDenied": "Kamu tidak bisa mengirim pesan ke orang ini sekarang. Mungkin dia memblokirmu atau membatasi siapa yang boleh mengirim pesan.",
+    "commentDenied": "Kamu tidak bisa berkomentar di sini. Komentar mungkin dimatikan untuk video ini, atau dibatasi oleh pemiliknya.",
+    "slowDown": "Pelan-pelan dulu",
+    "pageNotFoundTitle": "Halaman ini tidak ada",
+    "pageNotFoundBody": "Tautan mungkin sudah lama atau rusak."
   },
   "tabs": {
     "home": "Beranda",
@@ -273,6 +280,12 @@
     "watchFull": "Tonton layar penuh",
     "closePreview": "Tutup pratinjau",
     "play": "Putar",
-    "pause": "Jeda"
+    "pause": "Jeda",
+    "errFormat": "Format video ini tidak didukung. Coba rekam ulang.",
+    "errPending": "Masih ada unggahan yang berjalan. Tunggu sebentar lalu coba lagi.",
+    "errSignedOut": "Silakan masuk lagi untuk memposting.",
+    "errUploadFailed": "Unggahan terputus sebelum selesai. Coba lagi dengan koneksi yang lebih stabil.",
+    "errUnavailable": "Pengunggahan sedang tidak tersedia. Coba lagi beberapa menit lagi.",
+    "errDenied": "Akunmu tidak bisa memposting saat ini."
   }
 }

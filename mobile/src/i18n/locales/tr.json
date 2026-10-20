@@ -109,7 +109,14 @@
     "rateLimited": "Çok fazla deneme yapıldı — daha sonra tekrar dene",
     "network": "Bağlantı kurulamadı — internetini kontrol et",
     "waitSeconds": "Yeni kod istemeden önce {{seconds}} saniye bekle",
-    "generic": "Bir şeyler ters gitti, tekrar dene"
+    "generic": "Bir şeyler ters gitti, tekrar dene",
+    "passwordWeak": "Bu parola bilinen veri ihlallerinde yer aldı. Lütfen başka bir parola seçin.",
+    "samePassword": "Yeni parola mevcut parolanızdan farklı olmalıdır.",
+    "sendDenied": "Şu anda bu kişiye mesaj gönderemezsin. Seni engellemiş olabilir ya da kimlerin mesaj atabileceğini sınırlamış olabilir.",
+    "commentDenied": "Buraya yorum yapamazsın. Bu videoda yorumlar kapalı olabilir ya da sahibi tarafından sınırlanmış olabilir.",
+    "slowDown": "Biraz yavaşla",
+    "pageNotFoundTitle": "Bu sayfa mevcut değil",
+    "pageNotFoundBody": "Bağlantı eski ya da bozuk olabilir."
   },
   "tabs": {
     "home": "Ana Sayfa",
@@ -273,6 +280,12 @@
     "watchFull": "Tam ekran izle",
     "closePreview": "Önizlemeyi kapat",
     "play": "Oynat",
-    "pause": "Duraklat"
+    "pause": "Duraklat",
+    "errFormat": "Bu videonun biçimi desteklenmiyor. Yeniden kaydetmeyi dene.",
+    "errPending": "Hâlâ devam eden yüklemelerin var. Biraz bekleyip tekrar dene.",
+    "errSignedOut": "Paylaşmak için lütfen yeniden giriş yap.",
+    "errUploadFailed": "Yükleme bitmeden yarıda kesildi. Daha kararlı bir bağlantıyla tekrar dene.",
+    "errUnavailable": "Yükleme şu anda kullanılamıyor. Birkaç dakika sonra tekrar dene.",
+    "errDenied": "Hesabın şu anda paylaşım yapamıyor."
   }
 }

@@ -109,7 +109,14 @@
     "rateLimited": "尝试次数过多 — 请稍后再试",
     "network": "连接失败 — 请检查网络",
     "waitSeconds": "请等待 {{seconds}} 秒后再获取新验证码",
-    "generic": "出了点问题，请重试"
+    "generic": "出了点问题，请重试",
+    "passwordWeak": "该密码曾出现在已知的数据泄露中，请换一个密码。",
+    "samePassword": "新密码必须与当前密码不同。",
+    "sendDenied": "你现在无法给对方发消息。对方可能已屏蔽你，或限制了谁可以给他发消息。",
+    "commentDenied": "你无法在此评论。该视频可能已关闭评论，或发布者限制了评论权限。",
+    "slowDown": "请稍微慢一点",
+    "pageNotFoundTitle": "此页面不存在",
+    "pageNotFoundBody": "链接可能已过期或有误。"
   },
   "tabs": {
     "home": "首页",
@@ -273,6 +280,12 @@
     "watchFull": "全屏观看",
     "closePreview": "关闭预览",
     "play": "播放",
-    "pause": "暂停"
+    "pause": "暂停",
+    "errFormat": "不支持此视频的格式。请重新录制。",
+    "errPending": "你还有上传正在进行。请稍等后重试。",
+    "errSignedOut": "请重新登录后再发布。",
+    "errUploadFailed": "上传在完成前中断了。请在更稳定的网络下重试。",
+    "errUnavailable": "目前无法上传。请几分钟后再试。",
+    "errDenied": "你的账号目前无法发布。"
   }
 }

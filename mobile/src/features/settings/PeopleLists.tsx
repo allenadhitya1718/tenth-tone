@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { chatKeys } from '@/api/chat';
 import { profileKeys } from '@/api/profiles';
 import {
   fetchBlocked,
@@ -162,6 +163,8 @@ export function BlockedScreen() {
       qc.invalidateQueries({ queryKey: ['following'] });
       qc.invalidateQueries({ queryKey: ['isFollowing'] });
       qc.invalidateQueries({ queryKey: ['feed'] });
+      qc.invalidateQueries({ queryKey: ['suggestedProfiles'] });
+      qc.invalidateQueries({ queryKey: chatKeys.chats() });
     } catch (e) {
       showError(t, e, 'settings2.blocked.unblockFailed');
     } finally {

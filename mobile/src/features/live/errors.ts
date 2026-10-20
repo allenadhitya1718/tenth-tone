@@ -1,5 +1,6 @@
 import { ApiError } from '@/api/client';
 import type { ErrorMsg } from '@/components/ui';
+import { refusalKind } from '@/lib/serverError';
 
 // ApiError codes the live and wallet screens can meet (src/api/live.ts,
 // gifts.ts, agora.ts, wallet.ts). Each has a string under live.errors.<code>.
@@ -46,7 +47,12 @@ export function errorCode(e: unknown): string | null {
 // switch, the same convention as ErrorBox.
 export function liveError(e: unknown, fallback = 'live.errors.generic'): NonNullable<ErrorMsg> {
   const code = errorCode(e);
-  return { key: code && KNOWN.has(code) ? `live.errors.${code}` : fallback };
+  if (code && KNOWN.has(code)) return { key: `live.errors.${code}` };
+  // A database rate limit ("too many ... please wait"), or no connection.
+  const kind = refusalKind(e);
+  if (kind === 'rate') return { key: 'errors.rateLimited' };
+  if (kind === 'network') return { key: 'errors.network' };
+  return { key: fallback };
 }
 
 // The server's own words for a refused title, cover or comment (Arabic), when

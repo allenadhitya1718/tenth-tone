@@ -109,6 +109,8 @@ function engineInUse(engine: IRtcEngine) {
 }
 
 function toBroadcaster(engine: IRtcEngine) {
+  // The capture device is only open while talking (see toAudience).
+  engine.enableLocalAudio(true);
   engine.setClientRole(ClientRoleType.ClientRoleBroadcaster);
   engine.updateChannelMediaOptions({
     clientRoleType: ClientRoleType.ClientRoleBroadcaster,
@@ -118,6 +120,11 @@ function toBroadcaster(engine: IRtcEngine) {
 }
 
 function toAudience(engine: IRtcEngine) {
+  // Listening needs no microphone: closing the capture device is what turns
+  // the system's green microphone indicator off between presses.
+  try {
+    engine.enableLocalAudio(false);
+  } catch {}
   engine.updateChannelMediaOptions({
     publishMicrophoneTrack: false,
     clientRoleType: ClientRoleType.ClientRoleAudience,
@@ -409,6 +416,8 @@ export function useWalkie({ chatId, me, myName, others, allowed }: Options): Wal
     };
     eng.registerEventHandler(handler);
     eng.enableAudio();
+    // Joined as audience: keep the capture device closed until the button is held.
+    eng.enableLocalAudio(false);
     eng.disableVideo();
     eng.setAudioProfile(AudioProfileType.AudioProfileSpeechStandard, AudioScenarioType.AudioScenarioChatroom);
     eng.setDefaultAudioRouteToSpeakerphone(true);

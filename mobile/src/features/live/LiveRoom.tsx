@@ -28,6 +28,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isCommentBlocked } from '@/api/comments';
+import { refusalKind } from '@/lib/serverError';
 import { giftKeys, subscribeToLiveGifts, type Gift } from '@/api/gifts';
 import {
   approveLiveGuest,
@@ -206,7 +207,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
         await qc.invalidateQueries({ queryKey: liveKeys.guests(liveId) });
         return true;
       } catch (e) {
-        Alert.alert(t('live.errors.title'), t(liveError(e).key));
+        Alert.alert(refusalKind(e) === 'rate' ? t('errors.slowDown') : t('live.errors.title'), t(liveError(e).key));
         return false;
       } finally {
         setBusyId(null);

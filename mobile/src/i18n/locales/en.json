@@ -109,7 +109,14 @@
     "rateLimited": "Too many attempts — try again later",
     "network": "Connection failed — check your internet",
     "waitSeconds": "Wait {{seconds}} seconds before asking for a new code",
-    "generic": "Something went wrong, try again"
+    "generic": "Something went wrong, try again",
+    "passwordWeak": "That password has appeared in known data breaches. Please choose a different one.",
+    "samePassword": "Your new password must be different from your current one.",
+    "sendDenied": "You can't message this person right now. They may have blocked you or limited who can message them.",
+    "commentDenied": "You can't comment here. Comments may be off for this video, or limited by its owner.",
+    "slowDown": "Slow down a little",
+    "pageNotFoundTitle": "This page doesn't exist",
+    "pageNotFoundBody": "The link may be old or broken."
   },
   "tabs": {
     "home": "Home",
@@ -284,6 +291,12 @@
     "watchFull": "Watch full screen",
     "closePreview": "Close preview",
     "play": "Play",
-    "pause": "Pause"
+    "pause": "Pause",
+    "errFormat": "This video's format isn't supported. Try recording it again.",
+    "errPending": "You still have uploads in progress. Wait a moment and try again.",
+    "errSignedOut": "Please sign in again to post.",
+    "errUploadFailed": "The upload was interrupted before it finished. Try again on a steadier connection.",
+    "errUnavailable": "Uploading isn't available right now. Please try again in a few minutes.",
+    "errDenied": "Your account can't post right now."
   }
 }

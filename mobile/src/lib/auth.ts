@@ -138,6 +138,8 @@ export function authErrorKey(e: unknown): { key: string; seconds?: number } {
   if (/Email not confirmed/i.test(m)) return { key: 'errors.emailNotConfirmed' };
   if (/User already registered/i.test(m)) return { key: 'errors.emailTaken' };
   if (/Password should be at least/i.test(m)) return { key: 'errors.passwordTooShort' };
+  if (/weak_password|known to be weak|easy to guess|pwned|data breach/i.test(m) || (e as { code?: string })?.code === 'weak_password') return { key: 'errors.passwordWeak' };
+  if (/different from the old password|same_password/i.test(m) || (e as { code?: string })?.code === 'same_password') return { key: 'errors.samePassword' };
   if (/expired|invalid.*(otp|token)|token.*(expired|invalid)/i.test(m)) return { key: 'errors.badCode' };
   if (/minimum age/i.test(m)) return { key: 'errors.tooYoung' };
   if (m === 'name-required') return { key: 'register.nameRequired' };

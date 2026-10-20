@@ -59,7 +59,7 @@ import { otherAgoraSessionActive } from './agoraGuard';
 import { dismissIncomingCall, markCallOver } from './callNotification';
 import { keepAwake } from './keepAwake';
 import { openCallScreen } from './nav';
-import { ensureCamera, ensureMic } from './permissions';
+import { ensureCamera, ensureMic, prepareForCall } from './permissions';
 
 // ---------- Timing ----------
 
@@ -446,6 +446,7 @@ export async function openCall(callId: Uuid): Promise<void> {
       // Sign the token while it rings: most of the wait after Accept was the
       // token round trip (measured on the web app). No microphone yet.
       prewarmToken(root.channel, state.localUid!);
+      void prepareForCall(root.kind).catch(() => {});
       startRinging();
       keepAwake(true);
       const left = INCOMING_TIMEOUT_MS - (Date.now() - Date.parse(row.created_at));

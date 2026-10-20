@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
 import type { Comment } from '@/api/comments';
+import { chatKeys } from '@/api/chat';
 import { profileKeys } from '@/api/profiles';
 import { blockUser, safetyKeys } from '@/api/safety';
 import { removeCreatorFromFeeds } from '@/features/feed/cache';
@@ -20,6 +21,16 @@ export function useBlock() {
     qc.setQueriesData<Comment[]>({ queryKey: ['comments'] }, (list) =>
       Array.isArray(list) ? list.filter((c) => (c.user_id ?? c.user?.id) !== userId) : list,
     );
+    // Discover's "Suggested for you" and people search: the blocked account
+    // leaves the cached lists at once, then everything refetches.
+    qc.setQueriesData<{ id?: string }[]>({ queryKey: ['suggestedProfiles'] }, (list) =>
+      Array.isArray(list) ? list.filter((p) => p.id !== userId) : list,
+    );
+    for (const k of ['suggestedProfiles', 'popularVideos', 'search', 'shareTargets', 'followRequests']) {
+      void qc.invalidateQueries({ queryKey: [k] });
+    }
+    // The inbox hides a blocked person's name; their chat row changes too.
+    void qc.invalidateQueries({ queryKey: chatKeys.chats() });
     void qc.invalidateQueries({ queryKey: safetyKeys.blocked() });
     void qc.invalidateQueries({ queryKey: ['feed'] });
     void qc.invalidateQueries({ queryKey: ['userVideos', userId] });

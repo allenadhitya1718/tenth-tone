@@ -832,6 +832,34 @@ export function subscribeToMessages(chatId: Uuid, cb: (row: MessageRow) => void)
   };
 }
 
+// Reactions and "delete for everyone" made by the OTHER side while this
+// thread is open. Neither table row carries a usable chat filter on DELETE
+// (the old row holds only its key unless REPLICA IDENTITY FULL, 0141), so
+// the callbacks get the ids and the screen decides whether they concern it.
+// Needs messages and message_reactions in the realtime publication (0003,
+// 0042; 0141 re-asserts both).
+export function subscribeToMessageChanges(
+  onDeleted: (messageId: Uuid) => void,
+  onReaction: (messageId: Uuid | null) => void,
+): Unsubscribe {
+  const channel = supabase
+    .channel(listenerTopic('message-changes'))
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (payload) => {
+      const id = (payload.old as { id?: Uuid } | null)?.id;
+      if (id) onDeleted(id);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, (payload) => {
+      const row = (payload.new as { message_id?: Uuid } | null)?.message_id
+        ? (payload.new as { message_id: Uuid })
+        : (payload.old as { message_id?: Uuid } | null);
+      onReaction(row?.message_id ?? null);
+    })
+    .subscribe();
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}
+
 // Every new message in any chat this person belongs to (RLS filters to
 // member chats, so no filter here). The inbox and the tab badge repaint on
 // each one without the chat being opened; the callback should invalidate

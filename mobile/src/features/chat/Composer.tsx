@@ -110,9 +110,15 @@ export const Composer = memo(function Composer({
     if (replyTo) input.current?.focus();
   }, [replyTo]);
 
+  // A hardware Return key can raise onSubmitEditing twice for one press
+  // (seen with adb key events): the same text inside 600 ms is one send.
+  const lastSubmit = useRef({ body: '', at: 0 });
   const submit = useCallback(() => {
     const body = text.trim();
     if (!body) return;
+    const now = Date.now();
+    if (lastSubmit.current.body === body && now - lastSubmit.current.at < 600) return;
+    lastSubmit.current = { body, at: now };
     setText('');
     // Client note 10: the keyboard stays up after sending. submitBehavior
     // "submit" keeps the field focused on the return key; the send button
@@ -120,7 +126,11 @@ export const Composer = memo(function Composer({
     input.current?.focus();
     void onSendText(body).then((ok) => {
       // Nothing was written: hand the text back rather than losing it.
-      if (!ok) setText((cur) => cur || body);
+      if (!ok) {
+        // A retry of the text that just failed must not hit the double-send guard.
+        lastSubmit.current = { body: '', at: 0 };
+        setText((cur) => cur || body);
+      }
     });
   }, [text, onSendText]);
 

@@ -22,6 +22,7 @@ import { PlacePicker } from '@/features/place/PlacePicker';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
+import { publishErrorKey } from './publishError';
 import { clearPendingSound, usePendingSound } from './pendingSound';
 import { Avatar, TagPeoplePicker } from './TagPeoplePicker';
 import { atHandle } from '@/lib/handle';
@@ -124,13 +125,12 @@ export function PublishScreen({
       router.dismissAll();
       router.replace('/profile');
     } catch (e) {
+      // The real cause goes to the log (it used to vanish: a failure here
+      // left nothing in logcat) and a named reason to the person.
+      console.warn('publish failed:', e instanceof ApiError ? e.code : '', (e as Error)?.message, (e as { details?: unknown })?.details ?? (e as ApiError)?.detail ?? '');
       const code = e instanceof ApiError ? e.code : '';
-      const message =
-        code === 'content_blocked'
-          ? (e as Error).message
-          : code.startsWith('quota') || code === 'file_too_large'
-            ? t('publish.tooLarge')
-            : t('publish.failedHint');
+      const why = publishErrorKey(e);
+      const message = code === 'content_blocked' ? (e as Error).message : why ? t(why) : t('publish.failedHint');
       Alert.alert(t('publish.failed'), message, [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('feed.retry'), onPress: () => submit(asDraft) },

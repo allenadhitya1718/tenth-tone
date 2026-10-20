@@ -39,6 +39,7 @@ export const FollowButton = memo(function FollowButton({ userId, name }: { userI
     queryFn: () => hasRequestedFollow(userId),
     enabled: enabled && following.data === false,
     staleTime: 60_000,
+    refetchInterval: (q) => (q.state.data ? 15_000 : false),
   });
 
   const toggle = useMutation({

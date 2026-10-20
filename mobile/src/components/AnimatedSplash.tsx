@@ -11,7 +11,6 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 // Boot screen shown over the app while it signs in. It opens on the exact
 // frame of the native splash (the mark, centred, on the same navy) so the
@@ -37,6 +36,7 @@ function Ring({ delay, size }: { delay: number; size: number }) {
   return (
     <Animated.View
       pointerEvents="none"
+      renderToHardwareTextureAndroid
       style={[
         { position: 'absolute', width: size, height: size, borderRadius: size / 2, borderWidth: 1.5, borderColor: '#3B82F6' },
         a,
@@ -70,6 +70,12 @@ export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; o
     });
   }, [ready, minPassed, out, onFinish]);
 
+  useEffect(() => {
+    if (!ready || !minPassed) return;
+    const t = setTimeout(onFinish, OUT_MS + 600);
+    return () => clearTimeout(t);
+  }, [ready, minPassed, onFinish]);
+
   const root = useAnimatedStyle(() => ({ opacity: 1 - out.value }));
   // Starts exactly as the native splash shows it (full size, full opacity).
   const mark = useAnimatedStyle(() => ({
@@ -80,18 +86,10 @@ export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; o
   const d = Math.max(width, height) * 1.1;
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, styles.root, root]} onLayout={onShown}>
-      <Animated.View pointerEvents="none" style={[{ position: 'absolute', width: d, height: d }, halo]}>
-        <Svg width={d} height={d}>
-          <Defs>
-            <RadialGradient id="g" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#2563EB" stopOpacity="0.34" />
-              <Stop offset="0.45" stopColor="#1E56D6" stopOpacity="0.12" />
-              <Stop offset="1" stopColor="#000421" stopOpacity="0" />
-            </RadialGradient>
-          </Defs>
-          <Rect width={d} height={d} fill="url(#g)" />
-        </Svg>
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.root, root]} onLayout={onShown}>
+      {/* A pre-drawn glow image: animating its opacity is cheap, unlike re-rasterising a full-screen SVG gradient each frame. */}
+      <Animated.View pointerEvents="none" renderToHardwareTextureAndroid style={[{ position: 'absolute', width: d, height: d }, halo]}>
+        <Image source={require('../../assets/splash-glow.png')} style={{ width: d, height: d }} resizeMode="stretch" />
       </Animated.View>
       {[0, 1, 2].map((i) => (
         <Ring key={i} delay={500 + i * RING_GAP} size={MARK * 1.05} />

@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { queryClient } from '@/api/queryClient';
+import { useFollowRequestSync } from '@/features/notifications/useFollowRequestSync';
 import { usePushRegistration } from '@/features/notifications/push';
 import { useRecordSession } from '@/features/settings/useRecordSession';
 import { initI18n, languageIsRtl } from '@/i18n';
@@ -54,6 +55,7 @@ function RootNavigator() {
   const { i18n } = useTranslation();
   usePushRegistration();
   useIncomingCalls();
+  useFollowRequestSync(session?.user.id);
   useRecordSession();
 
   const [splashDone, setSplashDone] = useState(false);
