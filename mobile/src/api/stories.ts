@@ -10,6 +10,7 @@
 // Also thrown: 'content_blocked' (as in videos.ts: moderation refused it,
 // message carries the server's Arabic text), 'not_signed_in' (client.ts),
 // the upload.ts codes, and Postgrest errors as-is.
+import { openOrCreateDm } from './chat';
 import { ApiError, requireUid, supabase } from './client';
 import { checkImage } from './moderation';
 import type { Iso, Uuid } from './types';
@@ -73,6 +74,8 @@ export type UserStory = {
   expires_at: Iso;
   seen: boolean;
   view_count: number | null;
+  // 0151: you liked this story (someone else's). Absent before 0151.
+  liked?: boolean;
 };
 
 // fetch_story_viewers: "seen by", newest view first. Owner only.
@@ -83,6 +86,8 @@ export type StoryViewer = {
   avatar_url: string | null;
   verified: boolean | null;
   viewed_at: Iso;
+  // 0151: this viewer liked the story.
+  liked?: boolean;
 };
 
 // Mirrors stories_caption_length and stories_sound_start_check, so a value
@@ -224,6 +229,40 @@ export async function fetchStoryViewers(storyId: Uuid, limit = 200, offset = 0):
   });
   if (error) throw error;
   return (data ?? []) as StoryViewer[];
+}
+
+// ---------- Likes and replies (0151) ----------
+
+// Like or unlike someone else's story. Resolves whether it is now liked.
+// Before 0151 is applied the function is missing: ApiError('needs_update').
+export async function likeStory(storyId: Uuid, liked: boolean): Promise<boolean> {
+  const { data, error, status } = await supabase.rpc('like_story', { p_story_id: storyId, p_liked: liked });
+  if (error) {
+    if (error.code === 'PGRST202' || error.code === '42883' || status === 404) throw new ApiError('needs_update');
+    throw error;
+  }
+  return data === true;
+}
+
+const REPLY_ERRORS = new Set(['story_gone', 'blocked', 'empty_reply', 'reply_too_long', 'bad_chat', 'own_story']);
+
+// A reply goes to the story's owner as a message in your DM with them, with
+// a picture of the story above it (the server takes the picture from the
+// story). Opens the DM first; a person who does not take messages from you
+// refuses it there. Resolves the chat id.
+export async function replyToStory(story: Pick<UserStory, 'id' | 'user_id'>, text: string): Promise<Uuid> {
+  const body = text.trim();
+  if (!body) throw new ApiError('empty_reply');
+  const chatId = await openOrCreateDm(story.user_id);
+  // The reply needs your view of the story on record; usually it already is.
+  await markStoryViewed(story.id);
+  const { error, status } = await supabase.rpc('reply_to_story', { p_story_id: story.id, p_chat_id: chatId, p_text: body });
+  if (error) {
+    if (error.code === 'PGRST202' || error.code === '42883' || status === 404) throw new ApiError('needs_update');
+    if (REPLY_ERRORS.has(error.message)) throw new ApiError(error.message, error.message);
+    throw error;
+  }
+  return chatId;
 }
 
 // ---------- Editing and deleting ----------

@@ -1,0 +1,21 @@
+{
+  "storyReply": {
+    "placeholder": "Balas ke {{name}}…",
+    "send": "Kirim",
+    "sent": "Balasan terkirim",
+    "like": "Suka",
+    "unlike": "Batal suka",
+    "likedIt": "Menyukai ceritamu",
+    "youReplied": "Kamu membalas ceritanya",
+    "repliedToYours": "Membalas ceritamu",
+    "storyPicture": "Cerita",
+    "preview": "↩️ Balasan cerita: {{text}}",
+    "err": {
+      "needsUpdate": "Suka dan balasan cerita belum tersedia.",
+      "gone": "Cerita ini sudah tidak tersedia.",
+      "cant": "Kamu tidak bisa membalas cerita ini.",
+      "generic": "Balasanmu gagal dikirim. Coba lagi.",
+      "likeFailed": "Gagal menyukai cerita ini. Coba lagi."
+    }
+  }
+}

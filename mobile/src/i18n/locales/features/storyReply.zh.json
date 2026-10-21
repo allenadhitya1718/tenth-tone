@@ -1,0 +1,21 @@
+{
+  "storyReply": {
+    "placeholder": "回复 {{name}}…",
+    "send": "发送",
+    "sent": "回复已发送",
+    "like": "赞",
+    "unlike": "取消赞",
+    "likedIt": "赞了你的快拍",
+    "youReplied": "你回复了对方的快拍",
+    "repliedToYours": "回复了你的快拍",
+    "storyPicture": "快拍",
+    "preview": "↩️ 快拍回复：{{text}}",
+    "err": {
+      "needsUpdate": "快拍点赞和回复暂不可用。",
+      "gone": "此快拍已不可用。",
+      "cant": "你无法回复此快拍。",
+      "generic": "回复发送失败，请重试。",
+      "likeFailed": "点赞失败，请重试。"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "storyReply": {
+    "placeholder": "Répondre à {{name}}…",
+    "send": "Envoyer",
+    "sent": "Réponse envoyée",
+    "like": "J'aime",
+    "unlike": "Je n'aime plus",
+    "likedIt": "A aimé votre story",
+    "youReplied": "Vous avez répondu à sa story",
+    "repliedToYours": "A répondu à votre story",
+    "storyPicture": "Story",
+    "preview": "↩️ Réponse à une story : {{text}}",
+    "err": {
+      "needsUpdate": "Les mentions J'aime et réponses aux stories ne sont pas encore disponibles.",
+      "gone": "Cette story n'est plus disponible.",
+      "cant": "Vous ne pouvez pas répondre à cette story.",
+      "generic": "Impossible d'envoyer votre réponse. Réessayez.",
+      "likeFailed": "Impossible d'aimer cette story. Réessayez."
+    }
+  }
+}

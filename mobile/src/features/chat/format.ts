@@ -11,7 +11,7 @@ import {
 
 // A call row carries JSON in `text` (0045), not a sentence. Printing it raw
 // showed {"kind":"video",...} in the inbox, so it is read here instead.
-type CallInfo = { kind?: string; status?: string; seconds?: number };
+type CallInfo = { kind?: string; status?: string; seconds?: number; answered?: boolean };
 
 export function parseCall(text: string | null | undefined): CallInfo {
   try {
@@ -22,10 +22,26 @@ export function parseCall(text: string | null | undefined): CallInfo {
   }
 }
 
-export function callLabel(info: CallInfo, t: TFunction) {
+// Nobody picked up: rung out ('missed'), or the caller hung up while it
+// rang. Before 0150 the second case was recorded as 'ended' with no
+// duration; since 0150 the server writes 'missed' for it and an 'answered'
+// flag on every record.
+export function isMissedCall(info: CallInfo) {
+  if (info.status === 'missed') return true;
+  return info.status === 'ended' && info.answered !== true && !Number(info.seconds);
+}
+
+// As WhatsApp: the person rung sees "Missed voice call", the caller sees
+// "Voice call · No answer". Without `mine` (the inbox preview) the neutral
+// "Missed voice call".
+export function callLabel(info: CallInfo, t: TFunction, mine?: boolean) {
+  const video = info.kind === 'video';
   if (info.status === 'declined') return t('chat.callDeclined');
-  if (info.status === 'missed') return t('chat.callMissed');
-  return info.kind === 'video' ? t('chat.callVideo') : t('chat.callVoice');
+  if (isMissedCall(info)) {
+    if (mine) return video ? t('callLog.noAnswerVideo') : t('callLog.noAnswerVoice');
+    return video ? t('callLog.missedVideo') : t('callLog.missedVoice');
+  }
+  return video ? t('chat.callVideo') : t('chat.callVoice');
 }
 
 // A group change line (0147): `text` is JSON written by the server, e.g.
@@ -107,6 +123,8 @@ export function previewText(
   if (kind === 'gif') return t('gif.preview');
   // 0146: a shared video's text is only its link.
   if (kind === 'video_share') return `🎬 ${t('sendTo.sharedVideo')}`;
+  // 0151: a story reply's text is the reply itself.
+  if (kind === 'story_reply') return t('storyReply.preview', { text: (m.text || '').replace(/\s+/g, ' ').trim().slice(0, 60) });
   if (kind === 'file') return `📎 ${m.text || t('chat.file')}`;
   if (kind === 'call') {
     const info = parseCall(m.text);

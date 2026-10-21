@@ -1,0 +1,21 @@
+{
+  "storyReply": {
+    "placeholder": "Reply to {{name}}…",
+    "send": "Send",
+    "sent": "Reply sent",
+    "like": "Like",
+    "unlike": "Unlike",
+    "likedIt": "Liked your story",
+    "youReplied": "You replied to their story",
+    "repliedToYours": "Replied to your story",
+    "storyPicture": "Story",
+    "preview": "↩️ Story reply: {{text}}",
+    "err": {
+      "needsUpdate": "Story likes and replies aren't available yet.",
+      "gone": "This story is no longer available.",
+      "cant": "You can't reply to this story.",
+      "generic": "Couldn't send your reply. Try again.",
+      "likeFailed": "Couldn't like this story. Try again."
+    }
+  }
+}

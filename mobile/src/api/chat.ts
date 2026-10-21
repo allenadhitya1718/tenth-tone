@@ -54,7 +54,10 @@ export type MessageType =
   | 'gif'
   // 0146: a video sent from the "Send to" sheet. attachment_url (and text,
   // for older apps) is the video's share link (api/videoShare.ts).
-  | 'video_share';
+  | 'video_share'
+  // 0151: a reply to a story. attachment_url is the story's picture (set by
+  // the server, reply_to_story), text is the reply.
+  | 'story_reply';
 
 export type Chat = {
   id: Uuid;

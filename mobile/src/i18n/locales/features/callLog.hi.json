@@ -1,0 +1,8 @@
+{
+  "callLog": {
+    "missedVoice": "छूटी हुई वॉइस कॉल",
+    "missedVideo": "छूटी हुई वीडियो कॉल",
+    "noAnswerVoice": "वॉइस कॉल · कोई जवाब नहीं",
+    "noAnswerVideo": "वीडियो कॉल · कोई जवाब नहीं"
+  }
+}

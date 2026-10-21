@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   FlatList,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   RefreshControl,
   StyleSheet,
   Text,
@@ -29,9 +31,11 @@ type ViewToken = { isViewable: boolean; index?: number | null };
 // open, so the same clip can be pinned again).
 export type Pin = { id: string; at: string };
 
-// One tab of the home feed: a vertical pager of full-height clips. Paging
-// is native (pagingEnabled), so a flick advances exactly one clip, which the
-// web app had to rebuild by hand on top of scroll-snap.
+// One tab of the home feed: a vertical pager of full-height clips. It snaps
+// every `height` with interval momentum off, so any flick, however light,
+// or a drag past half way moves exactly one clip, as on Reels / TikTok.
+// (pagingEnabled on Android only turned the page on a hard fling, and a
+// gentle swipe sprang back.)
 export function FeedList({
   tab,
   pin: pinProp,
@@ -93,6 +97,14 @@ export function FeedList({
     const first = viewableItems.find((v) => v.isViewable);
     if (first?.index != null) setIndex(first.index);
   }, []);
+  // The clip the snap settled on plays at once, without waiting for the
+  // viewability pass.
+  const onSettled = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (height > 0) setIndex(Math.max(0, Math.round(e.nativeEvent.contentOffset.y / height)));
+    },
+    [height],
+  );
 
   const renderItem = useCallback(
     ({ item, index: i }: { item: Video; index: number }) => (
@@ -151,8 +163,11 @@ export function FeedList({
       data={videos}
       keyExtractor={(v) => v.id}
       renderItem={renderItem}
-      pagingEnabled
+      snapToInterval={height}
+      snapToAlignment="start"
+      disableIntervalMomentum
       decelerationRate="fast"
+      onMomentumScrollEnd={onSettled}
       showsVerticalScrollIndicator={false}
       getItemLayout={(_, i) => ({ length: height, offset: height * i, index: i })}
       onViewableItemsChanged={onViewable}

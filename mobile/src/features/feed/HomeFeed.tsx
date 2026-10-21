@@ -2,7 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
+import { I18nManager, PixelRatio, Pressable, StyleSheet, Text, View } from 'react-native';
 import PagerView from 'react-native-pager-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -47,7 +47,9 @@ export function HomeFeed({ pin }: { pin?: Pin }) {
     // playing video underneath.
     <View
       style={styles.root}
-      onLayout={(e) => setHeight(e.nativeEvent.layout.height)}
+      // Whole device pixels: the feed snaps every `height`, and a fractional
+      // page drifts a little further off with each clip.
+      onLayout={(e) => setHeight(PixelRatio.roundToNearestPixel(e.nativeEvent.layout.height))}
       importantForAccessibility={screenFocused ? 'auto' : 'no-hide-descendants'}
       accessibilityElementsHidden={!screenFocused}
     >

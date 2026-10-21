@@ -1,0 +1,8 @@
+{
+  "callLog": {
+    "missedVoice": "مكالمة صوتية فائتة",
+    "missedVideo": "مكالمة فيديو فائتة",
+    "noAnswerVoice": "مكالمة صوتية · لم يتم الرد",
+    "noAnswerVideo": "مكالمة فيديو · لم يتم الرد"
+  }
+}

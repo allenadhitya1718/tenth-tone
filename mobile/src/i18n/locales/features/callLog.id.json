@@ -1,0 +1,8 @@
+{
+  "callLog": {
+    "missedVoice": "Panggilan suara tak terjawab",
+    "missedVideo": "Panggilan video tak terjawab",
+    "noAnswerVoice": "Panggilan suara · Tidak dijawab",
+    "noAnswerVideo": "Panggilan video · Tidak dijawab"
+  }
+}

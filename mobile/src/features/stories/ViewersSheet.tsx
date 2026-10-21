@@ -95,7 +95,7 @@ const ViewerRow = memo(function ViewerRow({ v, onOpen }: { v: StoryViewer; onOpe
       onPress={() => onOpen(v.viewer_id)}
       style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.bg2 }]}
       accessibilityRole="button"
-      accessibilityLabel={`${name}, ${timeAgo(v.viewed_at, t, i18n.language)}`}
+      accessibilityLabel={[name, timeAgo(v.viewed_at, t, i18n.language), v.liked ? t('storyReply.likedIt') : null].filter(Boolean).join(', ')}
     >
       <PersonAvatar uri={v.avatar_url} name={name} size={42} />
       <View style={{ flex: 1, minWidth: 0 }}>
@@ -114,6 +114,8 @@ const ViewerRow = memo(function ViewerRow({ v, onOpen }: { v: StoryViewer; onOpe
       <AppText variant="small" muted>
         {timeAgo(v.viewed_at, t, i18n.language)}
       </AppText>
+      {/* 0151: they liked the story. */}
+      {v.liked ? <Ionicons name="heart" size={18} color="#FF3B5C" /> : null}
     </Pressable>
   );
 });

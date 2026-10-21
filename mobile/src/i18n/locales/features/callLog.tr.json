@@ -1,0 +1,8 @@
+{
+  "callLog": {
+    "missedVoice": "Cevapsız sesli arama",
+    "missedVideo": "Cevapsız görüntülü arama",
+    "noAnswerVoice": "Sesli arama · Yanıt yok",
+    "noAnswerVideo": "Görüntülü arama · Yanıt yok"
+  }
+}

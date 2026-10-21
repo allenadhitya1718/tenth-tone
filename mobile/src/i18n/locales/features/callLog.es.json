@@ -1,0 +1,8 @@
+{
+  "callLog": {
+    "missedVoice": "Llamada de voz perdida",
+    "missedVideo": "Videollamada perdida",
+    "noAnswerVoice": "Llamada de voz · Sin respuesta",
+    "noAnswerVideo": "Videollamada · Sin respuesta"
+  }
+}

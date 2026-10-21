@@ -1,0 +1,21 @@
+{
+  "storyReply": {
+    "placeholder": "{{name}} adlı kişiye yanıt ver…",
+    "send": "Gönder",
+    "sent": "Yanıt gönderildi",
+    "like": "Beğen",
+    "unlike": "Beğenmekten vazgeç",
+    "likedIt": "Hikâyeni beğendi",
+    "youReplied": "Hikâyesine yanıt verdin",
+    "repliedToYours": "Hikâyene yanıt verdi",
+    "storyPicture": "Hikâye",
+    "preview": "↩️ Hikâye yanıtı: {{text}}",
+    "err": {
+      "needsUpdate": "Hikâye beğenileri ve yanıtları henüz kullanılamıyor.",
+      "gone": "Bu hikâye artık mevcut değil.",
+      "cant": "Bu hikâyeye yanıt veremezsin.",
+      "generic": "Yanıtın gönderilemedi. Tekrar dene.",
+      "likeFailed": "Hikâye beğenilemedi. Tekrar dene."
+    }
+  }
+}

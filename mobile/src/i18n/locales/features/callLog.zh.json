@@ -1,0 +1,8 @@
+{
+  "callLog": {
+    "missedVoice": "未接语音通话",
+    "missedVideo": "未接视频通话",
+    "noAnswerVoice": "语音通话 · 无人接听",
+    "noAnswerVideo": "视频通话 · 无人接听"
+  }
+}

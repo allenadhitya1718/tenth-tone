@@ -10,7 +10,7 @@ import { parseGifUrl } from '@/api/gifs';
 import { useTheme } from '@/providers/ThemeProvider';
 import { light } from '@/theme/colors';
 
-import { callLabel, clockTime, formatDuration, parseCall, previewText, systemLabel } from './format';
+import { callLabel, clockTime, formatDuration, isMissedCall, parseCall, previewText, systemLabel } from './format';
 import type { ThreadMessage } from './useThread';
 import { SwipeToReply } from './SwipeToReply';
 import { VideoShareCard } from './VideoShareCard';
@@ -74,8 +74,10 @@ export const MessageBubble = memo(function MessageBubble({
   // Calls and system rows are centred records, not bubbles.
   if (item.type === 'call' || item.type === 'system') {
     const info = item.type === 'call' ? parseCall(item.text) : null;
-    const missed = info?.status === 'missed' || info?.status === 'declined';
-    const label = info ? callLabel(info, t) : systemLabel(item.text, t);
+    // A call record is attributed to the caller, so `mine` means I rang.
+    // Red for the person who missed it (or a decline), as WhatsApp does.
+    const missed = !!info && (info.status === 'declined' || (isMissedCall(info) && !mine));
+    const label = info ? callLabel(info, t, mine) : systemLabel(item.text, t);
     const secs = Number(info?.seconds) || 0;
     return (
       <View style={styles.centerRow} accessible accessibilityLabel={`${label}, ${time}`}>
@@ -231,6 +233,32 @@ export const MessageBubble = memo(function MessageBubble({
           </Pressable>
         ) : null}
 
+        {item.type === 'story_reply' ? (
+          // 0151: a reply to a story, with a small picture of the story.
+          <View style={styles.storyReply}>
+            <Text style={[styles.storyReplyLabel, { color: tone.sub }]}>
+              {mine ? t('storyReply.youReplied') : t('storyReply.repliedToYours')}
+            </Text>
+            {item.attachment_url ? (
+              <Pressable
+                onPress={() => item.attachment_url && onOpenImage(item.attachment_url)}
+                onLongPress={() => onMenu(item)}
+                delayLongPress={300}
+                accessibilityRole="imagebutton"
+                accessibilityLabel={t('storyReply.storyPicture')}
+              >
+                <Image
+                  source={{ uri: item.attachment_url }}
+                  style={[styles.storyThumb, { backgroundColor: colors.bg3 }]}
+                  contentFit="cover"
+                  transition={150}
+                  recyclingKey={item.localId ?? item.id}
+                />
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
         {isVideoShare ? (
           <VideoShareCard
             url={item.attachment_url}
@@ -360,6 +388,9 @@ const styles = StyleSheet.create({
   metaHidden: { position: 'absolute', width: 1, height: 1, opacity: 0 },
   quoteOnMedia: { marginBottom: 3 },
   metaUnderMedia: { paddingBottom: 2 },
+  storyReply: { gap: 6, marginBottom: 4, alignItems: 'flex-start' },
+  storyReplyLabel: { fontSize: 12.5, fontWeight: '600', textAlign: 'left' },
+  storyThumb: { width: 110, height: 180, borderRadius: 12 },
   pending: { opacity: 0.75 },
   author: { fontSize: 12.5, fontWeight: '700', marginBottom: 2, textAlign: 'left' },
   quote: { borderStartWidth: 3, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, marginBottom: 5, minWidth: 120 },

@@ -1,0 +1,21 @@
+{
+  "storyReply": {
+    "placeholder": "Responder a {{name}}…",
+    "send": "Enviar",
+    "sent": "Respuesta enviada",
+    "like": "Me gusta",
+    "unlike": "Ya no me gusta",
+    "likedIt": "Le gustó tu historia",
+    "youReplied": "Respondiste a su historia",
+    "repliedToYours": "Respondió a tu historia",
+    "storyPicture": "Historia",
+    "preview": "↩️ Respuesta a una historia: {{text}}",
+    "err": {
+      "needsUpdate": "Los me gusta y respuestas a historias aún no están disponibles.",
+      "gone": "Esta historia ya no está disponible.",
+      "cant": "No puedes responder a esta historia.",
+      "generic": "No se pudo enviar tu respuesta. Inténtalo de nuevo.",
+      "likeFailed": "No se pudo dar me gusta a esta historia. Inténtalo de nuevo."
+    }
+  }
+}

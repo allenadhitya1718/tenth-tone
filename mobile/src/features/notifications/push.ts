@@ -423,12 +423,38 @@ export function usePushRegistration() {
   }, [userId, qc]);
 }
 
-// For the chat screen: marks this chat as the one being read while mounted.
+// Removes this chat's message notifications from the shade (owner report:
+// they stayed after the chat was read, unlike WhatsApp). The system draws
+// them from the push itself, tagged `chat_<id>` (send-push), so they are
+// found by that tag or by the chat_id in their data; on Android the tag is
+// also cancelled directly, in case the list does not report it. Never throws.
+export async function dismissChatNotifications(chatId: string) {
+  const tag = `chat_${chatId}`;
+  try {
+    const shown = await Notifications.getPresentedNotificationsAsync();
+    const ids = new Set(
+      shown.filter((n) => n.request.identifier === tag || chatIdOf(dataOf(n)) === chatId).map((n) => n.request.identifier),
+    );
+    if (Platform.OS === 'android') ids.add(tag);
+    await Promise.all([...ids].map((id) => Notifications.dismissNotificationAsync(id).catch(() => {})));
+  } catch (e) {
+    console.warn('push: could not clear chat notifications:', (e as Error)?.message ?? e);
+  }
+}
+
+// For the chat screen: marks this chat as the one being read while mounted,
+// and clears its notifications on opening and whenever the app comes back
+// to the front with the chat open (a push may have landed in between).
 export function useActiveChat(chatId: string | null | undefined) {
   useEffect(() => {
     if (!chatId) return;
     setActiveChatId(chatId);
+    void dismissChatNotifications(chatId);
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') void dismissChatNotifications(chatId);
+    });
     return () => {
+      sub.remove();
       if (activeChatId === chatId) setActiveChatId(null);
     };
   }, [chatId]);

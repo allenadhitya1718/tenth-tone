@@ -15,27 +15,34 @@ import {
   AppState,
   Easing,
   I18nManager,
+  Keyboard,
   PanResponder,
+  Platform,
   Pressable,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
   type AccessibilityActionEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ApiError } from '@/api/client';
 import {
   deleteStory,
   fetchUserStories,
+  likeStory,
   markStoryViewed,
+  replyToStory,
   storyKeys,
   type StoryTrayEntry,
   type UserStory,
 } from '@/api/stories';
 import { fetchProfile, profileKeys } from '@/api/profiles';
 import { showAlert } from '@/components/Dialog';
+import { showToast } from '@/components/Toast';
 import { timeAgo } from '@/lib/timeAgo';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -105,7 +112,9 @@ export function StoryViewer({ userId }: { userId: string }) {
     };
   }, []);
 
-  const paused = held || sheetOpen || viewersOpen || !focused || !appActive;
+  // Typing a reply holds the story, as on Instagram.
+  const [typing, setTyping] = useState(false);
+  const paused = held || sheetOpen || viewersOpen || typing || !focused || !appActive;
   // With a screen reader the story waits for the "next" action instead of
   // moving on by itself.
   const autoAdvance = !screenReader;
@@ -229,6 +238,70 @@ export function StoryViewer({ userId }: { userId: string }) {
     },
     onError: () => showAlert(t('stories.deleteFailed')),
   });
+  // ---------- like and reply (0151) ----------
+  // Optimistic per story; the server's answer settles it.
+  const [likedNow, setLikedNow] = useState<Record<string, boolean>>({});
+  const liked = !!story && (likedNow[story.id] ?? !!story.liked);
+  const [heart] = useState(() => new Animated.Value(1));
+  const like = useMutation({
+    mutationFn: ({ id, on }: { id: string; on: boolean }) => likeStory(id, on),
+    onMutate: ({ id, on }) => {
+      setLikedNow((m) => ({ ...m, [id]: on }));
+      if (on) {
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        heart.setValue(0.6);
+        Animated.spring(heart, { toValue: 1, friction: 3, tension: 160, useNativeDriver: true }).start();
+      }
+    },
+    onSuccess: (now, { id }) => setLikedNow((m) => ({ ...m, [id]: now })),
+    onError: (e, { id, on }) => {
+      setLikedNow((m) => ({ ...m, [id]: !on }));
+      showAlert(t(e instanceof ApiError && e.code === 'needs_update' ? 'storyReply.err.needsUpdate' : 'storyReply.err.likeFailed'));
+    },
+  });
+
+  const [reply, setReply] = useState('');
+  const [kbHeight, setKbHeight] = useState(0);
+  useEffect(() => {
+    // The app draws edge to edge, so the reply bar lifts itself over the
+    // keyboard (as the comments sheet does); Android leaves out the
+    // navigation-bar inset from the height.
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) =>
+      setKbHeight(e.endCoordinates.height + (Platform.OS === 'android' ? insets.bottom : 0)),
+    );
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKbHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, [insets.bottom]);
+  const send = useMutation({
+    mutationFn: ({ s, text }: { s: UserStory; text: string }) => replyToStory(s, text),
+    onSuccess: () => {
+      setReply('');
+      Keyboard.dismiss();
+      showToast(t('storyReply.sent'), 'paper-plane');
+    },
+    onError: (e) => {
+      const code = e instanceof ApiError ? e.code : '';
+      const key =
+        code === 'needs_update'
+          ? 'storyReply.err.needsUpdate'
+          : code === 'story_gone'
+            ? 'storyReply.err.gone'
+            : code === 'blocked' || code === 'dm_unavailable' || code === 'bad_chat'
+              ? 'storyReply.err.cant'
+              : 'storyReply.err.generic';
+      if (key === 'storyReply.err.generic') console.warn('story reply failed:', (e as Error)?.message ?? e);
+      showAlert(t(key));
+    },
+  });
+  const submitReply = () => {
+    const text = reply.trim();
+    if (!story || !text || send.isPending) return;
+    send.mutate({ s: story, text });
+  };
+
   const confirmDelete = () => {
     if (!story) return;
     setSheetOpen(true);
@@ -422,7 +495,7 @@ export function StoryViewer({ userId }: { userId: string }) {
         {/* Bottom: sound, caption, owner tools */}
         <LinearGradient
           colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.65)']}
-          style={[styles.bottom, { paddingBottom: insets.bottom + 14 }]}
+          style={[styles.bottom, { paddingBottom: kbHeight > 0 ? kbHeight + 8 : insets.bottom + 14 }]}
           pointerEvents="box-none"
         >
           {hasSound && story.sound_title ? (
@@ -469,7 +542,57 @@ export function StoryViewer({ userId }: { userId: string }) {
                 </BlurView>
               </Pressable>
             </View>
-          ) : null}
+          ) : (
+            <View style={styles.replyRow}>
+              <View style={styles.replyBox}>
+                <TextInput
+                  value={reply}
+                  onChangeText={setReply}
+                  onFocus={() => setTyping(true)}
+                  onBlur={() => setTyping(false)}
+                  placeholder={t('storyReply.placeholder', { name: ownerName })}
+                  placeholderTextColor="rgba(255,255,255,0.75)"
+                  maxLength={1000}
+                  multiline
+                  returnKeyType="send"
+                  submitBehavior="submit"
+                  onSubmitEditing={submitReply}
+                  style={styles.replyInput}
+                  accessibilityLabel={t('storyReply.placeholder', { name: ownerName })}
+                />
+              </View>
+              {reply.trim() ? (
+                <Pressable
+                  onPress={submitReply}
+                  disabled={send.isPending}
+                  hitSlop={6}
+                  style={styles.iconBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('storyReply.send')}
+                  accessibilityState={{ busy: send.isPending }}
+                >
+                  {send.isPending ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Ionicons name="paper-plane" size={24} color="#fff" style={I18nManager.isRTL ? styles.flip : undefined} />
+                  )}
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() => story && like.mutate({ id: story.id, on: !liked })}
+                  hitSlop={6}
+                  style={styles.iconBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={liked ? t('storyReply.unlike') : t('storyReply.like')}
+                  accessibilityState={{ selected: liked }}
+                >
+                  <Animated.View style={{ transform: [{ scale: heart }] }}>
+                    <Ionicons name={liked ? 'heart' : 'heart-outline'} size={28} color={liked ? '#FF3B5C' : '#fff'} />
+                  </Animated.View>
+                </Pressable>
+              )}
+            </View>
+          )}
         </LinearGradient>
       </Animated.View>
 
@@ -617,4 +740,17 @@ const styles = StyleSheet.create({
   },
   glassRound: { width: 44, paddingHorizontal: 0, justifyContent: 'center' },
   glassText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  replyRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 4 },
+  replyBox: {
+    flex: 1,
+    minHeight: 46,
+    maxHeight: 120,
+    borderRadius: 23,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.6)',
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+  },
+  replyInput: { color: '#fff', fontSize: 15, paddingVertical: 10, textAlign: I18nManager.isRTL ? 'right' : 'left' },
+  flip: { transform: [{ scaleX: -1 }] },
 });
