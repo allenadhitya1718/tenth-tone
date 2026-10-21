@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { queryClient } from '@/api/queryClient';
+import { bootQueryCache, queryClient } from '@/api/queryClient';
 import { useFollowRequestSync } from '@/features/notifications/useFollowRequestSync';
 import { usePushRegistration } from '@/features/notifications/push';
 import { usePresenceHeartbeat } from '@/features/presence/usePresence';
@@ -28,8 +28,10 @@ export default function RootLayout() {
   useEffect(() => {
     // When the stored language needs the other layout direction, initI18n
     // reloads the app; rendering in between would flash the wrong layout.
-    initI18n()
-      .then(({ reloading }) => !reloading && setLangReady(true))
+    // The saved cache (chats, inbox) is read back alongside the language,
+    // so the first screen already shows it.
+    Promise.all([initI18n(), bootQueryCache()])
+      .then(([{ reloading }]) => !reloading && setLangReady(true))
       .catch(() => setLangReady(true));
   }, []);
 
