@@ -12,6 +12,7 @@ import { useTheme } from '@/providers/ThemeProvider';
 import { light } from '@/theme/colors';
 
 import { LocationMessage, VideoMessage } from './ChatMedia';
+import { LoadingMedia } from './LoadingMedia';
 import { themeChips, useChatTheme } from './chatThemeContext';
 import { callLabel, clockTime, formatDuration, isMissedCall, parseCall, previewText, systemLabel } from './format';
 import type { ThreadMessage } from './useThread';
@@ -223,13 +224,7 @@ export const MessageBubble = memo(function MessageBubble({
             onAccessibilityAction={onA11yAction}
           >
             <View style={styles.mediaClip}>
-              <Image
-                source={{ uri: item.attachment_url ?? undefined }}
-                style={[styles.image, { backgroundColor: colors.bg3 }]}
-                contentFit="cover"
-                transition={150}
-                recyclingKey={item.localId ?? item.id}
-              />
+              <LoadingMedia uri={item.attachment_url} style={styles.image} recyclingKey={item.localId ?? item.id} />
               {timeOnMedia ? <MediaMeta time={time} tick={mine ? tick : null} pending={!!item.pending} mine={mine} /> : null}
             </View>
           </Pressable>
@@ -247,14 +242,11 @@ export const MessageBubble = memo(function MessageBubble({
             onAccessibilityAction={onA11yAction}
           >
             <View style={styles.mediaClip}>
-              <Image
-                source={{ uri: gif.uri }}
-                style={[styles.gif, { aspectRatio: gif.aspect, backgroundColor: colors.bg3 }]}
-                contentFit="cover"
+              <LoadingMedia
+                uri={gif.uri}
+                style={[styles.gif, { aspectRatio: gif.aspect }]}
                 autoplay
-                transition={150}
                 recyclingKey={item.localId ?? item.id}
-                accessible={false}
               />
               <MediaMeta time={time} tick={mine ? tick : null} pending={!!item.pending} mine={mine} />
               {gif.klipy ? <KlipyWatermark /> : null}
