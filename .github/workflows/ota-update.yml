@@ -1,0 +1,75 @@
+# Over-the-air update: sends the current JavaScript (screens, text, logic) to
+# installed FLYP builds without a new APK or TestFlight build. Phones fetch
+# it when the app opens and switch to it on the next launch.
+#
+# Only for changes inside the JS bundle. A native change (new library,
+# permission, config plugin, app.json native fields) needs a full build AND
+# a bump of "version" in mobile/app.json, because builds only take updates
+# made for their own app version (runtimeVersion policy appVersion).
+#
+# Channels: the Android test APK listens on "preview", TestFlight builds on
+# "production" (mobile/eas.json).
+name: OTA update
+
+on:
+  workflow_dispatch:
+    inputs:
+      channels:
+        description: 'Which builds get it'
+        type: choice
+        options: [both, preview, production]
+        default: both
+      message:
+        description: 'What changed (shown in the Expo dashboard)'
+        required: true
+
+concurrency:
+  group: ota-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile
+    # What the builds bundle with, so an update does not lose it:
+    #  - the public values the build profiles set in eas.json (`eas update`
+    #    does not read a build profile's env);
+    #  - the EAS environment of each channel's builds (--environment below),
+    #    which holds EXPO_PUBLIC_AGORA_APP_ID for calls and walkie-talkie;
+    #  - the Maps key, only so app.config.js keeps extra.mapsKeyConfigured
+    #    true (the map would fall back to its placeholder otherwise).
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://vfkwipvinmnybilcrdzr.supabase.co
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_dgWbaJlmKOgP3VDEriA7Lg_LDHOiomD
+      GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.0
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish to preview (Android test builds)
+        if: inputs.channels == 'both' || inputs.channels == 'preview'
+        run: eas update --channel preview --environment preview --message "$MESSAGE" --non-interactive
+        env:
+          MESSAGE: ${{ inputs.message }}
+
+      - name: Publish to production (TestFlight builds)
+        if: inputs.channels == 'both' || inputs.channels == 'production'
+        run: eas update --channel production --environment production --message "$MESSAGE" --non-interactive
+        env:
+          MESSAGE: ${{ inputs.message }}

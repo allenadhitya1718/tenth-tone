@@ -16,7 +16,8 @@
         "GRADLE_OPTS": "-Dorg.gradle.jvmargs=\"-Xmx3g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8\" -Dorg.gradle.parallel=false -Dorg.gradle.workers.max=2 -Dorg.gradle.daemon=false",
         "EXPO_PUBLIC_SUPABASE_URL": "https://vfkwipvinmnybilcrdzr.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_dgWbaJlmKOgP3VDEriA7Lg_LDHOiomD"
-      }
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
@@ -29,7 +30,8 @@
         "GRADLE_OPTS": "-Dorg.gradle.jvmargs=\"-Xmx3g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8\" -Dorg.gradle.parallel=false -Dorg.gradle.workers.max=2 -Dorg.gradle.daemon=false",
         "EXPO_PUBLIC_SUPABASE_URL": "https://vfkwipvinmnybilcrdzr.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_dgWbaJlmKOgP3VDEriA7Lg_LDHOiomD"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
@@ -38,7 +40,8 @@
         "GRADLE_OPTS": "-Dorg.gradle.jvmargs=\"-Xmx3g -XX:MaxMetaspaceSize=768m -Dfile.encoding=UTF-8\" -Dorg.gradle.parallel=false -Dorg.gradle.workers.max=2 -Dorg.gradle.daemon=false",
         "EXPO_PUBLIC_SUPABASE_URL": "https://vfkwipvinmnybilcrdzr.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_dgWbaJlmKOgP3VDEriA7Lg_LDHOiomD"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {
