@@ -5,6 +5,7 @@ import { AppState } from 'react-native';
 import {
   fetchFriendLocations,
   fetchTrackedLocations,
+  liveNote,
   locationKeys,
   subscribeToFriendLocations,
   type FriendLocation,
@@ -22,12 +23,14 @@ export type Pin = {
   updatedAt: string;
   // Visible through an approved permit rather than (only) follow sharing.
   tracked: boolean;
+  // 0154: their note ("At the beach, come join!"), for a day after it was set.
+  note: string | null;
 };
 
 const STALE_MS = 60 * 60 * 1000;
 export const isStale = (p: Pin, now: number) => now - new Date(p.updatedAt).getTime() > STALE_MS;
 
-type Row = { user_id: string; lat: number | null; lng: number | null; updated_at: string };
+type Row = { user_id: string; lat: number | null; lng: number | null; updated_at: string; note?: string | null; note_at?: string | null };
 
 // Applies one realtime row to a cached list straight away, so a followed
 // friend's pin moves without waiting for a refetch. A row whose coordinates
@@ -36,7 +39,16 @@ function patch<T extends Row>(list: T[] | undefined, row: Partial<UserLocationRo
   if (!list || !row.user_id) return list;
   if (row.lat == null || row.lng == null) return list.filter((r) => r.user_id !== row.user_id);
   return list.map((r) =>
-    r.user_id === row.user_id ? { ...r, lat: row.lat!, lng: row.lng!, updated_at: row.updated_at ?? r.updated_at } : r,
+    r.user_id === row.user_id
+      ? {
+          ...r,
+          lat: row.lat!,
+          lng: row.lng!,
+          updated_at: row.updated_at ?? r.updated_at,
+          // Present only once 0154 is applied; a note change moves nothing.
+          ...('note' in row ? { note: row.note ?? null, note_at: row.note_at ?? null } : null),
+        }
+      : r,
   );
 }
 
@@ -98,6 +110,7 @@ export function usePins(live: boolean) {
         longitude: l.lng,
         updatedAt: l.updated_at,
         tracked: true,
+        note: liveNote(l),
       });
     }
     for (const l of friends.data ?? []) {
@@ -111,6 +124,7 @@ export function usePins(live: boolean) {
         longitude: l.lng,
         updatedAt: l.updated_at,
         tracked: false,
+        note: liveNote(l),
       });
     }
     return [...out.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));

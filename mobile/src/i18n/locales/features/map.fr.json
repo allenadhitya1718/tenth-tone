@@ -102,7 +102,17 @@
     "placePinA11y": "Publication à {{place}}",
     "placesA11y_one": "Carte de {{count}} lieu",
     "placesA11y_many": "Carte de {{count}} de lieux",
-    "placesA11y_other": "Carte de {{count}} lieux"
+    "placesA11y_other": "Carte de {{count}} lieux",
+    "noteAdd": "Ajouter une note",
+    "noteTitle": "Votre note",
+    "noteHint": "Les amis qui voient votre position voient cette note avec votre repère pendant 24 heures.",
+    "notePlaceholder": "À la plage, venez !",
+    "noteSave": "Partager la note",
+    "noteClear": "Retirer",
+    "noteEditA11y": "Votre note : {{note}}. Touchez deux fois pour modifier",
+    "noteBlocked": "Cette note contient des mots que FLYP n'autorise pas. Essayez une autre formulation.",
+    "noteTooLong": "Une note peut contenir jusqu'à 80 caractères.",
+    "noteNotSharing": "Activez le partage de position pour ajouter une note."
   },
   "mapEntry": {
     "label": "Carte"

@@ -17,10 +17,10 @@
 // TODO(client note 27): follow-a-friend and directions on the map.
 //
 // ApiError codes introduced in this file:
-//   (none; requireUid() throws 'not_signed_in' from client.ts)
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+//   note_blocked, note_too_long, not_sharing (setLocationNote, 0154)
+import type { PostgrestError, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-import { must, requireUid, supabase, uid, listenerTopic } from './client';
+import { ApiError, must, requireUid, supabase, uid, listenerTopic } from './client';
 import type { Iso, Unsubscribe, UserSummary, Uuid } from './types';
 
 export const locationKeys = {
@@ -45,6 +45,9 @@ export type UserLocationRow = {
   visibility: LocationVisibility;
   sharing_enabled: boolean;
   updated_at: Iso;
+  // 0154: a short note shown with the pin; null before 0154 is applied.
+  note?: string | null;
+  note_at?: Iso | null;
 };
 
 type LocationPerson = Pick<UserSummary, 'id' | 'name' | 'handle' | 'avatar_url'>;
@@ -56,6 +59,8 @@ export type FriendLocation = {
   updated_at: Iso;
   visibility: LocationVisibility;
   sharing_enabled: boolean;
+  note?: string | null;
+  note_at?: Iso | null;
   profiles: LocationPerson | null;
 };
 
@@ -64,10 +69,37 @@ export type TrackedLocation = {
   lat: number | null;
   lng: number | null;
   updated_at: Iso;
+  note?: string | null;
+  note_at?: Iso | null;
   profiles: LocationPerson | null;
 };
 
-export type LocationSettings = { sharing_enabled: boolean; visibility: LocationVisibility };
+export type LocationSettings = {
+  sharing_enabled: boolean;
+  visibility: LocationVisibility;
+  note?: string | null;
+  note_at?: Iso | null;
+};
+
+/** How long a note shows on the map after it was set. */
+export const LOCATION_NOTE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+export const LOCATION_NOTE_MAX = 80;
+
+/** The note to show, or null once it is a day old. */
+export function liveNote(row: { note?: string | null; note_at?: Iso | null }): string | null {
+  if (!row.note || !row.note_at) return null;
+  return Date.now() - new Date(row.note_at).getTime() < LOCATION_NOTE_MAX_AGE_MS ? row.note : null;
+}
+
+// Until 0154 is applied the note columns do not exist (42703): read without
+// them, so the map keeps working on an older database.
+async function withNoteFallback<T>(
+  run: (withNote: boolean) => PromiseLike<{ data: T; error: PostgrestError | null }>,
+): Promise<{ data: T; error: PostgrestError | null }> {
+  const res = await run(true);
+  if (res.error?.code === '42703') return run(false);
+  return res;
+}
 
 export type PermitStatus = 'pending' | 'approved' | 'denied' | 'revoked';
 
@@ -126,14 +158,34 @@ export async function fetchMyLocationSettings(): Promise<LocationSettings> {
   // A failed read is not consent withdrawn. Collapsing the two meant a
   // transient error silently revoked sharing, so the error is thrown.
   const data = must(
-    await supabase
-      .from('user_locations')
-      .select('sharing_enabled, visibility')
-      .eq('user_id', me)
-      .maybeSingle<Pick<UserLocationRow, 'sharing_enabled' | 'visibility'>>(),
+    await withNoteFallback((withNote) =>
+      supabase
+        .from('user_locations')
+        .select(withNote ? 'sharing_enabled, visibility, note, note_at' : 'sharing_enabled, visibility')
+        .eq('user_id', me)
+        .maybeSingle<Pick<UserLocationRow, 'sharing_enabled' | 'visibility' | 'note' | 'note_at'>>(),
+    ),
   );
   if (!data) return { sharing_enabled: false, visibility: 'friends' };
-  return { sharing_enabled: !!data.sharing_enabled, visibility: data.visibility || 'friends' };
+  return {
+    sharing_enabled: !!data.sharing_enabled,
+    visibility: data.visibility || 'friends',
+    note: data.note ?? null,
+    note_at: data.note_at ?? null,
+  };
+}
+
+// 0154: the note friends see with my pin. Empty clears it. The server trims
+// it, runs the comment word filter and refuses it unless I am sharing.
+export async function setLocationNote(note: string): Promise<void> {
+  await requireUid();
+  const { error } = await supabase.rpc('set_location_note', { p_note: note.trim() });
+  if (!error) return;
+  const msg = error.message ?? '';
+  for (const code of ['note_blocked', 'note_too_long', 'not_sharing'] as const) {
+    if (msg.includes(code)) throw new ApiError(code, msg);
+  }
+  throw error;
 }
 
 // The master switch. Setting visibility alone left sharing_enabled false,
@@ -195,17 +247,19 @@ export async function fetchFriendLocations(): Promise<FriendLocation[]> {
   const ids = ((f ?? []) as { followed_id: Uuid }[]).map((r) => r.followed_id);
   if (!ids.length) return [];
   const data = must(
-    await supabase
-      .from('user_locations')
-      .select(
-        `
-      user_id, lat, lng, updated_at, visibility, sharing_enabled,
+    await withNoteFallback((withNote) =>
+      supabase
+        .from('user_locations')
+        .select(
+          `
+      user_id, lat, lng, updated_at, visibility, sharing_enabled,${withNote ? ' note, note_at,' : ''}
       profiles:profiles!user_locations_user_id_fkey ( id, name, handle, avatar_url )
     `,
-      )
-      .in('user_id', ids)
-      .eq('sharing_enabled', true)
-      .gt('updated_at', new Date(Date.now() - FRIEND_LOCATION_MAX_AGE_MS).toISOString()),
+        )
+        .in('user_id', ids)
+        .eq('sharing_enabled', true)
+        .gt('updated_at', new Date(Date.now() - FRIEND_LOCATION_MAX_AGE_MS).toISOString()),
+    ),
   ) as unknown as (Omit<FriendLocation, 'lat' | 'lng'> & { lat: number | null; lng: number | null })[] | null;
   // A row with no coordinates is someone who has stopped sharing.
   return (data ?? []).filter((r): r is FriendLocation => r.lat != null && r.lng != null);
@@ -322,12 +376,14 @@ export async function fetchTrackedLocations(): Promise<TrackedLocation[]> {
   const ids = ((permits ?? []) as { target_id: Uuid }[]).map((p) => p.target_id);
   if (!ids.length) return [];
   const data = must(
-    await supabase
-      .from('user_locations')
-      .select(
-        'user_id, lat, lng, updated_at, profiles:profiles!user_locations_user_id_fkey(id,name,handle,avatar_url)',
-      )
-      .in('user_id', ids),
+    await withNoteFallback((withNote) =>
+      supabase
+        .from('user_locations')
+        .select(
+          `user_id, lat, lng, updated_at,${withNote ? ' note, note_at,' : ''} profiles:profiles!user_locations_user_id_fkey(id,name,handle,avatar_url)`,
+        )
+        .in('user_id', ids),
+    ),
   ) as unknown as TrackedLocation[] | null;
   return data ?? [];
 }

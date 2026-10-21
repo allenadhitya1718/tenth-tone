@@ -20,6 +20,8 @@ type Props = {
   isMe?: boolean;
   dimmed?: boolean;
   selected?: boolean;
+  // 0154: their note, as a speech bubble above the name.
+  note?: string | null;
   accessibilityLabel: string;
   onPress?: () => void;
 };
@@ -39,6 +41,7 @@ export const AvatarMarker = memo(function AvatarMarker({
   isMe,
   dimmed,
   selected,
+  note,
   accessibilityLabel,
   onPress,
 }: Props) {
@@ -50,7 +53,7 @@ export const AvatarMarker = memo(function AvatarMarker({
     setTracking(true);
     const t = setTimeout(settle, avatarUrl ? 1500 : 300);
     return () => clearTimeout(t);
-  }, [avatarUrl, ring, selected, dimmed, name]);
+  }, [avatarUrl, ring, selected, dimmed, name, note]);
 
   const size = isMe ? 56 : selected ? 56 : 50;
   const initial = (name || '?').trim().charAt(0).toUpperCase() || '?';
@@ -66,6 +69,16 @@ export const AvatarMarker = memo(function AvatarMarker({
       accessibilityRole="button"
     >
       <View style={[styles.wrap, dimmed && styles.dimmed]} collapsable={false}>
+        {note ? (
+          <View style={styles.noteWrap}>
+            <View style={styles.note}>
+              <Text style={styles.noteText} numberOfLines={2} maxFontSizeMultiplier={1.2}>
+                {note}
+              </Text>
+            </View>
+            <View style={styles.noteTail} />
+          </View>
+        ) : null}
         <View style={styles.label}>
           <Text style={styles.labelText} numberOfLines={1} maxFontSizeMultiplier={1.2}>
             {name}
@@ -98,6 +111,31 @@ export const AvatarMarker = memo(function AvatarMarker({
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center' },
+  noteWrap: { alignItems: 'center', marginBottom: 4 },
+  note: {
+    maxWidth: 170,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 3,
+  },
+  noteText: { color: '#111111', fontSize: 12.5, fontWeight: '600', textAlign: 'center' },
+  noteTail: {
+    width: 0,
+    height: 0,
+    marginTop: -1,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 7,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#FFFFFF',
+  },
   dimmed: { opacity: 0.6 },
   label: {
     maxWidth: 120,

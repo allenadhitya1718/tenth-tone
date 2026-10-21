@@ -96,7 +96,17 @@
     "placesEmptyMe": "Tambahkan tempat saat memposting dan tempat itu akan muncul di petamu.",
     "aPlace": "Sebuah tempat",
     "placePinA11y": "Postingan di {{place}}",
-    "placesA11y_other": "Peta {{count}} tempat"
+    "placesA11y_other": "Peta {{count}} tempat",
+    "noteAdd": "Tambah catatan",
+    "noteTitle": "Catatanmu",
+    "noteHint": "Teman yang bisa melihat lokasimu akan melihat ini di pin-mu selama 24 jam.",
+    "notePlaceholder": "Lagi di pantai, ayo gabung!",
+    "noteSave": "Bagikan catatan",
+    "noteClear": "Hapus",
+    "noteEditA11y": "Catatanmu: {{note}}. Ketuk dua kali untuk mengedit",
+    "noteBlocked": "Catatan itu berisi kata yang tidak diizinkan FLYP. Coba kata lain.",
+    "noteTooLong": "Catatan maksimal 80 karakter.",
+    "noteNotSharing": "Aktifkan berbagi lokasi untuk menambah catatan."
   },
   "mapEntry": {
     "label": "Peta"

@@ -96,7 +96,17 @@
     "placesEmptyMe": "发布时添加地点，就会显示在你的地图上。",
     "aPlace": "某地点",
     "placePinA11y": "发布于 {{place}}",
-    "placesA11y_other": "包含 {{count}} 个地点的地图"
+    "placesA11y_other": "包含 {{count}} 个地点的地图",
+    "noteAdd": "添加备注",
+    "noteTitle": "你的备注",
+    "noteHint": "能看到你位置的好友会在你的定位旁看到这条备注，持续 24 小时。",
+    "notePlaceholder": "在海滩，快来一起玩！",
+    "noteSave": "分享备注",
+    "noteClear": "移除",
+    "noteEditA11y": "你的备注：{{note}}。双击编辑",
+    "noteBlocked": "这条备注包含 FLYP 不允许的词语，请换种说法。",
+    "noteTooLong": "备注最多 80 个字符。",
+    "noteNotSharing": "开启位置共享后才能添加备注。"
   },
   "mapEntry": {
     "label": "地图"

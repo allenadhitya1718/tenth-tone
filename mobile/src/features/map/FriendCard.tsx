@@ -113,6 +113,11 @@ export function FriendCard({ pin, me, now, following, bottomInset, onFollow, onC
             <AppText variant="small" muted numberOfLines={1}>
               {meta}
             </AppText>
+            {pin.note ? (
+              <AppText variant="small" numberOfLines={3} style={[styles.note, { backgroundColor: colors.bg2 }]}>
+                {pin.note}
+              </AppText>
+            ) : null}
           </View>
         </Pressable>
         <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('map.close')} style={styles.close}>
@@ -189,6 +194,7 @@ function Action({
 }
 
 const styles = StyleSheet.create({
+  note: { alignSelf: 'flex-start', marginTop: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, overflow: 'hidden', fontWeight: '600' },
   card: {
     position: 'absolute',
     start: 0,

@@ -99,7 +99,17 @@
     "aPlace": "A place",
     "placePinA11y": "Post at {{place}}",
     "placesA11y_one": "Map of {{count}} place",
-    "placesA11y_other": "Map of {{count}} places"
+    "placesA11y_other": "Map of {{count}} places",
+    "noteAdd": "Add a note",
+    "noteTitle": "Your note",
+    "noteHint": "Friends who can see your location see this with your pin for 24 hours.",
+    "notePlaceholder": "At the beach, come join!",
+    "noteSave": "Share note",
+    "noteClear": "Remove",
+    "noteEditA11y": "Your note: {{note}}. Double tap to edit",
+    "noteBlocked": "That note has words FLYP doesn't allow. Try different wording.",
+    "noteTooLong": "Notes can be up to 80 characters.",
+    "noteNotSharing": "Turn on location sharing to add a note."
   },
   "mapEntry": {
     "label": "Map"

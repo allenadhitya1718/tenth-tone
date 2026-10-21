@@ -102,7 +102,17 @@
     "placePinA11y": "Publicación en {{place}}",
     "placesA11y_one": "Mapa de {{count}} lugar",
     "placesA11y_many": "Mapa de {{count}} de lugares",
-    "placesA11y_other": "Mapa de {{count}} lugares"
+    "placesA11y_other": "Mapa de {{count}} lugares",
+    "noteAdd": "Añadir una nota",
+    "noteTitle": "Tu nota",
+    "noteHint": "Los amigos que pueden ver tu ubicación verán esto junto a tu pin durante 24 horas.",
+    "notePlaceholder": "En la playa, ¡vente!",
+    "noteSave": "Compartir nota",
+    "noteClear": "Quitar",
+    "noteEditA11y": "Tu nota: {{note}}. Toca dos veces para editar",
+    "noteBlocked": "Esa nota tiene palabras que FLYP no permite. Prueba con otras palabras.",
+    "noteTooLong": "Las notas pueden tener hasta 80 caracteres.",
+    "noteNotSharing": "Activa compartir ubicación para añadir una nota."
   },
   "mapEntry": {
     "label": "Mapa"

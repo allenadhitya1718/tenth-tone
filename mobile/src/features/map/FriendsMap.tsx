@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   fetchIncomingPermits,
   fetchMyLocationSettings,
+  liveNote,
   locationKeys,
   requestLocationPermit,
 } from '@/api/location';
@@ -33,6 +34,7 @@ import { FriendCard } from './FriendCard';
 import { FriendsSheet } from './FriendsSheet';
 import { DEFAULT_REGION, regionAround, type LatLng } from './geo';
 import { LocationConsent } from './LocationConsent';
+import { LocationNoteSheet } from './LocationNoteSheet';
 import { MapErrorBoundary, MapUnavailable } from './MapFallback';
 import { DARK_MAP_STYLE, MAP_PROVIDER, MAPS_AVAILABLE } from './mapConfig';
 import { MapSettingsSheet } from './MapSettingsSheet';
@@ -177,6 +179,10 @@ function MapScreen({
   const [followId, setFollowId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const myNote = settingsData ? liveNote(settingsData) : null;
+  // Room for the note chip under the status pill while sharing.
+  const noteOffset = sharing ? 46 : 0;
   const [mapState, setMapState] = useState<'loading' | 'ready' | 'failed'>(MAPS_AVAILABLE ? 'loading' : 'failed');
 
   const selected = useMemo(() => pins.find((p) => p.id === selectedId) ?? null, [pins, selectedId]);
@@ -286,6 +292,7 @@ function MapScreen({
                   avatarUrl={profile.data?.avatar_url}
                   ring={RING.me}
                   isMe
+                  note={sharing ? myNote : null}
                   accessibilityLabel={t('map.youAreHere')}
                 />
               ) : null}
@@ -335,10 +342,25 @@ function MapScreen({
         </View>
       </View>
 
+      {sharing ? (
+        <Pressable
+          onPress={() => setNoteOpen(true)}
+          style={[styles.noteChip, { top: insets.top + 60, backgroundColor: colors.bg }]}
+          accessibilityRole="button"
+          accessibilityLabel={myNote ? t('map.noteEditA11y', { note: myNote }) : t('map.noteAdd')}
+        >
+          <Ionicons name={myNote ? 'chatbubble-ellipses' : 'add-circle-outline'} size={16} color={colors.primary2} />
+          <AppText variant="small" style={{ fontWeight: '700', flexShrink: 1 }} numberOfLines={1}>
+            {myNote ?? t('map.noteAdd')}
+          </AppText>
+          {myNote ? <Ionicons name="pencil" size={13} color={colors.muted} /> : null}
+        </Pressable>
+      ) : null}
+
       {permission === 'denied' && sharing ? (
         <Pressable
           onPress={() => void Linking.openSettings()}
-          style={[styles.banner, { top: insets.top + 64, backgroundColor: colors.dangerSoft }]}
+          style={[styles.banner, { top: insets.top + 64 + noteOffset, backgroundColor: colors.dangerSoft }]}
           accessibilityRole="button"
           accessibilityHint={t('map.openSettings')}
         >
@@ -351,7 +373,7 @@ function MapScreen({
 
       {/* Floating controls, on the end side */}
       {mapState === 'ready' ? (
-        <View style={[styles.fabs, { top: insets.top + 176 }]} pointerEvents="box-none">
+        <View style={[styles.fabs, { top: insets.top + 176 + noteOffset }]} pointerEvents="box-none">
           {meCoord ? (
             <RoundButton
               icon="locate"
@@ -371,7 +393,7 @@ function MapScreen({
           onPress={stopFollowing}
           style={[
             styles.followPill,
-            { top: insets.top + (permission === 'denied' && sharing ? 124 : 64), backgroundColor: colors.primary },
+            { top: insets.top + noteOffset + (permission === 'denied' && sharing ? 124 : 64), backgroundColor: colors.primary },
           ]}
           accessibilityRole="button"
           accessibilityLabel={t('map.stopFollowingA11y', { name: followed.name })}
@@ -419,6 +441,7 @@ function MapScreen({
         onClose={() => setSettingsOpen(false)}
         onTurnOn={onTurnOn}
       />
+      <LocationNoteSheet visible={noteOpen} current={myNote} onClose={() => setNoteOpen(false)} />
     </View>
   );
 }
@@ -535,6 +558,22 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   fabs: { position: 'absolute', end: 14, gap: 10 },
+  noteChip: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: '78%',
+    minHeight: 36,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
   followPill: {
     position: 'absolute',
     alignSelf: 'center',

@@ -99,7 +99,17 @@
     "aPlace": "Bir yer",
     "placePinA11y": "Gönderi konumu: {{place}}",
     "placesA11y_one": "Harita, {{count}} yer",
-    "placesA11y_other": "Harita, {{count}} yer"
+    "placesA11y_other": "Harita, {{count}} yer",
+    "noteAdd": "Not ekle",
+    "noteTitle": "Notun",
+    "noteHint": "Konumunu görebilen arkadaşların bunu 24 saat boyunca iğnenin yanında görür.",
+    "notePlaceholder": "Sahildeyim, gelin!",
+    "noteSave": "Notu paylaş",
+    "noteClear": "Kaldır",
+    "noteEditA11y": "Notun: {{note}}. Düzenlemek için iki kez dokun",
+    "noteBlocked": "Bu not FLYP'nin izin vermediği kelimeler içeriyor. Farklı bir ifade dene.",
+    "noteTooLong": "Notlar en fazla 80 karakter olabilir.",
+    "noteNotSharing": "Not eklemek için konum paylaşımını aç."
   },
   "mapEntry": {
     "label": "Harita"
