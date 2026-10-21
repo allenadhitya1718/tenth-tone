@@ -86,12 +86,15 @@ export function Inbox() {
     const list = active === 'requests' ? requests : all.filter((c) => !c.is_request);
     const q = deferredQuery.trim().replace(/^@+/, '').toLowerCase();
     if (!q) return list;
+    // People (name, @handle) and group names; not message text, which the
+    // placeholder says ("Search people and groups").
     return list.filter(
       (c) =>
-        c.title.toLowerCase().includes(q) ||
+        (c.title || '').toLowerCase().includes(q) ||
+        translateTitle(c.title || '', t).toLowerCase().includes(q) ||
         c.others.some((o) => o?.handle?.toLowerCase().includes(q) || o?.name?.toLowerCase().includes(q)),
     );
-  }, [all, requests, active, deferredQuery]);
+  }, [all, requests, active, deferredQuery, t]);
 
   const open = useCallback(
     (chat: ChatListItem) => {
@@ -147,9 +150,14 @@ export function Inbox() {
           returnKeyType="search"
           autoCorrect={false}
           autoCapitalize="none"
-          clearButtonMode="while-editing"
           accessibilityLabel={t('chat.searchChats')}
         />
+        {/* Android has no built-in clear button (clearButtonMode is iOS only). */}
+        {query ? (
+          <Pressable onPress={() => setQuery('')} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('gif.clear')}>
+            <Ionicons name="close-circle" size={18} color={colors.muted} />
+          </Pressable>
+        ) : null}
       </View>
 
       {requests.length ? (
@@ -338,7 +346,17 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 12,
   },
-  searchInput: { flex: 1, fontSize: 15, height: '100%', textAlign: I18nManager.isRTL ? 'right' : 'left' },
+  // No vertical padding: Android's default (~10 px a side) inside the 40 px
+  // box squeezed the typed text out of sight, so search looked dead.
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    height: '100%',
+    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
+  },
   segments: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 6 },
   segment: {
     flexDirection: 'row',
