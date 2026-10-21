@@ -28,7 +28,15 @@
       "peach": "蜜桃",
       "forest": "森林",
       "berry": "莓果",
-      "dusk": "黄昏"
+      "dusk": "黄昏",
+      "love": "爱心",
+      "galaxy": "星河",
+      "neon": "霓虹",
+      "midnight": "午夜",
+      "lofi": "Lo-fi",
+      "cotton": "棉花糖",
+      "citrus": "柑橘",
+      "mono": "黑白"
     },
     "sys": {
       "changed": "{{actor}} 更改了聊天主题",

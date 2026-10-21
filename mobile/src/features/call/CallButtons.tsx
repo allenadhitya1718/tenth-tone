@@ -15,7 +15,18 @@ import { dialPath, openCallScreen } from './nav';
 // The voice and video buttons for a chat header. One-to-one only: give it the
 // other person of a DM. Busy and permission problems are explained here,
 // before any screen opens or any phone rings.
-export function CallButtons({ peer, chatId, size = 24 }: { peer: UserSummary; chatId?: Uuid | null; size?: number }) {
+export function CallButtons({
+  peer,
+  chatId,
+  size = 24,
+  color,
+}: {
+  peer: UserSummary;
+  chatId?: Uuid | null;
+  size?: number;
+  // On a chat theme the header icons take the theme's contrast.
+  color?: string;
+}) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const [checking, setChecking] = useState(false);
@@ -67,7 +78,7 @@ export function CallButtons({ peer, chatId, size = 24 }: { peer: UserSummary; ch
         accessibilityLabel={t('call.startVoice')}
         disabled={checking}
       >
-        <Ionicons name="call-outline" size={size} color={colors.text} />
+        <Ionicons name="call-outline" size={size} color={color ?? colors.text} />
       </Pressable>
       <Pressable
         onPress={() => void start('video')}
@@ -77,7 +88,7 @@ export function CallButtons({ peer, chatId, size = 24 }: { peer: UserSummary; ch
         accessibilityLabel={t('call.startVideo')}
         disabled={checking}
       >
-        <Ionicons name="videocam-outline" size={size + 2} color={colors.text} />
+        <Ionicons name="videocam-outline" size={size + 2} color={color ?? colors.text} />
       </Pressable>
     </View>
   );
@@ -90,11 +101,13 @@ export function GroupCallButtons({
   title,
   photo,
   size = 24,
+  color,
 }: {
   chatId: Uuid;
   title: string;
   photo?: string | null;
   size?: number;
+  color?: string;
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -136,7 +149,7 @@ export function GroupCallButtons({
         accessibilityLabel={t('call.group.startVoice', { name: title })}
         disabled={checking}
       >
-        <Ionicons name="call-outline" size={size} color={colors.text} />
+        <Ionicons name="call-outline" size={size} color={color ?? colors.text} />
       </Pressable>
       <Pressable
         onPress={() => void start('video')}
@@ -146,7 +159,7 @@ export function GroupCallButtons({
         accessibilityLabel={t('call.group.startVideo', { name: title })}
         disabled={checking}
       >
-        <Ionicons name="videocam-outline" size={size + 2} color={colors.text} />
+        <Ionicons name="videocam-outline" size={size + 2} color={color ?? colors.text} />
       </Pressable>
     </View>
   );

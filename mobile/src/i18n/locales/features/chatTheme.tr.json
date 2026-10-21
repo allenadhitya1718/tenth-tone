@@ -28,7 +28,15 @@
       "peach": "Şeftali",
       "forest": "Orman",
       "berry": "Böğürtlen",
-      "dusk": "Alacakaranlık"
+      "dusk": "Alacakaranlık",
+      "love": "Aşk",
+      "galaxy": "Galaksi",
+      "neon": "Neon",
+      "midnight": "Gece yarısı",
+      "lofi": "Lo-fi",
+      "cotton": "Pamuk şeker",
+      "citrus": "Narenciye",
+      "mono": "Mono"
     },
     "sys": {
       "changed": "{{actor}} sohbet temasını değiştirdi",

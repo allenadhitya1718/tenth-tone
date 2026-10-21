@@ -20,6 +20,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 import {
   acceptChatRequest,
@@ -43,10 +44,12 @@ import { useTheme } from '@/providers/ThemeProvider';
 import { AttachSheet, type AttachKind } from './AttachSheet';
 import { Avatar } from './Avatar';
 import { ChatBackground } from './ChatBackground';
+import { ChatThemeContext, themeChips } from './chatThemeContext';
 import { Composer } from './Composer';
 import { dayKey, dayLabel, translateTitle } from './format';
 import { ImageViewer } from './ImageViewer';
 import { locationLink } from './location';
+import { themeFor } from './themes';
 import { DaySeparator, MessageBubble } from './MessageBubble';
 import { MessageInfoSheet } from './MessageInfoSheet';
 import { MessageMenu } from './MessageMenu';
@@ -412,6 +415,13 @@ export function ChatThread({ chatId }: { chatId: string }) {
         : t('fix4.quotedMessage')
     : '';
 
+  // 0149: the chat's theme runs behind the header and the composer too, as on
+  // Instagram; the header takes the theme's contrast.
+  const chatTheme = themeFor(info.data?.theme, info.data?.wallpaper);
+  const chips = chatTheme ? themeChips(chatTheme) : null;
+  const ink = chips?.onBg ?? colors.text;
+  const inkMuted = chips?.onBgMuted ?? colors.muted;
+
   const presence = usePresence(!isGroup && !isRequest ? other?.id : null);
   const seen = presenceLabel(presence.data, t, i18n.language);
   const seenNow = seen === t('presence.activeNow');
@@ -426,10 +436,13 @@ export function ChatThread({ chatId }: { chatId: string }) {
   }
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+    <ChatThemeContext.Provider value={chatTheme}>
+    <SafeAreaView style={[styles.root, { backgroundColor: chatTheme ? '#000' : colors.bg }]} edges={['top', 'bottom']}>
+      {chatTheme ? <ChatBackground theme={info.data?.theme} wallpaper={info.data?.wallpaper} /> : null}
+      {chatTheme ? <StatusBar style={chatTheme.dark ? 'light' : 'dark'} /> : null}
+      <View style={[styles.header, chatTheme ? styles.headerOnTheme : { borderBottomColor: colors.border }]}>
         <Pressable onPress={goBack} hitSlop={10} style={styles.headerBtn} accessibilityRole="button" accessibilityLabel={t('chat.back')}>
-          <Ionicons name={I18nManager.isRTL ? 'chevron-forward' : 'chevron-back'} size={28} color={colors.text} />
+          <Ionicons name={I18nManager.isRTL ? 'chevron-forward' : 'chevron-back'} size={28} color={ink} />
         </Pressable>
         {/* A DM opens the other person's profile; a group opens Group Info
             (rename, photo, members, leave). */}
@@ -446,29 +459,29 @@ export function ChatThread({ chatId }: { chatId: string }) {
         >
           <Avatar uri={photo} name={title} size={38} />
           <View style={styles.identityText}>
-            <Text style={[styles.headerName, { color: colors.text }]} numberOfLines={1}>
+            <Text style={[styles.headerName, { color: ink }]} numberOfLines={1}>
               {title || ' '}
             </Text>
             {isGroup ? (
-              <Text style={[styles.headerSub, { color: colors.muted }]} numberOfLines={1}>
+              <Text style={[styles.headerSub, { color: inkMuted }]} numberOfLines={1}>
                 {t('chat.members', { count: info.data?.memberCount ?? 0 })}
               </Text>
             ) : seen ? (
               // 0152: "Active now" / "Last seen ..." when they share it.
-              <Text style={[styles.headerSub, { color: seenNow ? colors.success : colors.muted }]} numberOfLines={1}>
+              <Text style={[styles.headerSub, { color: seenNow ? (chatTheme ? chatTheme.accent : colors.success) : inkMuted }]} numberOfLines={1}>
                 {seen}
               </Text>
             ) : other?.handle ? (
-              <Text style={[styles.headerSub, { color: colors.muted }]} numberOfLines={1}>
+              <Text style={[styles.headerSub, { color: inkMuted }]} numberOfLines={1}>
                 @{other.handle}
               </Text>
             ) : null}
           </View>
         </Pressable>
-        {other && !isRequest ? <CallButtons peer={other} chatId={chatId} /> : null}
+        {other && !isRequest ? <CallButtons peer={other} chatId={chatId} color={ink} /> : null}
         {/* A group call rings every member who may be rung (0145). */}
         {isGroup && !isRequest && (info.data?.memberCount ?? 0) >= 2 ? (
-          <GroupCallButtons chatId={chatId} title={title} photo={photo} />
+          <GroupCallButtons chatId={chatId} title={title} photo={photo} color={ink} />
         ) : null}
         {/* Chat theme (0149): shared with everyone in the chat. */}
         {(other || isGroup) && !isRequest ? (
@@ -479,7 +492,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
             accessibilityRole="button"
             accessibilityLabel={t('chatTheme.title')}
           >
-            <Ionicons name="color-palette-outline" size={23} color={colors.text} />
+            <Ionicons name="color-palette-outline" size={23} color={ink} />
           </Pressable>
         ) : null}
       </View>
@@ -487,7 +500,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
       <KeyboardAvoidingView style={styles.flex} behavior="padding">
         {/* Any touch on the thread closes the emoji panel (client note 29). */}
         <View style={styles.flex} onTouchStart={emojiOpen ? closeEmoji : undefined}>
-          <ChatBackground theme={info.data?.theme} wallpaper={info.data?.wallpaper} />
+          {chatTheme ? null : <ChatBackground />}
           {messages.isLoading ? (
             <View style={styles.center}>
               <ActivityIndicator color={colors.primary} accessibilityLabel={t('chat.loading')} />
@@ -522,8 +535,8 @@ export function ChatThread({ chatId }: { chatId: string }) {
               {!rows.length ? (
                 <View style={styles.intro} pointerEvents="none">
                   <Avatar uri={photo} name={title} size={76} />
-                  <Text style={[styles.introName, { color: colors.text }]}>{title}</Text>
-                  <Text style={[styles.introSub, { color: colors.muted }]}>
+                  <Text style={[styles.introName, { color: ink }]}>{title}</Text>
+                  <Text style={[styles.introSub, { color: inkMuted }]}>
                     {isGroup ? t('chat.noMessagesYet') : t('chat.sayHello')}
                   </Text>
                 </View>
@@ -595,6 +608,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
       <AttachSheet open={attachOpen} onClose={() => setAttachOpen(false)} onPick={(k) => void onAttach(k)} />
       <PlacePicker precise open={placeOpen} onClose={() => setPlaceOpen(false)} onPick={(p) => void sendLocation(p)} />
     </SafeAreaView>
+    </ChatThemeContext.Provider>
   );
 }
 
@@ -617,6 +631,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  headerOnTheme: { borderBottomWidth: 0, backgroundColor: 'transparent' },
   identity: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
   identityText: { flex: 1, minWidth: 0 },
   headerName: { fontSize: 16, fontWeight: '700', textAlign: 'left' },

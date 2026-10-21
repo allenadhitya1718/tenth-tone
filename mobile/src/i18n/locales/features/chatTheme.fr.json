@@ -28,7 +28,15 @@
       "peach": "Pêche",
       "forest": "Forêt",
       "berry": "Baies",
-      "dusk": "Crépuscule"
+      "dusk": "Crépuscule",
+      "love": "Amour",
+      "galaxy": "Galaxie",
+      "neon": "Néon",
+      "midnight": "Minuit",
+      "lofi": "Lo-fi",
+      "cotton": "Barbe à papa",
+      "citrus": "Agrumes",
+      "mono": "Mono"
     },
     "sys": {
       "changed": "{{actor}} a changé le thème de la discussion",

@@ -28,7 +28,15 @@
       "peach": "Melocotón",
       "forest": "Bosque",
       "berry": "Frutos rojos",
-      "dusk": "Anochecer"
+      "dusk": "Anochecer",
+      "love": "Amor",
+      "galaxy": "Galaxia",
+      "neon": "Neón",
+      "midnight": "Medianoche",
+      "lofi": "Lo-fi",
+      "cotton": "Algodón de azúcar",
+      "citrus": "Cítrico",
+      "mono": "Mono"
     },
     "sys": {
       "changed": "{{actor}} cambió el tema del chat",

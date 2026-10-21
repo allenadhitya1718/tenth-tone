@@ -11,6 +11,7 @@ import { useTheme } from '@/providers/ThemeProvider';
 import { light } from '@/theme/colors';
 
 import { LocationMessage, VideoMessage } from './ChatMedia';
+import { themeChips, useChatTheme } from './chatThemeContext';
 import { callLabel, clockTime, formatDuration, isMissedCall, parseCall, previewText, systemLabel } from './format';
 import type { ThreadMessage } from './useThread';
 import { SwipeToReply } from './SwipeToReply';
@@ -53,14 +54,34 @@ export const MessageBubble = memo(function MessageBubble({
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const time = clockTime(item.created_at, i18n.language);
+  // 0149: on a chat theme, the theme's bubbles (yours a gradient).
+  const chatTheme = useChatTheme();
 
-  const tone = useMemo(
-    () =>
-      mine
-        ? { bg: colors.primary, fg: colors.onPrimary, sub: colors.onPrimary, track: colors.primaryPressed, quote: colors.primaryPressed }
-        : { bg: colors.bg2, fg: colors.text, sub: colors.muted, track: colors.border, quote: colors.bg3 },
-    [mine, colors],
-  );
+  const tone = useMemo(() => {
+    if (chatTheme) {
+      return mine
+        ? {
+            bg: chatTheme.mine[0],
+            gradient: chatTheme.mine.length > 1 ? chatTheme.mine : null,
+            fg: chatTheme.mineText,
+            sub: chatTheme.mineText,
+            track: 'rgba(0,0,0,0.2)',
+            quote: 'rgba(0,0,0,0.16)',
+          }
+        : {
+            bg: chatTheme.theirs,
+            gradient: null,
+            fg: chatTheme.theirsText,
+            sub: chatTheme.dark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.55)',
+            track: chatTheme.dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)',
+            quote: chatTheme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+          };
+    }
+    return mine
+      ? { bg: colors.primary, gradient: null, fg: colors.onPrimary, sub: colors.onPrimary, track: colors.primaryPressed, quote: colors.primaryPressed }
+      : { bg: colors.bg2, gradient: null, fg: colors.text, sub: colors.muted, track: colors.border, quote: colors.bg3 };
+  }, [mine, colors, chatTheme]);
+  const chip = chatTheme ? themeChips(chatTheme) : null;
   const voiceTone = useMemo(() => ({ fg: tone.fg, track: tone.track }), [tone]);
 
   // Swiping is not available to a screen reader, so "Reply" is also an
@@ -82,7 +103,7 @@ export const MessageBubble = memo(function MessageBubble({
     const secs = Number(info?.seconds) || 0;
     return (
       <View style={styles.centerRow} accessible accessibilityLabel={`${label}, ${time}`}>
-        <View style={[styles.record, { backgroundColor: colors.bg2 }]}>
+        <View style={[styles.record, { backgroundColor: chip?.chip ?? colors.bg2 }]}>
           {info ? (
             <Ionicons
               name={info.kind === 'video' ? 'videocam' : 'call'}
@@ -90,7 +111,7 @@ export const MessageBubble = memo(function MessageBubble({
               color={missed ? colors.danger : colors.muted}
             />
           ) : null}
-          <Text style={[styles.recordText, { color: missed ? colors.danger : colors.muted }]}>
+          <Text style={[styles.recordText, { color: missed ? colors.danger : chip?.chipText ?? colors.muted }]}>
             {label}
             {secs > 0 ? ` · ${formatDuration(secs)}` : ''} · {time}
           </Text>
@@ -146,13 +167,17 @@ export const MessageBubble = memo(function MessageBubble({
         style={[
           styles.bubble,
           { backgroundColor: tone.bg },
+          tone.gradient && styles.clip,
           mine ? styles.bubbleMine : styles.bubbleTheirs,
           isMedia && styles.bubbleMedia,
           item.pending && styles.pending,
         ]}
       >
+        {tone.gradient ? (
+          <LinearGradient colors={tone.gradient as [string, string, ...string[]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        ) : null}
         {authorName && !mine ? (
-          <Text style={[styles.author, { color: colors.primary2 }, isMedia && styles.captionPad]} numberOfLines={1}>
+          <Text style={[styles.author, { color: chatTheme ? chatTheme.accent : colors.primary2 }, isMedia && styles.captionPad]} numberOfLines={1}>
             {authorName}
           </Text>
         ) : null}
@@ -369,10 +394,12 @@ function groupReactions(list: ThreadMessage['reactions'], myId: string | undefin
 // Day separator between messages of different days.
 export const DaySeparator = memo(function DaySeparator({ label }: { label: string }) {
   const { colors } = useTheme();
+  const chatTheme = useChatTheme();
+  const chip = chatTheme ? themeChips(chatTheme) : null;
   return (
     <View style={styles.centerRow} accessibilityRole="header">
-      <View style={[styles.day, { backgroundColor: colors.bg2 }]}>
-        <Text style={[styles.dayText, { color: colors.muted }]}>{label}</Text>
+      <View style={[styles.day, { backgroundColor: chip?.chip ?? colors.bg2 }]}>
+        <Text style={[styles.dayText, { color: chip?.chipText ?? colors.muted }]}>{label}</Text>
       </View>
     </View>
   );
@@ -386,6 +413,7 @@ const styles = StyleSheet.create({
   wrapTheirs: { alignItems: 'flex-start' },
   bubble: { maxWidth: '80%', borderRadius: 18, paddingHorizontal: 12, paddingTop: 7, paddingBottom: 5 },
   bubbleMine: { borderBottomEndRadius: 5 },
+  clip: { overflow: 'hidden' },
   bubbleTheirs: { borderBottomStartRadius: 5 },
   // A thin frame in the bubble colour around a photo or GIF (WhatsApp).
   bubbleMedia: { paddingHorizontal: 3, paddingTop: 3, paddingBottom: 3 },

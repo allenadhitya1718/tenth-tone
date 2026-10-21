@@ -24,6 +24,7 @@ import { QuickEmojis } from '@/components/emoji/EmojiPanel';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { formatDuration, previewText } from './format';
+import { themeChips, useChatTheme } from './chatThemeContext';
 import { useVoiceRecorder } from './useVoiceRecorder';
 import type { ThreadMessage } from './useThread';
 import { PushToTalkButton } from './walkie/PushToTalkButton';
@@ -262,17 +263,22 @@ export const Composer = memo(function Composer({
 
   const hasText = text.trim().length > 0;
   const walkieOn = !!walkie?.on;
+  // 0149: on a chat theme the composer sits on the theme (no solid bar), with
+  // a translucent field in the theme's contrast.
+  const chatTheme = useChatTheme();
+  const chips = chatTheme ? themeChips(chatTheme) : null;
+  const iconMuted = chips?.onBgMuted ?? colors.muted;
 
   return (
-    <View style={{ backgroundColor: colors.bg }}>
+    <View style={{ backgroundColor: chips ? 'transparent' : colors.bg }}>
       {replyTo ? (
-        <View style={[styles.replyBar, { borderTopColor: colors.border, backgroundColor: colors.bg2 }]}>
+        <View style={[styles.replyBar, { borderTopColor: chips?.line ?? colors.border, backgroundColor: chips?.field ?? colors.bg2 }]}>
           <View style={[styles.replyAccent, { backgroundColor: colors.primary2 }]} />
           <View style={styles.replyBody}>
             <Text style={[styles.replyName, { color: colors.primary2 }]} numberOfLines={1}>
               {replyName}
             </Text>
-            <Text style={[styles.replyText, { color: colors.muted }]} numberOfLines={1}>
+            <Text style={[styles.replyText, { color: iconMuted }]} numberOfLines={1}>
               {previewText(replyTo, t)}
             </Text>
           </View>
@@ -283,7 +289,7 @@ export const Composer = memo(function Composer({
             accessibilityRole="button"
             accessibilityLabel={t('chat.cancelReply')}
           >
-            <Ionicons name="close" size={22} color={colors.muted} />
+            <Ionicons name="close" size={22} color={iconMuted} />
           </Pressable>
         </View>
       ) : null}
@@ -296,7 +302,7 @@ export const Composer = memo(function Composer({
         </Text>
       ) : null}
 
-      <View style={[styles.row, { borderTopColor: colors.border }]}>
+      <View style={[styles.row, { borderTopColor: chips ? 'transparent' : colors.border }]}>
         {rec.recording && locked ? (
           <View style={styles.recording} accessibilityLiveRegion="polite">
             <Pressable
@@ -333,17 +339,17 @@ export const Composer = memo(function Composer({
               accessibilityRole="button"
               accessibilityLabel={emojiOpen ? t('chat.keyboard') : t('chat.emoji')}
             >
-              <Ionicons name={emojiOpen ? 'keypad-outline' : 'happy-outline'} size={26} color={colors.muted} />
+              <Ionicons name={emojiOpen ? 'keypad-outline' : 'happy-outline'} size={26} color={iconMuted} />
             </Pressable>
-            <View style={[styles.field, { backgroundColor: colors.bg2 }]}>
+            <View style={[styles.field, { backgroundColor: chips?.field ?? colors.bg2 }]}>
               <TextInput
                 ref={input}
                 value={text}
                 onChangeText={(v) => setText(v.slice(0, MAX_LEN))}
                 onFocus={() => setEmojiOpen(false)}
                 placeholder={t('chat.placeholder')}
-                placeholderTextColor={colors.muted}
-                style={[styles.input, { color: colors.text }]}
+                placeholderTextColor={iconMuted}
+                style={[styles.input, { color: chips?.onBg ?? colors.text }]}
                 multiline
                 // Return sends and the field keeps focus, so the keyboard
                 // does not drop between messages (client note 10).
@@ -362,7 +368,7 @@ export const Composer = memo(function Composer({
                   accessibilityLabel={t('walkie.toggle')}
                   accessibilityHint={t('walkie.toggleHint')}
                 >
-                  <Ionicons name={walkieOn ? 'radio' : 'radio-outline'} size={23} color={walkieOn ? colors.success : colors.muted} />
+                  <Ionicons name={walkieOn ? 'radio' : 'radio-outline'} size={23} color={walkieOn ? colors.success : iconMuted} />
                 </Pressable>
               ) : null}
               <Pressable
@@ -372,7 +378,7 @@ export const Composer = memo(function Composer({
                 accessibilityRole="button"
                 accessibilityLabel={t('attach.title')}
               >
-                <Ionicons name="add-circle-outline" size={26} color={colors.muted} />
+                <Ionicons name="add-circle-outline" size={26} color={iconMuted} />
               </Pressable>
             </View>
           </>

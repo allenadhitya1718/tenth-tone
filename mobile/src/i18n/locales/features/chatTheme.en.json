@@ -28,7 +28,15 @@
       "peach": "Peach",
       "forest": "Forest",
       "berry": "Berry",
-      "dusk": "Dusk"
+      "dusk": "Dusk",
+      "love": "Love",
+      "galaxy": "Galaxy",
+      "neon": "Neon",
+      "midnight": "Midnight",
+      "lofi": "Lo-fi",
+      "cotton": "Cotton candy",
+      "citrus": "Citrus",
+      "mono": "Mono"
     },
     "sys": {
       "changed": "{{actor}} changed the chat theme",

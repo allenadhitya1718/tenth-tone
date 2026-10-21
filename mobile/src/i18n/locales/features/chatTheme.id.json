@@ -28,7 +28,15 @@
       "peach": "Persik",
       "forest": "Hutan",
       "berry": "Beri",
-      "dusk": "Petang"
+      "dusk": "Petang",
+      "love": "Cinta",
+      "galaxy": "Galaksi",
+      "neon": "Neon",
+      "midnight": "Tengah malam",
+      "lofi": "Lo-fi",
+      "cotton": "Gulali",
+      "citrus": "Jeruk",
+      "mono": "Mono"
     },
     "sys": {
       "changed": "{{actor}} mengubah tema obrolan",
