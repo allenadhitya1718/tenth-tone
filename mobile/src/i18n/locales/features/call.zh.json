@@ -132,6 +132,13 @@
         "nobody": "目前无法呼叫此群组中的任何人。",
         "not_in_group": "你不是此群组的成员。"
       }
-    }
+    },
+    "audio": "音频",
+    "audioTitle": "音频输出",
+    "audioA11y": "音频：{{output}}。双击更改",
+    "outBluetooth": "蓝牙",
+    "outHeadset": "耳机",
+    "outSpeaker": "扬声器",
+    "outPhone": "听筒"
   }
 }

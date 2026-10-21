@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["FlypAudioRouteModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.flypaudioroute.FlypAudioRouteModule"]
+  }
+}

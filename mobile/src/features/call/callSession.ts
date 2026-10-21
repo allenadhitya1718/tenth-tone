@@ -15,7 +15,7 @@
 // is the ROOT call whose status is the session's. They are the same row for a
 // direct call; someone added to a group call (0092) is rung with an invite
 // row whose root_id points at the root. Both carry the same Agora channel.
-import { Vibration } from 'react-native';
+import { Platform, Vibration } from 'react-native';
 import {
   AudioRoute,
   AudioScenarioType,
@@ -56,6 +56,8 @@ import {
 import { ApiError, uid as currentUid } from '@/api/client';
 import type { Unsubscribe, UserSummary, Uuid } from '@/api/types';
 import { claimAgora } from '@/api/walkie';
+
+import { type AudioOutput, hasAudioRouteModule, readAudioRoute, setNativeAudioOutput, watchAudioRoute } from './audioRoute';
 import type { ErrorMsg } from '@/components/ui';
 import { AGORA_APP_ID, agoraUidFor } from '@/features/live/config';
 import { startAudioForeground, stopAudioForeground } from '@/lib/audioForeground';
@@ -145,6 +147,12 @@ export type CallState = {
   speaking: number[];
   muted: boolean;
   speaker: boolean;
+  // Where the call's sound goes, and which headsets are connected: with one
+  // connected the speaker button becomes an output picker.
+  audioOut: AudioOutput;
+  bluetooth: boolean;
+  bluetoothName: string | null;
+  headset: boolean;
   cameraOn: boolean;
   frontCamera: boolean;
   // When the other person's audio first reached this phone (ms epoch).
@@ -180,6 +188,10 @@ const INITIAL: CallState = {
   speaking: [],
   muted: false,
   speaker: false,
+  audioOut: 'earpiece',
+  bluetooth: false,
+  bluetoothName: null,
+  headset: false,
   cameraOn: false,
   frontCamera: true,
   startedAt: null,
@@ -726,7 +738,38 @@ export function toggleMute() {
   set({ muted: next });
 }
 
+// Agora's speaker switch does nothing while a Bluetooth or wired headset is
+// connected, so with one connected the output is chosen explicitly: Android
+// through setRouteInCommunicationMode, iOS through the audio session
+// (audioRoute.ts). Without the native module (an older build) iOS falls back
+// to Agora's switch.
+const ROUTE_CODE: Record<AudioOutput, number> = { headset: 0, earpiece: 1, speaker: 3, bluetooth: 5, other: -1 };
+
+export function setAudioOutput(out: AudioOutput) {
+  const joined = !!engine && state.media !== 'idle' && state.media !== 'joining';
+  try {
+    if (joined && engine) {
+      if (Platform.OS === 'android') {
+        engine.setRouteInCommunicationMode(ROUTE_CODE[out]);
+      } else {
+        engine.setEnableSpeakerphone(out === 'speaker');
+        if (hasAudioRouteModule()) setNativeAudioOutput(out);
+      }
+    }
+  } catch {}
+  set({ speaker: out === 'speaker', audioOut: out });
+}
+
+// The output to go back to from the speaker: the headset if one is connected.
+export function privateOutput(): AudioOutput {
+  return state.bluetooth ? 'bluetooth' : state.headset ? 'headset' : 'earpiece';
+}
+
 export function toggleSpeaker() {
+  if (state.bluetooth || state.headset) {
+    setAudioOutput(state.speaker ? privateOutput() : 'speaker');
+    return;
+  }
   const next = !state.speaker;
   try {
     // Only effective once joined; before that it is applied at the join.
@@ -944,6 +987,9 @@ async function joinMedia(g: number) {
       if (fgsCallId && state.callId === fgsCallId && isCallActive()) openCallScreen(fgsCallId);
     },
     body: state.peer?.name || state.peer?.handle || null,
+    title: state.groupName || state.peer?.name || state.peer?.handle || null,
+    avatar: state.groupChatId ? null : state.peer?.avatar_url ?? null,
+    video: state.kind === 'video',
   });
 
   const renew = () => {
@@ -1084,7 +1130,12 @@ async function joinMedia(g: number) {
     onAudioRoutingChanged: (routing) => {
       if (g !== gen) return;
       const speaker = routing === AudioRoute.RouteSpeakerphone || routing === AudioRoute.RouteLoudspeaker;
-      if (speaker !== state.speaker) set({ speaker });
+      const bt = routing === AudioRoute.RouteBluetoothDeviceHfp || routing === AudioRoute.RouteBluetoothDeviceA2dp;
+      const wired = routing === AudioRoute.RouteHeadset || routing === AudioRoute.RouteHeadsetnomic || routing === AudioRoute.RouteUsb;
+      const audioOut: AudioOutput = speaker ? 'speaker' : bt ? 'bluetooth' : wired ? 'headset' : routing === AudioRoute.RouteEarpiece ? 'earpiece' : 'other';
+      // Agora moving the call onto a headset means one is connected, even
+      // on a build without the native module.
+      set({ speaker, audioOut, ...(bt ? { bluetooth: true } : null), ...(wired ? { headset: true } : null) });
     },
     onTokenPrivilegeWillExpire: renew,
     onRequestToken: renew,
@@ -1094,6 +1145,14 @@ async function joinMedia(g: number) {
   };
   handler = h;
   e.registerEventHandler(h);
+
+  // Which headsets are connected, now and as they come and go.
+  const applyRoute = (r: ReturnType<typeof readAudioRoute>) => {
+    if (!r || g !== gen) return;
+    set({ bluetooth: r.bluetooth, bluetoothName: r.bluetoothName ?? null, headset: r.headset });
+  };
+  applyRoute(readAudioRoute());
+  unsubs.push(watchAudioRoute(applyRoute));
 
   try {
     e.enableAudio();

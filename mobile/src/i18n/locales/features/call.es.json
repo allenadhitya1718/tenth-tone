@@ -132,6 +132,13 @@
         "nobody": "Ahora mismo no se puede llamar a nadie de este grupo.",
         "not_in_group": "No eres miembro de este grupo."
       }
-    }
+    },
+    "audio": "Audio",
+    "audioTitle": "Salida de audio",
+    "audioA11y": "Audio: {{output}}. Toca dos veces para cambiar",
+    "outBluetooth": "Bluetooth",
+    "outHeadset": "Auriculares",
+    "outSpeaker": "Altavoz",
+    "outPhone": "Teléfono"
   }
 }

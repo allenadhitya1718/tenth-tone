@@ -39,11 +39,13 @@ import {
   openCall,
   toggleCamera,
   toggleMute,
+  setAudioOutput,
   toggleSpeaker,
   useCallState,
   type CallState,
   type Readiness,
 } from './callSession';
+import type { AudioOutput } from './audioRoute';
 import { AddPeopleSheet } from './AddPeopleSheet';
 import { LocalPip } from './LocalPip';
 import { callPath, markCallScreen, type DialParams } from './nav';
@@ -55,6 +57,14 @@ import {
   useMarkRinging,
   useMemberToasts,
 } from './useCallMembers';
+
+const OUTPUT_KEY: Record<AudioOutput, string> = {
+  bluetooth: 'call.outBluetooth',
+  headset: 'call.outHeadset',
+  speaker: 'call.outSpeaker',
+  earpiece: 'call.outPhone',
+  other: 'call.outPhone',
+};
 
 // The full-screen call: outgoing ring, incoming ring (Accept / Decline), and
 // the call itself. Port of V.call and the incoming card in web/js/views.js.
@@ -473,13 +483,36 @@ function CallView({ s, leave }: { s: CallState; leave: () => void }) {
                 active={s.muted}
                 onPress={toggleMute}
               />
-              <RoundIcon
-                icon={s.speaker ? 'volume-high' : 'volume-medium'}
-                label={s.speaker ? t('call.speakerOff') : t('call.speakerOn')}
-                caption={t('call.speaker')}
-                active={s.speaker}
-                onPress={toggleSpeaker}
-              />
+              {s.bluetooth || s.headset ? (
+                // A headset is connected: pick where the sound goes.
+                <RoundIcon
+                  icon={s.audioOut === 'bluetooth' ? 'bluetooth' : s.audioOut === 'speaker' ? 'volume-high' : s.audioOut === 'headset' ? 'headset' : 'phone-portrait-outline'}
+                  label={t('call.audioA11y', { output: t(OUTPUT_KEY[s.audioOut]) })}
+                  caption={t('call.audio')}
+                  active={s.audioOut === 'speaker'}
+                  onPress={() =>
+                    showAlert(t('call.audioTitle'), undefined, [
+                      ...(s.bluetooth
+                        ? [{ text: `${s.audioOut === 'bluetooth' ? '✓ ' : ''}${s.bluetoothName || t('call.outBluetooth')}`, onPress: () => setAudioOutput('bluetooth') }]
+                        : []),
+                      ...(s.headset
+                        ? [{ text: `${s.audioOut === 'headset' ? '✓ ' : ''}${t('call.outHeadset')}`, onPress: () => setAudioOutput('headset') }]
+                        : []),
+                      { text: `${s.audioOut === 'speaker' ? '✓ ' : ''}${t('call.outSpeaker')}`, onPress: () => setAudioOutput('speaker') },
+                      { text: `${s.audioOut === 'earpiece' ? '✓ ' : ''}${t('call.outPhone')}`, onPress: () => setAudioOutput('earpiece') },
+                      { text: t('common.cancel'), style: 'cancel' },
+                    ])
+                  }
+                />
+              ) : (
+                <RoundIcon
+                  icon={s.speaker ? 'volume-high' : 'volume-medium'}
+                  label={s.speaker ? t('call.speakerOff') : t('call.speakerOn')}
+                  caption={t('call.speaker')}
+                  active={s.speaker}
+                  onPress={toggleSpeaker}
+                />
+              )}
               <RoundIcon
                 icon={s.cameraOn ? 'videocam' : 'videocam-off'}
                 label={s.cameraOn ? t('call.cameraOff') : video ? t('call.cameraOn') : t('call.switchToVideo')}

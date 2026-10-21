@@ -132,6 +132,13 @@
         "nobody": "Şu anda bu gruptaki hiç kimse aranamıyor.",
         "not_in_group": "Bu grubun üyesi değilsin."
       }
-    }
+    },
+    "audio": "Ses",
+    "audioTitle": "Ses çıkışı",
+    "audioA11y": "Ses: {{output}}. Değiştirmek için iki kez dokun",
+    "outBluetooth": "Bluetooth",
+    "outHeadset": "Kulaklık",
+    "outSpeaker": "Hoparlör",
+    "outPhone": "Telefon"
   }
 }

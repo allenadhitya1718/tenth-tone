@@ -132,6 +132,13 @@
         "nobody": "Saat ini tidak ada anggota grup ini yang bisa dipanggil.",
         "not_in_group": "Kamu bukan anggota grup ini."
       }
-    }
+    },
+    "audio": "Audio",
+    "audioTitle": "Output audio",
+    "audioA11y": "Audio: {{output}}. Ketuk dua kali untuk mengubah",
+    "outBluetooth": "Bluetooth",
+    "outHeadset": "Headphone",
+    "outSpeaker": "Speaker",
+    "outPhone": "Ponsel"
   }
 }
