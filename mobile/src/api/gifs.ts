@@ -91,7 +91,7 @@ export function gifStoredUrl(g: Pick<Gif, 'url' | 'width' | 'height'>): string {
 }
 
 /** A stored GIF URL split into what to load and its aspect ratio (w / h). */
-export function parseGifUrl(stored: string | null | undefined): { uri: string; aspect: number } | null {
+export function parseGifUrl(stored: string | null | undefined): { uri: string; aspect: number; klipy: boolean } | null {
   if (!stored) return null;
   const [uri, frag = ''] = stored.split('#');
   if (!uri) return null;
@@ -99,5 +99,7 @@ export function parseGifUrl(stored: string | null | undefined): { uri: string; a
   const h = Number(/(?:^|&)h=(\d+)/.exec(frag)?.[1]);
   const aspect = w > 0 && h > 0 ? w / h : 1;
   // Clamp: a 10:1 strip or a 1:10 sliver would make an unusable bubble.
-  return { uri, aspect: Math.min(2.5, Math.max(0.5, aspect)) };
+  // KLIPY's GIFs carry its watermark; old Tenor ones do not.
+  const klipy = /^https:\/\/([a-z0-9-]+\.)*klipy\.com\//.test(uri);
+  return { uri, aspect: Math.min(2.5, Math.max(0.5, aspect)), klipy };
 }

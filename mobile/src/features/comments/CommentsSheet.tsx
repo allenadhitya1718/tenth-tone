@@ -38,6 +38,7 @@ import { videoKeys } from '@/api/videos';
 import { showAlert } from '@/components/Dialog';
 import { NotFoundState } from '@/components/NotFoundState';
 import { EmojiGifPanel } from '@/components/emoji/EmojiGifPanel';
+import { KlipyWatermark } from '@/components/emoji/KlipyBrand';
 import { QuickEmojis } from '@/components/emoji/EmojiPanel';
 import { patchVideoEverywhere } from '@/features/feed/cache';
 import { formatCount } from '@/features/feed/format';
@@ -564,16 +565,19 @@ function CommentRow({
           </Text>
         ) : null}
         {gif ? (
-          <Image
-            source={{ uri: gif.uri }}
-            style={[styles.gif, { aspectRatio: gif.aspect, backgroundColor: colors.bg3 }]}
-            contentFit="cover"
-            autoplay
-            recyclingKey={comment.id}
-            accessible
-            accessibilityRole="image"
-            accessibilityLabel={t('gif.a11yPlain')}
-          />
+          <View style={styles.gif}>
+            <Image
+              source={{ uri: gif.uri }}
+              style={[styles.gifImage, { aspectRatio: gif.aspect, backgroundColor: colors.bg3 }]}
+              contentFit="cover"
+              autoplay
+              recyclingKey={comment.id}
+              accessible
+              accessibilityRole="image"
+              accessibilityLabel={t('gif.a11yPlain')}
+            />
+            {gif.klipy ? <KlipyWatermark /> : null}
+          </View>
         ) : null}
         <View style={styles.actions}>
           <Pressable onPress={onReply} hitSlop={8} accessibilityRole="button">
@@ -631,7 +635,8 @@ const styles = StyleSheet.create({
   name: { fontSize: 12.5, fontWeight: '600', marginBottom: 2 },
   body: { fontSize: 15, lineHeight: 21 },
   // Height follows the GIF's aspect ratio; the width keeps tall GIFs short.
-  gif: { width: 170, maxWidth: '100%', borderRadius: 10, marginTop: 4 },
+  gif: { width: 170, maxWidth: '100%', borderRadius: 10, marginTop: 4, overflow: 'hidden' },
+  gifImage: { width: '100%' },
   like: { alignItems: 'center', minWidth: 30 },
   likeN: { fontSize: 11, marginTop: 1 },
   composer: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth },

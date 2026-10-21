@@ -20,6 +20,8 @@ import { type Gif, gifKeys, searchGifs } from '@/api/gifs';
 import { useDebouncedValue } from '@/features/discover/useDebouncedValue';
 import { useTheme } from '@/providers/ThemeProvider';
 
+import { PoweredByKlipy } from './KlipyBrand';
+
 const CELL_HEIGHT = 112;
 const GAP = 4;
 
@@ -177,7 +179,11 @@ export const GifPanel = memo(function GifPanel({ height, onPick, onSearchFocusCh
           <Pressable onPress={() => setText('')} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('gif.clear')}>
             <Ionicons name="close-circle" size={18} color={colors.muted} />
           </Pressable>
-        ) : null}
+        ) : (
+          // KLIPY's attribution guide: "Powered by KLIPY" by the search bar,
+          // in view while the picker is open.
+          <PoweredByKlipy />
+        )}
       </View>
       {!searching && gifs.length ? (
         <Text style={[styles.section, { color: colors.muted }]} accessibilityRole="header">
@@ -185,8 +191,6 @@ export const GifPanel = memo(function GifPanel({ height, onPick, onSearchFocusCh
         </Text>
       ) : null}
       <View style={styles.flex}>{body}</View>
-      {/* KLIPY's terms require visible attribution. */}
-      <Text style={[styles.attribution, { color: colors.muted }]}>{t('gif.poweredBy')}</Text>
     </View>
   );
 });
@@ -216,5 +220,4 @@ const styles = StyleSheet.create({
   retry: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth },
   retryText: { fontSize: 14, fontWeight: '700' },
   more: { marginVertical: 8 },
-  attribution: { fontSize: 10, textAlign: 'center', paddingVertical: 3 },
 });

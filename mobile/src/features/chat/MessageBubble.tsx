@@ -7,6 +7,7 @@ import { type AccessibilityActionEvent, type AccessibilityActionInfo, Pressable,
 
 import type { Tick } from '@/api/chat';
 import { parseGifUrl } from '@/api/gifs';
+import { KlipyWatermark } from '@/components/emoji/KlipyBrand';
 import { useTheme } from '@/providers/ThemeProvider';
 import { light } from '@/theme/colors';
 
@@ -256,6 +257,7 @@ export const MessageBubble = memo(function MessageBubble({
                 accessible={false}
               />
               <MediaMeta time={time} tick={mine ? tick : null} pending={!!item.pending} mine={mine} />
+              {gif.klipy ? <KlipyWatermark /> : null}
             </View>
           </Pressable>
         ) : null}
