@@ -1,0 +1,20 @@
+{
+  "presence": {
+    "activeNow": "Aktif sekarang",
+    "activeMinutes": "Aktif {{count}} mnt lalu",
+    "lastSeenToday": "Terakhir dilihat hari ini pukul {{time}}",
+    "lastSeenYesterday": "Terakhir dilihat kemarin pukul {{time}}",
+    "lastSeenDate": "Terakhir dilihat {{date}}",
+    "settingsGroup": "Status aktivitas",
+    "settingsLabel": "Tampilkan status aktivitas",
+    "settingsHint": "Orang yang kamu ajak chat bisa melihat kapan terakhir kamu aktif. Jika dimatikan, kamu juga tidak bisa melihat status mereka."
+  },
+  "msgInfo": {
+    "title": "Info pesan",
+    "sentAt": "Terkirim pukul {{time}}",
+    "readBy": "Dibaca oleh",
+    "deliveredTo": "Terkirim ke",
+    "notYet": "Belum terkirim",
+    "unknown": "Belum ada detail untuk obrolan ini."
+  }
+}

@@ -522,22 +522,29 @@ function stampMicros(iso: Iso | null | undefined): number | null {
 // ticks follow its slowest member). A null stamp counts as joined_at; reading
 // implies delivery. No receipts (still loading, or the read failed) is 'sent'.
 export function tickFor(message: Pick<Message, 'created_at'>, receipts: Receipt[]): Tick {
-  const at = stampMicros(message.created_at);
-  if (at === null || !receipts.length) return 'sent';
+  if (!receipts.length) return 'sent';
   let read = true;
-  let delivered = true;
   for (const r of receipts) {
-    const joined = stampMicros(r.joined_at);
-    const readAt = stampMicros(r.last_read_at) ?? joined;
-    const deliveredStamp = stampMicros(r.last_delivered_at) ?? joined;
-    const deliveredAt =
-      readAt === null ? deliveredStamp : deliveredStamp === null ? readAt : Math.max(readAt, deliveredStamp);
-    if (readAt === null || at > readAt) read = false;
-    if (deliveredAt === null || at > deliveredAt) delivered = false;
-    if (!delivered) break;
+    const one = memberTick(message, r);
+    if (one === 'sent') return 'sent';
+    if (one !== 'read') read = false;
   }
-  if (read) return 'read';
-  return delivered ? 'delivered' : 'sent';
+  return read ? 'read' : 'delivered';
+}
+
+// How far one member has got with one of YOUR messages: the message info
+// sheet lists each member by this, and tickFor combines them.
+export function memberTick(message: Pick<Message, 'created_at'>, r: Receipt): Tick {
+  const at = stampMicros(message.created_at);
+  if (at === null) return 'sent';
+  const joined = stampMicros(r.joined_at);
+  const readAt = stampMicros(r.last_read_at) ?? joined;
+  const deliveredStamp = stampMicros(r.last_delivered_at) ?? joined;
+  const deliveredAt =
+    readAt === null ? deliveredStamp : deliveredStamp === null ? readAt : Math.max(readAt, deliveredStamp);
+  if (readAt !== null && at <= readAt) return 'read';
+  if (deliveredAt !== null && at <= deliveredAt) return 'delivered';
+  return 'sent';
 }
 
 // Accepting moves a request into the inbox proper. Declining removes you

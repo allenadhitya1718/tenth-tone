@@ -8,7 +8,7 @@ import { fetchMySettings, setPrivate, settingsKeys, type MySettings, type WhoCan
 import { Screen, TopBar } from '@/components/ui';
 
 import { ErrorView, go, Group, LoadingView, Row, showError, SwitchRow } from './components';
-import { useUserSettings } from './hooks';
+import { useUpdateUserSettings, useUserSettings } from './hooks';
 
 export const WHO_FIELDS = ['message', 'comment', 'tag'] as const;
 export type WhoField = (typeof WHO_FIELDS)[number];
@@ -20,6 +20,7 @@ export function PrivacyScreen() {
   const qc = useQueryClient();
   const me = useQuery({ queryKey: settingsKeys.mySettings(), queryFn: fetchMySettings });
   const settings = useUserSettings();
+  const updateSettings = useUpdateUserSettings();
   const location = useQuery({ queryKey: locationKeys.settings(), queryFn: fetchMyLocationSettings });
 
   const priv = useMutation({
@@ -78,6 +79,18 @@ export function PrivacyScreen() {
             />
           );
         })}
+      </Group>
+
+      <Group title={t('presence.settingsGroup')} footer={t('presence.settingsHint')}>
+        <SwitchRow
+          icon="radio-button-on-outline"
+          label={t('presence.settingsLabel')}
+          value={settings.data?.show_activity_status ?? true}
+          disabled={!settings.data || updateSettings.isPending}
+          onChange={(on) =>
+            updateSettings.mutate({ show_activity_status: on }, { onError: (e) => showError(t, e, 'settings2.common.updateFailed') })
+          }
+        />
       </Group>
 
       <Group title={t('settings2.privacy.locationGroup')}>

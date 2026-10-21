@@ -1,0 +1,20 @@
+{
+  "presence": {
+    "activeNow": "Şu an aktif",
+    "activeMinutes": "{{count}} dk önce aktifti",
+    "lastSeenToday": "Son görülme bugün {{time}}",
+    "lastSeenYesterday": "Son görülme dün {{time}}",
+    "lastSeenDate": "Son görülme {{date}}",
+    "settingsGroup": "Etkinlik durumu",
+    "settingsLabel": "Etkinlik durumunu göster",
+    "settingsHint": "Sohbet ettiğin kişiler en son ne zaman aktif olduğunu görebilir. Kapatırsan onlarınkini de göremezsin."
+  },
+  "msgInfo": {
+    "title": "Mesaj bilgisi",
+    "sentAt": "{{time}} tarihinde gönderildi",
+    "readBy": "Okuyanlar",
+    "deliveredTo": "İletilenler",
+    "notYet": "Henüz iletilmedi",
+    "unknown": "Bu sohbet için henüz ayrıntı yok."
+  }
+}

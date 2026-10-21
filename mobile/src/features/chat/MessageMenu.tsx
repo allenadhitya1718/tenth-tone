@@ -25,6 +25,7 @@ export function MessageMenu({
   onReply,
   onCopy,
   onDelete,
+  onInfo,
 }: {
   message: ThreadMessage | null;
   mine: boolean;
@@ -33,6 +34,8 @@ export function MessageMenu({
   onReply?: (m: ThreadMessage) => void;
   onCopy: (m: ThreadMessage) => void;
   onDelete: (m: ThreadMessage) => void;
+  // Message info (who has read it); own messages only.
+  onInfo?: (m: ThreadMessage) => void;
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -108,6 +111,16 @@ export function MessageMenu({
                   onPress={() => {
                     onCopy(m);
                     close();
+                  }}
+                />
+              ) : null}
+              {mine && sent && onInfo && m.type !== 'call' && m.type !== 'system' ? (
+                <Action
+                  icon="information-circle-outline"
+                  label={t('msgInfo.title')}
+                  onPress={() => {
+                    close();
+                    onInfo(m);
                   }}
                 />
               ) : null}

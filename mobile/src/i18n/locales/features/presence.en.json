@@ -1,0 +1,20 @@
+{
+  "presence": {
+    "activeNow": "Active now",
+    "activeMinutes": "Active {{count}}m ago",
+    "lastSeenToday": "Last seen today at {{time}}",
+    "lastSeenYesterday": "Last seen yesterday at {{time}}",
+    "lastSeenDate": "Last seen {{date}}",
+    "settingsGroup": "Activity status",
+    "settingsLabel": "Show activity status",
+    "settingsHint": "People you chat with can see when you were last active. If you turn this off, you won't see theirs either."
+  },
+  "msgInfo": {
+    "title": "Message info",
+    "sentAt": "Sent at {{time}}",
+    "readBy": "Read by",
+    "deliveredTo": "Delivered to",
+    "notYet": "Not delivered yet",
+    "unknown": "No details for this chat yet."
+  }
+}

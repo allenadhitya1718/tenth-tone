@@ -46,6 +46,7 @@ import { Composer } from './Composer';
 import { dayKey, dayLabel, translateTitle } from './format';
 import { ImageViewer } from './ImageViewer';
 import { DaySeparator, MessageBubble } from './MessageBubble';
+import { MessageInfoSheet } from './MessageInfoSheet';
 import { MessageMenu } from './MessageMenu';
 import { useGroupLive } from './useGroupLive';
 import { type ThreadMessage, useThread } from './useThread';
@@ -53,6 +54,7 @@ import { useWalkie } from './walkie/useWalkie';
 import { WalkieBanner } from './walkie/WalkieBanner';
 import { useActiveChat } from '@/features/notifications/push';
 import { CallButtons, GroupCallButtons } from '@/features/call/CallButtons';
+import { presenceLabel, usePresence } from '@/features/presence/usePresence';
 import { sendRefusalKey } from '@/lib/serverError';
 
 // Client note 26: live walkie-talkie voice (push-to-talk over an Agora
@@ -97,6 +99,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<ThreadMessage | null>(null);
   const [menuFor, setMenuFor] = useState<ThreadMessage | null>(null);
+  const [infoFor, setInfoFor] = useState<ThreadMessage | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -352,6 +355,10 @@ export function ChatThread({ chatId }: { chatId: string }) {
         : t('fix4.quotedMessage')
     : '';
 
+  const presence = usePresence(!isGroup && !isRequest ? other?.id : null);
+  const seen = presenceLabel(presence.data, t, i18n.language);
+  const seenNow = seen === t('presence.activeNow');
+
   const closeEmoji = useCallback(() => setEmojiOpen(false), []);
   const cancelReply = useCallback(() => setReplyTo(null), []);
 
@@ -388,6 +395,11 @@ export function ChatThread({ chatId }: { chatId: string }) {
             {isGroup ? (
               <Text style={[styles.headerSub, { color: colors.muted }]} numberOfLines={1}>
                 {t('chat.members', { count: info.data?.memberCount ?? 0 })}
+              </Text>
+            ) : seen ? (
+              // 0152: "Active now" / "Last seen ..." when they share it.
+              <Text style={[styles.headerSub, { color: seenNow ? colors.success : colors.muted }]} numberOfLines={1}>
+                {seen}
               </Text>
             ) : other?.handle ? (
               <Text style={[styles.headerSub, { color: colors.muted }]} numberOfLines={1}>
@@ -514,6 +526,13 @@ export function ChatThread({ chatId }: { chatId: string }) {
         onReply={isRequest ? undefined : setReplyTo}
         onCopy={onCopy}
         onDelete={onDelete}
+        onInfo={setInfoFor}
+      />
+      <MessageInfoSheet
+        message={infoFor}
+        receipts={receiptList ?? []}
+        members={info.data?.others ?? []}
+        onClose={() => setInfoFor(null)}
       />
       <ImageViewer uri={viewing} onClose={() => setViewing(null)} />
     </SafeAreaView>

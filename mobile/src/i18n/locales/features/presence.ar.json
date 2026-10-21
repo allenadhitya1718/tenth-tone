@@ -1,0 +1,20 @@
+{
+  "presence": {
+    "activeNow": "نشط الآن",
+    "activeMinutes": "نشط منذ {{count}} د",
+    "lastSeenToday": "آخر ظهور اليوم الساعة {{time}}",
+    "lastSeenYesterday": "آخر ظهور أمس الساعة {{time}}",
+    "lastSeenDate": "آخر ظهور {{date}}",
+    "settingsGroup": "حالة النشاط",
+    "settingsLabel": "إظهار حالة النشاط",
+    "settingsHint": "يمكن لمن تتحدث معهم رؤية آخر وقت كنت فيه نشطًا. إذا أوقفت ذلك، فلن ترى حالتهم أيضًا."
+  },
+  "msgInfo": {
+    "title": "معلومات الرسالة",
+    "sentAt": "أُرسلت الساعة {{time}}",
+    "readBy": "قرأها",
+    "deliveredTo": "وصلت إلى",
+    "notYet": "لم تصل بعد",
+    "unknown": "لا توجد تفاصيل لهذه الدردشة بعد."
+  }
+}

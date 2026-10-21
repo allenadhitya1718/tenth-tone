@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/api/queryClient';
 import { useFollowRequestSync } from '@/features/notifications/useFollowRequestSync';
 import { usePushRegistration } from '@/features/notifications/push';
+import { usePresenceHeartbeat } from '@/features/presence/usePresence';
 import { useRecordSession } from '@/features/settings/useRecordSession';
 import { initI18n, languageIsRtl } from '@/i18n';
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
@@ -59,6 +60,7 @@ function RootNavigator() {
   useIncomingCalls();
   useFollowRequestSync(session?.user.id);
   useRecordSession();
+  usePresenceHeartbeat(!!session && ready && !recovering);
 
   const [splashDone, setSplashDone] = useState(false);
   const splash = splashDone ? null : (

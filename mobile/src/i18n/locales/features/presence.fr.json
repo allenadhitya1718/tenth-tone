@@ -1,0 +1,20 @@
+{
+  "presence": {
+    "activeNow": "En ligne",
+    "activeMinutes": "Actif il y a {{count}} min",
+    "lastSeenToday": "Vu aujourd'hui à {{time}}",
+    "lastSeenYesterday": "Vu hier à {{time}}",
+    "lastSeenDate": "Vu le {{date}}",
+    "settingsGroup": "Statut d'activité",
+    "settingsLabel": "Afficher le statut d'activité",
+    "settingsHint": "Les personnes avec qui vous discutez voient quand vous étiez actif. Si vous le désactivez, vous ne verrez pas non plus le leur."
+  },
+  "msgInfo": {
+    "title": "Infos du message",
+    "sentAt": "Envoyé à {{time}}",
+    "readBy": "Lu par",
+    "deliveredTo": "Distribué à",
+    "notYet": "Pas encore distribué",
+    "unknown": "Aucun détail pour cette discussion."
+  }
+}

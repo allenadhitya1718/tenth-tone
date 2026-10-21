@@ -54,6 +54,9 @@ export type UserSettings = {
   who_can_tag: WhoCan;
   autoplay: boolean;
   data_saver: boolean;
+  // 0029 / 0152: "Active now" / "Last seen" shown to people you chat with.
+  // Off hides yours and, as on WhatsApp, theirs from you.
+  show_activity_status: boolean;
   user_id?: Uuid;
   updated_at?: Iso;
 };
@@ -72,6 +75,7 @@ const SETTINGS_DEFAULTS: UserSettings = {
   who_can_tag: 'everyone',
   autoplay: true,
   data_saver: false,
+  show_activity_status: true,
 };
 
 export type Gender = 'male' | 'female' | 'other' | 'undisclosed';

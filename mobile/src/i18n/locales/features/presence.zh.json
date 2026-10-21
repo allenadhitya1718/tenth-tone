@@ -1,0 +1,20 @@
+{
+  "presence": {
+    "activeNow": "在线",
+    "activeMinutes": "{{count}} 分钟前在线",
+    "lastSeenToday": "今天 {{time}} 在线过",
+    "lastSeenYesterday": "昨天 {{time}} 在线过",
+    "lastSeenDate": "{{date}} 在线过",
+    "settingsGroup": "活动状态",
+    "settingsLabel": "显示活动状态",
+    "settingsHint": "与你聊天的人可以看到你上次在线的时间。关闭后，你也看不到他们的状态。"
+  },
+  "msgInfo": {
+    "title": "消息详情",
+    "sentAt": "发送于 {{time}}",
+    "readBy": "已读",
+    "deliveredTo": "已送达",
+    "notYet": "尚未送达",
+    "unknown": "此聊天暂无详情。"
+  }
+}

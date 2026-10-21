@@ -1,0 +1,20 @@
+{
+  "presence": {
+    "activeNow": "Activo ahora",
+    "activeMinutes": "Activo hace {{count}} min",
+    "lastSeenToday": "Últ. vez hoy a las {{time}}",
+    "lastSeenYesterday": "Últ. vez ayer a las {{time}}",
+    "lastSeenDate": "Últ. vez el {{date}}",
+    "settingsGroup": "Estado de actividad",
+    "settingsLabel": "Mostrar estado de actividad",
+    "settingsHint": "Las personas con las que chateas pueden ver cuándo estuviste activo. Si lo desactivas, tampoco verás el suyo."
+  },
+  "msgInfo": {
+    "title": "Info. del mensaje",
+    "sentAt": "Enviado a las {{time}}",
+    "readBy": "Leído por",
+    "deliveredTo": "Entregado a",
+    "notYet": "Aún no entregado",
+    "unknown": "Todavía no hay detalles de este chat."
+  }
+}
