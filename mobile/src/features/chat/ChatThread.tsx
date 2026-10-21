@@ -113,7 +113,8 @@ export function ChatThread({ chatId }: { chatId: string }) {
 
   const isGroup = info.data?.type === 'group';
   // Name, photo and member count repaint when anyone changes the group (0147).
-  useGroupLive(chatId, isGroup);
+  // Group changes and chat themes (0147, 0149) both write a system line.
+  useGroupLive(chatId);
   const other = !isGroup ? info.data?.others[0] : undefined;
   const title = translateTitle(info.data?.title ?? listed?.title ?? '', t);
   const photo = info.data?.photo || listed?.avatar || null;
@@ -400,12 +401,24 @@ export function ChatThread({ chatId }: { chatId: string }) {
         {isGroup && !isRequest && (info.data?.memberCount ?? 0) >= 2 ? (
           <GroupCallButtons chatId={chatId} title={title} photo={photo} />
         ) : null}
+        {/* Chat theme (0149): shared with everyone in the chat. */}
+        {(other || isGroup) && !isRequest ? (
+          <Pressable
+            onPress={() => router.push(`/chat-theme/${chatId}` as Href)}
+            hitSlop={8}
+            style={styles.headerBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t('chatTheme.title')}
+          >
+            <Ionicons name="color-palette-outline" size={23} color={colors.text} />
+          </Pressable>
+        ) : null}
       </View>
 
       <KeyboardAvoidingView style={styles.flex} behavior="padding">
         {/* Any touch on the thread closes the emoji panel (client note 29). */}
         <View style={styles.flex} onTouchStart={emojiOpen ? closeEmoji : undefined}>
-          <ChatBackground />
+          <ChatBackground theme={info.data?.theme} wallpaper={info.data?.wallpaper} />
           {messages.isLoading ? (
             <View style={styles.center}>
               <ActivityIndicator color={colors.primary} accessibilityLabel={t('chat.loading')} />

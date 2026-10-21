@@ -1,0 +1,46 @@
+{
+  "chatTheme": {
+    "title": "聊天主题",
+    "preview": "主题预览",
+    "sampleTheirs": "嗨！这样看起来怎么样？",
+    "sampleMine": "很喜欢 😍",
+    "sharedNote": "此聊天中的所有人都会看到你选择的主题。",
+    "default": "默认",
+    "photo": "你的照片",
+    "choosePhoto": "选择照片",
+    "changePhoto": "更换照片",
+    "colours": "纯色",
+    "gradients": "渐变",
+    "apply": "设置主题",
+    "saved": "聊天主题已更新",
+    "names": {
+      "sand": "沙色",
+      "mint": "薄荷",
+      "blush": "腮红",
+      "lavender": "薰衣草",
+      "sky": "天空",
+      "lemon": "柠檬",
+      "slate": "石板",
+      "graphite": "石墨",
+      "sunset": "日落",
+      "aurora": "极光",
+      "ocean": "海洋",
+      "peach": "蜜桃",
+      "forest": "森林",
+      "berry": "莓果",
+      "dusk": "黄昏"
+    },
+    "sys": {
+      "changed": "{{actor}} 更改了聊天主题",
+      "reset": "{{actor}} 将聊天主题恢复为默认"
+    },
+    "err": {
+      "needsUpdate": "聊天主题暂不可用，请稍后再试。",
+      "notAccepted": "对方接受你的消息请求后，你才能更改主题。",
+      "blocked": "你无法更改此聊天的主题。",
+      "gone": "此聊天已不可用。",
+      "photoFailed": "无法使用这张照片，请换一张。",
+      "generic": "无法更改主题，请重试。"
+    }
+  }
+}

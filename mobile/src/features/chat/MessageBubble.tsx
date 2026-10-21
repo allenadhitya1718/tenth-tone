@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type AccessibilityActionEvent, type AccessibilityActionInfo, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -102,6 +103,9 @@ export const MessageBubble = memo(function MessageBubble({
   // 0146: a video sent from the "Send to" sheet; text is only its link.
   const isVideoShare = item.type === 'video_share';
   const isMedia = isImage || !!gif || isVideoShare;
+  // WhatsApp look: a photo or GIF with no caption carries its time and ticks
+  // on the picture itself, over a soft shade, inside a thin bubble frame.
+  const timeOnMedia = !!gif || (isImage && !item.text);
   const hasInteractive = isMedia || isVoice || !!item.reply_to;
   const gifLabel = item.text ? t('gif.a11y', { description: item.text }) : t('gif.a11yPlain');
 
@@ -144,7 +148,7 @@ export const MessageBubble = memo(function MessageBubble({
         ]}
       >
         {authorName && !mine ? (
-          <Text style={[styles.author, { color: colors.primary2 }]} numberOfLines={1}>
+          <Text style={[styles.author, { color: colors.primary2 }, isMedia && styles.captionPad]} numberOfLines={1}>
             {authorName}
           </Text>
         ) : null}
@@ -154,7 +158,7 @@ export const MessageBubble = memo(function MessageBubble({
             onPress={() => item.reply_to && onQuotePress(item.reply_to.id)}
             onLongPress={() => onMenu(item)}
             disabled={!item.reply_to}
-            style={[styles.quote, { backgroundColor: tone.quote, borderStartColor: mine ? colors.onPrimary : colors.primary2 }]}
+            style={[styles.quote, { backgroundColor: tone.quote, borderStartColor: mine ? colors.onPrimary : colors.primary2 }, isMedia && styles.quoteOnMedia]}
             accessibilityRole="button"
             accessibilityLabel={
               item.reply_to
@@ -188,13 +192,16 @@ export const MessageBubble = memo(function MessageBubble({
             accessibilityActions={a11yActions}
             onAccessibilityAction={onA11yAction}
           >
-            <Image
-              source={{ uri: item.attachment_url ?? undefined }}
-              style={[styles.image, { backgroundColor: colors.bg3 }]}
-              contentFit="cover"
-              transition={150}
-              recyclingKey={item.localId ?? item.id}
-            />
+            <View style={styles.mediaClip}>
+              <Image
+                source={{ uri: item.attachment_url ?? undefined }}
+                style={[styles.image, { backgroundColor: colors.bg3 }]}
+                contentFit="cover"
+                transition={150}
+                recyclingKey={item.localId ?? item.id}
+              />
+              {timeOnMedia ? <MediaMeta time={time} tick={mine ? tick : null} pending={!!item.pending} mine={mine} /> : null}
+            </View>
           </Pressable>
         ) : null}
 
@@ -209,15 +216,18 @@ export const MessageBubble = memo(function MessageBubble({
             accessibilityActions={a11yActions}
             onAccessibilityAction={onA11yAction}
           >
-            <Image
-              source={{ uri: gif.uri }}
-              style={[styles.gif, { aspectRatio: gif.aspect, backgroundColor: colors.bg3 }]}
-              contentFit="cover"
-              autoplay
-              transition={150}
-              recyclingKey={item.localId ?? item.id}
-              accessible={false}
-            />
+            <View style={styles.mediaClip}>
+              <Image
+                source={{ uri: gif.uri }}
+                style={[styles.gif, { aspectRatio: gif.aspect, backgroundColor: colors.bg3 }]}
+                contentFit="cover"
+                autoplay
+                transition={150}
+                recyclingKey={item.localId ?? item.id}
+                accessible={false}
+              />
+              <MediaMeta time={time} tick={mine ? tick : null} pending={!!item.pending} mine={mine} />
+            </View>
           </Pressable>
         ) : null}
 
@@ -242,14 +252,18 @@ export const MessageBubble = memo(function MessageBubble({
         ) : null}
 
         <View
-          style={[styles.meta, isMedia && styles.captionPad]}
+          style={timeOnMedia ? styles.metaHidden : [styles.meta, isMedia && styles.captionPad, isMedia && styles.metaUnderMedia]}
           accessible={hasInteractive}
           accessibilityLabel={hasInteractive ? a11yLabel : undefined}
           accessibilityActions={hasInteractive ? a11yActions : undefined}
           onAccessibilityAction={hasInteractive ? onA11yAction : undefined}
         >
-          <Text style={[styles.time, { color: tone.sub }]}>{time}</Text>
-          {mine ? <TickIcon tick={tick} pending={!!item.pending} color={tone.sub} /> : null}
+          {timeOnMedia ? null : (
+            <>
+              <Text style={[styles.time, { color: tone.sub }]}>{time}</Text>
+              {mine ? <TickIcon tick={tick} pending={!!item.pending} color={tone.sub} /> : null}
+            </>
+          )}
         </View>
       </Pressable>
 
@@ -290,6 +304,20 @@ function TickIcon({ tick, pending, color }: { tick: Tick | null; pending: boolea
   );
 }
 
+// Time and ticks drawn on a photo or GIF, bottom end corner, white on a
+// soft dark shade so they read on any picture (WhatsApp style).
+function MediaMeta({ time, tick, pending, mine }: { time: string; tick: Tick | null; pending: boolean; mine: boolean }) {
+  return (
+    <View style={styles.mediaMetaWrap} pointerEvents="none" importantForAccessibility="no-hide-descendants">
+      <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)']} style={StyleSheet.absoluteFill} />
+      <View style={styles.mediaMeta}>
+        <Text style={styles.mediaTime}>{time}</Text>
+        {mine ? <TickIcon tick={tick} pending={pending} color="#FFFFFF" /> : null}
+      </View>
+    </View>
+  );
+}
+
 function groupReactions(list: ThreadMessage['reactions'], myId: string | undefined) {
   if (!list?.length) return [];
   const by = new Map<string, { emoji: string; count: number; mine: boolean }>();
@@ -323,16 +351,24 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: '80%', borderRadius: 18, paddingHorizontal: 12, paddingTop: 7, paddingBottom: 5 },
   bubbleMine: { borderBottomEndRadius: 5 },
   bubbleTheirs: { borderBottomStartRadius: 5 },
-  bubbleMedia: { paddingHorizontal: 4, paddingTop: 4 },
+  // A thin frame in the bubble colour around a photo or GIF (WhatsApp).
+  bubbleMedia: { paddingHorizontal: 3, paddingTop: 3, paddingBottom: 3 },
+  mediaClip: { borderRadius: 15, overflow: 'hidden' },
+  mediaMetaWrap: { position: 'absolute', start: 0, end: 0, bottom: 0, height: 34, justifyContent: 'flex-end' },
+  mediaMeta: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: 3, paddingHorizontal: 8, paddingBottom: 5 },
+  mediaTime: { fontSize: 11, color: '#FFFFFF', textShadowColor: 'rgba(0,0,0,0.4)', textShadowRadius: 2 },
+  metaHidden: { position: 'absolute', width: 1, height: 1, opacity: 0 },
+  quoteOnMedia: { marginBottom: 3 },
+  metaUnderMedia: { paddingBottom: 2 },
   pending: { opacity: 0.75 },
   author: { fontSize: 12.5, fontWeight: '700', marginBottom: 2, textAlign: 'left' },
   quote: { borderStartWidth: 3, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, marginBottom: 5, minWidth: 120 },
   quoteName: { fontSize: 12.5, fontWeight: '700', textAlign: 'left' },
   quoteText: { fontSize: 13, textAlign: 'left' },
   italic: { fontStyle: 'italic' },
-  image: { width: 230, height: 270, borderRadius: 14 },
+  image: { width: 230, height: 270 },
   // Width fixed, height from the GIF's own aspect ratio (clamped in parseGifUrl).
-  gif: { width: 220, borderRadius: 14 },
+  gif: { width: 220 },
   text: { fontSize: 16, lineHeight: 22, textAlign: 'left', writingDirection: 'auto' },
   captionPad: { paddingHorizontal: 8 },
   meta: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: 3, marginTop: 2 },

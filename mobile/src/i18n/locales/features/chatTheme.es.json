@@ -1,0 +1,46 @@
+{
+  "chatTheme": {
+    "title": "Tema del chat",
+    "preview": "Vista previa del tema",
+    "sampleTheirs": "¡Hola! ¿Qué tal se ve?",
+    "sampleMine": "Me encanta 😍",
+    "sharedNote": "Todos en este chat verán el tema que elijas.",
+    "default": "Predeterminado",
+    "photo": "Tu foto",
+    "choosePhoto": "Elegir una foto",
+    "changePhoto": "Cambiar foto",
+    "colours": "Colores",
+    "gradients": "Degradados",
+    "apply": "Aplicar tema",
+    "saved": "Tema del chat actualizado",
+    "names": {
+      "sand": "Arena",
+      "mint": "Menta",
+      "blush": "Rubor",
+      "lavender": "Lavanda",
+      "sky": "Cielo",
+      "lemon": "Limón",
+      "slate": "Pizarra",
+      "graphite": "Grafito",
+      "sunset": "Atardecer",
+      "aurora": "Aurora",
+      "ocean": "Océano",
+      "peach": "Melocotón",
+      "forest": "Bosque",
+      "berry": "Frutos rojos",
+      "dusk": "Anochecer"
+    },
+    "sys": {
+      "changed": "{{actor}} cambió el tema del chat",
+      "reset": "{{actor}} restableció el tema del chat"
+    },
+    "err": {
+      "needsUpdate": "Los temas del chat aún no están disponibles. Inténtalo más tarde.",
+      "notAccepted": "Podrás cambiar el tema cuando acepte tu solicitud de mensaje.",
+      "blocked": "No puedes cambiar el tema de este chat.",
+      "gone": "Este chat ya no está disponible.",
+      "photoFailed": "No se pudo usar esa foto. Prueba con otra.",
+      "generic": "No se pudo cambiar el tema. Inténtalo de nuevo."
+    }
+  }
+}

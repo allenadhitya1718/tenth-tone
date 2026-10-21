@@ -1,0 +1,46 @@
+{
+  "chatTheme": {
+    "title": "Sohbet teması",
+    "preview": "Tema önizlemesi",
+    "sampleTheirs": "Selam! Nasıl görünüyor?",
+    "sampleMine": "Bayıldım 😍",
+    "sharedNote": "Bu sohbetteki herkes seçtiğin temayı görecek.",
+    "default": "Varsayılan",
+    "photo": "Fotoğrafın",
+    "choosePhoto": "Fotoğraf seç",
+    "changePhoto": "Fotoğrafı değiştir",
+    "colours": "Renkler",
+    "gradients": "Geçişler",
+    "apply": "Temayı uygula",
+    "saved": "Sohbet teması güncellendi",
+    "names": {
+      "sand": "Kum",
+      "mint": "Nane",
+      "blush": "Allık",
+      "lavender": "Lavanta",
+      "sky": "Gökyüzü",
+      "lemon": "Limon",
+      "slate": "Arduvaz",
+      "graphite": "Grafit",
+      "sunset": "Gün batımı",
+      "aurora": "Aurora",
+      "ocean": "Okyanus",
+      "peach": "Şeftali",
+      "forest": "Orman",
+      "berry": "Böğürtlen",
+      "dusk": "Alacakaranlık"
+    },
+    "sys": {
+      "changed": "{{actor}} sohbet temasını değiştirdi",
+      "reset": "{{actor}} sohbet temasını varsayılana döndürdü"
+    },
+    "err": {
+      "needsUpdate": "Sohbet temaları henüz kullanılamıyor. Daha sonra tekrar dene.",
+      "notAccepted": "Mesaj isteğini kabul ettiğinde temayı değiştirebilirsin.",
+      "blocked": "Bu sohbetin temasını değiştiremezsin.",
+      "gone": "Bu sohbet artık kullanılamıyor.",
+      "photoFailed": "Bu fotoğraf kullanılamadı. Başka birini dene.",
+      "generic": "Tema değiştirilemedi. Tekrar dene."
+    }
+  }
+}

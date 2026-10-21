@@ -98,6 +98,10 @@ export type ChatInfo = {
   memberCount: number;
   title: string;
   photo: string;
+  // 0149: the chat's shared background. null theme = the default doodle;
+  // wallpaper is set only with theme 'photo'.
+  theme: string | null;
+  wallpaper: string | null;
   // The chat does not exist or you are not in it (a stale link).
   missing?: boolean;
 };
@@ -166,14 +170,14 @@ const MEMBER_PROFILE = 'profiles:profiles!chat_members_user_id_fkey(id, name, ha
 // Details for ONE chat (title, photo, members), for the thread header.
 export async function fetchChatInfo(chatId: Uuid): Promise<ChatInfo> {
   const me = await uid();
-  const [{ data: chat, error: chatError }, { data: members }] = await Promise.all([
-    supabase.from('chats').select('id, type, name, photo_url').eq('id', chatId).maybeSingle(),
+  const [chatRes, { data: members }] = await Promise.all([
+    readChatRow(chatId),
     supabase.from('chat_members').select(`user_id, ${MEMBER_PROFILE}`).eq('chat_id', chatId),
   ]);
   // A failed read is an error to retry; only a clean "no such chat" (not a
   // member, or never existed) is reported as missing.
-  if (chatError) throw chatError;
-  const c = chat as Pick<Chat, 'id' | 'type' | 'name' | 'photo_url'> | null;
+  if (chatRes.error) throw chatRes.error;
+  const c = chatRes.data;
   const rows = (members ?? []) as unknown as Pick<ChatMember, 'user_id' | 'profiles'>[];
   const others = rows
     .filter((m) => m.user_id !== me)
@@ -187,8 +191,21 @@ export async function fetchChatInfo(chatId: Uuid): Promise<ChatInfo> {
     memberCount: rows.length,
     title: isGroup ? c?.name || GROUP_FALLBACK_TITLE : others[0]?.name || others[0]?.handle || DM_FALLBACK_TITLE,
     photo: isGroup ? c?.photo_url || '' : others[0]?.avatar_url || '',
+    theme: c?.theme ?? null,
+    wallpaper: c?.theme === 'photo' ? c?.wallpaper_url ?? null : null,
     ...(c ? {} : { missing: true }),
   };
+}
+
+type ChatRow = Pick<Chat, 'id' | 'type' | 'name' | 'photo_url'> & { theme?: string | null; wallpaper_url?: string | null };
+
+// With the theme columns (0149); before 0149 is applied, without them, so
+// the thread still opens.
+async function readChatRow(chatId: Uuid): Promise<{ data: ChatRow | null; error: unknown }> {
+  const full = await supabase.from('chats').select('id, type, name, photo_url, theme, wallpaper_url').eq('id', chatId).maybeSingle();
+  if (full.error?.code !== '42703') return { data: full.data as ChatRow | null, error: full.error };
+  const base = await supabase.from('chats').select('id, type, name, photo_url').eq('id', chatId).maybeSingle();
+  return { data: base.data as ChatRow | null, error: base.error };
 }
 
 // The people YOU have blocked. Only that direction is readable (the

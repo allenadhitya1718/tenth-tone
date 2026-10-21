@@ -62,6 +62,15 @@ import gifFr from './locales/features/gif.fr.json';
 import gifEs from './locales/features/gif.es.json';
 import gifTr from './locales/features/gif.tr.json';
 import gifId from './locales/features/gif.id.json';
+import chatThemeAr from './locales/features/chatTheme.ar.json';
+import chatThemeEn from './locales/features/chatTheme.en.json';
+import chatThemeZh from './locales/features/chatTheme.zh.json';
+import chatThemeHi from './locales/features/chatTheme.hi.json';
+import chatThemeUr from './locales/features/chatTheme.ur.json';
+import chatThemeFr from './locales/features/chatTheme.fr.json';
+import chatThemeEs from './locales/features/chatTheme.es.json';
+import chatThemeTr from './locales/features/chatTheme.tr.json';
+import chatThemeId from './locales/features/chatTheme.id.json';
 import groupInfoAr from './locales/features/groupInfo.ar.json';
 import groupInfoEn from './locales/features/groupInfo.en.json';
 import groupInfoZh from './locales/features/groupInfo.zh.json';
@@ -188,15 +197,15 @@ import draftsId from './locales/features/drafts.id.json';
 // Each feature keeps its strings in its own namespace file
 // (locales/features/<name>.<lang>.json, top-level key = the namespace), so
 // features can be worked on without editing one shared file.
-const AR = { ...ar, ...chatAr, ...discoverAr, ...liveAr, ...mapAr, ...settings2Ar, ...storiesAr, ...hashtagsAr, ...walkieAr, ...callAr, ...camera2Ar, ...notifyAr, ...draftsAr, ...placeAr, ...ugcAr, ...fix4Ar, ...polishAr, ...gifAr, ...sendToAr, ...groupInfoAr };
-const EN = { ...en, ...chatEn, ...discoverEn, ...liveEn, ...mapEn, ...settings2En, ...storiesEn, ...hashtagsEn, ...walkieEn, ...callEn, ...camera2En, ...notifyEn, ...draftsEn, ...placeEn, ...ugcEn, ...fix4En, ...polishEn, ...gifEn, ...sendToEn, ...groupInfoEn };
-const ZH = { ...zh, ...chatZh, ...discoverZh, ...liveZh, ...mapZh, ...settings2Zh, ...storiesZh, ...notifyZh, ...hashtagsZh, ...walkieZh, ...callZh, ...camera2Zh, ...draftsZh, ...placeZh, ...ugcZh, ...fix4Zh, ...polishZh, ...gifZh, ...sendToZh, ...groupInfoZh };
-const HI = { ...hi, ...chatHi, ...discoverHi, ...liveHi, ...mapHi, ...settings2Hi, ...storiesHi, ...notifyHi, ...hashtagsHi, ...walkieHi, ...callHi, ...camera2Hi, ...draftsHi, ...placeHi, ...ugcHi, ...fix4Hi, ...polishHi, ...gifHi, ...sendToHi, ...groupInfoHi };
-const UR = { ...ur, ...chatUr, ...discoverUr, ...liveUr, ...mapUr, ...settings2Ur, ...storiesUr, ...notifyUr, ...hashtagsUr, ...walkieUr, ...callUr, ...camera2Ur, ...draftsUr, ...placeUr, ...ugcUr, ...fix4Ur, ...polishUr, ...gifUr, ...sendToUr, ...groupInfoUr };
-const FR = { ...fr, ...chatFr, ...discoverFr, ...liveFr, ...mapFr, ...settings2Fr, ...storiesFr, ...notifyFr, ...hashtagsFr, ...walkieFr, ...callFr, ...camera2Fr, ...draftsFr, ...placeFr, ...ugcFr, ...fix4Fr, ...polishFr, ...gifFr, ...sendToFr, ...groupInfoFr };
-const ES = { ...es, ...chatEs, ...discoverEs, ...liveEs, ...mapEs, ...settings2Es, ...storiesEs, ...notifyEs, ...hashtagsEs, ...walkieEs, ...callEs, ...camera2Es, ...draftsEs, ...placeEs, ...ugcEs, ...fix4Es, ...polishEs, ...gifEs, ...sendToEs, ...groupInfoEs };
-const TR = { ...tr, ...chatTr, ...discoverTr, ...liveTr, ...mapTr, ...settings2Tr, ...storiesTr, ...notifyTr, ...hashtagsTr, ...walkieTr, ...callTr, ...camera2Tr, ...draftsTr, ...placeTr, ...ugcTr, ...fix4Tr, ...polishTr, ...gifTr, ...sendToTr, ...groupInfoTr };
-const ID = { ...id, ...chatId, ...discoverId, ...liveId, ...mapId, ...settings2Id, ...storiesId, ...notifyId, ...hashtagsId, ...walkieId, ...callId, ...camera2Id, ...draftsId, ...placeId, ...ugcId, ...fix4Id, ...polishId, ...gifId, ...sendToId, ...groupInfoId };
+const AR = { ...ar, ...chatAr, ...discoverAr, ...liveAr, ...mapAr, ...settings2Ar, ...storiesAr, ...hashtagsAr, ...walkieAr, ...callAr, ...camera2Ar, ...notifyAr, ...draftsAr, ...placeAr, ...ugcAr, ...fix4Ar, ...polishAr, ...gifAr, ...sendToAr, ...groupInfoAr, ...chatThemeAr };
+const EN = { ...en, ...chatEn, ...discoverEn, ...liveEn, ...mapEn, ...settings2En, ...storiesEn, ...hashtagsEn, ...walkieEn, ...callEn, ...camera2En, ...notifyEn, ...draftsEn, ...placeEn, ...ugcEn, ...fix4En, ...polishEn, ...gifEn, ...sendToEn, ...groupInfoEn, ...chatThemeEn };
+const ZH = { ...zh, ...chatZh, ...discoverZh, ...liveZh, ...mapZh, ...settings2Zh, ...storiesZh, ...notifyZh, ...hashtagsZh, ...walkieZh, ...callZh, ...camera2Zh, ...draftsZh, ...placeZh, ...ugcZh, ...fix4Zh, ...polishZh, ...gifZh, ...sendToZh, ...groupInfoZh, ...chatThemeZh };
+const HI = { ...hi, ...chatHi, ...discoverHi, ...liveHi, ...mapHi, ...settings2Hi, ...storiesHi, ...notifyHi, ...hashtagsHi, ...walkieHi, ...callHi, ...camera2Hi, ...draftsHi, ...placeHi, ...ugcHi, ...fix4Hi, ...polishHi, ...gifHi, ...sendToHi, ...groupInfoHi, ...chatThemeHi };
+const UR = { ...ur, ...chatUr, ...discoverUr, ...liveUr, ...mapUr, ...settings2Ur, ...storiesUr, ...notifyUr, ...hashtagsUr, ...walkieUr, ...callUr, ...camera2Ur, ...draftsUr, ...placeUr, ...ugcUr, ...fix4Ur, ...polishUr, ...gifUr, ...sendToUr, ...groupInfoUr, ...chatThemeUr };
+const FR = { ...fr, ...chatFr, ...discoverFr, ...liveFr, ...mapFr, ...settings2Fr, ...storiesFr, ...notifyFr, ...hashtagsFr, ...walkieFr, ...callFr, ...camera2Fr, ...draftsFr, ...placeFr, ...ugcFr, ...fix4Fr, ...polishFr, ...gifFr, ...sendToFr, ...groupInfoFr, ...chatThemeFr };
+const ES = { ...es, ...chatEs, ...discoverEs, ...liveEs, ...mapEs, ...settings2Es, ...storiesEs, ...notifyEs, ...hashtagsEs, ...walkieEs, ...callEs, ...camera2Es, ...draftsEs, ...placeEs, ...ugcEs, ...fix4Es, ...polishEs, ...gifEs, ...sendToEs, ...groupInfoEs, ...chatThemeEs };
+const TR = { ...tr, ...chatTr, ...discoverTr, ...liveTr, ...mapTr, ...settings2Tr, ...storiesTr, ...notifyTr, ...hashtagsTr, ...walkieTr, ...callTr, ...camera2Tr, ...draftsTr, ...placeTr, ...ugcTr, ...fix4Tr, ...polishTr, ...gifTr, ...sendToTr, ...groupInfoTr, ...chatThemeTr };
+const ID = { ...id, ...chatId, ...discoverId, ...liveId, ...mapId, ...settings2Id, ...storiesId, ...notifyId, ...hashtagsId, ...walkieId, ...callId, ...camera2Id, ...draftsId, ...placeId, ...ugcId, ...fix4Id, ...polishId, ...gifId, ...sendToId, ...groupInfoId, ...chatThemeId };
 
 // Every language the app offers (client note 14). `native` is the name in
 // its own script, `english` the name shown beside it for anyone who cannot

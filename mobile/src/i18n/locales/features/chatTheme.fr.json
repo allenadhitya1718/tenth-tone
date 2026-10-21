@@ -1,0 +1,46 @@
+{
+  "chatTheme": {
+    "title": "Thème de la discussion",
+    "preview": "Aperçu du thème",
+    "sampleTheirs": "Salut ! Ça rend comment ?",
+    "sampleMine": "J'adore 😍",
+    "sharedNote": "Tout le monde dans cette discussion verra le thème que vous choisissez.",
+    "default": "Par défaut",
+    "photo": "Votre photo",
+    "choosePhoto": "Choisir une photo",
+    "changePhoto": "Changer de photo",
+    "colours": "Couleurs",
+    "gradients": "Dégradés",
+    "apply": "Appliquer le thème",
+    "saved": "Thème de la discussion mis à jour",
+    "names": {
+      "sand": "Sable",
+      "mint": "Menthe",
+      "blush": "Rose poudré",
+      "lavender": "Lavande",
+      "sky": "Ciel",
+      "lemon": "Citron",
+      "slate": "Ardoise",
+      "graphite": "Graphite",
+      "sunset": "Coucher de soleil",
+      "aurora": "Aurore",
+      "ocean": "Océan",
+      "peach": "Pêche",
+      "forest": "Forêt",
+      "berry": "Baies",
+      "dusk": "Crépuscule"
+    },
+    "sys": {
+      "changed": "{{actor}} a changé le thème de la discussion",
+      "reset": "{{actor}} a rétabli le thème par défaut"
+    },
+    "err": {
+      "needsUpdate": "Les thèmes ne sont pas encore disponibles. Réessayez plus tard.",
+      "notAccepted": "Vous pourrez changer le thème quand votre demande de message sera acceptée.",
+      "blocked": "Vous ne pouvez pas changer le thème de cette discussion.",
+      "gone": "Cette discussion n'est plus disponible.",
+      "photoFailed": "Impossible d'utiliser cette photo. Essayez-en une autre.",
+      "generic": "Impossible de changer le thème. Réessayez."
+    }
+  }
+}

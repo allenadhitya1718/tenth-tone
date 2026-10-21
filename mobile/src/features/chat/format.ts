@@ -39,6 +39,8 @@ type GroupEvent = {
   target?: string;
   target_name?: string;
   name?: string;
+  // 0149 theme_changed: the new theme key, or 'default'.
+  theme?: string;
   targets?: { id?: string; name?: string }[];
 };
 
@@ -79,6 +81,10 @@ export function systemLabel(text: string | null | undefined, t: TFunction): stri
       return t('groupInfo.sys.left', { actor });
     case 'owner_changed':
       return t('groupInfo.sys.ownerChanged', { actor });
+    case 'theme_changed':
+      return ev.theme === 'default'
+        ? t('chatTheme.sys.reset', { actor })
+        : t('chatTheme.sys.changed', { actor });
     default:
       return t('groupInfo.sys.updated');
   }

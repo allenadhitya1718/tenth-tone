@@ -466,6 +466,7 @@ export function GroupInfo({ chatId }: { chatId: string }) {
 
   const footer = (
     <View style={[styles.actions, { borderTopColor: colors.border }]}>
+      <ActionRow icon="color-palette-outline" label={t('chatTheme.title')} onPress={() => router.push(`/chat-theme/${chatId}` as Href)} />
       <ActionRow icon="exit-outline" label={t('groupInfo.leave')} danger busy={leave.isPending} disabled={busyAll} onPress={confirmLeave} />
       {owner ? (
         <ActionRow icon="trash-outline" label={t('groupInfo.delete')} danger busy={remove.isPending} disabled={busyAll} onPress={confirmDelete} />

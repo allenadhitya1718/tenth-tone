@@ -5,11 +5,12 @@ import type { MessageRow } from '@/api/chat';
 import { listenerTopic, supabase } from '@/api/client';
 import { groupQueryKeys } from '@/api/groups';
 
-// Every group change (rename, photo, add, remove, admin, leave) writes a
-// 'system' line into the chat (0147), and messages are already in the
+// Every group change (rename, photo, add, remove, admin, leave) and every
+// chat theme change, in groups and DMs alike, writes a 'system' line into
+// the chat (0147, 0149), and messages are already in the
 // realtime publication. So one listener on this chat's inserts is enough to
-// repaint the thread header, the inbox row and the Group Info screen when
-// anyone changes the group, without publishing chats / chat_members (whose
+// repaint the thread header and background, the inbox row and the Group
+// Info screen when anyone changes the chat, without publishing chats / chat_members (whose
 // read stamps change on every message).
 export function useGroupLive(chatId: string, enabled = true) {
   const qc = useQueryClient();

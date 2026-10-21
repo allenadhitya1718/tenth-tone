@@ -1,0 +1,46 @@
+{
+  "chatTheme": {
+    "title": "Chat theme",
+    "preview": "Theme preview",
+    "sampleTheirs": "Hey! How does this look?",
+    "sampleMine": "Love it 😍",
+    "sharedNote": "Everyone in this chat will see the theme you choose.",
+    "default": "Default",
+    "photo": "Your photo",
+    "choosePhoto": "Choose a photo",
+    "changePhoto": "Change photo",
+    "colours": "Colours",
+    "gradients": "Gradients",
+    "apply": "Set theme",
+    "saved": "Chat theme updated",
+    "names": {
+      "sand": "Sand",
+      "mint": "Mint",
+      "blush": "Blush",
+      "lavender": "Lavender",
+      "sky": "Sky",
+      "lemon": "Lemon",
+      "slate": "Slate",
+      "graphite": "Graphite",
+      "sunset": "Sunset",
+      "aurora": "Aurora",
+      "ocean": "Ocean",
+      "peach": "Peach",
+      "forest": "Forest",
+      "berry": "Berry",
+      "dusk": "Dusk"
+    },
+    "sys": {
+      "changed": "{{actor}} changed the chat theme",
+      "reset": "{{actor}} reset the chat theme"
+    },
+    "err": {
+      "needsUpdate": "Chat themes aren't available yet. Try again later.",
+      "notAccepted": "You can change the theme once they accept your message request.",
+      "blocked": "You can't change the theme of this chat.",
+      "gone": "This chat is no longer available.",
+      "photoFailed": "Couldn't use that photo. Try another one.",
+      "generic": "Couldn't change the theme. Try again."
+    }
+  }
+}

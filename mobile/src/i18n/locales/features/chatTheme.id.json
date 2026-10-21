@@ -1,0 +1,46 @@
+{
+  "chatTheme": {
+    "title": "Tema obrolan",
+    "preview": "Pratinjau tema",
+    "sampleTheirs": "Hai! Gimana kelihatannya?",
+    "sampleMine": "Suka banget 😍",
+    "sharedNote": "Semua orang di obrolan ini akan melihat tema yang kamu pilih.",
+    "default": "Bawaan",
+    "photo": "Fotomu",
+    "choosePhoto": "Pilih foto",
+    "changePhoto": "Ganti foto",
+    "colours": "Warna",
+    "gradients": "Gradien",
+    "apply": "Pasang tema",
+    "saved": "Tema obrolan diperbarui",
+    "names": {
+      "sand": "Pasir",
+      "mint": "Mint",
+      "blush": "Merona",
+      "lavender": "Lavender",
+      "sky": "Langit",
+      "lemon": "Lemon",
+      "slate": "Batu tulis",
+      "graphite": "Grafit",
+      "sunset": "Senja",
+      "aurora": "Aurora",
+      "ocean": "Samudra",
+      "peach": "Persik",
+      "forest": "Hutan",
+      "berry": "Beri",
+      "dusk": "Petang"
+    },
+    "sys": {
+      "changed": "{{actor}} mengubah tema obrolan",
+      "reset": "{{actor}} mengembalikan tema obrolan ke bawaan"
+    },
+    "err": {
+      "needsUpdate": "Tema obrolan belum tersedia. Coba lagi nanti.",
+      "notAccepted": "Kamu bisa mengubah tema setelah dia menerima permintaan pesanmu.",
+      "blocked": "Kamu tidak bisa mengubah tema obrolan ini.",
+      "gone": "Obrolan ini sudah tidak tersedia.",
+      "photoFailed": "Foto itu tidak bisa dipakai. Coba foto lain.",
+      "generic": "Tema tidak bisa diubah. Coba lagi."
+    }
+  }
+}
