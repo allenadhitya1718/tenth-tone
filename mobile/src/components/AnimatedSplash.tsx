@@ -3,6 +3,7 @@ import { Image, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
+  interpolate,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
@@ -20,18 +21,23 @@ import Animated, {
 export const SPLASH_BG = '#000421';
 const MARK = 200; // same as `imageWidth` for expo-splash-screen in app.json
 const MIN_MS = 2200;
-const OUT_MS = 380;
-const RING_GAP = 380;
+const OUT_MS = 480;
+const RING_GAP = 420;
+// Gentle ease-out (no hard start or stop), shared by the beats below.
+const SOFT = Easing.bezier(0.22, 1, 0.36, 1);
+const BREATHE = Easing.inOut(Easing.sin);
 
 function Ring({ delay, size }: { delay: number; size: number }) {
   const p = useSharedValue(0);
   useEffect(() => {
-    p.value = withDelay(delay, withTiming(1, { duration: 1500, easing: Easing.out(Easing.cubic) }));
+    p.value = withDelay(delay, withTiming(1, { duration: 1900, easing: SOFT }));
     return () => cancelAnimation(p);
   }, [delay, p]);
+  // Fades in as it leaves the mark and out as it spreads: it used to appear
+  // at full strength on its first frame, which read as a flicker.
   const a = useAnimatedStyle(() => ({
-    opacity: (1 - p.value) * (p.value === 0 ? 0 : 0.55),
-    transform: [{ scale: 0.55 + p.value * 1.35 }],
+    opacity: interpolate(p.value, [0, 0.12, 1], [0, 0.5, 0]),
+    transform: [{ scale: 0.6 + p.value * 1.3 }],
   }));
   return (
     <Animated.View
@@ -55,8 +61,11 @@ export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; o
     glow.value = withDelay(
       250,
       withSequence(
-        withTiming(1, { duration: 700, easing: Easing.out(Easing.quad) }),
-        withRepeat(withSequence(withTiming(0.72, { duration: 700 }), withTiming(1, { duration: 700 })), -1),
+        withTiming(1, { duration: 900, easing: SOFT }),
+        withRepeat(
+          withSequence(withTiming(0.75, { duration: 1100, easing: BREATHE }), withTiming(1, { duration: 1100, easing: BREATHE })),
+          -1,
+        ),
       ),
     );
     const t = setTimeout(() => setMinPassed(true), MIN_MS);
@@ -65,7 +74,7 @@ export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; o
 
   useEffect(() => {
     if (!ready || !minPassed) return;
-    out.value = withTiming(1, { duration: OUT_MS, easing: Easing.in(Easing.quad) }, (fin) => {
+    out.value = withTiming(1, { duration: OUT_MS, easing: Easing.inOut(Easing.cubic) }, (fin) => {
       if (fin) runOnJS(onFinish)();
     });
   }, [ready, minPassed, out, onFinish]);

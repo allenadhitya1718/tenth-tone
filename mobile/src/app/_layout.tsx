@@ -71,14 +71,24 @@ function RootNavigator() {
     <AnimatedSplash ready={ready} onShown={() => SplashScreen.hideAsync().catch(() => {})} onFinish={() => setSplashDone(true)} />
   );
 
-  if (!ready) return splash;
-
   const signedIn = !!session && !recovering;
 
+  // The splash keeps one place in the tree whether or not the app is ready:
+  // moving it (it used to be returned alone, then nested below) remounted
+  // it the moment sign-in finished, restarting its animation mid-play.
   return (
-    <LocaleProvider direction={languageIsRtl(i18n.language) ? 'rtl' : 'ltr'}>
+    <>
+      {ready ? <AppTree signedIn={signedIn} isDark={isDark} bg={colors.bg} rtl={languageIsRtl(i18n.language)} /> : null}
+      {splash}
+    </>
+  );
+}
+
+function AppTree({ signedIn, isDark, bg, rtl }: { signedIn: boolean; isDark: boolean; bg: string; rtl: boolean }) {
+  return (
+    <LocaleProvider direction={rtl ? 'rtl' : 'ltr'}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: bg } }}>
         <Stack.Protected guard={signedIn}>
           <Stack.Screen name="(app)" />
         </Stack.Protected>
@@ -87,7 +97,6 @@ function RootNavigator() {
         </Stack.Protected>
       </Stack>
       {signedIn ? <CallPill /> : null}
-      {splash}
     </LocaleProvider>
   );
 }
