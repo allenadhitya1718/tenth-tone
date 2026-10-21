@@ -15,7 +15,9 @@
       "call": {
         "title": "Llamada de FLYP en curso",
         "body": "Toca para volver a la llamada",
-        "end": "Colgar"
+        "end": "Colgar",
+        "ongoingVoice": "Llamada de voz en curso",
+        "ongoingVideo": "Videollamada en curso"
       },
       "live": {
         "title": "Estás en directo",
@@ -26,7 +28,8 @@
         "title": "Walkie-talkie activado",
         "body": "Toca para volver al chat",
         "end": "Desactivar"
-      }
+      },
+      "callChannel": "Llamadas en curso"
     }
   }
 }

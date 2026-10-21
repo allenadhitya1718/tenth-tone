@@ -351,6 +351,16 @@ export function StoryViewer({ userId }: { userId: string }) {
     return (
       <View style={[styles.root, styles.center]}>
         <StatusBar barStyle="light-content" />
+        {/* Always a way out (iOS has no back button), even while loading. */}
+        <Pressable
+          onPress={close}
+          hitSlop={10}
+          style={[styles.iconBtn, styles.loadingClose, { top: insets.top + 8 }]}
+          accessibilityRole="button"
+          accessibilityLabel={t('stories.close')}
+        >
+          <Ionicons name="close" size={28} color="#fff" />
+        </Pressable>
         {stories.isLoading ? (
           <ActivityIndicator color="#fff" />
         ) : (
@@ -775,6 +785,7 @@ const styles = StyleSheet.create({
   shareName: { color: '#fff', fontSize: 14, fontWeight: '700', textAlign: 'left' },
   shareHandle: { color: 'rgba(255,255,255,0.8)', fontSize: 12, textAlign: 'left' },
   shareWatch: { color: '#fff', fontSize: 14, fontWeight: '700', marginStart: 6 },
+  loadingClose: { position: 'absolute', end: 12 },
   ownerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
   glassWrap: { borderRadius: 24, overflow: 'hidden' },
   glass: {

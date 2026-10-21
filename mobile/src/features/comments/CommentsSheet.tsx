@@ -36,7 +36,7 @@ import { ApiError } from '@/api/client';
 import { type Gif, gifStoredUrl, parseGifUrl } from '@/api/gifs';
 import { videoKeys } from '@/api/videos';
 import { showAlert } from '@/components/Dialog';
-import { NotFoundState } from '@/components/NotFoundState';
+import { NotFoundState, goBackOrHome } from '@/components/NotFoundState';
 import { EmojiGifPanel } from '@/components/emoji/EmojiGifPanel';
 import { KlipyWatermark } from '@/components/emoji/KlipyBrand';
 import { QuickEmojis } from '@/components/emoji/EmojiPanel';
@@ -283,7 +283,7 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
   if (missing) {
     return (
       <View style={styles.backdrop}>
-        <Pressable style={{ flex: 1 }} onPress={() => router.back()} accessibilityLabel={t('legal.close')} />
+        <Pressable style={{ flex: 1 }} onPress={goBackOrHome} accessibilityLabel={t('legal.close')} />
         <SafeAreaView style={[styles.panel, { height: height * 0.5, backgroundColor: colors.bg }]} edges={['bottom']}>
           <NotFoundState embedded title={t('fix4.notFoundVideoTitle')} body={t('fix4.notFoundVideoBody')} />
         </SafeAreaView>
@@ -300,7 +300,7 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
     <View style={styles.backdrop} collapsable={false} importantForAccessibility="auto">
     <Pressable
       style={{ flex: 1 }}
-      onPress={() => router.back()}
+      onPress={goBackOrHome}
       accessible={false}
       importantForAccessibility="no"
       accessibilityElementsHidden
@@ -316,7 +316,7 @@ export function CommentsSheet({ videoId }: { videoId: string }) {
         <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
           {t('comments.title', { count: comments.length })}
         </Text>
-        <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('legal.close')}>
+        <Pressable onPress={goBackOrHome} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('legal.close')}>
           <Ionicons name="close" size={24} color={colors.text} />
         </Pressable>
       </View>

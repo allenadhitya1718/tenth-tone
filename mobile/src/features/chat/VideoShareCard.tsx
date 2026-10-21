@@ -126,8 +126,9 @@ export const VideoShareCard = memo(function VideoShareCard({
 });
 
 const styles = StyleSheet.create({
-  card: { width: 200 },
-  thumb: { width: 200, height: 280, borderRadius: 14, overflow: 'hidden' },
+  // Same frame as a photo or GIF in the bubble (MessageBubble mediaClip).
+  card: { width: 220 },
+  thumb: { width: 220, height: 300, borderRadius: 15, overflow: 'hidden' },
   centerFill: { ...(StyleSheet.absoluteFill as object), alignItems: 'center', justifyContent: 'center', gap: 6 },
   errorText: { color: '#fff', fontSize: 13, fontWeight: '600', textAlign: 'center', paddingHorizontal: 12 },
   who: {
@@ -161,8 +162,8 @@ const styles = StyleSheet.create({
   },
   // The triangle points right in every language; nudged to look centred.
   playIcon: { marginLeft: 3 },
-  caption: { fontSize: 14, marginTop: 6, paddingHorizontal: 6, textAlign: 'left', writingDirection: 'auto' },
-  unavailable: { width: 200, height: 120, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 4, padding: 12 },
+  caption: { fontSize: 14, marginTop: 4, paddingHorizontal: 8, textAlign: 'left', writingDirection: 'auto' },
+  unavailable: { width: 220, height: 120, borderRadius: 15, alignItems: 'center', justifyContent: 'center', gap: 4, padding: 12 },
   unavailableTitle: { fontSize: 14, fontWeight: '700' },
   unavailableBody: { fontSize: 12.5, textAlign: 'center' },
 });

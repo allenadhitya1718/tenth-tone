@@ -35,7 +35,7 @@ import { fetchUserSounds, type Sound, soundKeys } from '@/api/sounds';
 import { fetchDrafts, fetchSavedVideos, fetchUserVideos, videoKeys, type VideoTile } from '@/api/videos';
 import { tagKeys } from '@/api/tags';
 import { showAlert } from '@/components/Dialog';
-import { NotFoundState } from '@/components/NotFoundState';
+import { NotFoundState, goBackOrHome } from '@/components/NotFoundState';
 import { Button } from '@/components/ui';
 import { DraftSheet } from '@/features/drafts/DraftSheet';
 import { useDeleteVideo } from '@/features/feed/useDeleteVideo';
@@ -53,7 +53,9 @@ type Tab = 'videos' | 'audio' | 'map' | 'saved' | 'drafts';
 
 // One screen for your own profile and everyone else's. Client note 28: a
 // profile shows audio and maps as well as videos.
-export function ProfileView({ userId, isMe }: { userId: string; isMe: boolean }) {
+// `pushed`: opened over another screen (/user/<id>), not the Profile tab, so
+// it needs a back button even when it is your own profile.
+export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: boolean; pushed?: boolean }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
@@ -90,7 +92,7 @@ export function ProfileView({ userId, isMe }: { userId: string; isMe: boolean })
 
   const header = (
     <>
-      <ProfileHeader profile={profile.data ?? null} userId={userId} isMe={isMe} loading={profile.isLoading} />
+      <ProfileHeader profile={profile.data ?? null} userId={userId} isMe={isMe} pushed={!!pushed} loading={profile.isLoading} />
       <View style={[styles.tabs, { borderBottomColor: colors.border }]}>
         {tabs.map((k) => (
           <Pressable
@@ -187,7 +189,19 @@ const TAB_ICON: Record<Tab, keyof typeof Ionicons.glyphMap> = {
   drafts: 'document-text-outline',
 };
 
-function ProfileHeader({ profile, userId, isMe, loading }: { profile: Profile | null; userId: string; isMe: boolean; loading: boolean }) {
+function ProfileHeader({
+  profile,
+  userId,
+  isMe,
+  pushed,
+  loading,
+}: {
+  profile: Profile | null;
+  userId: string;
+  isMe: boolean;
+  pushed: boolean;
+  loading: boolean;
+}) {
   const { t } = useTranslation();
   const { colors } = useTheme();
 
@@ -201,7 +215,7 @@ function ProfileHeader({ profile, userId, isMe, loading }: { profile: Profile | 
   const shownName = profile?.name ?? profile?.handle ?? '';
   async function onBlock() {
     setMenuOpen(false);
-    if (await confirmBlock(userId, shownName)) router.back();
+    if (await confirmBlock(userId, shownName)) goBackOrHome();
   }
   // Mute (hide their videos from your feeds) and restrict (their comments on
   // your videos are only shown to them, no messages); both reversible here.
@@ -210,12 +224,13 @@ function ProfileHeader({ profile, userId, isMe, loading }: { profile: Profile | 
   return (
     <View>
       <View style={styles.topBar}>
-        {isMe ? (
+        {isMe && !pushed ? (
           <Pressable onPress={() => router.push('/settings')} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('settings.title')}>
             <Ionicons name="menu" size={26} color={colors.text} />
           </Pressable>
         ) : (
-          <Pressable onPress={() => router.back()} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('common.back')}>
+          // Checked: a profile opened cold from a link has nothing behind it.
+          <Pressable onPress={goBackOrHome} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('common.back')}>
             <Ionicons name={I18nManager.isRTL ? 'chevron-forward' : 'chevron-back'} size={26} color={colors.text} />
           </Pressable>
         )}

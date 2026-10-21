@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { I18nManager, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { I18nManager, Keyboard, Modal, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ApiError } from '@/api/client';
@@ -53,6 +53,20 @@ export function LocationNoteSheet({ visible, current, onClose }: Props) {
     },
   });
 
+  // The panel sits on top of the keyboard. KeyboardAvoidingView does
+  // nothing inside an Android Modal (edge to edge, the window never
+  // resizes), which left the text box hidden under the keyboard.
+  const [kb, setKb] = useState(0);
+  useEffect(() => {
+    const ios = Platform.OS === 'ios';
+    const show = Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', (e) => setKb(e.endCoordinates.height));
+    const hide = Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', () => setKb(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
   const trimmed = text.trim();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
@@ -62,8 +76,8 @@ export function LocationNoteSheet({ visible, current, onClose }: Props) {
         accessibilityRole="button"
         accessibilityLabel={t('map.close')}
       />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.avoid} pointerEvents="box-none">
-        <View style={[styles.panel, { backgroundColor: colors.bg, paddingBottom: insets.bottom + 14 }]} accessibilityViewIsModal>
+      <View style={[styles.avoid, { paddingBottom: kb }]} pointerEvents="box-none">
+        <View style={[styles.panel, { backgroundColor: colors.bg, paddingBottom: (kb ? 0 : insets.bottom) + 14 }]} accessibilityViewIsModal>
           <View style={styles.head}>
             <AppText variant="label" style={{ flex: 1 }} accessibilityRole="header">
               {t('map.noteTitle')}
@@ -111,7 +125,7 @@ export function LocationNoteSheet({ visible, current, onClose }: Props) {
             />
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }

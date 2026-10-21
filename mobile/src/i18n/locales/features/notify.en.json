@@ -15,7 +15,9 @@
       "call": {
         "title": "FLYP call in progress",
         "body": "Tap to return to the call",
-        "end": "Hang up"
+        "end": "Hang up",
+        "ongoingVoice": "Ongoing voice call",
+        "ongoingVideo": "Ongoing video call"
       },
       "live": {
         "title": "You're live",
@@ -26,7 +28,8 @@
         "title": "Walkie-talkie on",
         "body": "Tap to return to the chat",
         "end": "Turn off"
-      }
+      },
+      "callChannel": "Ongoing calls"
     }
   }
 }

@@ -15,7 +15,9 @@
       "call": {
         "title": "FLYP araması sürüyor",
         "body": "Aramaya dönmek için dokunun",
-        "end": "Kapat"
+        "end": "Kapat",
+        "ongoingVoice": "Sesli arama devam ediyor",
+        "ongoingVideo": "Görüntülü arama devam ediyor"
       },
       "live": {
         "title": "Canlı yayındasın",
@@ -26,7 +28,8 @@
         "title": "Telsiz açık",
         "body": "Sohbete dönmek için dokunun",
         "end": "Kapat"
-      }
+      },
+      "callChannel": "Devam eden aramalar"
     }
   }
 }

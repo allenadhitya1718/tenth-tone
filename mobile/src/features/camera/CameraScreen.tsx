@@ -18,6 +18,7 @@ import {
 } from 'react-native-vision-camera';
 
 import { showAlert } from '@/components/Dialog';
+import { goBackOrHome } from '@/components/NotFoundState';
 import { Button } from '@/components/ui';
 import { NEW_STORY_HREF } from '@/features/stories/StoryTray';
 
@@ -869,7 +870,7 @@ function CloseButton({ top, disabled }: { top: number; disabled?: boolean }) {
   const { t } = useTranslation();
   return (
     <Pressable
-      onPress={() => router.back()}
+      onPress={goBackOrHome}
       disabled={disabled}
       style={[styles.close, { top: top + 10, opacity: disabled ? 0.3 : 1 }]}
       hitSlop={10}

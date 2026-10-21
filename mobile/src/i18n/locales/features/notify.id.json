@@ -15,7 +15,9 @@
       "call": {
         "title": "Panggilan FLYP sedang berlangsung",
         "body": "Ketuk untuk kembali ke panggilan",
-        "end": "Tutup"
+        "end": "Tutup",
+        "ongoingVoice": "Panggilan suara berlangsung",
+        "ongoingVideo": "Panggilan video berlangsung"
       },
       "live": {
         "title": "Kamu sedang live",
@@ -26,7 +28,8 @@
         "title": "Walkie-talkie aktif",
         "body": "Ketuk untuk kembali ke chat",
         "end": "Matikan"
-      }
+      },
+      "callChannel": "Panggilan berlangsung"
     }
   }
 }

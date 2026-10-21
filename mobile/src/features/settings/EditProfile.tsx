@@ -28,6 +28,7 @@ import { AppText, Screen, TopBar } from '@/components/ui';
 import { cleanHandle, useHandleCheck } from '@/hooks/useHandleCheck';
 import { HANDLE_RE } from '@/lib/auth';
 import { useAuth } from '@/providers/AuthProvider';
+import { goBackOrHome } from '@/components/NotFoundState';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { countryNameFor } from '@/lib/countryNames';
@@ -132,7 +133,7 @@ function EditForm({
   // Leaving with unsaved edits asks first, for the back button, the Android
   // back key and (by turning it off while dirty) the iOS swipe.
   const leave = async () => {
-    if (!dirty || saving) return router.back();
+    if (!dirty || saving) return goBackOrHome();
     const yes = await confirm({
       title: t('settings2.edit.discardTitle'),
       message: t('settings2.edit.discardBody'),
@@ -140,7 +141,7 @@ function EditForm({
       cancelLabel: t('settings2.edit.keepEditing'),
       destructive: true,
     });
-    if (yes) router.back();
+    if (yes) goBackOrHome();
   };
   useEffect(() => {
     if (!dirty) return;

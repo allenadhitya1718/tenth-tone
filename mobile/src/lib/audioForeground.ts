@@ -52,10 +52,21 @@ export type AudioSessionOptions = {
   onOpen?: () => void;
   /** Replaces the default "Tap to return..." line (the other person's name...). */
   body?: string | null;
+  /** Calls, Instagram-style: the other person as the title, their photo, and
+   * "Ongoing voice/video call" under it. */
+  title?: string | null;
+  avatar?: string | null;
+  video?: boolean;
 };
 
 const ANDROID = Platform.OS === 'android';
 const CHANNEL = 'ongoing_audio';
+// Calls get their own channel and group: in the shared low-priority channel
+// the ongoing call sat among (and was bundled with) every other FLYP
+// notification. Its own group keeps Android from bundling it.
+const CALL_CHANNEL = 'ongoing_call';
+const CALL_GROUP = 'flyp_ongoing_call';
+const CALL_COLOR = '#1E56D6';
 const NOTIFICATION_ID = 'flyp_audio_fgs';
 const KIND = 'audio_fgs';
 const ACTION_END = 'audio_fgs_end';
@@ -96,7 +107,20 @@ async function micGranted(): Promise<boolean> {
   }
 }
 
-async function ensureChannel() {
+async function ensureChannel(kind: AudioSessionKind) {
+  if (kind === 'call') {
+    if (await notifee.isChannelCreated(CALL_CHANNEL)) return;
+    await notifee.createChannel({
+      id: CALL_CHANNEL,
+      name: i18n.t('notify.fgs.callChannel', { defaultValue: 'Ongoing calls' }),
+      // Shown, never sounding: the call is already in your ear.
+      importance: AndroidImportance.DEFAULT,
+      visibility: AndroidVisibility.PUBLIC,
+      vibration: false,
+      badge: false,
+    });
+    return;
+  }
   if (await notifee.isChannelCreated(CHANNEL)) return;
   await notifee.createChannel({
     id: CHANNEL,
@@ -137,20 +161,32 @@ async function show(kind: AudioSessionKind, s: Session) {
   const types = mic
     ? [AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_MICROPHONE, AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK]
     : [AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK];
-  const key = `${kind}|${mic ? 'mic' : 'play'}|${s.body ?? ''}|${s.onEnd ? 1 : 0}`;
+  const key = `${kind}|${mic ? 'mic' : 'play'}|${s.body ?? ''}|${s.title ?? ''}|${s.avatar ?? ''}|${s.video ? 1 : 0}|${s.onEnd ? 1 : 0}`;
   // Starting (or adding the microphone type) needs the app in front; a
   // same-type update of the running notification does not.
   const needsFront = !running || (mic && !shownKey.includes('|mic|'));
   if (needsFront && AppState.currentState !== 'active') return;
   if (running && key === shownKey) return;
-  await ensureChannel();
+  await ensureChannel(kind);
+  const call = kind === 'call';
   await notifee.displayNotification({
     id: NOTIFICATION_ID,
-    title: i18n.t(`notify.fgs.${kind}.title`),
-    body: s.body || i18n.t(`notify.fgs.${kind}.body`),
+    title: call && s.title ? s.title : i18n.t(`notify.fgs.${kind}.title`),
+    body:
+      call && s.title
+        ? i18n.t(s.video ? 'notify.fgs.call.ongoingVideo' : 'notify.fgs.call.ongoingVoice')
+        : s.body || i18n.t(`notify.fgs.${kind}.body`),
     data: { kind: KIND, session: kind },
     android: {
-      channelId: CHANNEL,
+      channelId: call ? CALL_CHANNEL : CHANNEL,
+      ...(call
+        ? {
+            groupId: CALL_GROUP,
+            color: CALL_COLOR,
+            colorized: true,
+            ...(s.avatar ? { largeIcon: s.avatar, circularLargeIcon: true } : {}),
+          }
+        : {}),
       asForegroundService: true,
       foregroundServiceTypes: types,
       category: kind === 'call' ? AndroidCategory.CALL : AndroidCategory.SERVICE,

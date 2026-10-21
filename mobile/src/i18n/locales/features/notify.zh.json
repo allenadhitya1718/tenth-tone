@@ -15,7 +15,9 @@
       "call": {
         "title": "FLYP 通话中",
         "body": "点按返回通话",
-        "end": "挂断"
+        "end": "挂断",
+        "ongoingVoice": "语音通话中",
+        "ongoingVideo": "视频通话中"
       },
       "live": {
         "title": "你正在直播",
@@ -26,7 +28,8 @@
         "title": "对讲机已开启",
         "body": "点按返回聊天",
         "end": "关闭"
-      }
+      },
+      "callChannel": "进行中的通话"
     }
   }
 }

@@ -129,7 +129,9 @@ export const MessageBubble = memo(function MessageBubble({
   const gif = item.type === 'gif' ? parseGifUrl(item.attachment_url) : null;
   // 0146: a video sent from the "Send to" sheet; text is only its link.
   const isVideoShare = item.type === 'video_share';
-  const isMedia = isImage || isVideo || !!gif || isVideoShare;
+  // A story reply with its picture is framed like a photo (owner request).
+  const isStoryReply = item.type === 'story_reply' && !!item.attachment_url;
+  const isMedia = isImage || isVideo || !!gif || isVideoShare || isStoryReply;
   // WhatsApp look: a photo or GIF with no caption carries its time and ticks
   // on the picture itself, over a soft shade, inside a thin bubble frame.
   const timeOnMedia = !!gif || (isImage && !item.text);
@@ -256,8 +258,8 @@ export const MessageBubble = memo(function MessageBubble({
 
         {item.type === 'story_reply' ? (
           // 0151: a reply to a story, with a small picture of the story.
-          <View style={styles.storyReply}>
-            <Text style={[styles.storyReplyLabel, { color: tone.sub }]}>
+          <View style={[styles.storyReply, isStoryReply && styles.storyReplyMedia]}>
+            <Text style={[styles.storyReplyLabel, { color: tone.sub }, isStoryReply && styles.captionPad]}>
               {mine ? t('storyReply.youReplied') : t('storyReply.repliedToYours')}
             </Text>
             {item.attachment_url ? (
@@ -268,13 +270,9 @@ export const MessageBubble = memo(function MessageBubble({
                 accessibilityRole="imagebutton"
                 accessibilityLabel={t('storyReply.storyPicture')}
               >
-                <Image
-                  source={{ uri: item.attachment_url }}
-                  style={[styles.storyThumb, { backgroundColor: colors.bg3 }]}
-                  contentFit="cover"
-                  transition={150}
-                  recyclingKey={item.localId ?? item.id}
-                />
+                <View style={styles.mediaClip}>
+                  <LoadingMedia uri={item.attachment_url} style={styles.storyThumb} recyclingKey={item.localId ?? item.id} />
+                </View>
               </Pressable>
             ) : null}
           </View>
@@ -301,7 +299,7 @@ export const MessageBubble = memo(function MessageBubble({
         {isVoice && item.attachment_url ? <VoiceNote uri={item.attachment_url} tone={voiceTone} /> : null}
 
         {item.text && item.type !== 'voice' && item.type !== 'location' && item.type !== 'gif' && !isVideoShare ? (
-          <Text style={[styles.text, { color: tone.fg }, isImage && styles.captionPad]} selectable={false}>
+          <Text style={[styles.text, { color: tone.fg }, (isImage || isStoryReply) && styles.captionPad]} selectable={false}>
             {item.text}
           </Text>
         ) : null}
@@ -420,7 +418,8 @@ const styles = StyleSheet.create({
   metaUnderMedia: { paddingBottom: 2 },
   storyReply: { gap: 6, marginBottom: 4, alignItems: 'flex-start' },
   storyReplyLabel: { fontSize: 12.5, fontWeight: '600', textAlign: 'left' },
-  storyThumb: { width: 110, height: 180, borderRadius: 12 },
+  storyReplyMedia: { gap: 4, marginBottom: 2, paddingTop: 3 },
+  storyThumb: { width: 180, height: 300 },
   pending: { opacity: 0.75 },
   author: { fontSize: 12.5, fontWeight: '700', marginBottom: 2, textAlign: 'left' },
   quote: { borderStartWidth: 3, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, marginBottom: 5, minWidth: 120 },

@@ -15,5 +15,5 @@ export default function UserProfile() {
   if (!UUID.test(String(id))) {
     return <NotFoundState icon="person-outline" title={t('fix4.notFoundUserTitle')} body={t('fix4.notFoundUserBody')} />;
   }
-  return <ProfileView userId={String(id)} isMe={session?.user.id === id} />;
+  return <ProfileView userId={String(id)} isMe={session?.user.id === id} pushed />;
 }
