@@ -8,7 +8,9 @@
 # made for their own app version (runtimeVersion policy appVersion).
 #
 # Channels: the Android test APK listens on "preview", TestFlight builds on
-# "production" (mobile/eas.json).
+# "production" (mobile/eas.json). Each is published for its own platform
+# only: the app has no web build (Agora is native-only), and the default
+# "all" would try to bundle one.
 name: OTA update
 
 on:
@@ -64,12 +66,12 @@ jobs:
 
       - name: Publish to preview (Android test builds)
         if: inputs.channels == 'both' || inputs.channels == 'preview'
-        run: eas update --channel preview --environment preview --message "$MESSAGE" --non-interactive
+        run: eas update --channel preview --environment preview --platform android --message "$MESSAGE" --non-interactive
         env:
           MESSAGE: ${{ inputs.message }}
 
       - name: Publish to production (TestFlight builds)
         if: inputs.channels == 'both' || inputs.channels == 'production'
-        run: eas update --channel production --environment production --message "$MESSAGE" --non-interactive
+        run: eas update --channel production --environment production --platform ios --message "$MESSAGE" --non-interactive
         env:
           MESSAGE: ${{ inputs.message }}
