@@ -35,6 +35,7 @@ import { useTheme } from '@/providers/ThemeProvider';
 import { Avatar } from './Avatar';
 import { previewText, translateTitle } from './format';
 import { appendToCachedThread, patchChatPreview } from './liveCache';
+import { MapButton } from './MapButton';
 
 type Segment = 'primary' | 'requests';
 const EMPTY: ChatListItem[] = [];
@@ -128,15 +129,19 @@ export function Inbox() {
         <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
           {t('chat.inboxTitle')}
         </Text>
-        <Pressable
-          onPress={() => router.push('/chat-new' as Href)}
-          hitSlop={10}
-          style={styles.headerBtn}
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.newMessage')}
-        >
-          <Ionicons name="create-outline" size={26} color={colors.text} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          {/* The friends map lives here now (owner), not in Discover. */}
+          <MapButton />
+          <Pressable
+            onPress={() => router.push('/chat-new' as Href)}
+            hitSlop={10}
+            style={styles.headerBtn}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.newMessage')}
+          >
+            <Ionicons name="create-outline" size={26} color={colors.text} />
+          </Pressable>
+        </View>
       </View>
 
       <View style={[styles.search, { backgroundColor: colors.bg2 }]}>
@@ -336,6 +341,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 52 },
   title: { fontSize: 24, fontWeight: '800' },
   headerBtn: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   search: {
     flexDirection: 'row',
     alignItems: 'center',

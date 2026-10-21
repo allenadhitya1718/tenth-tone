@@ -97,5 +97,8 @@
     "aPlace": "某地点",
     "placePinA11y": "发布于 {{place}}",
     "placesA11y_other": "包含 {{count}} 个地点的地图"
+  },
+  "mapEntry": {
+    "label": "地图"
   }
 }

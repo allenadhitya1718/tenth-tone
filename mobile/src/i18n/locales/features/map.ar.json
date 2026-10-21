@@ -112,5 +112,8 @@
     "placesA11y_few": "خريطة لـ {{count}} أماكن",
     "placesA11y_many": "خريطة لـ {{count}} مكانًا",
     "placesA11y_other": "خريطة لـ {{count}} مكان"
+  },
+  "mapEntry": {
+    "label": "الخريطة"
   }
 }

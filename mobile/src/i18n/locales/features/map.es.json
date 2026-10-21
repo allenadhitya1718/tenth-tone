@@ -103,5 +103,8 @@
     "placesA11y_one": "Mapa de {{count}} lugar",
     "placesA11y_many": "Mapa de {{count}} de lugares",
     "placesA11y_other": "Mapa de {{count}} lugares"
+  },
+  "mapEntry": {
+    "label": "Mapa"
   }
 }

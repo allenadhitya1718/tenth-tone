@@ -100,5 +100,8 @@
     "placePinA11y": "Post at {{place}}",
     "placesA11y_one": "Map of {{count}} place",
     "placesA11y_other": "Map of {{count}} places"
+  },
+  "mapEntry": {
+    "label": "Map"
   }
 }

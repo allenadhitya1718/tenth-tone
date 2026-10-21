@@ -100,5 +100,8 @@
     "placePinA11y": "{{place}} پر پوسٹ",
     "placesA11y_one": "{{count}} جگہ کا نقشہ",
     "placesA11y_other": "{{count}} جگہوں کا نقشہ"
+  },
+  "mapEntry": {
+    "label": "نقشہ"
   }
 }

@@ -97,5 +97,8 @@
     "aPlace": "Sebuah tempat",
     "placePinA11y": "Postingan di {{place}}",
     "placesA11y_other": "Peta {{count}} tempat"
+  },
+  "mapEntry": {
+    "label": "Peta"
   }
 }

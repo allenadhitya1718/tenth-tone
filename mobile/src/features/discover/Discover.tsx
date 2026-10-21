@@ -77,16 +77,6 @@ export function Discover() {
           {t('discover.title')}
         </Text>
         <View style={styles.topActions}>
-          {/* The friends map used to be reachable only from Settings. */}
-          <Pressable
-            onPress={() => go('/map')}
-            hitSlop={6}
-            style={styles.topBtn}
-            accessibilityRole="button"
-            accessibilityLabel={t('map.title')}
-          >
-            <Ionicons name="map-outline" size={25} color={colors.text} />
-          </Pressable>
           <NotificationsBell />
         </View>
       </View>

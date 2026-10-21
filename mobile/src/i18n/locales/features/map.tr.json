@@ -100,5 +100,8 @@
     "placePinA11y": "Gönderi konumu: {{place}}",
     "placesA11y_one": "Harita, {{count}} yer",
     "placesA11y_other": "Harita, {{count}} yer"
+  },
+  "mapEntry": {
+    "label": "Harita"
   }
 }
