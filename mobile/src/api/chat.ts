@@ -938,3 +938,20 @@ export async function countUnreadChats(): Promise<number> {
     return 0;
   }
 }
+
+// 0153: when each other member received and read one of YOUR messages, for
+// message info. Times are null when not yet (or before 0153); an empty map
+// before 0153 is applied. Never throws.
+export type ReceiptTimes = Map<Uuid, { delivered_at: Iso | null; read_at: Iso | null }>;
+
+export async function fetchReceiptTimes(messageId: Uuid): Promise<ReceiptTimes> {
+  const out: ReceiptTimes = new Map();
+  try {
+    const { data, error } = await supabase.rpc('message_receipt_times', { p_message_id: messageId });
+    if (error) return out;
+    for (const r of (data ?? []) as { user_id: Uuid; delivered_at: Iso | null; read_at: Iso | null }[]) {
+      out.set(r.user_id, { delivered_at: r.delivered_at, read_at: r.read_at });
+    }
+  } catch {}
+  return out;
+}
