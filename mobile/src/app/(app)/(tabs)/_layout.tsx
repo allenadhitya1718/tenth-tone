@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { router, Tabs } from 'expo-router';
+import { router, Tabs, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
@@ -14,6 +14,12 @@ export default function TabsLayout() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const unread = useQuery({ queryKey: chatKeys.unreadCount(), queryFn: countUnreadChats });
+  // On Home (the video feed) the bar is black in both themes, as on
+  // Instagram's Reels, so it does not cut a white strip under the video.
+  const onFeed = usePathname() === '/';
+  const bar = onFeed
+    ? { bg: '#000000', border: 'rgba(255,255,255,0.08)', active: '#FFFFFF', inactive: 'rgba(255,255,255,0.6)' }
+    : { bg: colors.tabBar, border: colors.border, active: colors.text, inactive: colors.muted };
 
   const icon = (on: IconName, off: IconName) =>
     function TabIcon({ focused, size }: { focused: boolean; size: number }) {
@@ -23,7 +29,7 @@ export default function TabsLayout() {
         <Ionicons
           name={focused ? on : off}
           size={size}
-          color={focused ? colors.text : colors.muted}
+          color={focused ? bar.active : bar.inactive}
           accessibilityElementsHidden
           importantForAccessibility="no"
         />
@@ -34,9 +40,9 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.text,
-        tabBarInactiveTintColor: colors.muted,
-        tabBarStyle: { backgroundColor: colors.tabBar, borderTopColor: colors.border },
+        tabBarActiveTintColor: bar.active,
+        tabBarInactiveTintColor: bar.inactive,
+        tabBarStyle: { backgroundColor: bar.bg, borderTopColor: bar.border },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
       }}
     >
