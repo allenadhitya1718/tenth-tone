@@ -7,6 +7,7 @@
 // ApiError codes introduced here:
 //   story_rate_limited  50 stories in the last 24 hours (database trigger)
 //   story_not_found     update / delete matched no row of yours
+//   video_not_shareable shareVideoToStory: not a public post you can share (0155)
 // Also thrown: 'content_blocked' (as in videos.ts: moderation refused it,
 // message carries the server's Arabic text), 'not_signed_in' (client.ts),
 // the upload.ts codes, and Postgrest errors as-is.
@@ -76,7 +77,18 @@ export type UserStory = {
   view_count: number | null;
   // 0151: you liked this story (someone else's). Absent before 0151.
   liked?: boolean;
+  // 0155: a feed video added to the story. shared_visible is false when the
+  // caller can no longer see the video (only the owner gets such a row).
+  shared_video_id?: Uuid | null;
+  shared_visible?: boolean | null;
+  shared_handle?: string | null;
+  shared_name?: string | null;
+  shared_avatar?: string | null;
 };
+
+/** A shared video the viewer can no longer watch. */
+export const isUnavailableShare = (s: Pick<UserStory, 'shared_video_id' | 'shared_visible'>) =>
+  !!s.shared_video_id && s.shared_visible === false;
 
 // fetch_story_viewers: "seen by", newest view first. Owner only.
 export type StoryViewer = {
@@ -187,6 +199,29 @@ export async function createStory({
     throw error;
   }
   return data as StoryRow;
+}
+
+// ---------- Adding a feed video (0155) ----------
+
+// Posts a story that plays someone's feed video with a card linking to it.
+// The database fills in the media from the video (whatever is sent here)
+// and refuses a post that is not public, from a private account, or across
+// a block. Before 0155 the column is missing: ApiError('needs_update').
+export async function shareVideoToStory(videoId: Uuid, audience: StoryAudience = 'followers'): Promise<void> {
+  const userId = await requireUid();
+  const { error } = await supabase.from('stories').insert({
+    user_id: userId,
+    shared_video_id: videoId,
+    // Replaced by the database from the video's own row.
+    media_url: 'https://flyp.app/shared',
+    media_kind: 'video',
+    audience,
+  });
+  if (!error) return;
+  if (error.code === 'PGRST204' || error.code === '42703') throw new ApiError('needs_update', error.message, error);
+  if (/video_not_shareable/.test(error.message ?? '')) throw new ApiError('video_not_shareable', error.message, error);
+  if (isRateLimited(error)) throw new ApiError('story_rate_limited', error.message, error);
+  throw error;
 }
 
 // ---------- Reading ----------

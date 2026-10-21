@@ -1,0 +1,13 @@
+{
+  "storyShare": {
+    "add": "Tambah ke cerita",
+    "added": "Ditambahkan ke ceritamu",
+    "watch": "Tonton",
+    "watchA11y": "Tonton video {{name}}",
+    "unavailable": "Video ini sudah tidak tersedia",
+    "notShareable": "Video ini tidak bisa ditambahkan ke cerita. Hanya postingan publik yang bisa dibagikan.",
+    "rateLimited": "Kamu sudah memposting banyak cerita hari ini. Coba lagi nanti.",
+    "needsUpdate": "Menambah ke cerita belum tersedia.",
+    "failed": "Tidak bisa menambahkan ke ceritamu. Coba lagi."
+  }
+}

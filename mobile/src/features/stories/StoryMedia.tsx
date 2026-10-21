@@ -1,8 +1,10 @@
 import { useEventListener } from 'expo';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEffect } from 'react';
-import { type Animated, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { type Animated, StyleSheet, Text, View } from 'react-native';
 
 import type { UserStory } from '@/api/stories';
 
@@ -26,6 +28,21 @@ export function ImageStory({ story, onReady, onFail }: Common) {
       onError={() => onFail(story.id)}
       accessibilityIgnoresInvertColors
     />
+  );
+}
+
+// 0155: a shared video the viewer can no longer watch (the creator deleted
+// access to it). Timed like a photo.
+export function UnavailableStory({ story, onReady }: Omit<Common, 'onFail'>) {
+  const { t } = useTranslation();
+  useEffect(() => {
+    onReady(story.id);
+  }, [story.id, onReady]);
+  return (
+    <View style={[StyleSheet.absoluteFill, styles.center]}>
+      <Ionicons name="videocam-off-outline" size={40} color="#fff" />
+      <Text style={styles.text}>{t('storyShare.unavailable')}</Text>
+    </View>
   );
 }
 
@@ -76,3 +93,8 @@ export function VideoStory({
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  center: { alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#111' },
+  text: { color: '#fff', fontSize: 16, fontWeight: '600' },
+});

@@ -1,0 +1,13 @@
+{
+  "storyShare": {
+    "add": "Hikayene ekle",
+    "added": "Hikayene eklendi",
+    "watch": "İzle",
+    "watchA11y": "{{name}} adlı kişinin videosunu izle",
+    "unavailable": "Bu video artık mevcut değil",
+    "notShareable": "Bu video hikayeye eklenemez. Yalnızca herkese açık gönderiler paylaşılabilir.",
+    "rateLimited": "Bugün çok fazla hikaye paylaştın. Daha sonra tekrar dene.",
+    "needsUpdate": "Hikayeye ekleme henüz kullanılamıyor.",
+    "failed": "Hikayene eklenemedi. Tekrar dene."
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "storyShare": {
+    "add": "Add to story",
+    "added": "Added to your story",
+    "watch": "Watch",
+    "watchA11y": "Watch {{name}}'s video",
+    "unavailable": "This video is no longer available",
+    "notShareable": "This video can't be added to a story. Only public posts can be shared.",
+    "rateLimited": "You've posted a lot of stories today. Try again later.",
+    "needsUpdate": "Adding to a story isn't available yet.",
+    "failed": "Couldn't add it to your story. Try again."
+  }
+}

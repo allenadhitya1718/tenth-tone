@@ -33,6 +33,7 @@ import { ApiError } from '@/api/client';
 import {
   deleteStory,
   fetchUserStories,
+  isUnavailableShare,
   likeStory,
   markStoryViewed,
   replyToStory,
@@ -46,7 +47,7 @@ import { showToast } from '@/components/Toast';
 import { timeAgo } from '@/lib/timeAgo';
 import { useAuth } from '@/providers/AuthProvider';
 
-import { ImageStory, VideoStory } from './StoryMedia';
+import { ImageStory, UnavailableStory, VideoStory } from './StoryMedia';
 import { storyHref } from './StoryTray';
 import { ViewersSheet } from './ViewersSheet';
 
@@ -164,7 +165,7 @@ export function StoryViewer({ userId }: { userId: string }) {
   }, [story?.id, progress]);
 
   useEffect(() => {
-    if (!story || story.media_kind !== 'image' || !ready || paused) return;
+    if (!story || (story.media_kind !== 'image' && !isUnavailableShare(story)) || !ready || paused) return;
     const key = `${story.id}#${round}`;
     if (elapsed.current.id !== key) elapsed.current = { id: key, ms: 0 };
     const done = elapsed.current.ms;
@@ -387,7 +388,9 @@ export function StoryViewer({ userId }: { userId: string }) {
       <Animated.View
         style={[styles.stage, { borderRadius: radius, transform: [{ translateY: dragY }, { scale }] }]}
       >
-        {story.media_kind === 'video' ? (
+        {isUnavailableShare(story) ? (
+          <UnavailableStory key={story.id} story={story} onReady={setReadyId} />
+        ) : story.media_kind === 'video' ? (
           <VideoStory
             key={`${story.id}#${round}`}
             story={story}
@@ -511,6 +514,37 @@ export function StoryViewer({ userId }: { userId: string }) {
             <Text style={styles.caption} pointerEvents="none">
               {story.caption}
             </Text>
+          ) : null}
+          {story.shared_video_id && !isUnavailableShare(story) ? (
+            // 0155: whose video this is; opens the original post.
+            <Pressable
+              onPress={() => router.push(`/video/${story.shared_video_id}`)}
+              style={styles.shareCardWrap}
+              accessibilityRole="button"
+              accessibilityLabel={t('storyShare.watchA11y', { name: story.shared_name || story.shared_handle || '' })}
+            >
+              <BlurView intensity={40} tint="dark" style={styles.shareCard}>
+                <View style={styles.shareAvatar}>
+                  {story.shared_avatar ? (
+                    <Image source={{ uri: story.shared_avatar }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                  ) : (
+                    <Ionicons name="person" size={14} color="#fff" />
+                  )}
+                </View>
+                <View style={styles.shareWho}>
+                  <Text style={styles.shareName} numberOfLines={1}>
+                    {story.shared_name || story.shared_handle}
+                  </Text>
+                  {story.shared_handle ? (
+                    <Text style={styles.shareHandle} numberOfLines={1}>
+                      @{story.shared_handle}
+                    </Text>
+                  ) : null}
+                </View>
+                <Text style={styles.shareWatch}>{t('storyShare.watch')}</Text>
+                <Ionicons name={I18nManager.isRTL ? 'chevron-back' : 'chevron-forward'} size={16} color="#fff" />
+              </BlurView>
+            </Pressable>
           ) : null}
           {isMine ? (
             <View style={styles.ownerRow}>
@@ -726,6 +760,21 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowRadius: 6,
   },
+  shareCardWrap: { alignSelf: 'center', borderRadius: 22, overflow: 'hidden', marginBottom: 10, maxWidth: '90%' },
+  shareCard: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingStart: 6, paddingEnd: 12, paddingVertical: 6 },
+  shareAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shareWho: { flexShrink: 1 },
+  shareName: { color: '#fff', fontSize: 14, fontWeight: '700', textAlign: 'left' },
+  shareHandle: { color: 'rgba(255,255,255,0.8)', fontSize: 12, textAlign: 'left' },
+  shareWatch: { color: '#fff', fontSize: 14, fontWeight: '700', marginStart: 6 },
   ownerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
   glassWrap: { borderRadius: 24, overflow: 'hidden' },
   glass: {

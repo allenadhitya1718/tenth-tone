@@ -26,6 +26,7 @@ import { chatKeys, fetchChats } from '@/api/chat';
 import { ApiError } from '@/api/client';
 import { countShare, discoverKeys, fetchShareTargets, videoLink } from '@/api/discover';
 import { normalizePeopleQuery, searchPeople, withoutBlocked } from '@/api/search';
+import { shareVideoToStory, storyKeys } from '@/api/stories';
 import type { Uuid } from '@/api/types';
 import { SEND_TO_MAX, type SendTarget, sendVideoToChats } from '@/api/videoShare';
 import { showToast } from '@/components/Toast';
@@ -216,6 +217,31 @@ export function SendToSheet({
 
   const link = videoLink(videoId);
 
+  // 0155: "Add to story", like Instagram. Not counted as a share: it is not
+  // sent anywhere, and the story's own views show its reach.
+  const toStory = useMutation({
+    mutationFn: () => shareVideoToStory(videoId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: storyKeys.tray() });
+      if (me) void qc.invalidateQueries({ queryKey: storyKeys.user(me) });
+      onClose();
+      showToast(t('storyShare.added'), 'checkmark-circle');
+    },
+    onError: (e) => {
+      const code = e instanceof ApiError ? e.code : '';
+      const key =
+        code === 'video_not_shareable'
+          ? 'storyShare.notShareable'
+          : code === 'story_rate_limited'
+            ? 'storyShare.rateLimited'
+            : code === 'needs_update'
+              ? 'storyShare.needsUpdate'
+              : 'storyShare.failed';
+      if (key === 'storyShare.failed') console.warn('add to story failed:', (e as Error)?.message ?? e);
+      setNotice({ text: t(key), error: true });
+    },
+  });
+
   const copyLink = useCallback(async () => {
     try {
       await Clipboard.setStringAsync(link);
@@ -390,6 +416,12 @@ export function SendToSheet({
               </>
             ) : (
               <View style={styles.actions}>
+                <FooterAction
+                  icon="add-circle-outline"
+                  label={t('storyShare.add')}
+                  onPress={() => !toStory.isPending && toStory.mutate()}
+                  busy={toStory.isPending}
+                />
                 <FooterAction icon="link" label={t('sendTo.copyLink')} onPress={() => void copyLink()} />
                 <FooterAction icon="share-social" label={t('sendTo.otherApps')} onPress={() => void shareOut()} />
               </View>
@@ -446,12 +478,22 @@ const TargetCell = memo(function TargetCell({
   );
 });
 
-function FooterAction({ icon, label, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void }) {
+function FooterAction({
+  icon,
+  label,
+  onPress,
+  busy,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  busy?: boolean;
+}) {
   const { colors } = useTheme();
   return (
-    <Pressable onPress={onPress} style={styles.action} accessibilityRole="button" accessibilityLabel={label}>
+    <Pressable onPress={onPress} style={styles.action} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ busy: !!busy }}>
       <View style={[styles.actionIcon, { backgroundColor: colors.bg2 }]}>
-        <Ionicons name={icon} size={22} color={colors.text} />
+        {busy ? <ActivityIndicator color={colors.text} /> : <Ionicons name={icon} size={22} color={colors.text} />}
       </View>
       <Text style={[styles.actionText, { color: colors.text }]} numberOfLines={2}>
         {label}

@@ -1,0 +1,13 @@
+{
+  "storyShare": {
+    "add": "Añadir a la historia",
+    "added": "Añadido a tu historia",
+    "watch": "Ver",
+    "watchA11y": "Ver el video de {{name}}",
+    "unavailable": "Este video ya no está disponible",
+    "notShareable": "Este video no se puede añadir a una historia. Solo se pueden compartir publicaciones públicas.",
+    "rateLimited": "Hoy has publicado muchas historias. Inténtalo más tarde.",
+    "needsUpdate": "Añadir a la historia aún no está disponible.",
+    "failed": "No se pudo añadir a tu historia. Inténtalo de nuevo."
+  }
+}

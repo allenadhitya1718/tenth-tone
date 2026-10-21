@@ -1,0 +1,13 @@
+{
+  "storyShare": {
+    "add": "添加到快拍",
+    "added": "已添加到你的快拍",
+    "watch": "观看",
+    "watchA11y": "观看 {{name}} 的视频",
+    "unavailable": "该视频已无法观看",
+    "notShareable": "该视频无法添加到快拍，只能分享公开的帖子。",
+    "rateLimited": "你今天发布的快拍太多了，请稍后再试。",
+    "needsUpdate": "暂时无法添加到快拍。",
+    "failed": "无法添加到你的快拍，请重试。"
+  }
+}
