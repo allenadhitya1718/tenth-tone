@@ -13,6 +13,9 @@
     "signOut": "退出登录",
     "rowLabel": "生日",
     "add": "添加",
-    "locked": "你的生日是私密的，保存后无法更改。如有错误，请联系客服。"
+    "locked": "你的生日是私密的，保存后无法更改。",
+    "confirmTitle": "确认无误吗？",
+    "confirmBody": "{{date}}\n\n生日保存后将无法更改。",
+    "confirmYes": "确认保存"
   }
 }

@@ -22,7 +22,7 @@ import { useTheme } from '@/providers/ThemeProvider';
 //
 // gate: no way back, only "Sign out"; edit: an ordinary screen.
 export function ConfirmBirthday({ mode }: { mode: 'gate' | 'edit' }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const qc = useQueryClient();
   const [birth, setBirth] = useState('');
@@ -65,6 +65,19 @@ export function ConfirmBirthday({ mode }: { mode: 'gate' | 'edit' }) {
     },
   });
 
+  // No corrections (owner): one last look before it is saved for good.
+  const confirmSave = () =>
+    showAlert(
+      t('birthday.confirmTitle'),
+      t('birthday.confirmBody', {
+        date: new Date(`${birth}T00:00:00`).toLocaleDateString(i18n.language, { day: 'numeric', month: 'long', year: 'numeric' }),
+      }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('birthday.confirmYes'), onPress: () => save.mutate() },
+      ],
+    );
+
   return (
     <Screen header={mode === 'edit' ? <TopBar title={t('birthday.title')} /> : undefined} contentStyle={styles.content}>
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
@@ -84,7 +97,7 @@ export function ConfirmBirthday({ mode }: { mode: 'gate' | 'edit' }) {
           <Ionicons name="lock-closed" size={16} color={colors.muted} />
           <Text style={[styles.noteText, { color: colors.muted }]}>{t('birthday.privateNote')}</Text>
         </View>
-        <Button title={t('birthday.save')} onPress={() => save.mutate()} disabled={!birth} loading={save.isPending} />
+        <Button title={t('birthday.save')} onPress={confirmSave} disabled={!birth} loading={save.isPending} />
         {mode === 'gate' ? (
           <Text onPress={() => void signOut()} style={[styles.signOut, { color: colors.muted }]} accessibilityRole="button">
             {t('birthday.signOut')}

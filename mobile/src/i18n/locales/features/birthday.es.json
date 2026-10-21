@@ -13,6 +13,9 @@
     "signOut": "Cerrar sesión",
     "rowLabel": "Fecha de nacimiento",
     "add": "Añadir",
-    "locked": "Tu fecha de nacimiento es privada y no se puede cambiar una vez guardada. Si es incorrecta, contacta con soporte."
+    "locked": "Tu fecha de nacimiento es privada y no se puede cambiar una vez guardada.",
+    "confirmTitle": "¿Es correcto?",
+    "confirmBody": "{{date}}\n\nNo podrás cambiar tu fecha de nacimiento más adelante.",
+    "confirmYes": "Sí, guardar"
   }
 }

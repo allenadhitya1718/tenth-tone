@@ -13,6 +13,9 @@
     "signOut": "Se déconnecter",
     "rowLabel": "Date de naissance",
     "add": "Ajouter",
-    "locked": "Votre date de naissance est privée et ne peut plus être modifiée. Si elle est fausse, contactez l'assistance."
+    "locked": "Votre date de naissance est privée et ne peut plus être modifiée une fois enregistrée.",
+    "confirmTitle": "Est-ce correct ?",
+    "confirmBody": "{{date}}\n\nVous ne pourrez plus modifier votre date de naissance.",
+    "confirmYes": "Oui, enregistrer"
   }
 }

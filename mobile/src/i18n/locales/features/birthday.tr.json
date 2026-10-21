@@ -13,6 +13,9 @@
     "signOut": "Çıkış yap",
     "rowLabel": "Doğum tarihi",
     "add": "Ekle",
-    "locked": "Doğum tarihin gizlidir ve kaydedildikten sonra değiştirilemez. Yanlışsa destek ile iletişime geç."
+    "locked": "Doğum tarihin gizlidir ve kaydedildikten sonra değiştirilemez.",
+    "confirmTitle": "Bu doğru mu?",
+    "confirmBody": "{{date}}\n\nDoğum tarihini daha sonra değiştiremezsin.",
+    "confirmYes": "Evet, kaydet"
   }
 }

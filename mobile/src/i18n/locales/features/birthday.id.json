@@ -13,6 +13,9 @@
     "signOut": "Keluar",
     "rowLabel": "Tanggal lahir",
     "add": "Tambah",
-    "locked": "Tanggal lahirmu bersifat pribadi dan tidak bisa diubah setelah disimpan. Jika salah, hubungi dukungan."
+    "locked": "Tanggal lahirmu bersifat pribadi dan tidak bisa diubah setelah disimpan.",
+    "confirmTitle": "Sudah benar?",
+    "confirmBody": "{{date}}\n\nKamu tidak bisa mengubah tanggal lahirmu nanti.",
+    "confirmYes": "Ya, simpan"
   }
 }

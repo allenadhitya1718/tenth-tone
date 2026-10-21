@@ -13,6 +13,9 @@
     "signOut": "Sign out",
     "rowLabel": "Birthday",
     "add": "Add",
-    "locked": "Your birthday is private and can't be changed once saved. If it's wrong, contact support."
+    "locked": "Your birthday is private and can't be changed once saved.",
+    "confirmTitle": "Is this right?",
+    "confirmBody": "{{date}}\n\nYou can't change your birthday later.",
+    "confirmYes": "Yes, save"
   }
 }
