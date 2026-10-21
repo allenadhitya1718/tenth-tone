@@ -1,0 +1,14 @@
+{
+  "attach": {
+    "title": "附件",
+    "camera": "相机",
+    "photos": "照片",
+    "video": "视频",
+    "location": "位置",
+    "tooBig": "视频太大，无法发送（最大 20 MB）。请换一个更短的视频。",
+    "cameraDenied": "请在设置中允许访问相机以拍照。",
+    "openMaps": "在地图中打开",
+    "sharedLocation": "共享的位置",
+    "videoMessage": "视频"
+  }
+}

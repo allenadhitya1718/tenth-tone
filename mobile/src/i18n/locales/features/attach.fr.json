@@ -1,0 +1,14 @@
+{
+  "attach": {
+    "title": "Joindre",
+    "camera": "Appareil photo",
+    "photos": "Photos",
+    "video": "Vidéo",
+    "location": "Position",
+    "tooBig": "Cette vidéo est trop lourde (20 Mo max). Essayez-en une plus courte.",
+    "cameraDenied": "Autorisez l'appareil photo dans les réglages pour prendre une photo.",
+    "openMaps": "Ouvrir dans Plans",
+    "sharedLocation": "Position partagée",
+    "videoMessage": "Vidéo"
+  }
+}

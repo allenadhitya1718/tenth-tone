@@ -1,0 +1,14 @@
+{
+  "attach": {
+    "title": "Adjuntar",
+    "camera": "Cámara",
+    "photos": "Fotos",
+    "video": "Video",
+    "location": "Ubicación",
+    "tooBig": "Ese video es demasiado grande (máx. 20 MB). Prueba con uno más corto.",
+    "cameraDenied": "Permite el acceso a la cámara en Ajustes para hacer una foto.",
+    "openMaps": "Abrir en Mapas",
+    "sharedLocation": "Ubicación compartida",
+    "videoMessage": "Video"
+  }
+}

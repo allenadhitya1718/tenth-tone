@@ -1,0 +1,14 @@
+{
+  "attach": {
+    "title": "Lampirkan",
+    "camera": "Kamera",
+    "photos": "Foto",
+    "video": "Video",
+    "location": "Lokasi",
+    "tooBig": "Video itu terlalu besar untuk dikirim (maks 20 MB). Coba yang lebih pendek.",
+    "cameraDenied": "Izinkan akses kamera di Pengaturan untuk mengambil foto.",
+    "openMaps": "Buka di Maps",
+    "sharedLocation": "Lokasi dibagikan",
+    "videoMessage": "Video"
+  }
+}

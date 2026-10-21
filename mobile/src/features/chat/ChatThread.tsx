@@ -40,11 +40,13 @@ import { Button } from '@/components/ui';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
+import { AttachSheet, type AttachKind } from './AttachSheet';
 import { Avatar } from './Avatar';
 import { ChatBackground } from './ChatBackground';
 import { Composer } from './Composer';
 import { dayKey, dayLabel, translateTitle } from './format';
 import { ImageViewer } from './ImageViewer';
+import { locationLink } from './location';
 import { DaySeparator, MessageBubble } from './MessageBubble';
 import { MessageInfoSheet } from './MessageInfoSheet';
 import { MessageMenu } from './MessageMenu';
@@ -54,6 +56,7 @@ import { useWalkie } from './walkie/useWalkie';
 import { WalkieBanner } from './walkie/WalkieBanner';
 import { useActiveChat } from '@/features/notifications/push';
 import { CallButtons, GroupCallButtons } from '@/features/call/CallButtons';
+import { PlacePicker } from '@/features/place/PlacePicker';
 import { presenceLabel, usePresence } from '@/features/presence/usePresence';
 import { sendRefusalKey } from '@/lib/serverError';
 
@@ -66,6 +69,7 @@ type Row =
   | { kind: 'msg'; key: string; msg: ThreadMessage; tick: Tick | null; author: string | null };
 
 const EMPTY: ThreadMessage[] = [];
+const MAX_CHAT_FILE = 20 * 1024 * 1024;
 
 export function ChatThread({ chatId }: { chatId: string }) {
   // Pushes for the chat on screen are not shown as banners.
@@ -176,7 +180,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
   );
 
   const sendMedia = useCallback(
-    async (type: 'image' | 'voice', media: LocalMedia) => {
+    async (type: 'image' | 'voice' | 'video', media: LocalMedia) => {
       const reply = replyTo;
       setReplyTo(null);
       try {
@@ -211,22 +215,75 @@ export function ChatThread({ chatId }: { chatId: string }) {
   );
   const onSendGif = useCallback((gif: Gif) => void sendGif(gif), [sendGif]);
 
-  const pickImage = useCallback(async () => {
+  // ---------- The "+" sheet: camera, photos, video, location ----------
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [placeOpen, setPlaceOpen] = useState(false);
+  const openAttach = useCallback(() => {
     setEmojiOpen(false);
-    try {
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
-      if (res.canceled || !res.assets?.[0]) return;
-      const a = res.assets[0];
-      await sendMedia('image', {
+    setAttachOpen(true);
+  }, []);
+
+  const sendAsset = useCallback(
+    async (a: ImagePicker.ImagePickerAsset) => {
+      const video = a.type === 'video';
+      // chat-media takes files up to 20 MB (0031).
+      if (video && a.fileSize && a.fileSize > MAX_CHAT_FILE) {
+        showAlert(t('attach.tooBig'));
+        return;
+      }
+      await sendMedia(video ? 'video' : 'image', {
         uri: a.uri,
-        mimeType: a.mimeType ?? 'image/jpeg',
+        mimeType: a.mimeType ?? (video ? 'video/mp4' : 'image/jpeg'),
         size: a.fileSize ?? null,
         name: a.fileName ?? null,
       });
-    } catch {
-      showToast(t('chat.pickFailed'));
-    }
-  }, [sendMedia, showToast, t]);
+    },
+    [sendMedia, t],
+  );
+
+  const onAttach = useCallback(
+    async (kind: AttachKind) => {
+      if (kind === 'location') {
+        setPlaceOpen(true);
+        return;
+      }
+      try {
+        let res: ImagePicker.ImagePickerResult;
+        if (kind === 'camera') {
+          const perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (!perm.granted) {
+            showAlert(t('attach.cameraDenied'));
+            return;
+          }
+          res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
+        } else {
+          res = await ImagePicker.launchImageLibraryAsync(
+            kind === 'video'
+              ? { mediaTypes: ['videos'], videoMaxDuration: 180, videoQuality: ImagePicker.UIImagePickerControllerQualityType.Medium }
+              : { mediaTypes: ['images'], quality: 0.8 },
+          );
+        }
+        if (res.canceled || !res.assets?.[0]) return;
+        await sendAsset(res.assets[0]);
+      } catch {
+        showToast(t('chat.pickFailed'));
+      }
+    },
+    [sendAsset, showToast, t],
+  );
+
+  const sendLocation = useCallback(
+    async (place: { name: string; lat: number; lng: number }) => {
+      const reply = replyTo;
+      setReplyTo(null);
+      try {
+        await send({ text: locationLink(place.lat, place.lng, place.name), type: 'location', replyTo: reply });
+      } catch (e) {
+        failSend(e);
+      }
+    },
+    [send, replyTo, failSend],
+  );
 
   // ---------- Message actions ----------
 
@@ -510,7 +567,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
             emojiOpen={emojiOpen}
             setEmojiOpen={setEmojiOpen}
             onSendText={sendText}
-            onPickImage={pickImage}
+            onAttach={openAttach}
             onSendVoice={sendVoice}
             onSendGif={onSendGif}
             walkie={walkie}
@@ -535,6 +592,8 @@ export function ChatThread({ chatId }: { chatId: string }) {
         onClose={() => setInfoFor(null)}
       />
       <ImageViewer uri={viewing} onClose={() => setViewing(null)} />
+      <AttachSheet open={attachOpen} onClose={() => setAttachOpen(false)} onPick={(k) => void onAttach(k)} />
+      <PlacePicker precise open={placeOpen} onClose={() => setPlaceOpen(false)} onPick={(p) => void sendLocation(p)} />
     </SafeAreaView>
   );
 }

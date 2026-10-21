@@ -1,0 +1,14 @@
+{
+  "attach": {
+    "title": "Attach",
+    "camera": "Camera",
+    "photos": "Photos",
+    "video": "Video",
+    "location": "Location",
+    "tooBig": "That video is too large to send (max 20 MB). Try a shorter one.",
+    "cameraDenied": "Allow camera access in Settings to take a photo.",
+    "openMaps": "Open in Maps",
+    "sharedLocation": "Shared location",
+    "videoMessage": "Video"
+  }
+}

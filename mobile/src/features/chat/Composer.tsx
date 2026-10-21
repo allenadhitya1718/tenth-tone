@@ -48,7 +48,7 @@ type Props = {
   setEmojiOpen: (open: boolean) => void;
   // Resolves false when the send failed, so the text can be put back.
   onSendText: (text: string) => Promise<boolean>;
-  onPickImage: () => void;
+  onAttach: () => void;
   onSendVoice: (media: LocalMedia) => void;
   // A GIF picked in the emoji panel's GIF tab: sent at once.
   onSendGif: (gif: Gif) => void;
@@ -63,7 +63,7 @@ export const Composer = memo(function Composer({
   emojiOpen,
   setEmojiOpen,
   onSendText,
-  onPickImage,
+  onAttach,
   onSendVoice,
   onSendGif,
   walkie = null,
@@ -366,13 +366,13 @@ export const Composer = memo(function Composer({
                 </Pressable>
               ) : null}
               <Pressable
-                onPress={onPickImage}
+                onPress={onAttach}
                 hitSlop={6}
                 style={styles.attach}
                 accessibilityRole="button"
-                accessibilityLabel={t('chat.attachPhoto')}
+                accessibilityLabel={t('attach.title')}
               >
-                <Ionicons name="image-outline" size={23} color={colors.muted} />
+                <Ionicons name="add-circle-outline" size={26} color={colors.muted} />
               </Pressable>
             </View>
           </>

@@ -77,15 +77,18 @@ async function searchPlaces(q: string): Promise<Candidate[]> {
 // Client note 21: choose a place for a post. "Current location" names where
 // the phone is; the search box geocodes typed text. Whatever is chosen is
 // saved with its coordinates rounded to ~100 m (placeName.ts), never the raw
-// GPS fix.
+// GPS fix. `precise` (sending a location in a chat, where the person chose
+// to share exactly where they are) keeps the coordinates as they are.
 export function PlacePicker({
   open,
   onClose,
   onPick,
+  precise = false,
 }: {
   open: boolean;
   onClose: () => void;
   onPick: (place: VideoPlace) => void;
+  precise?: boolean;
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -126,7 +129,8 @@ export function PlacePicker({
   }
 
   function pick(c: Candidate, name = placeLabel(c.title, c.subtitle.split(',')[0])) {
-    onPick(toVideoPlace(name, c.lat, c.lng));
+    const place = toVideoPlace(name, c.lat, c.lng);
+    onPick(precise ? { ...place, lat: c.lat, lng: c.lng } : place);
     close();
   }
 

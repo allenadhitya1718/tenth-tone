@@ -10,6 +10,7 @@ import { parseGifUrl } from '@/api/gifs';
 import { useTheme } from '@/providers/ThemeProvider';
 import { light } from '@/theme/colors';
 
+import { LocationMessage, VideoMessage } from './ChatMedia';
 import { callLabel, clockTime, formatDuration, isMissedCall, parseCall, previewText, systemLabel } from './format';
 import type { ThreadMessage } from './useThread';
 import { SwipeToReply } from './SwipeToReply';
@@ -98,13 +99,14 @@ export const MessageBubble = memo(function MessageBubble({
     );
   }
 
-  const isImage = (item.type === 'image' || item.type === 'video') && !!item.attachment_url;
+  const isImage = item.type === 'image' && !!item.attachment_url;
+  const isVideo = item.type === 'video' && !!item.attachment_url;
   const isVoice = item.type === 'voice' && !!item.attachment_url;
   // 0144: a GIF, drawn at its own aspect ratio and animated.
   const gif = item.type === 'gif' ? parseGifUrl(item.attachment_url) : null;
   // 0146: a video sent from the "Send to" sheet; text is only its link.
   const isVideoShare = item.type === 'video_share';
-  const isMedia = isImage || !!gif || isVideoShare;
+  const isMedia = isImage || isVideo || !!gif || isVideoShare;
   // WhatsApp look: a photo or GIF with no caption carries its time and ticks
   // on the picture itself, over a soft shade, inside a thin bubble frame.
   const timeOnMedia = !!gif || (isImage && !item.text);
@@ -257,6 +259,12 @@ export const MessageBubble = memo(function MessageBubble({
               </Pressable>
             ) : null}
           </View>
+        ) : null}
+
+        {isVideo && item.attachment_url ? <VideoMessage uri={item.attachment_url} onLongPress={() => onMenu(item)} /> : null}
+
+        {item.type === 'location' ? (
+          <LocationMessage text={item.text} fg={tone.fg} sub={tone.sub} onLongPress={() => onMenu(item)} />
         ) : null}
 
         {isVideoShare ? (
