@@ -26,12 +26,15 @@ import {
   subscribeToInbox,
 } from '@/api/chat';
 import { Button } from '@/components/ui';
+import { getActiveChatId } from '@/features/notifications/push';
 import { StoryTray } from '@/features/stories/StoryTray';
 import { timeAgo } from '@/lib/timeAgo';
+import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { Avatar } from './Avatar';
 import { previewText, translateTitle } from './format';
+import { appendToCachedThread, patchChatPreview } from './liveCache';
 
 type Segment = 'primary' | 'requests';
 const EMPTY: ChatListItem[] = [];
@@ -40,6 +43,8 @@ export function Inbox() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const qc = useQueryClient();
+  const { session } = useAuth();
+  const me = session?.user.id;
   const [segment, setSegment] = useState<Segment>('primary');
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
@@ -49,12 +54,15 @@ export function Inbox() {
   // Live: any new message in any of my chats moves the preview, the order and
   // the unread dot without the chat being opened.
   useEffect(() => {
-    const unsub = subscribeToInbox(() => {
+    const unsub = subscribeToInbox((row) => {
+      // Shown at once; the refetch below settles it.
+      patchChatPreview(qc, row, me, getActiveChatId());
+      appendToCachedThread(qc, row, me);
       void qc.invalidateQueries({ queryKey: chatKeys.chats(), exact: true });
       void qc.invalidateQueries({ queryKey: chatKeys.unreadCount() });
     });
     return unsub;
-  }, [qc]);
+  }, [qc, me]);
 
   // Client note 10: the sender's second grey tick means "reached this phone",
   // so it is stamped on open and every time the app comes back to the front.

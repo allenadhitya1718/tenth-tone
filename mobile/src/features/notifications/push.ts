@@ -66,6 +66,8 @@ export function setActiveChatId(id: string | null) {
   activeChatId = id;
 }
 
+export const getActiveChatId = () => activeChatId;
+
 type PushData = Record<string, unknown>;
 
 const dataOf = (n: Notifications.Notification): PushData => (n.request.content.data ?? {}) as PushData;

@@ -24,6 +24,8 @@ import {
 } from '@/api/chat';
 import type { LocalMedia } from '@/api/upload';
 
+import { patchChatPreview } from './liveCache';
+
 // A message as this screen holds it. localId is set on bubbles this device
 // drew optimistically and stays as the list key after the real id arrives,
 // so the row is not remounted (an image would flash) when the send lands.
@@ -62,6 +64,12 @@ export function useThread(chatId: string, me: string | undefined, info: ChatInfo
       return pending.length ? [...fresh, ...pending] : fresh;
     },
     enabled: !!chatId,
+    // The thread listens for new messages only while it is open, so a cached
+    // copy can be missing what arrived since (owner report: group messages
+    // in the inbox preview but not in the thread). Shown from cache at once,
+    // always checked with the server on opening.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const receipts = useQuery({
@@ -114,6 +122,8 @@ export function useThread(chatId: string, me: string | undefined, info: ChatInfo
   useEffect(() => {
     if (!chatId || !me) return;
     const unsub = subscribeToMessages(chatId, (row: MessageRow) => {
+      // The inbox row is already right when you go back to it.
+      patchChatPreview(qc, row, me, chatId);
       let fromOther = false;
       qc.setQueryData<ThreadMessage[]>(key, (list = []) => {
         if (list.some((m) => m.id === row.id)) return list;
@@ -244,6 +254,7 @@ export function useThread(chatId: string, me: string | undefined, info: ChatInfo
           next[i] = { ...next[i], id: row.id, created_at: row.created_at, pending: false };
           return next;
         });
+        patchChatPreview(qc, row, me, chatId);
         void qc.invalidateQueries({ queryKey: chatKeys.chats(), exact: true });
         return true;
       } catch (e) {
