@@ -1,0 +1,18 @@
+{
+  "birthday": {
+    "title": "Confirm your birthday",
+    "body": "We need your date of birth to keep FLYP age-appropriate and to unlock features like the friends map (18+).",
+    "privateNote": "Private: never shown on your profile or to anyone else. It can't be changed once saved.",
+    "save": "Save",
+    "saved": "Birthday saved",
+    "tooYoungTitle": "You're too young for FLYP",
+    "tooYoung": "You need to be at least 13 to use FLYP.",
+    "alreadySet": "Your birthday is already saved.",
+    "invalid": "That date doesn't look right. Please check it.",
+    "failed": "Couldn't save your birthday. Try again.",
+    "signOut": "Sign out",
+    "rowLabel": "Birthday",
+    "add": "Add",
+    "locked": "Your birthday is private and can't be changed once saved. If it's wrong, contact support."
+  }
+}

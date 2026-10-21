@@ -89,11 +89,22 @@ export function EditProfile() {
       myId={myId}
       profile={profile.data}
       baseline={fromProfile(profile.data, priv.data?.gender ?? null, priv.data?.country ?? null)}
+      birthDate={priv.data?.birth_date ?? null}
     />
   );
 }
 
-function EditForm({ myId, profile, baseline }: { myId: string; profile: Profile; baseline: Form }) {
+function EditForm({
+  myId,
+  profile,
+  baseline,
+  birthDate,
+}: {
+  myId: string;
+  profile: Profile;
+  baseline: Form;
+  birthDate: string | null;
+}) {
   const { t, i18n } = useTranslation();
   const { colors, isDark } = useTheme();
   const qc = useQueryClient();
@@ -314,6 +325,20 @@ function EditForm({ myId, profile, baseline }: { myId: string; profile: Profile;
             label={t('settings2.edit.country')}
             value={form.country ? countryName(form.country, i18n.language) : t('settings2.edit.choose')}
             onPress={() => setPicker('country')}
+          />
+          {/* Private, set once (0036): add it if missing; once set it is
+              shown here only, read-only. */}
+          <Row
+            icon="gift-outline"
+            label={t('birthday.rowLabel')}
+            value={
+              birthDate
+                ? new Date(`${birthDate}T00:00:00`).toLocaleDateString(i18n.language, { day: 'numeric', month: 'long', year: 'numeric' })
+                : t('birthday.add')
+            }
+            onPress={() =>
+              birthDate ? showAlert(t('birthday.rowLabel'), t('birthday.locked')) : router.push('/confirm-birthday?from=edit')
+            }
           />
         </Group>
 

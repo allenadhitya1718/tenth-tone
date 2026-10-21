@@ -30,9 +30,9 @@
     "step1Title": "Ceritakan tentang dirimu",
     "step1Sub": "Nama yang dilihat orang lain, dan nama penggunamu",
     "name": "Nama",
-    "birthLabel": "Tanggal lahir (opsional)",
+    "birthLabel": "Tanggal lahir",
     "birthPick": "Pilih tanggal lahirmu",
-    "birthHint": "Kamu boleh melewati ini. Tanggal lahirmu tidak pernah ditampilkan ke siapa pun, dan tidak bisa diubah nanti.",
+    "birthHint": "Tanggal lahirmu bersifat pribadi: tidak pernah ditampilkan di profilmu dan tidak bisa diubah nanti.",
     "enterName": "Masukkan namamu",
     "enterBirth": "Masukkan tanggal lahirmu",
     "badBirth": "Tanggal lahir tidak valid",
@@ -57,7 +57,8 @@
     "agreePrefix": "Aku menyatakan berusia 13 tahun ke atas, dan menyetujui",
     "agreeSuffix": ", serta tidak akan memposting konten yang tidak pantas atau melecehkan pengguna mana pun. Tidak ada toleransi untuk konten yang tidak pantas.",
     "alreadyRegistered": "Email ini sudah punya akun. Silakan masuk.",
-    "nameRequired": "Nama wajib diisi"
+    "nameRequired": "Nama wajib diisi",
+    "birthRequired": "Masukkan tanggal lahirmu."
   },
   "otp": {
     "title": "Verifikasi",

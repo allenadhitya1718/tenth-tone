@@ -1,5 +1,8 @@
-import { Stack } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import { router, Stack, usePathname } from 'expo-router';
 import { useEffect } from 'react';
+
+import { fetchBirthDateStrict, settingsKeys } from '@/api/settings';
 
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -22,6 +25,18 @@ export default function AppLayout() {
       .then((m) => m.startStorePurchaseRecovery())
       .catch(() => {});
   }, []);
+
+  // An account without a birthday is asked for it once, right after signing
+  // in (owner request): Apple / phone sign-in and accounts from the earlier
+  // app never asked. Only on a clean "no birthday" answer, never because a
+  // read failed.
+  const birth = useQuery({ queryKey: settingsKeys.birthDate(), queryFn: fetchBirthDateStrict, staleTime: 5 * 60_000 });
+  const pathname = usePathname();
+  const needsBirthday = birth.isSuccess && birth.data === null;
+  useEffect(() => {
+    if (needsBirthday && pathname !== '/confirm-birthday') router.replace('/confirm-birthday');
+  }, [needsBirthday, pathname]);
+
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       {/* Comments slide up over the feed. A transparent modal with the panel
@@ -41,6 +56,7 @@ export default function AppLayout() {
       />
       <Stack.Screen name="stories/new" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
       <Stack.Screen name="map" options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="confirm-birthday" options={{ gestureEnabled: false }} />
       <Stack.Screen name="call/[id]" options={CALL_SCREEN} />
       <Stack.Screen name="call/dial" options={CALL_SCREEN} />
     </Stack>

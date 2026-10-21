@@ -30,9 +30,9 @@
     "step1Title": "介绍一下你自己",
     "step1Sub": "他人看到的名字以及你的用户名",
     "name": "名字",
-    "birthLabel": "出生日期（可选）",
+    "birthLabel": "出生日期",
     "birthPick": "选择你的出生日期",
-    "birthHint": "可以跳过。你的生日不会向任何人显示，且之后无法更改。",
+    "birthHint": "你的生日是私密的：不会显示在你的个人资料中，且之后无法更改。",
     "enterName": "请输入你的名字",
     "enterBirth": "请输入你的出生日期",
     "badBirth": "出生日期无效",
@@ -57,7 +57,8 @@
     "agreePrefix": "我确认已年满 13 周岁，并同意",
     "agreeSuffix": "，且不会发布不良内容或辱骂任何用户。我们对不良内容零容忍。",
     "alreadyRegistered": "该邮箱已注册，请直接登录。",
-    "nameRequired": "请填写名字"
+    "nameRequired": "请填写名字",
+    "birthRequired": "请输入你的出生日期。"
   },
   "otp": {
     "title": "验证",

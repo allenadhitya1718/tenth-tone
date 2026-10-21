@@ -30,9 +30,9 @@
     "step1Title": "Cuéntanos sobre ti",
     "step1Sub": "Tu nombre tal como lo verán los demás y tu nombre de usuario",
     "name": "Nombre",
-    "birthLabel": "Fecha de nacimiento (opcional)",
+    "birthLabel": "Fecha de nacimiento",
     "birthPick": "Elige tu fecha de nacimiento",
-    "birthHint": "Puedes omitir este paso. Tu cumpleaños nunca se muestra a nadie y no se puede cambiar después.",
+    "birthHint": "Tu fecha de nacimiento es privada: nunca se muestra en tu perfil y no se puede cambiar después.",
     "enterName": "Escribe tu nombre",
     "enterBirth": "Indica tu fecha de nacimiento",
     "badBirth": "Fecha de nacimiento no válida",
@@ -57,7 +57,8 @@
     "agreePrefix": "Confirmo que tengo 13 años o más y acepto los",
     "agreeSuffix": ", y no publicaré contenido inapropiado ni acosaré a ningún usuario. Hay tolerancia cero con el contenido inapropiado.",
     "alreadyRegistered": "Este correo ya tiene una cuenta. Inicia sesión.",
-    "nameRequired": "El nombre es obligatorio"
+    "nameRequired": "El nombre es obligatorio",
+    "birthRequired": "Introduce tu fecha de nacimiento."
   },
   "otp": {
     "title": "Verificación",

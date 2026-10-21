@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
+import { queryClient } from '@/api/queryClient';
+import { settingsKeys } from '@/api/settings';
 import { OtpInput } from '@/components/OtpInput';
 import { AppText, Button, ErrorBox, LinkText, Screen, TopBar, type ErrorMsg } from '@/components/ui';
 import { toErrorMsg } from '@/hooks/useAuthError';
@@ -52,7 +54,13 @@ export default function Otp() {
       await verifySignupCode(email, code);
       // There was no session to write the birthday with until now.
       if (pending.birthDate) {
-        await saveBirthDate(pending.birthDate).catch((e) => console.warn('birth date save:', e));
+        const birth = pending.birthDate;
+        await saveBirthDate(birth)
+          // The app may already be asking whether there is a birthday (the
+          // session arrived with the code): answer it, so it is not asked for
+          // again (AppLayout's check, ConfirmBirthday).
+          .then(() => queryClient.setQueryData(settingsKeys.birthDate(), birth))
+          .catch((e) => console.warn('birth date save:', e));
       }
       setPending({});
       // The root layout moves to the app as the session arrives.

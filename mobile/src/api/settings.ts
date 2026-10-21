@@ -241,6 +241,17 @@ export async function getMyBirthDate(): Promise<string | null> {
   return (data as { birth_date: string | null } | null)?.birth_date ?? null;
 }
 
+// The same, but a failed read throws instead of looking like "no birthday",
+// for the sign-in check that asks for a missing one (it must never ask just
+// because the network dropped).
+export async function fetchBirthDateStrict(): Promise<string | null> {
+  const me = await uid();
+  if (!me) return null;
+  const { data, error } = await supabase.from('user_private').select('birth_date').eq('user_id', me).maybeSingle();
+  if (error) throw error;
+  return (data as { birth_date: string | null } | null)?.birth_date ?? null;
+}
+
 export async function isAdult(): Promise<boolean> {
   const me = await uid();
   if (!me) return false;

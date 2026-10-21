@@ -30,9 +30,9 @@
     "step1Title": "Parlez-nous de vous",
     "step1Sub": "Votre nom tel que les autres le verront, et votre nom d'utilisateur",
     "name": "Nom",
-    "birthLabel": "Date de naissance (facultatif)",
+    "birthLabel": "Date de naissance",
     "birthPick": "Choisissez votre date de naissance",
-    "birthHint": "Vous pouvez passer cette étape. Votre date de naissance n'est jamais visible et ne peut pas être modifiée plus tard.",
+    "birthHint": "Votre date de naissance est privée : elle n'apparaît jamais sur votre profil et ne peut pas être modifiée ensuite.",
     "enterName": "Saisissez votre nom",
     "enterBirth": "Saisissez votre date de naissance",
     "badBirth": "Date de naissance invalide",
@@ -57,7 +57,8 @@
     "agreePrefix": "Je confirme avoir 13 ans ou plus et j'accepte les",
     "agreeSuffix": ", et je m'engage à ne publier aucun contenu répréhensible et à ne harceler aucun utilisateur. Aucune tolérance n'est accordée aux contenus répréhensibles.",
     "alreadyRegistered": "Un compte existe déjà avec cet e-mail. Connectez-vous plutôt.",
-    "nameRequired": "Le nom est obligatoire"
+    "nameRequired": "Le nom est obligatoire",
+    "birthRequired": "Veuillez saisir votre date de naissance."
   },
   "otp": {
     "title": "Vérification",

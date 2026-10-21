@@ -30,9 +30,9 @@
     "step1Title": "Tell us about you",
     "step1Sub": "Your name as others will see it, and your username",
     "name": "Name",
-    "birthLabel": "Date of birth (optional)",
+    "birthLabel": "Date of birth",
     "birthPick": "Choose your date of birth",
-    "birthHint": "You can skip this. Your birthday is never shown to anyone, and cannot be changed later.",
+    "birthHint": "Your birthday is private: it's never shown on your profile, and can't be changed later.",
     "enterName": "Enter your name",
     "enterBirth": "Enter your date of birth",
     "badBirth": "Invalid date of birth",
@@ -57,7 +57,8 @@
     "agreePrefix": "I confirm I am 13 or older, and I agree to the",
     "agreeSuffix": ", and I will not post objectionable content or abuse any user. There is zero tolerance for objectionable content.",
     "alreadyRegistered": "This email already has an account. Sign in instead.",
-    "nameRequired": "Name is required"
+    "nameRequired": "Name is required",
+    "birthRequired": "Please enter your date of birth."
   },
   "otp": {
     "title": "Verification",

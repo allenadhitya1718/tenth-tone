@@ -1,0 +1,18 @@
+{
+  "birthday": {
+    "title": "Doğum tarihini onayla",
+    "body": "FLYP'i yaşına uygun tutmak ve arkadaş haritası (18+) gibi özellikleri açmak için doğum tarihine ihtiyacımız var.",
+    "privateNote": "Gizli: profilinde veya başka kimseye asla gösterilmez. Kaydedildikten sonra değiştirilemez.",
+    "save": "Kaydet",
+    "saved": "Doğum tarihi kaydedildi",
+    "tooYoungTitle": "FLYP için çok küçüksün",
+    "tooYoung": "FLYP'i kullanmak için en az 13 yaşında olmalısın.",
+    "alreadySet": "Doğum tarihin zaten kayıtlı.",
+    "invalid": "Bu tarih doğru görünmüyor. Lütfen kontrol et.",
+    "failed": "Doğum tarihin kaydedilemedi. Tekrar dene.",
+    "signOut": "Çıkış yap",
+    "rowLabel": "Doğum tarihi",
+    "add": "Ekle",
+    "locked": "Doğum tarihin gizlidir ve kaydedildikten sonra değiştirilemez. Yanlışsa destek ile iletişime geç."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "birthday": {
+    "title": "Confirmez votre date de naissance",
+    "body": "Nous avons besoin de votre date de naissance pour adapter FLYP à votre âge et débloquer des fonctions comme la carte des amis (18+).",
+    "privateNote": "Privée : jamais affichée sur votre profil ni à personne. Elle ne peut plus être modifiée une fois enregistrée.",
+    "save": "Enregistrer",
+    "saved": "Date de naissance enregistrée",
+    "tooYoungTitle": "Vous êtes trop jeune pour FLYP",
+    "tooYoung": "Vous devez avoir au moins 13 ans pour utiliser FLYP.",
+    "alreadySet": "Votre date de naissance est déjà enregistrée.",
+    "invalid": "Cette date semble incorrecte. Vérifiez-la.",
+    "failed": "Impossible d'enregistrer votre date de naissance. Réessayez.",
+    "signOut": "Se déconnecter",
+    "rowLabel": "Date de naissance",
+    "add": "Ajouter",
+    "locked": "Votre date de naissance est privée et ne peut plus être modifiée. Si elle est fausse, contactez l'assistance."
+  }
+}

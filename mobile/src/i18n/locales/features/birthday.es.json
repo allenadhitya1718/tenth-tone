@@ -1,0 +1,18 @@
+{
+  "birthday": {
+    "title": "Confirma tu fecha de nacimiento",
+    "body": "Necesitamos tu fecha de nacimiento para adaptar FLYP a tu edad y desbloquear funciones como el mapa de amigos (18+).",
+    "privateNote": "Privada: nunca se muestra en tu perfil ni a nadie. No se puede cambiar una vez guardada.",
+    "save": "Guardar",
+    "saved": "Fecha de nacimiento guardada",
+    "tooYoungTitle": "Eres demasiado joven para FLYP",
+    "tooYoung": "Debes tener al menos 13 años para usar FLYP.",
+    "alreadySet": "Tu fecha de nacimiento ya está guardada.",
+    "invalid": "Esa fecha no parece correcta. Revísala.",
+    "failed": "No se pudo guardar tu fecha de nacimiento. Inténtalo de nuevo.",
+    "signOut": "Cerrar sesión",
+    "rowLabel": "Fecha de nacimiento",
+    "add": "Añadir",
+    "locked": "Tu fecha de nacimiento es privada y no se puede cambiar una vez guardada. Si es incorrecta, contacta con soporte."
+  }
+}

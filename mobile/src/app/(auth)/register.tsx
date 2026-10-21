@@ -56,11 +56,12 @@ export default function Register() {
     if (n.length < 2) return setError({ key: 'register.enterName' });
     if (handle.length < 3) return setError({ key: 'register.enterHandle' });
     if (handleState === 'taken') return setError({ key: 'register.handleTakenPick' });
-    if (birth) {
-      const age = ageOn(birth);
-      if (age == null || age > 120) return setError({ key: 'register.badBirth' });
-      if (age < MIN_AGE) return setError({ key: 'errors.tooYoung' });
-    }
+    // Required (owner request): the 18+ location check and the age minimum
+    // both read it, and it cannot be added to a profile by anyone else.
+    if (!birth) return setError({ key: 'register.birthRequired' });
+    const age = ageOn(birth);
+    if (age == null || age > 120) return setError({ key: 'register.badBirth' });
+    if (age < MIN_AGE) return setError({ key: 'errors.tooYoung' });
     // Moved faster than the debounce: settle it before going on.
     if (handleState === 'checking') {
       try {

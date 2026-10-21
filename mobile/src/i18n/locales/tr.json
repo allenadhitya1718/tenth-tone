@@ -30,9 +30,9 @@
     "step1Title": "Bize kendinden bahset",
     "step1Sub": "Başkalarının göreceği adın ve kullanıcı adın",
     "name": "Ad",
-    "birthLabel": "Doğum tarihi (isteğe bağlı)",
+    "birthLabel": "Doğum tarihi",
     "birthPick": "Doğum tarihini seç",
-    "birthHint": "Bu adımı atlayabilirsin. Doğum günün kimseye gösterilmez ve daha sonra değiştirilemez.",
+    "birthHint": "Doğum tarihin gizlidir: profilinde asla gösterilmez ve sonradan değiştirilemez.",
     "enterName": "Adını gir",
     "enterBirth": "Doğum tarihini gir",
     "badBirth": "Geçersiz doğum tarihi",
@@ -57,7 +57,8 @@
     "agreePrefix": "13 yaşında veya daha büyük olduğumu onaylıyorum ve şunları kabul ediyorum:",
     "agreeSuffix": ". Ayrıca uygunsuz içerik paylaşmayacağımı ve hiçbir kullanıcıyı taciz etmeyeceğimi kabul ediyorum. Uygunsuz içeriğe kesinlikle tahammül gösterilmez.",
     "alreadyRegistered": "Bu e-posta ile zaten bir hesap var. Bunun yerine giriş yap.",
-    "nameRequired": "Ad gerekli"
+    "nameRequired": "Ad gerekli",
+    "birthRequired": "Lütfen doğum tarihini gir."
   },
   "otp": {
     "title": "Doğrulama",

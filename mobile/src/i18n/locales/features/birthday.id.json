@@ -1,0 +1,18 @@
+{
+  "birthday": {
+    "title": "Konfirmasi tanggal lahirmu",
+    "body": "Kami perlu tanggal lahirmu agar FLYP sesuai usiamu dan untuk membuka fitur seperti peta teman (18+).",
+    "privateNote": "Pribadi: tidak pernah ditampilkan di profilmu atau ke siapa pun. Tidak bisa diubah setelah disimpan.",
+    "save": "Simpan",
+    "saved": "Tanggal lahir disimpan",
+    "tooYoungTitle": "Usiamu belum cukup untuk FLYP",
+    "tooYoung": "Kamu harus berusia minimal 13 tahun untuk menggunakan FLYP.",
+    "alreadySet": "Tanggal lahirmu sudah tersimpan.",
+    "invalid": "Tanggal itu sepertinya salah. Silakan periksa.",
+    "failed": "Gagal menyimpan tanggal lahirmu. Coba lagi.",
+    "signOut": "Keluar",
+    "rowLabel": "Tanggal lahir",
+    "add": "Tambah",
+    "locked": "Tanggal lahirmu bersifat pribadi dan tidak bisa diubah setelah disimpan. Jika salah, hubungi dukungan."
+  }
+}
