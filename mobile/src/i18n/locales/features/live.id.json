@@ -137,7 +137,9 @@
       "lowBody": "Isi ulang dompetmu untuk mengirim hadiah ini.",
       "failed": "Tidak dapat mengirim hadiah",
       "banner": "{{sender}} mengirim {{gift}}",
-      "bannerTo": "{{sender}} mengirim {{gift}} ke {{recipient}}"
+      "bannerTo": "{{sender}} mengirim {{gift}} ke {{recipient}}",
+      "soonTitle": "Hadiah segera hadir",
+      "soonBody": "Sebentar lagi kamu bisa mengirim hadiah ke kreator saat mereka live."
     },
     "report": {
       "title": "Laporkan",
@@ -380,6 +382,18 @@
           "upload_failed": "Foto tidak dapat diunggah. Periksa koneksimu dan coba lagi.",
           "unknown": "Terjadi kesalahan. Silakan coba lagi."
         }
+      },
+      "soon": {
+        "badge": "SEGERA HADIR",
+        "title": "Dompet segera hadir",
+        "body": "Koin, hadiah, dan penghasilan kreator hampir siap. Kami akan memberi tahu kamu begitu tersedia.",
+        "coinsTitle": "Koin",
+        "coinsBody": "Isi ulang lewat App Store atau Google Play.",
+        "giftsTitle": "Hadiah",
+        "giftsBody": "Kirim hadiah ke kreator saat mereka live.",
+        "earningsTitle": "Penghasilan",
+        "earningsBody": "Dapatkan berlian dari hadiah dan cairkan.",
+        "back": "Oke"
       }
     }
   }

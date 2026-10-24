@@ -145,7 +145,9 @@
       "lowBody": "Recarga tu billetera para enviar este regalo.",
       "failed": "No se pudo enviar el regalo",
       "banner": "{{sender}} envió {{gift}}",
-      "bannerTo": "{{sender}} envió {{gift}} a {{recipient}}"
+      "bannerTo": "{{sender}} envió {{gift}} a {{recipient}}",
+      "soonTitle": "Los regalos llegan pronto",
+      "soonBody": "Pronto podrás enviar regalos a los creadores durante sus directos."
     },
     "report": {
       "title": "Denunciar",
@@ -396,6 +398,18 @@
           "upload_failed": "No se pudo subir la foto. Revisa tu conexión e inténtalo de nuevo.",
           "unknown": "Algo salió mal. Inténtalo de nuevo."
         }
+      },
+      "soon": {
+        "badge": "PRÓXIMAMENTE",
+        "title": "La cartera está en camino",
+        "body": "Las monedas, los regalos y las ganancias de creadores casi están listos. Te avisaremos en cuanto estén disponibles.",
+        "coinsTitle": "Monedas",
+        "coinsBody": "Recarga a través de App Store o Google Play.",
+        "giftsTitle": "Regalos",
+        "giftsBody": "Envía regalos a los creadores durante sus directos.",
+        "earningsTitle": "Ganancias",
+        "earningsBody": "Gana diamantes con los regalos y cóbralos.",
+        "back": "Entendido"
       }
     }
   }

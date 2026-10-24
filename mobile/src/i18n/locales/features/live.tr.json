@@ -141,7 +141,9 @@
       "lowBody": "Bu hediyeyi göndermek için cüzdanına jeton yükle.",
       "failed": "Hediye gönderilemedi",
       "banner": "{{sender}} gönderdi: {{gift}}",
-      "bannerTo": "{{sender}} → {{recipient}}: {{gift}}"
+      "bannerTo": "{{sender}} → {{recipient}}: {{gift}}",
+      "soonTitle": "Hediyeler çok yakında",
+      "soonBody": "Yakında canlı yayınlarda içerik üreticilerine hediye gönderebileceksin."
     },
     "report": {
       "title": "Şikayet et",
@@ -388,6 +390,18 @@
           "upload_failed": "Fotoğraf yüklenemedi. Bağlantını kontrol edip tekrar dene.",
           "unknown": "Bir şeyler ters gitti. Lütfen tekrar dene."
         }
+      },
+      "soon": {
+        "badge": "ÇOK YAKINDA",
+        "title": "Cüzdan yolda",
+        "body": "Jetonlar, hediyeler ve içerik üretici kazançları neredeyse hazır. Kullanıma açılır açılmaz sana haber vereceğiz.",
+        "coinsTitle": "Jetonlar",
+        "coinsBody": "App Store veya Google Play üzerinden yükle.",
+        "giftsTitle": "Hediyeler",
+        "giftsBody": "Canlı yayınlarda içerik üreticilerine hediye gönder.",
+        "earningsTitle": "Kazançlar",
+        "earningsBody": "Hediyelerden elmas kazan ve nakde çevir.",
+        "back": "Tamam"
       }
     }
   }

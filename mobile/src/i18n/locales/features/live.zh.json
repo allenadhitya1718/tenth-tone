@@ -137,7 +137,9 @@
       "lowBody": "请为钱包充值后再赠送此礼物。",
       "failed": "礼物赠送失败",
       "banner": "{{sender}} 送出了{{gift}}",
-      "bannerTo": "{{sender}} 送给 {{recipient}} {{gift}}"
+      "bannerTo": "{{sender}} 送给 {{recipient}} {{gift}}",
+      "soonTitle": "礼物即将推出",
+      "soonBody": "很快你就可以在直播中给创作者送礼物了。"
     },
     "report": {
       "title": "举报",
@@ -380,6 +382,18 @@
           "upload_failed": "照片上传失败。请检查网络后重试。",
           "unknown": "出了点问题，请重试。"
         }
+      },
+      "soon": {
+        "badge": "即将推出",
+        "title": "钱包即将上线",
+        "body": "金币、礼物和创作者收益即将就绪。上线后我们会第一时间通知你。",
+        "coinsTitle": "金币",
+        "coinsBody": "通过 App Store 或 Google Play 充值。",
+        "giftsTitle": "礼物",
+        "giftsBody": "在直播中给创作者送礼物。",
+        "earningsTitle": "收益",
+        "earningsBody": "通过礼物赚取钻石并提现。",
+        "back": "知道了"
       }
     }
   }

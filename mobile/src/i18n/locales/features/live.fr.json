@@ -145,7 +145,9 @@
       "lowBody": "Rechargez votre portefeuille pour envoyer ce cadeau.",
       "failed": "Impossible d'envoyer le cadeau",
       "banner": "{{sender}} a envoyé {{gift}}",
-      "bannerTo": "{{sender}} a envoyé {{gift}} à {{recipient}}"
+      "bannerTo": "{{sender}} a envoyé {{gift}} à {{recipient}}",
+      "soonTitle": "Les cadeaux arrivent bientôt",
+      "soonBody": "Bientôt, vous pourrez envoyer des cadeaux aux créateurs pendant leurs lives."
     },
     "report": {
       "title": "Signaler",
@@ -396,6 +398,18 @@
           "upload_failed": "Impossible d'envoyer la photo. Vérifiez votre connexion et réessayez.",
           "unknown": "Une erreur s'est produite. Veuillez réessayer."
         }
+      },
+      "soon": {
+        "badge": "BIENTÔT",
+        "title": "Le portefeuille arrive",
+        "body": "Les pièces, les cadeaux et les gains des créateurs sont presque prêts. Nous vous préviendrons dès leur lancement.",
+        "coinsTitle": "Pièces",
+        "coinsBody": "Rechargez via l'App Store ou Google Play.",
+        "giftsTitle": "Cadeaux",
+        "giftsBody": "Envoyez des cadeaux aux créateurs pendant leurs lives.",
+        "earningsTitle": "Gains",
+        "earningsBody": "Gagnez des diamants grâce aux cadeaux et encaissez-les.",
+        "back": "Compris"
       }
     }
   }

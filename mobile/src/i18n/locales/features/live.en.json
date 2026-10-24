@@ -141,7 +141,9 @@
       "lowBody": "Top up your wallet to send this gift.",
       "failed": "Couldn't send the gift",
       "banner": "{{sender}} sent {{gift}}",
-      "bannerTo": "{{sender}} sent {{gift}} to {{recipient}}"
+      "bannerTo": "{{sender}} sent {{gift}} to {{recipient}}",
+      "soonTitle": "Gifts are coming soon",
+      "soonBody": "Soon you'll be able to send gifts to creators while they're live."
     },
     "report": {
       "title": "Report",
@@ -409,6 +411,18 @@
           "upload_failed": "Couldn't upload the photo. Check your connection and try again.",
           "unknown": "Something went wrong. Please try again."
         }
+      },
+      "soon": {
+        "badge": "COMING SOON",
+        "title": "Wallet is on its way",
+        "body": "Coins, gifts and creator earnings are almost ready. We'll let you know as soon as they're live.",
+        "coinsTitle": "Coins",
+        "coinsBody": "Top up through the App Store or Google Play.",
+        "giftsTitle": "Gifts",
+        "giftsBody": "Send gifts to creators during their lives.",
+        "earningsTitle": "Earnings",
+        "earningsBody": "Earn diamonds from gifts and cash them out.",
+        "back": "Got it"
       }
     }
   }

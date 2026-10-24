@@ -12,6 +12,7 @@ import { fetchWallet, walletKeys } from '@/api/wallet';
 import { showAlert } from '@/components/Dialog';
 import { Button } from '@/components/ui';
 import { formatCount } from '@/features/feed/format';
+import { WALLET_LAUNCHED } from '@/features/wallet/launch';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { errorCode, liveError } from './errors';
@@ -39,20 +40,42 @@ export function useGiftCatalogue(enabled = true) {
   return useQuery({ queryKey: giftKeys.catalogue(), queryFn: fetchGifts, staleTime: 10 * 60_000, enabled });
 }
 
-export function GiftTray({
-  visible,
-  onClose,
-  liveId,
-  recipients,
-  onSent,
-}: {
+type GiftTrayProps = {
   visible: boolean;
   onClose: () => void;
   liveId: string;
   /** The host first, then accepted guests; never the sender. */
   recipients: UserSummary[];
   onSent: (txId: string, gift: Gift, to: UserSummary) => void;
-}) {
+};
+
+export function GiftTray(props: GiftTrayProps) {
+  return WALLET_LAUNCHED ? <GiftPicker {...props} /> : <GiftsComingSoon visible={props.visible} onClose={props.onClose} />;
+}
+
+// Before launch (./wallet/launch.ts): what gifts will be, no balance or catalogue.
+function GiftsComingSoon({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
+  const tint = isDark ? colors.primary2 : colors.primary;
+  return (
+    <Sheet visible={visible} onClose={onClose} title={t('live.gifts.title')}>
+      <View style={styles.soon} accessibilityLiveRegion="polite">
+        <View style={[styles.soonIcon, { backgroundColor: colors.primarySoft }]}>
+          <Ionicons name="gift" size={36} color={tint} />
+        </View>
+        <Text style={[styles.soonBadge, { color: tint, borderColor: tint }]}>{t('live.wallet.soon.badge')}</Text>
+        <Text style={[styles.soonTitle, { color: colors.text }]} accessibilityRole="header">
+          {t('live.gifts.soonTitle')}
+        </Text>
+        <Text style={[styles.soonBody, { color: colors.muted }]}>{t('live.gifts.soonBody')}</Text>
+        <Button title={t('live.wallet.soon.back')} onPress={onClose} style={{ alignSelf: 'stretch' }} />
+      </View>
+    </Sheet>
+  );
+}
+
+function GiftPicker({ visible, onClose, liveId, recipients, onSent }: GiftTrayProps) {
   const { t, i18n } = useTranslation();
   const { colors, isDark } = useTheme();
   const qc = useQueryClient();
@@ -302,6 +325,11 @@ export function GiftBanner({ event, onDone }: { event: GiftEvent | null; onDone:
 }
 
 const styles = StyleSheet.create({
+  soon: { alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20 },
+  soonIcon: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
+  soonBadge: { fontSize: 12, fontWeight: '800', letterSpacing: 0.6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 3, overflow: 'hidden' },
+  soonTitle: { fontSize: 20, fontWeight: '800', textAlign: 'center' },
+  soonBody: { fontSize: 14, lineHeight: 20, textAlign: 'center', maxWidth: 320, marginBottom: 6 },
   toRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingStart: 16, paddingVertical: 10 },
   toLabel: { fontSize: 13, fontWeight: '600' },
   toChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingStart: 4, paddingEnd: 10, minHeight: 36, borderRadius: 18, borderWidth: 1.5 },
