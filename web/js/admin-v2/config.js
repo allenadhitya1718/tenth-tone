@@ -14,6 +14,14 @@
  * picked up by the other.
  */
 (function () {
+  // Never run inside another site's frame (clickjacking). GitHub Pages cannot
+  // send a frame-ancestors header, so the page refuses to load framed.
+  if (window.top !== window.self) {
+    document.documentElement.innerHTML = '';
+    try { window.top.location = window.self.location.href; } catch (_) { /* cross-origin top: page stays blank */ }
+    throw new Error('FLYP admin refuses to load inside a frame');
+  }
+
   window.FLYP_ADMIN_V2_CONFIG = Object.freeze({
     url: 'https://vfkwipvinmnybilcrdzr.supabase.co',
     key: 'sb_publishable_dgWbaJlmKOgP3VDEriA7Lg_LDHOiomD',

@@ -80,3 +80,4 @@ supabase/.temp/
 mobile/.env.testaccount
 builds/
 supabase/supabase/
+admin-dist/
