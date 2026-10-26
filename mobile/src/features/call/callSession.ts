@@ -222,6 +222,9 @@ function subscribe(l: () => void) {
   };
 }
 
+/** Called on every change of the call state (the iPhone CallKit bridge). */
+export const onCallStateChange = subscribe;
+
 export function useCallState(): CallState {
   return useSyncExternalStore(subscribe, getCallState, getCallState);
 }

@@ -31,6 +31,7 @@ import {
   markCallOver,
 } from '@/features/call/callNotification';
 import { answerWhenReady, getCallState } from '@/features/call/callSession';
+import { watchVoipToken } from '@/features/call/callkit';
 import { maybeAskFullScreenCalls } from '@/features/call/fullScreenPermission';
 import { openCallScreen } from '@/features/call/nav';
 import { useCallNotifications } from '@/features/call/useCallNotifications';
@@ -191,8 +192,11 @@ async function allowed(): Promise<boolean> {
 // What this build can do with a push (push_tokens.caps, 0160).
 export const PUSH_CAPS: string[] = Platform.OS === 'android' ? ['chat_style'] : Platform.OS === 'ios' ? ['chat_reply'] : [];
 
+// iPhone: the PushKit token, saved on the same row (callkit.ts).
+let voipToken: string | null | undefined;
+
 async function saveToken(token: string, lang: string) {
-  await savePushToken(token, Platform.OS, lang, PUSH_CAPS);
+  await savePushToken(token, Platform.OS, lang, PUSH_CAPS, voipToken);
   await AsyncStorage.setItem(TOKEN_KEY, token).catch(() => {});
 }
 
@@ -425,6 +429,14 @@ export function usePushRegistration() {
     const appSub = AppState.addEventListener('change', (st) => {
       if (st === 'active' && failures > 0) void attempt();
     });
+    // iPhone: a new PushKit token goes onto this phone's row at once.
+    const stopVoip = watchVoipToken((v) => {
+      if (v === (voipToken ?? null)) return;
+      voipToken = v;
+      void AsyncStorage.getItem(TOKEN_KEY).then((tok) => {
+        if (tok) saveToken(tok, lang).catch((e) => console.warn('push: voip token not saved:', (e as Error)?.message));
+      });
+    });
     // FCM and APNs rotate tokens now and then.
     const sub = Notifications.addPushTokenListener((tok) => {
       if (typeof tok.data === 'string' && tok.data) {
@@ -436,6 +448,7 @@ export function usePushRegistration() {
       clear();
       appSub.remove();
       sub.remove();
+      stopVoip();
     };
   }, [userId, lang, t]);
 

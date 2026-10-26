@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import notifee, { EventType } from 'react-native-notify-kit';
 
 import { attachCallActions, handleNotificationEvent, type CallAction } from './background';
+import { startCallKitBridge } from './callkit';
 import { answerWhenReady } from './callSession';
 import { openCallScreen } from './nav';
 import { checkIncomingCallsNow } from './useIncomingCalls';
@@ -24,6 +25,8 @@ export function useCallNotifications(enabled: boolean, openRoute: (route: string
       openCallScreen(a.callId);
     };
     const detach = attachCallActions({ run, ring: () => checkIncomingCallsNow() });
+    // iPhone: the native CallKit call screen (modules/flyp-callkit).
+    const stopCallKit = startCallKitBridge();
 
     let unsubscribe = () => {};
     if (Platform.OS === 'android') {
@@ -43,6 +46,7 @@ export function useCallNotifications(enabled: boolean, openRoute: (route: string
     }
     return () => {
       detach();
+      stopCallKit();
       unsubscribe();
     };
   }, [enabled, openRoute]);
