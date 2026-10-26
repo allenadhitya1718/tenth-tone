@@ -45,22 +45,22 @@ export type ModerationTarget =
   | { kind: 'viewer'; user: UserSummary }
   | { kind: 'stream'; liveId: string; host: UserSummary | null };
 
-type HostAction = { label: string; icon: 'person-add-outline' | 'mic-off-outline'; onPress: () => void };
+type HostAction = { label: string; icon: 'person-add-outline' | 'mic-off-outline' | 'mic-outline' | 'remove-circle-outline'; onPress: () => void };
 
 export function ModerationSheet({
   target,
   onClose,
   onHide,
   onBlocked,
-  hostAction,
+  hostActions,
 }: {
   target: ModerationTarget | null;
   onClose: () => void;
   /** Hide this person's chat on this screen. */
   onHide?: (userId: string) => void;
   onBlocked?: (userId: string) => void;
-  /** Host only: invite this viewer, or take this guest off stage. */
-  hostAction?: HostAction | null;
+  /** Host only: invite this viewer, or mute / take this guest off stage. */
+  hostActions?: HostAction[];
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -154,16 +154,17 @@ export function ModerationSheet({
             }}
           />
         ) : null}
-        {hostAction ? (
+        {(hostActions ?? []).map((a) => (
           <OptionRow
-            icon={hostAction.icon}
-            label={hostAction.label}
+            key={a.label}
+            icon={a.icon}
+            label={a.label}
             onPress={() => {
               close();
-              hostAction.onPress();
+              a.onPress();
             }}
           />
-        ) : null}
+        ))}
         {target.kind === 'stream' ? (
           <OptionRow
             icon="flag-outline"

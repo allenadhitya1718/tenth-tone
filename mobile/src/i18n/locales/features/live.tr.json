@@ -84,7 +84,13 @@
       "remove": "Sahneden çıkar",
       "withdraw": "Geri çek",
       "invite": "Davet et",
-      "inviteToSpeak": "Konuşmaya davet et"
+      "inviteToSpeak": "Konuşmaya davet et",
+      "count_one": "Sahnede {{count}}/{{max}}",
+      "count_other": "Sahnede {{count}}/{{max}}",
+      "mutedByHost": "sunucu sessize aldı",
+      "muteGuest": "Mikrofonunu kapat",
+      "unmuteGuest": "Tekrar konuşmasına izin ver",
+      "count": "Sahnede {{count}}/{{max}}"
     },
     "guest": {
       "request": "Konuşma isteği gönder",
@@ -105,7 +111,10 @@
       "removedBody": "Yayıncı seni dinleyicilere geri aldı.",
       "declinedTitle": "Yayıncı isteğini reddetti",
       "leave": "Sahneden ayrıl",
-      "leaveTitle": "Sahneden ayrılmak istiyor musun?"
+      "leaveTitle": "Sahneden ayrılmak istiyor musun?",
+      "join": "Katıl",
+      "mutedByHost": "Sunucu seni sessize aldı",
+      "mutedByHostBody": "Sunucu mikrofonunu açınca tekrar konuşabilirsin."
     },
     "chat": {
       "placeholder": "Yorum ekle…",
@@ -121,7 +130,9 @@
       "title": "Tepkiler",
       "send": "Gönder: {{emoji}}",
       "opened": "Tepkiler açık",
-      "close": "Tepkileri kapat"
+      "close": "Tepkileri kapat",
+      "tapHint": "Kalp göndermek için herhangi bir yere dokun",
+      "more": "Tepkiler"
     },
     "gifts": {
       "open": "Hediye gönder",
@@ -147,7 +158,8 @@
       "sendShort": "Gönder",
       "recharge": "Yükle",
       "combo": "Kombo",
-      "comboA11y": "{{gift}} tekrar gönder, {{count}} gönderildi"
+      "comboA11y": "{{gift}} tekrar gönder, {{count}} gönderildi",
+      "lineSent": "{{gift}} gönderdi"
     },
     "report": {
       "title": "Şikayet et",
@@ -225,7 +237,10 @@
       "agora_not_installed": "Canlı ses, uygulamanın bu sürümünde kullanılamıyor.",
       "agora_join_failed": "Ses bağlanamadı. Ayrılıp tekrar katılmayı dene.",
       "mic_denied": "Mikrofon erişimi kapalı, bu yüzden kimse seni duyamıyor.",
-      "same_uid_login": "Bu canlı yayın, hesabınla başka bir cihazda açık."
+      "same_uid_login": "Bu canlı yayın, hesabınla başka bir cihazda açık.",
+      "not_connected": "Yalnızca takip ettiğin veya seni takip edenleri davet edebilirsin.",
+      "cannot_see_live": "Bu kişi LIVE'ını açamaz (yalnızca arkadaşlar).",
+      "invite_limit": "Çok fazla davet. Birkaç dakika bekle."
     },
     "wallet": {
       "title": "Cüzdan",
@@ -409,6 +424,37 @@
       },
       "recharge": "Yükle",
       "rechargeFor": "Yükle · {{price}}"
+    },
+    "invite": {
+      "open": "Birini davet et",
+      "title": "LIVE'ına davet et",
+      "search": "Kişi ara",
+      "clear": "Aramayı temizle",
+      "lead": "Takip ettiklerin. Sahneye katılmaları için bildirim alacaklar.",
+      "results": "Yalnızca takip ettiğin veya seni takip edenler davet edilebilir.",
+      "noResults": "Kimse bulunamadı.",
+      "noFollowing": "Henüz kimseyi takip etmiyorsun. Yukarıdan ara.",
+      "failed": "Kişiler yüklenemedi.",
+      "action": "Davet et",
+      "actionA11y": "{{name}} kişisini davet et",
+      "invited": "Davet edildi",
+      "accepted": "Sahnede",
+      "sent": "Davet gönderildi"
+    },
+    "ranking": {
+      "open": "En çok hediye gönderenler",
+      "chip": "En çok hediye",
+      "title": "Bu LIVE'da en çok hediye gönderenler",
+      "lead": "Bu LIVE'da hediyelerle gönderilen jetonlara göre.",
+      "empty": "Henüz hediye yok. İlk sen ol!",
+      "failed": "Sıralama yüklenemedi.",
+      "rowA11y_one": "{{rank}}. {{name}}, {{count}} jeton",
+      "rowA11y_other": "{{rank}}. {{name}}, {{count}} jeton",
+      "rowA11y": "{{rank}}. {{name}}, {{count}} jeton"
+    },
+    "follow": {
+      "action": "{{name}} kişisini takip et",
+      "failed": "Takip edilemedi. Tekrar dene."
     }
   }
 }

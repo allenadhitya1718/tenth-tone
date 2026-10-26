@@ -16,7 +16,7 @@ export const REACTIONS = ['❤️', '🔥', '👏', '😂', '😮', '💯'] as c
 
 export const MAX_TITLE = 60; // the web go-live input's maxlength
 export const MAX_COMMENT = 500; // live_comments column limit
-export const MAX_GUESTS = 4; // 0103: at most 4 accepted guests plus the host
+export const MAX_GUESTS = 29; // 0159: at most 29 accepted guests plus the host (30 on stage)
 export const MAX_COMMENTS_SHOWN = 100;
 
 // The Agora uid a signed-in person joins a live channel with.

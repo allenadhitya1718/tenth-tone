@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, Easing, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import type { UserSummary } from '@/api/types';
 
@@ -9,14 +9,16 @@ import { agoraUidFor, MAX_GUESTS } from './config';
 import { Avatar } from './Sheet';
 import { useIsSpeaking, type SpeakingStore } from './speakingStore';
 
-// The stage (client notes 5 and 6): the host and up to four guests as avatar
-// tiles, laid out as an even 3 + 2 grid that does not jump around as people
-// join and leave. Empty seats are shown so the layout stays still; tapping
-// one asks to speak (viewer) or opens the stage manager (host).
+// The stage (client notes 5 and 6, round 4): TikTok's multi-guest layout for
+// an audio room. The host sits large at the top; up to 29 guests fill a
+// four-across grid under them that scrolls once it is taller than the space
+// it is given. One open seat follows the guests while the stage has room:
+// tapping it asks to join (viewer) or opens the stage manager (host).
 
-export type StageSpeaker = { user: UserSummary; isHost: boolean; isMe: boolean; muted?: boolean };
+export type StageSpeaker = { user: UserSummary; isHost: boolean; isMe: boolean; muted?: boolean; hostMuted?: boolean };
 
 const RING = '#5B9BF5';
+const COLUMNS = 4;
 
 export function Stage({
   speakers,
@@ -24,16 +26,21 @@ export function Stage({
   onLongPress,
   onEmptySeat,
   emptySeatLabel,
+  maxHeight,
 }: {
   speakers: StageSpeaker[];
   speaking: SpeakingStore;
   onLongPress: (s: StageSpeaker) => void;
   onEmptySeat?: () => void;
   emptySeatLabel: string;
+  maxHeight?: number;
 }) {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
-  const tile = Math.min(116, Math.floor((width - 48) / 3));
-  const seats = Math.max(0, 1 + MAX_GUESTS - speakers.length);
+  const tile = Math.floor((Math.min(width, 520) - 32) / COLUMNS);
+  const host = speakers.find((s) => s.isHost) ?? null;
+  const guests = speakers.filter((s) => !s.isHost);
+  const full = guests.length >= MAX_GUESTS;
 
   // A web-hosted stream joins with a random uid that is not ours to compute;
   // any speaker we cannot place is credited to the host tile.
@@ -41,31 +48,41 @@ export function Stage({
   const known = useMemo(() => new Set(ids.split(',').filter(Boolean).map(agoraUidFor)), [ids]);
 
   return (
-    <View style={styles.grid} accessibilityRole="list">
-      {speakers.map((s) => (
-        <SpeakerTile
-          key={s.user.id}
-          speaker={s}
-          size={tile}
-          speaking={speaking}
-          fallback={s.isHost ? known : undefined}
-          onLongPress={onLongPress}
-        />
-      ))}
-      {Array.from({ length: seats }, (_, i) => (
-        <Pressable
-          key={`seat-${i}`}
-          onPress={onEmptySeat}
-          disabled={!onEmptySeat}
-          accessibilityRole="button"
-          accessibilityLabel={emptySeatLabel}
-          style={[styles.tile, { width: tile }]}
-        >
-          <View style={[styles.seat, { width: tile * 0.62, height: tile * 0.62, borderRadius: tile * 0.31 }]}>
-            <Ionicons name={onEmptySeat ? 'add' : 'mic-outline'} size={22} color="rgba(255,255,255,0.55)" />
-          </View>
-        </Pressable>
-      ))}
+    <View style={{ gap: 10 }}>
+      {host ? (
+        <View style={styles.hostRow}>
+          <SpeakerTile speaker={host} size={124} speaking={speaking} fallback={known} onLongPress={onLongPress} />
+        </View>
+      ) : null}
+      <Text style={styles.count} accessibilityRole="text">
+        {t('live.stage.count', { count: guests.length + 1, max: MAX_GUESTS + 1 })}
+      </Text>
+      <ScrollView
+        style={maxHeight ? { maxHeight } : undefined}
+        contentContainerStyle={styles.grid}
+        showsVerticalScrollIndicator={guests.length > COLUMNS * 2}
+        nestedScrollEnabled
+        accessibilityRole="list"
+      >
+        {guests.map((s) => (
+          <SpeakerTile key={s.user.id} speaker={s} size={tile} speaking={speaking} onLongPress={onLongPress} />
+        ))}
+        {!full && onEmptySeat ? (
+          <Pressable
+            onPress={onEmptySeat}
+            accessibilityRole="button"
+            accessibilityLabel={emptySeatLabel}
+            style={[styles.tile, { width: tile }]}
+          >
+            <View style={[styles.seat, { width: tile * 0.66, height: tile * 0.66, borderRadius: tile * 0.33 }]}>
+              <Ionicons name="add" size={24} color="rgba(255,255,255,0.75)" />
+            </View>
+            <Text style={styles.seatLabel} numberOfLines={1}>
+              {emptySeatLabel}
+            </Text>
+          </Pressable>
+        ) : null}
+      </ScrollView>
     </View>
   );
 }
@@ -84,7 +101,7 @@ const SpeakerTile = memo(function SpeakerTile({
   onLongPress: (s: StageSpeaker) => void;
 }) {
   const { t } = useTranslation();
-  const isSpeaking = useIsSpeaking(speaking, agoraUidFor(speaker.user.id), fallback) && !speaker.muted;
+  const isSpeaking = useIsSpeaking(speaking, agoraUidFor(speaker.user.id), fallback) && !speaker.muted && !speaker.hostMuted;
   const [pulse] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
@@ -103,13 +120,13 @@ const SpeakerTile = memo(function SpeakerTile({
     return () => loop.stop();
   }, [isSpeaking, pulse]);
 
-  const avatar = size * 0.62;
+  const avatar = size * 0.66;
   const name = speaker.user.name || speaker.user.handle || t('live.someone');
   const label = [
     name,
     speaker.isHost ? t('live.stage.host') : t('live.stage.guest'),
     isSpeaking ? t('live.stage.speaking') : null,
-    speaker.muted ? t('live.stage.muted') : null,
+    speaker.hostMuted ? t('live.stage.mutedByHost') : speaker.muted ? t('live.stage.muted') : null,
   ]
     .filter(Boolean)
     .join(', ');
@@ -145,7 +162,7 @@ const SpeakerTile = memo(function SpeakerTile({
             <Ionicons name="star" size={10} color="#fff" />
           </View>
         ) : null}
-        {speaker.muted ? (
+        {speaker.muted || speaker.hostMuted ? (
           <View style={styles.mutedBadge}>
             <Ionicons name="mic-off" size={11} color="#fff" />
           </View>
@@ -159,14 +176,16 @@ const SpeakerTile = memo(function SpeakerTile({
 });
 
 const styles = StyleSheet.create({
+  hostRow: { alignItems: 'center' },
+  count: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '700', textAlign: 'center' },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    rowGap: 14,
-    columnGap: 8,
+    rowGap: 12,
     paddingHorizontal: 16,
   },
+  seatLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600', maxWidth: '100%' },
   tile: { alignItems: 'center', gap: 6, minHeight: 44 },
   seat: {
     alignItems: 'center',
@@ -202,5 +221,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  name: { color: '#fff', fontSize: 13, fontWeight: '700', maxWidth: '100%', textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 4 },
+  name: { color: '#fff', fontSize: 12, fontWeight: '700', maxWidth: '100%', textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 4 },
 });

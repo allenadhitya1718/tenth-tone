@@ -8,7 +8,7 @@ import { Button } from '@/components/ui';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { MAX_GUESTS } from './config';
-import { Avatar, Sheet } from './Sheet';
+import { Avatar, OptionRow, Sheet } from './Sheet';
 import { fetchLiveViewers, liveViewersKey } from './viewers';
 import { atHandle } from '@/lib/handle';
 
@@ -33,6 +33,7 @@ export function StageManager({
   onRemove,
   onInvite,
   onPerson,
+  onInviteSomeone,
 }: {
   visible: boolean;
   onClose: () => void;
@@ -45,6 +46,8 @@ export function StageManager({
   onRemove: (userId: string) => void;
   onInvite: (userId: string) => void;
   onPerson: (user: UserSummary, onStage: boolean) => void;
+  /** Opens the search to invite a specific person who is not watching. */
+  onInviteSomeone: () => void;
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -73,6 +76,7 @@ export function StageManager({
   return (
     <Sheet visible={visible} onClose={onClose} title={t('live.stage.manage')} maxHeight={0.8}>
       {guestsError ? <Text style={[styles.note, { color: colors.danger }]}>{t(guestsError)}</Text> : null}
+      <OptionRow icon="person-add-outline" label={t('live.invite.open')} onPress={onInviteSomeone} disabled={full} />
       <SectionList
         sections={sections}
         keyExtractor={(r) => `${r.kind}-${r.user.id}`}

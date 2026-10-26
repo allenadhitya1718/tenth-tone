@@ -14,6 +14,7 @@ import {
   BackHandler,
   FlatList,
   I18nManager,
+  Keyboard,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -22,6 +23,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,6 +45,7 @@ import {
   removeLiveGuest,
   requestToJoinLive,
   respondLiveInvite,
+  setLiveGuestMuted,
   type LiveComment,
   type LiveGuestStatus,
   type LiveReactions,
@@ -56,9 +59,10 @@ import { useTheme } from '@/providers/ThemeProvider';
 
 import { agoraUidFor, formatDuration, liveLink, MAX_COMMENT, MAX_GUESTS } from './config';
 import { liveError, serverDetail } from './errors';
-import { GiftBanner, GiftTray, useGiftBanner } from './Gifts';
+import { BIG_GIFT, GiftBanner, giftName, GiftSpotlight, GiftTray, useGiftBanner, useGiftSpotlight } from './Gifts';
 import { ModerationSheet, type ModerationTarget } from './ModerationSheet';
 import { FloaterLayer, ReactionTray, useFloaters } from './Reactions';
+import { HostChip, InvitePeopleSheet, RankingSheet, TopGifterStack, useTopGifters } from './RoomParts';
 import { Avatar, OptionRow, Sheet } from './Sheet';
 import { createSpeakingStore } from './speakingStore';
 import { Stage, type StageSpeaker } from './Stage';
@@ -72,10 +76,11 @@ import {
   useLiveStreamRow,
   useProfileLookup,
 } from './useLiveData';
-import { atHandle } from '@/lib/handle';
 
 // One screen for the host, the audience and guests on stage (client notes 4,
-// 5, 6, 7, 17, 29). Port of V.live in web/js/views.js, audio only.
+// 5, 6, 7, 17, 29). Audio only, laid out like TikTok LIVE (round 4): host
+// capsule and top gifters on top, the stage, comments and gift lines at the
+// bottom left, and tapping anywhere sends hearts.
 //
 // Who you are decides the controls:
 //   host     End, the stage manager, mic; publishes from the start
@@ -90,7 +95,8 @@ const BG = '#000421';
 const DIM = 'rgba(255,255,255,0.72)';
 
 export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boolean }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const { height: winH } = useWindowDimensions();
   const { session } = useAuth();
   const me = session?.user.id ?? null;
   const insets = useSafeAreaInsets();
@@ -176,7 +182,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
     ];
     for (const g of onStage) {
       const user: UserSummary = g.user ?? { id: g.user_id, name: null, handle: null, avatar_url: null };
-      list.push({ user, isHost: false, isMe: g.user_id === me, muted: g.user_id === me ? agora.muted : undefined });
+      list.push({ user, isHost: false, isMe: g.user_id === me, muted: g.user_id === me ? agora.muted : undefined, hostMuted: !!g.host_muted });
     }
     return list;
   }, [host, isHost, onStage, me, agora.muted]);
@@ -196,6 +202,16 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
       showAlert(t('live.guest.declinedTitle'));
     }
   }, [myStatus, isHost, t]);
+
+  // The host muted me (0159): turn the mic off and keep it off until they
+  // unmute. Agora cannot do this from the host's phone, so this app does it.
+  const hostMutedMe = myStatus === 'accepted' && !!myGuest?.host_muted;
+  const { setMuted } = agora;
+  useEffect(() => {
+    if (!hostMutedMe) return;
+    setMuted(true);
+    AccessibilityInfo.announceForAccessibility(t('live.guest.mutedByHost'));
+  }, [hostMutedMe, setMuted, t]);
 
   // ---------- guest actions (RPCs; errors are translated ApiError codes) ----------
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -322,7 +338,22 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
     [speakers, me],
   );
   const { push: pushBanner } = banner;
+  const spotlight = useGiftSpotlight();
+  const { push: pushSpot } = spotlight;
   const hostId = host?.id ?? null;
+  const [giftLines, setGiftLines] = useState<GiftLine[]>([]);
+  const ranking = useTopGifters(liveId, isLive);
+  const [rankingOpen, setRankingOpen] = useState(false);
+  const { refetch: refetchRanking } = ranking;
+  const addGiftLine = useCallback(
+    (id: string, sender: string, gift: Pick<Gift, 'name' | 'name_en' | 'emoji' | 'asset_url'>, price: number) => {
+      const label = giftName(gift, i18n.language);
+      setGiftLines((prev) => [...prev, { id, at: new Date().toISOString(), sender, gift: label, emoji: gift.emoji || '🎁' }].slice(-30));
+      if (price >= BIG_GIFT) pushSpot({ sender, gift });
+      void refetchRanking();
+    },
+    [i18n.language, pushSpot, refetchRanking],
+  );
 
   useEffect(() => {
     if (!isLive) return;
@@ -337,19 +368,21 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
           row.to_user_id === hostId ? Promise.resolve(null) : lookup(row.to_user_id),
         ]);
         if (!active) return;
+        const sender = from?.name || from?.handle || t('live.someone');
         pushBanner({
           key: `${row.from_user_id}:${row.to_user_id}:${row.gift_id}`,
-          sender: from?.name || from?.handle || t('live.someone'),
+          sender,
           recipient: to ? to.name || to.handle || null : null,
           gift,
         });
+        addGiftLine(row.id, sender, gift, row.amount);
       })();
     });
     return () => {
       active = false;
       unsub();
     };
-  }, [isLive, liveId, hostId, lookup, pushBanner, qc, t]);
+  }, [isLive, liveId, hostId, lookup, pushBanner, addGiftLine, qc, t]);
 
   const onGiftSent = useCallback(
     (txId: string, gift: Gift, to: UserSummary) => {
@@ -361,8 +394,9 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
         recipient: to.id === hostId ? null : to.name || to.handle || null,
         gift,
       });
+      addGiftLine(txId, t('live.you'), gift, gift.price);
     },
-    [hostId, pushBanner, t],
+    [hostId, pushBanner, addGiftLine, t],
   );
 
   // ---------- moderation ----------
@@ -377,12 +411,33 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
   const onSpeaker = useCallback((s: StageSpeaker) => setModTarget({ kind: 'speaker', user: s.user }), [setModTarget]);
   const modUserId = modTarget && modTarget.kind !== 'stream' ? modTarget.user.id : null;
   const modOnStage = !!modUserId && onStage.some((g) => g.user_id === modUserId);
-  const modHostAction =
+  const modGuest = modUserId ? onStage.find((g) => g.user_id === modUserId) : undefined;
+  const modHostActions =
     isHost && modUserId
       ? modOnStage
-        ? { label: t('live.stage.remove'), icon: 'mic-off-outline' as const, onPress: () => void guestAction(modUserId, () => removeLiveGuest(liveId, modUserId)) }
-        : { label: t('live.stage.inviteToSpeak'), icon: 'person-add-outline' as const, onPress: () => void guestAction(modUserId, () => inviteToLive(liveId, modUserId)) }
-      : null;
+        ? [
+            modGuest?.host_muted
+              ? { label: t('live.stage.unmuteGuest'), icon: 'mic-outline' as const, onPress: () => void muteGuest(modUserId, false) }
+              : { label: t('live.stage.muteGuest'), icon: 'mic-off-outline' as const, onPress: () => void muteGuest(modUserId, true) },
+            { label: t('live.stage.remove'), icon: 'remove-circle-outline' as const, onPress: () => void guestAction(modUserId, () => removeLiveGuest(liveId, modUserId)) },
+          ]
+        : [{ label: t('live.stage.inviteToSpeak'), icon: 'person-add-outline' as const, onPress: () => void guestAction(modUserId, () => inviteToLive(liveId, modUserId)) }]
+      : [];
+
+  async function muteGuest(userId: string, muted: boolean) {
+    setBusyId(userId);
+    try {
+      await setLiveGuestMuted(liveId, userId, muted);
+      await qc.invalidateQueries({ queryKey: liveKeys.guests(liveId) });
+    } catch (e) {
+      showAlert(t('live.errors.title'), t(liveError(e).key));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  // ---------- invite a specific person (host) ----------
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   // ---------- host ----------
   const [managerOpen, setManagerOpen] = useState(false);
@@ -496,36 +551,20 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
       <View style={[StyleSheet.absoluteFill, styles.dim]} />
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-        {/* Header */}
+        {/* Top: host capsule on the left; top gifters, listeners and close on the right. */}
         <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
-          <Pressable
-            style={styles.hostInfo}
-            onPress={() => host && router.push(`/user/${host.id}`)}
-            accessibilityRole="button"
-            accessibilityLabel={t('live.hostProfile', { name: hostName })}
-          >
-            <Avatar uri={host?.avatar_url} name={hostName} size={36} />
-            <View style={{ flexShrink: 1 }}>
-              <Text style={styles.hostName} numberOfLines={1}>
-                {hostName}
-              </Text>
-              {host?.handle ? (
-                <Text style={styles.hostHandle} numberOfLines={1}>
-                  {atHandle(host.handle)}
-                </Text>
-              ) : null}
-            </View>
-          </Pressable>
+          <HostChip
+            host={host}
+            elapsed={elapsed}
+            canFollow={!isHost && !!me}
+            onProfile={() => host && router.push(`/user/${host.id}`)}
+          />
           <View style={styles.headerRight}>
-            <View style={styles.liveBadge} accessible accessibilityLabel={t('live.badgeA11y', { time: formatDuration(elapsed) })}>
-              <Text style={styles.liveBadgeText}>{t('live.badge')}</Text>
-              <Text style={styles.liveBadgeTime}>{formatDuration(elapsed)}</Text>
-            </View>
+            <TopGifterStack gifters={ranking.data ?? []} onPress={() => setRankingOpen(true)} />
             <View style={styles.pill} accessible accessibilityLabel={t('live.viewersA11y', { count: live.viewer_count })}>
-              <Ionicons name="headset" size={12} color="#fff" />
+              <Ionicons name="person" size={11} color="#fff" />
               <Text style={styles.pillText}>{formatCount(live.viewer_count)}</Text>
             </View>
-            <RoundIcon icon="share-social-outline" label={t('live.share')} onPress={() => void share()} />
             {isHost ? (
               <Pressable
                 onPress={confirmEnd}
@@ -535,26 +574,29 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
                 accessibilityLabel={t('live.end.action')}
                 accessibilityState={{ busy: ending }}
               >
-                {ending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.endText}>{t('live.end.action')}</Text>}
+                {ending ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="power" size={18} color="#fff" />}
               </Pressable>
             ) : (
-              <>
-                <RoundIcon
-                  icon="ellipsis-horizontal"
-                  label={t('live.options')}
-                  onPress={() => setModTarget({ kind: 'stream', liveId, host })}
-                />
-                <RoundIcon icon="close" label={t('live.leave')} onPress={leave} />
-              </>
+              <Pressable onPress={leave} hitSlop={8} style={styles.close} accessibilityRole="button" accessibilityLabel={t('live.leave')}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </Pressable>
             )}
           </View>
         </View>
 
-        {live.title ? (
-          <Text style={styles.title} numberOfLines={2}>
-            {live.title}
-          </Text>
-        ) : null}
+        {/* Second row: ranking chip and the title, like TikTok's "Weekly ranking" line. */}
+        <View style={styles.subRow}>
+          <Pressable onPress={() => setRankingOpen(true)} style={styles.rankChip} accessibilityRole="button" accessibilityLabel={t('live.ranking.open')}>
+            <Ionicons name="trophy" size={12} color="#FFC93C" />
+            <Text style={styles.rankChipText}>{t('live.ranking.chip')}</Text>
+            <Ionicons name={I18nManager.isRTL ? 'chevron-back' : 'chevron-forward'} size={12} color="#fff" />
+          </Pressable>
+          {live.title ? (
+            <Text style={styles.title} numberOfLines={1}>
+              {live.title}
+            </Text>
+          ) : null}
+        </View>
 
         <AudioStatus
           status={agora.status}
@@ -568,7 +610,8 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
             speakers={speakers}
             speaking={speaking}
             onLongPress={onSpeaker}
-            emptySeatLabel={isHost ? t('live.stage.manage') : t('live.guest.request')}
+            maxHeight={Math.round(winH * 0.26)}
+            emptySeatLabel={isHost ? t('live.stage.invite') : t('live.guest.join')}
             onEmptySeat={
               !isLive
                 ? undefined
@@ -581,15 +624,25 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
           />
         </View>
 
-        <View style={{ flex: 1 }} />
+        {/* The open middle: tapping it sends a heart, as on TikTok. */}
+        <Pressable
+          style={{ flex: 1 }}
+          onPress={() => {
+            Keyboard.dismiss();
+            if (isLive) sendReaction('❤️');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={t('live.reactions.heart')}
+          accessibilityHint={t('live.reactions.tapHint')}
+        />
 
-        {/* Chat over a gradient, with the gift banner on top of it. */}
+        {/* Comments and gift lines bottom left, gift banner above them. */}
         <View style={styles.bottom}>
-          <LinearGradient colors={['transparent', 'rgba(0,4,33,0.88)']} style={StyleSheet.absoluteFill} pointerEvents="none" />
+          <LinearGradient colors={['transparent', 'rgba(0,4,33,0.7)']} style={StyleSheet.absoluteFill} pointerEvents="none" />
           <View style={styles.bannerSlot}>
             <GiftBanner event={banner.current} onDone={banner.shift} />
           </View>
-          <CommentList comments={chat.comments} loading={chat.loading} failed={chat.failed} onComment={onComment} />
+          <CommentList comments={chat.comments} gifts={giftLines} loading={chat.loading} failed={chat.failed} onComment={onComment} />
 
           <View style={[styles.bar, { paddingBottom: composerBottom }]}>
             <View style={styles.inputWrap}>
@@ -609,7 +662,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
               />
               {text.trim() ? (
                 <Pressable onPress={() => void sendComment()} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('live.chat.send')} style={styles.sendBtn}>
-                  <Ionicons name="send" size={20} color="#fff" style={I18nManager.isRTL ? { transform: [{ scaleX: -1 }] } : undefined} />
+                  <Ionicons name="send" size={18} color="#fff" style={I18nManager.isRTL ? { transform: [{ scaleX: -1 }] } : undefined} />
                 </Pressable>
               ) : null}
             </View>
@@ -617,10 +670,13 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
             {isLive && amSpeaker ? (
               <RoundIcon
                 icon={agora.muted ? 'mic-off' : 'mic'}
-                label={agora.muted ? t('live.mic.unmute') : t('live.mic.mute')}
-                onPress={() => agora.setMuted(!agora.muted)}
+                label={hostMutedMe ? t('live.guest.mutedByHost') : agora.muted ? t('live.mic.unmute') : t('live.mic.mute')}
+                onPress={() => (hostMutedMe ? showAlert(t('live.guest.mutedByHost'), t('live.guest.mutedByHostBody')) : agora.setMuted(!agora.muted))}
                 active={!agora.muted}
               />
+            ) : null}
+            {isLive && isHost ? (
+              <RoundIcon icon="person-add" label={t('live.invite.open')} onPress={() => setInviteOpen(true)} />
             ) : null}
             {isLive && isHost ? (
               <RoundIcon icon="people" label={t('live.stage.manageA11y', { count: requestCount })} onPress={() => setManagerOpen(true)} badge={requestCount} />
@@ -644,12 +700,18 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
               />
             ) : null}
             {isLive && giftRecipients.length ? (
-              <RoundIcon icon="gift" label={t('live.gifts.open')} onPress={() => setGiftsOpen(true)} tint="#FF6FA3" />
+              <Pressable onPress={() => setGiftsOpen(true)} accessibilityRole="button" accessibilityLabel={t('live.gifts.open')} style={styles.giftBtn} hitSlop={4}>
+                <Ionicons name="gift" size={22} color="#fff" />
+              </Pressable>
+            ) : null}
+            <RoundIcon icon="arrow-redo" label={t('live.share')} onPress={() => void share()} />
+            {!isHost ? (
+              <RoundIcon icon="ellipsis-horizontal" label={t('live.options')} onPress={() => setModTarget({ kind: 'stream', liveId, host })} />
             ) : null}
             {isLive ? (
               <RoundIcon
                 icon="heart"
-                label={t('live.reactions.heart')}
+                label={t('live.reactions.more')}
                 onPress={() => {
                   sendReaction('❤️');
                   setTrayOpen(true);
@@ -662,6 +724,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
       </KeyboardAvoidingView>
 
       <FloaterLayer items={floaters.items} onDone={floaters.done} />
+      <GiftSpotlight event={spotlight.current} onDone={spotlight.shift} />
       <ReactionTray open={trayOpen} onPick={sendReaction} onClose={closeTray} bottom={composerBottom + 56} />
 
       {ended ? <EndedCard live={live} isHost={isHost} peak={stream.peak} onDone={() => router.replace('/')} /> : null}
@@ -684,9 +747,36 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
             setManagerOpen(false);
             setModTarget({ kind: 'viewer', user });
           }}
+          onInviteSomeone={() => {
+            setManagerOpen(false);
+            setInviteOpen(true);
+          }}
         />
       ) : null}
-      <ModerationSheet target={modTarget} onClose={() => setModTarget(null)} onHide={hide} onBlocked={hide} hostAction={modHostAction} />
+      <ModerationSheet target={modTarget} onClose={() => setModTarget(null)} onHide={hide} onBlocked={hide} hostActions={modHostActions} />
+      <RankingSheet
+        visible={rankingOpen}
+        onClose={() => setRankingOpen(false)}
+        query={ranking}
+        onPerson={(user) => {
+          setRankingOpen(false);
+          if (user.id !== me) setModTarget({ kind: 'viewer', user });
+        }}
+      />
+      {isHost ? (
+        <InvitePeopleSheet
+          visible={inviteOpen}
+          onClose={() => setInviteOpen(false)}
+          myId={me}
+          guests={guests}
+          busyId={busyId}
+          onInvite={(id) =>
+            void guestAction(id, () => inviteToLive(liveId, id)).then((ok) => {
+              if (ok) AccessibilityInfo.announceForAccessibility(t('live.invite.sent'));
+            })
+          }
+        />
+      ) : null}
       <Sheet visible={showInvite && isLive} onClose={() => setInviteDismissed(myGuest?.updated_at ?? null)} title={t('live.guest.invitedTitle')}>
         <InviteBody avatar={host?.avatar_url} name={hostName} />
         <OptionRow
@@ -802,25 +892,40 @@ function AudioStatus({
   return null;
 }
 
+// A gift shown as a line among the comments, as TikTok does.
+type GiftLine = { id: string; at: string; sender: string; gift: string; emoji: string };
+type FeedItem = { kind: 'comment'; c: LiveComment } | { kind: 'gift'; g: GiftLine };
+
 const CommentList = memo(function CommentList({
   comments,
+  gifts,
   loading,
   failed,
   onComment,
 }: {
   comments: LiveComment[];
+  gifts: GiftLine[];
   loading: boolean;
   failed: boolean;
   onComment: (c: LiveComment) => void;
 }) {
   const { t } = useTranslation();
-  // Inverted, so the newest line sits at the bottom without scrolling.
-  const data = useMemo(() => [...comments].reverse(), [comments]);
+  // Comments and gift lines by time, inverted so the newest sits at the bottom.
+  const data = useMemo<FeedItem[]>(
+    () =>
+      [
+        ...comments.map((c) => ({ kind: 'comment' as const, c, at: c.created_at })),
+        ...gifts.map((g) => ({ kind: 'gift' as const, g, at: g.at })),
+      ]
+        .sort((x, y) => (x.at < y.at ? 1 : x.at > y.at ? -1 : 0))
+        .map(({ at: _at, ...item }) => item as FeedItem),
+    [comments, gifts],
+  );
   return (
     <FlatList
       data={data}
       inverted
-      keyExtractor={(c) => c.id}
+      keyExtractor={(x) => (x.kind === 'comment' ? x.c.id : `g-${x.g.id}`)}
       style={styles.comments}
       contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 4 }}
       keyboardShouldPersistTaps="handled"
@@ -836,7 +941,18 @@ const CommentList = memo(function CommentList({
           )}
         </View>
       }
-      renderItem={({ item }) => <CommentRow comment={item} onPress={onComment} />}
+      renderItem={({ item }) =>
+        item.kind === 'comment' ? (
+          <CommentRow comment={item.c} onPress={onComment} />
+        ) : (
+          <View style={[styles.comment, styles.giftLine]} accessible accessibilityLabel={t('live.gifts.banner', { sender: item.g.sender, gift: item.g.gift })}>
+            <Text style={styles.commentText}>
+              <Text style={styles.commentName}>{item.g.sender} </Text>
+              {t('live.gifts.lineSent', { gift: item.g.gift })} {item.g.emoji}
+            </Text>
+          </View>
+        )
+      }
     />
   );
 });
@@ -894,32 +1010,38 @@ const styles = StyleSheet.create({
   centerTitle: { color: '#fff', fontSize: 18, fontWeight: '800', textAlign: 'center' },
   centerText: { color: DIM, fontSize: 14, textAlign: 'center' },
   wide: { alignSelf: 'stretch', paddingHorizontal: 24 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10 },
+  close: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  subRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, marginTop: 8 },
+  rankChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 12, paddingHorizontal: 9, minHeight: 26 },
+  rankChipText: { color: '#fff', fontSize: 11.5, fontWeight: '700' },
+  giftBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#E8478A', alignItems: 'center', justifyContent: 'center' },
+  giftLine: { backgroundColor: 'rgba(232,71,138,0.35)' },
   hostInfo: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, minHeight: 44 },
   hostName: { color: '#fff', fontSize: 14, fontWeight: '800' },
   hostHandle: { color: DIM, fontSize: 12 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 6, marginStart: 'auto' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 4, marginStart: 'auto' },
   liveBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#ff2d55', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
   liveBadgeText: { color: '#fff', fontSize: 11, fontWeight: '900' },
   liveBadgeTime: { color: '#fff', fontSize: 11, fontWeight: '700', fontVariant: ['tabular-nums'] },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,0,0,0.4)', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
   pillText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  endBtn: { backgroundColor: '#ff2d55', borderRadius: 18, paddingHorizontal: 14, minHeight: 36, minWidth: 56, alignItems: 'center', justifyContent: 'center' },
+  endBtn: { backgroundColor: '#ff2d55', borderRadius: 18, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   endText: { color: '#fff', fontWeight: '800', fontSize: 13 },
-  title: { color: '#fff', fontSize: 16, fontWeight: '700', paddingHorizontal: 16, marginTop: 10, textAlign: 'center' },
-  stage: { marginTop: 28 },
+  title: { color: '#fff', fontSize: 13, fontWeight: '700', flexShrink: 1, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3 },
+  stage: { marginTop: 18 },
   bottom: { maxHeight: '48%' },
   bannerSlot: { minHeight: 44, justifyContent: 'center' },
-  comments: { flexGrow: 0, maxHeight: 220 },
-  comment: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 4 },
+  comments: { flexGrow: 0, maxHeight: 230, width: '78%' },
+  comment: { flexDirection: 'row', alignItems: 'flex-start', alignSelf: 'flex-start', gap: 6, paddingVertical: 4, paddingHorizontal: 8, marginVertical: 2, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.28)', maxWidth: '100%' },
   commentText: { color: '#fff', fontSize: 14, lineHeight: 19, flexShrink: 1, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3 },
   commentName: { color: 'rgba(255,255,255,0.75)', fontWeight: '800' },
   chatEmpty: { color: DIM, fontSize: 13, textAlign: 'center', paddingVertical: 8 },
-  bar: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingTop: 8 },
+  bar: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingTop: 8 },
   inputWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 22, paddingStart: 14, paddingEnd: 4, minHeight: 44 },
   input: { flex: 1, color: '#fff', fontSize: 15, paddingVertical: 10 },
   sendBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1E56D6', alignItems: 'center', justifyContent: 'center' },
-  round: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
+  round: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
   roundActive: { backgroundColor: 'rgba(30,86,214,0.85)' },
   badge: { position: 'absolute', top: -2, end: -2, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#ff2d55', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: '800' },

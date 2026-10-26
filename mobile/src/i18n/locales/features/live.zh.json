@@ -82,7 +82,13 @@
       "remove": "抱下麦",
       "withdraw": "撤回",
       "invite": "邀请",
-      "inviteToSpeak": "邀请上麦"
+      "inviteToSpeak": "邀请上麦",
+      "count_one": "台上 {{count}}/{{max}}",
+      "count_other": "台上 {{count}}/{{max}}",
+      "mutedByHost": "已被主播静音",
+      "muteGuest": "将其静音",
+      "unmuteGuest": "允许其再次发言",
+      "count": "台上 {{count}}/{{max}}"
     },
     "guest": {
       "request": "申请上麦",
@@ -103,7 +109,10 @@
       "removedBody": "主播已将你移回听众席。",
       "declinedTitle": "主播拒绝了你的申请",
       "leave": "下麦",
-      "leaveTitle": "确定下麦？"
+      "leaveTitle": "确定下麦？",
+      "join": "加入",
+      "mutedByHost": "主播已将你静音",
+      "mutedByHostBody": "主播重新开启你的麦克风后你才能发言。"
     },
     "chat": {
       "placeholder": "添加评论…",
@@ -119,7 +128,9 @@
       "title": "互动表情",
       "send": "发送 {{emoji}}",
       "opened": "互动表情已打开",
-      "close": "关闭互动表情"
+      "close": "关闭互动表情",
+      "tapHint": "点击任意位置送爱心",
+      "more": "表情"
     },
     "gifts": {
       "open": "送礼物",
@@ -143,7 +154,8 @@
       "sendShort": "赠送",
       "recharge": "充值",
       "combo": "连送",
-      "comboA11y": "再送一次{{gift}}，已送 {{count}} 个"
+      "comboA11y": "再送一次{{gift}}，已送 {{count}} 个",
+      "lineSent": "送出了{{gift}}"
     },
     "report": {
       "title": "举报",
@@ -221,7 +233,10 @@
       "agora_not_installed": "此版本的应用不支持语音直播。",
       "agora_join_failed": "无法连接音频。请尝试退出后重新加入。",
       "mic_denied": "麦克风权限已关闭，没有人能听到你。",
-      "same_uid_login": "你的账号已在另一台设备上打开此直播。"
+      "same_uid_login": "你的账号已在另一台设备上打开此直播。",
+      "not_connected": "只能邀请你关注的人或关注你的人。",
+      "cannot_see_live": "此人无法观看你的直播（仅好友可见）。",
+      "invite_limit": "邀请过多，请稍等几分钟。"
     },
     "wallet": {
       "title": "钱包",
@@ -401,6 +416,37 @@
       },
       "recharge": "充值",
       "rechargeFor": "充值 · {{price}}"
+    },
+    "invite": {
+      "open": "邀请某人",
+      "title": "邀请加入你的直播",
+      "search": "搜索用户",
+      "clear": "清除搜索",
+      "lead": "你关注的人。他们会收到上台邀请通知。",
+      "results": "只能邀请你关注的人或关注你的人。",
+      "noResults": "未找到用户。",
+      "noFollowing": "你还没有关注任何人。请在上方搜索。",
+      "failed": "无法加载用户。",
+      "action": "邀请",
+      "actionA11y": "邀请 {{name}}",
+      "invited": "已邀请",
+      "accepted": "在台上",
+      "sent": "邀请已发送"
+    },
+    "ranking": {
+      "open": "送礼榜",
+      "chip": "送礼榜",
+      "title": "本场直播送礼榜",
+      "lead": "按本场直播中送出的礼物金币排序。",
+      "empty": "还没有礼物，来做第一个吧！",
+      "failed": "无法加载榜单。",
+      "rowA11y_one": "第{{rank}}名 {{name}}，{{count}} 金币",
+      "rowA11y_other": "第{{rank}}名 {{name}}，{{count}} 金币",
+      "rowA11y": "第{{rank}}名 {{name}}，{{count}} 金币"
+    },
+    "follow": {
+      "action": "关注 {{name}}",
+      "failed": "关注失败，请重试。"
     }
   }
 }

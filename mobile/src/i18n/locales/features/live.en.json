@@ -84,7 +84,13 @@
       "remove": "Remove from stage",
       "withdraw": "Withdraw",
       "invite": "Invite",
-      "inviteToSpeak": "Invite to speak"
+      "inviteToSpeak": "Invite to speak",
+      "count_one": "{{count}}/{{max}} on stage",
+      "count_other": "{{count}}/{{max}} on stage",
+      "mutedByHost": "muted by the host",
+      "muteGuest": "Mute their mic",
+      "unmuteGuest": "Let them speak again",
+      "count": "{{count}}/{{max}} on stage"
     },
     "guest": {
       "request": "Request to speak",
@@ -105,7 +111,10 @@
       "removedBody": "The host moved you back to the audience.",
       "declinedTitle": "The host declined your request",
       "leave": "Leave stage",
-      "leaveTitle": "Leave the stage?"
+      "leaveTitle": "Leave the stage?",
+      "join": "Join",
+      "mutedByHost": "The host muted you",
+      "mutedByHostBody": "You can speak again when the host turns your mic back on."
     },
     "chat": {
       "placeholder": "Add a comment…",
@@ -121,7 +130,9 @@
       "title": "Reactions",
       "send": "Send {{emoji}}",
       "opened": "Reactions open",
-      "close": "Close reactions"
+      "close": "Close reactions",
+      "tapHint": "Tap anywhere to send hearts",
+      "more": "Reactions"
     },
     "gifts": {
       "open": "Send a gift",
@@ -147,7 +158,8 @@
       "sendShort": "Send",
       "recharge": "Recharge",
       "combo": "Combo",
-      "comboA11y": "Send {{gift}} again, {{count}} sent"
+      "comboA11y": "Send {{gift}} again, {{count}} sent",
+      "lineSent": "sent {{gift}}"
     },
     "report": {
       "title": "Report",
@@ -225,7 +237,10 @@
       "agora_not_installed": "Live audio isn't available in this build of the app.",
       "agora_join_failed": "Couldn't connect the audio. Try leaving and joining again.",
       "mic_denied": "Microphone access is off, so nobody can hear you.",
-      "same_uid_login": "This live is open on another device with your account."
+      "same_uid_login": "This live is open on another device with your account.",
+      "not_connected": "You can only invite people you follow or who follow you.",
+      "cannot_see_live": "This person can't open your LIVE (friends only).",
+      "invite_limit": "Too many invites. Wait a few minutes."
     },
     "wallet": {
       "title": "Wallet",
@@ -430,6 +445,37 @@
       },
       "recharge": "Recharge",
       "rechargeFor": "Recharge · {{price}}"
+    },
+    "invite": {
+      "open": "Invite someone",
+      "title": "Invite to your LIVE",
+      "search": "Search people",
+      "clear": "Clear search",
+      "lead": "People you follow. They'll get a notification to join you on stage.",
+      "results": "Only people you follow, or who follow you, can be invited.",
+      "noResults": "No one found.",
+      "noFollowing": "You don't follow anyone yet. Search for someone above.",
+      "failed": "Couldn't load people.",
+      "action": "Invite",
+      "actionA11y": "Invite {{name}}",
+      "invited": "Invited",
+      "accepted": "On stage",
+      "sent": "Invitation sent"
+    },
+    "ranking": {
+      "open": "Top gifters",
+      "chip": "Top gifters",
+      "title": "Top gifters in this LIVE",
+      "lead": "Ranked by coins sent in gifts during this LIVE.",
+      "empty": "No gifts yet. Be the first!",
+      "failed": "Couldn't load the ranking.",
+      "rowA11y_one": "{{rank}}. {{name}}, {{count}} coin",
+      "rowA11y_other": "{{rank}}. {{name}}, {{count}} coins",
+      "rowA11y": "{{rank}}. {{name}}, {{count}} coins"
+    },
+    "follow": {
+      "action": "Follow {{name}}",
+      "failed": "Couldn't follow. Try again."
     }
   }
 }

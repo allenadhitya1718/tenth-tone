@@ -48,6 +48,7 @@ export const liveKeys = {
   stream: (id: string) => ['live', id] as const,
   comments: (id: string) => ['live', id, 'comments'] as const,
   guests: (id: string) => ['live', id, 'guests'] as const,
+  topGifters: (id: string) => ['live', id, 'topGifters'] as const,
 };
 
 export type LiveStatus = 'live' | 'ended' | 'banned';
@@ -459,7 +460,10 @@ export type LiveGuestErrorCode =
   | 'too_soon'
   | 'no_invitation'
   | 'no_request'
-  | 'not_on_stage';
+  | 'not_on_stage'
+  | 'not_connected'
+  | 'cannot_see_live'
+  | 'invite_limit';
 
 const LIVE_GUEST_ERRORS: readonly string[] = [
   'not_signed_in',
@@ -475,6 +479,9 @@ const LIVE_GUEST_ERRORS: readonly string[] = [
   'no_invitation',
   'no_request',
   'not_on_stage',
+  'not_connected',
+  'cannot_see_live',
+  'invite_limit',
 ] satisfies readonly LiveGuestErrorCode[];
 
 // public.live_guests as stored (what realtime carries).
@@ -484,6 +491,8 @@ export type LiveGuestRow = {
   status: LiveGuestStatus;
   created_at: Iso;
   updated_at: Iso;
+  /** 0159: the host muted this guest; their app keeps the mic off. */
+  host_muted?: boolean;
 };
 
 export type LiveGuest = LiveGuestRow & { user: UserSummary | null };
@@ -540,6 +549,24 @@ export function removeLiveGuest(liveId: Uuid, userId: Uuid): Promise<LiveGuestSt
   return guestRpc('remove_live_guest', { p_live_id: liveId, p_user_id: userId });
 }
 
+// Host mutes or unmutes a guest on stage (0159). The guest's app follows
+// live_guests.host_muted and keeps its microphone off while it is set.
+export async function setLiveGuestMuted(liveId: Uuid, userId: Uuid, muted: boolean): Promise<boolean> {
+  const { data, error } = await supabase.rpc('set_live_guest_muted', { p_live_id: liveId, p_user_id: userId, p_muted: muted });
+  if (error) throw liveGuestError(error);
+  return data as boolean;
+}
+
+export type LiveTopGifter = { user_id: Uuid; name: string | null; handle: string | null; avatar_url: string | null; coins: number };
+
+// Who has sent the most coins in gifts during this live (0159), for the
+// TikTok-style ranking. The gift read policy decides what is counted.
+export async function fetchLiveTopGifters(liveId: Uuid, limit = 20): Promise<LiveTopGifter[]> {
+  const { data, error } = await supabase.rpc('live_top_gifters', { p_live_id: liveId, p_limit: limit });
+  if (error) throw liveGuestError(error);
+  return ((data ?? []) as LiveTopGifter[]).map((r) => ({ ...r, coins: Number(r.coins) }));
+}
+
 // The guest leaves the stage, withdraws a request or declines an invite.
 // Returns 'left' (or the row's existing 'removed' / 'left').
 export function leaveLiveStage(liveId: Uuid): Promise<LiveGuestStatus> {
@@ -553,7 +580,7 @@ export async function fetchLiveGuests(liveId: Uuid): Promise<LiveGuest[]> {
   const { data, error } = await supabase
     .from('live_guests')
     .select(
-      'live_id, user_id, status, created_at, updated_at, user:profiles!live_guests_user_id_fkey (id, name, handle, avatar_url, verified)',
+      'live_id, user_id, status, created_at, updated_at, host_muted, user:profiles!live_guests_user_id_fkey (id, name, handle, avatar_url, verified)',
     )
     .eq('live_id', liveId)
     .order('created_at', { ascending: true });

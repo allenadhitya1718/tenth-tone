@@ -86,7 +86,13 @@
       "remove": "Quitar del escenario",
       "withdraw": "Retirar",
       "invite": "Invitar",
-      "inviteToSpeak": "Invitar a hablar"
+      "inviteToSpeak": "Invitar a hablar",
+      "count_one": "{{count}}/{{max}} en el escenario",
+      "count_other": "{{count}}/{{max}} en el escenario",
+      "mutedByHost": "silenciado por el anfitrión",
+      "muteGuest": "Silenciar su micrófono",
+      "unmuteGuest": "Dejar que vuelva a hablar",
+      "count": "{{count}}/{{max}} en el escenario"
     },
     "guest": {
       "request": "Pedir la palabra",
@@ -107,7 +113,10 @@
       "removedBody": "El anfitrión te devolvió al público.",
       "declinedTitle": "El anfitrión rechazó tu solicitud",
       "leave": "Bajar del escenario",
-      "leaveTitle": "¿Bajar del escenario?"
+      "leaveTitle": "¿Bajar del escenario?",
+      "join": "Unirse",
+      "mutedByHost": "El anfitrión te silenció",
+      "mutedByHostBody": "Podrás hablar cuando el anfitrión vuelva a activar tu micrófono."
     },
     "chat": {
       "placeholder": "Añade un comentario…",
@@ -123,7 +132,9 @@
       "title": "Reacciones",
       "send": "Enviar {{emoji}}",
       "opened": "Reacciones abiertas",
-      "close": "Cerrar reacciones"
+      "close": "Cerrar reacciones",
+      "tapHint": "Toca en cualquier lugar para enviar corazones",
+      "more": "Reacciones"
     },
     "gifts": {
       "open": "Enviar un regalo",
@@ -151,7 +162,8 @@
       "sendShort": "Enviar",
       "recharge": "Recargar",
       "combo": "Combo",
-      "comboA11y": "Enviar {{gift}} otra vez, {{count}} enviados"
+      "comboA11y": "Enviar {{gift}} otra vez, {{count}} enviados",
+      "lineSent": "envió {{gift}}"
     },
     "report": {
       "title": "Denunciar",
@@ -229,7 +241,10 @@
       "agora_not_installed": "El audio en vivo no está disponible en esta versión de la app.",
       "agora_join_failed": "No se pudo conectar el audio. Sal y vuelve a unirte.",
       "mic_denied": "El acceso al micrófono está desactivado, así que nadie puede oírte.",
-      "same_uid_login": "Este directo está abierto en otro dispositivo con tu cuenta."
+      "same_uid_login": "Este directo está abierto en otro dispositivo con tu cuenta.",
+      "not_connected": "Solo puedes invitar a quien sigues o te sigue.",
+      "cannot_see_live": "Esta persona no puede abrir tu LIVE (solo amigos).",
+      "invite_limit": "Demasiadas invitaciones. Espera unos minutos."
     },
     "wallet": {
       "title": "Billetera",
@@ -417,6 +432,37 @@
       },
       "recharge": "Recargar",
       "rechargeFor": "Recargar · {{price}}"
+    },
+    "invite": {
+      "open": "Invitar a alguien",
+      "title": "Invitar a tu LIVE",
+      "search": "Buscar personas",
+      "clear": "Borrar búsqueda",
+      "lead": "Personas que sigues. Recibirán una notificación para unirse al escenario.",
+      "results": "Solo puedes invitar a quien sigues o te sigue.",
+      "noResults": "No se encontró a nadie.",
+      "noFollowing": "Aún no sigues a nadie. Busca arriba.",
+      "failed": "No se pudieron cargar las personas.",
+      "action": "Invitar",
+      "actionA11y": "Invitar a {{name}}",
+      "invited": "Invitado",
+      "accepted": "En el escenario",
+      "sent": "Invitación enviada"
+    },
+    "ranking": {
+      "open": "Top de regalos",
+      "chip": "Top regalos",
+      "title": "Top de regalos en este LIVE",
+      "lead": "Según las monedas enviadas en regalos durante este LIVE.",
+      "empty": "Aún no hay regalos. ¡Sé el primero!",
+      "failed": "No se pudo cargar el ranking.",
+      "rowA11y_one": "{{rank}}. {{name}}, {{count}} moneda",
+      "rowA11y_other": "{{rank}}. {{name}}, {{count}} monedas",
+      "rowA11y": "{{rank}}. {{name}}, {{count}} monedas"
+    },
+    "follow": {
+      "action": "Seguir a {{name}}",
+      "failed": "No se pudo seguir. Inténtalo de nuevo."
     }
   }
 }

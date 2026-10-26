@@ -416,7 +416,74 @@ export function GiftBanner({ event, onDone }: { event: GiftEvent | null; onDone:
   );
 }
 
+// ---------- full-screen moment for a big gift ----------
+
+// TikTok plays large gifts across the whole screen. From BIG_GIFT coins up,
+// a gift gets its own centre-stage moment (one at a time, queued) on top of
+// the usual banner. Never blocks touches.
+export const BIG_GIFT = 499;
+const SPOT_MS = 2600;
+
+export type SpotEvent = { id: number; sender: string; gift: Pick<Gift, 'name' | 'name_en' | 'emoji' | 'asset_url'> };
+
+export function useGiftSpotlight() {
+  const [queue, setQueue] = useState<SpotEvent[]>([]);
+  const seq = useRef(0);
+  const push = useCallback((e: Omit<SpotEvent, 'id'>) => {
+    const id = ++seq.current;
+    setQueue((q) => [...q, { ...e, id }].slice(-10));
+  }, []);
+  const shift = useCallback(() => setQueue((q) => q.slice(1)), []);
+  return { current: queue[0] ?? null, push, shift };
+}
+
+export function GiftSpotlight({ event, onDone }: { event: SpotEvent | null; onDone: () => void }) {
+  const { t, i18n } = useTranslation();
+  const [v] = useState(() => new Animated.Value(0));
+  const key = event?.id;
+  useEffect(() => {
+    if (!key) return;
+    v.setValue(0);
+    const run = Animated.sequence([
+      Animated.spring(v, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }),
+      Animated.delay(SPOT_MS),
+      Animated.timing(v, { toValue: 2, duration: 350, useNativeDriver: true }),
+    ]);
+    run.start(({ finished }) => {
+      if (finished) onDone();
+    });
+    return () => run.stop();
+  }, [key, v, onDone]);
+  if (!event) return null;
+  const name = giftName(event.gift, i18n.language);
+  const text = t('live.gifts.banner', { sender: event.sender, gift: name });
+  return (
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.spotWrap]} accessibilityLiveRegion="polite" accessibilityLabel={text}>
+      <Animated.View
+        style={{
+          alignItems: 'center',
+          opacity: v.interpolate({ inputRange: [0, 0.3, 1, 2], outputRange: [0, 1, 1, 0] }),
+          transform: [
+            { scale: v.interpolate({ inputRange: [0, 1, 2], outputRange: [0.3, 1, 1.25] }) },
+            { translateY: v.interpolate({ inputRange: [0, 1, 2], outputRange: [60, 0, -40] }) },
+          ],
+        }}
+      >
+        <View style={styles.spotGlow}>
+          <GiftGlyph gift={event.gift} size={150} />
+        </View>
+        <Text style={styles.spotText} numberOfLines={2}>
+          {text}
+        </Text>
+      </Animated.View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  spotWrap: { alignItems: 'center', justifyContent: 'center' },
+  spotGlow: { width: 210, height: 210, borderRadius: 105, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,201,60,0.18)' },
+  spotText: { color: '#fff', fontSize: 17, fontWeight: '900', textAlign: 'center', marginTop: 10, paddingHorizontal: 32, textShadowColor: 'rgba(0,0,0,0.7)', textShadowRadius: 6 },
   soon: { alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20 },
   soonIcon: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
   soonBadge: { fontSize: 12, fontWeight: '800', letterSpacing: 0.6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 3, overflow: 'hidden' },

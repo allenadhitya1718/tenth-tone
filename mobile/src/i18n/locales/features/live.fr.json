@@ -86,7 +86,13 @@
       "remove": "Retirer de la scène",
       "withdraw": "Annuler",
       "invite": "Inviter",
-      "inviteToSpeak": "Inviter à parler"
+      "inviteToSpeak": "Inviter à parler",
+      "count_one": "{{count}}/{{max}} sur scène",
+      "count_other": "{{count}}/{{max}} sur scène",
+      "mutedByHost": "coupé par l'hôte",
+      "muteGuest": "Couper son micro",
+      "unmuteGuest": "Le laisser reparler",
+      "count": "{{count}}/{{max}} sur scène"
     },
     "guest": {
       "request": "Demander à parler",
@@ -107,7 +113,10 @@
       "removedBody": "L'hôte vous a renvoyé dans le public.",
       "declinedTitle": "L'hôte a refusé votre demande",
       "leave": "Quitter la scène",
-      "leaveTitle": "Quitter la scène ?"
+      "leaveTitle": "Quitter la scène ?",
+      "join": "Rejoindre",
+      "mutedByHost": "L'hôte t'a coupé le micro",
+      "mutedByHostBody": "Tu pourras reparler quand l'hôte réactivera ton micro."
     },
     "chat": {
       "placeholder": "Ajouter un commentaire…",
@@ -123,7 +132,9 @@
       "title": "Réactions",
       "send": "Envoyer {{emoji}}",
       "opened": "Réactions ouvertes",
-      "close": "Fermer les réactions"
+      "close": "Fermer les réactions",
+      "tapHint": "Touche n'importe où pour envoyer des cœurs",
+      "more": "Réactions"
     },
     "gifts": {
       "open": "Envoyer un cadeau",
@@ -151,7 +162,8 @@
       "sendShort": "Envoyer",
       "recharge": "Recharger",
       "combo": "Combo",
-      "comboA11y": "Renvoyer {{gift}}, {{count}} envoyés"
+      "comboA11y": "Renvoyer {{gift}}, {{count}} envoyés",
+      "lineSent": "a envoyé {{gift}}"
     },
     "report": {
       "title": "Signaler",
@@ -229,7 +241,10 @@
       "agora_not_installed": "L'audio en LIVE n'est pas disponible dans cette version de l'application.",
       "agora_join_failed": "Impossible de connecter l'audio. Quittez puis rejoignez à nouveau.",
       "mic_denied": "L'accès au micro est désactivé : personne ne peut vous entendre.",
-      "same_uid_login": "Ce LIVE est ouvert sur un autre appareil avec votre compte."
+      "same_uid_login": "Ce LIVE est ouvert sur un autre appareil avec votre compte.",
+      "not_connected": "Tu ne peux inviter que les personnes que tu suis ou qui te suivent.",
+      "cannot_see_live": "Cette personne ne peut pas ouvrir ton LIVE (amis seulement).",
+      "invite_limit": "Trop d'invitations. Attends quelques minutes."
     },
     "wallet": {
       "title": "Portefeuille",
@@ -417,6 +432,37 @@
       },
       "recharge": "Recharger",
       "rechargeFor": "Recharger · {{price}}"
+    },
+    "invite": {
+      "open": "Inviter quelqu'un",
+      "title": "Inviter à ton LIVE",
+      "search": "Rechercher des personnes",
+      "clear": "Effacer la recherche",
+      "lead": "Les personnes que tu suis. Elles recevront une notification pour te rejoindre sur scène.",
+      "results": "Seules les personnes que tu suis ou qui te suivent peuvent être invitées.",
+      "noResults": "Personne trouvé.",
+      "noFollowing": "Tu ne suis personne pour l'instant. Cherche ci-dessus.",
+      "failed": "Impossible de charger les personnes.",
+      "action": "Inviter",
+      "actionA11y": "Inviter {{name}}",
+      "invited": "Invité",
+      "accepted": "Sur scène",
+      "sent": "Invitation envoyée"
+    },
+    "ranking": {
+      "open": "Meilleurs donateurs",
+      "chip": "Top donateurs",
+      "title": "Meilleurs donateurs de ce LIVE",
+      "lead": "Classés par pièces envoyées en cadeaux pendant ce LIVE.",
+      "empty": "Pas encore de cadeau. Sois le premier !",
+      "failed": "Impossible de charger le classement.",
+      "rowA11y_one": "{{rank}}. {{name}}, {{count}} pièce",
+      "rowA11y_other": "{{rank}}. {{name}}, {{count}} pièces",
+      "rowA11y": "{{rank}}. {{name}}, {{count}} pièces"
+    },
+    "follow": {
+      "action": "Suivre {{name}}",
+      "failed": "Impossible de suivre. Réessaie."
     }
   }
 }

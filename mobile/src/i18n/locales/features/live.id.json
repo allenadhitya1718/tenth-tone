@@ -82,7 +82,13 @@
       "remove": "Keluarkan dari panggung",
       "withdraw": "Tarik",
       "invite": "Undang",
-      "inviteToSpeak": "Undang untuk bicara"
+      "inviteToSpeak": "Undang untuk bicara",
+      "count_one": "{{count}}/{{max}} di panggung",
+      "count_other": "{{count}}/{{max}} di panggung",
+      "mutedByHost": "dibisukan oleh host",
+      "muteGuest": "Bisukan mikrofonnya",
+      "unmuteGuest": "Izinkan bicara lagi",
+      "count": "{{count}}/{{max}} di panggung"
     },
     "guest": {
       "request": "Minta bicara",
@@ -103,7 +109,10 @@
       "removedBody": "Host memindahkanmu kembali ke penonton.",
       "declinedTitle": "Host menolak permintaanmu",
       "leave": "Turun panggung",
-      "leaveTitle": "Turun dari panggung?"
+      "leaveTitle": "Turun dari panggung?",
+      "join": "Gabung",
+      "mutedByHost": "Host membisukanmu",
+      "mutedByHostBody": "Kamu bisa bicara lagi saat host menyalakan mikrofonmu."
     },
     "chat": {
       "placeholder": "Tambahkan komentar…",
@@ -119,7 +128,9 @@
       "title": "Reaksi",
       "send": "Kirim {{emoji}}",
       "opened": "Reaksi terbuka",
-      "close": "Tutup reaksi"
+      "close": "Tutup reaksi",
+      "tapHint": "Ketuk di mana saja untuk mengirim hati",
+      "more": "Reaksi"
     },
     "gifts": {
       "open": "Kirim hadiah",
@@ -143,7 +154,8 @@
       "sendShort": "Kirim",
       "recharge": "Isi ulang",
       "combo": "Kombo",
-      "comboA11y": "Kirim {{gift}} lagi, {{count}} terkirim"
+      "comboA11y": "Kirim {{gift}} lagi, {{count}} terkirim",
+      "lineSent": "mengirim {{gift}}"
     },
     "report": {
       "title": "Laporkan",
@@ -221,7 +233,10 @@
       "agora_not_installed": "Audio LIVE tidak tersedia di versi aplikasi ini.",
       "agora_join_failed": "Tidak dapat menghubungkan audio. Coba keluar lalu bergabung lagi.",
       "mic_denied": "Akses mikrofon nonaktif, jadi tidak ada yang bisa mendengarmu.",
-      "same_uid_login": "LIVE ini sedang dibuka di perangkat lain dengan akunmu."
+      "same_uid_login": "LIVE ini sedang dibuka di perangkat lain dengan akunmu.",
+      "not_connected": "Kamu hanya bisa mengundang orang yang kamu ikuti atau yang mengikutimu.",
+      "cannot_see_live": "Orang ini tidak bisa membuka LIVE kamu (khusus teman).",
+      "invite_limit": "Terlalu banyak undangan. Tunggu beberapa menit."
     },
     "wallet": {
       "title": "Dompet",
@@ -401,6 +416,37 @@
       },
       "recharge": "Isi ulang",
       "rechargeFor": "Isi ulang · {{price}}"
+    },
+    "invite": {
+      "open": "Undang seseorang",
+      "title": "Undang ke LIVE kamu",
+      "search": "Cari orang",
+      "clear": "Hapus pencarian",
+      "lead": "Orang yang kamu ikuti. Mereka akan menerima notifikasi untuk bergabung di panggung.",
+      "results": "Hanya orang yang kamu ikuti atau yang mengikutimu yang bisa diundang.",
+      "noResults": "Tidak ada yang ditemukan.",
+      "noFollowing": "Kamu belum mengikuti siapa pun. Cari di atas.",
+      "failed": "Gagal memuat orang.",
+      "action": "Undang",
+      "actionA11y": "Undang {{name}}",
+      "invited": "Diundang",
+      "accepted": "Di panggung",
+      "sent": "Undangan terkirim"
+    },
+    "ranking": {
+      "open": "Pemberi hadiah teratas",
+      "chip": "Top pemberi",
+      "title": "Pemberi hadiah teratas di LIVE ini",
+      "lead": "Diurutkan menurut koin yang dikirim sebagai hadiah di LIVE ini.",
+      "empty": "Belum ada hadiah. Jadilah yang pertama!",
+      "failed": "Gagal memuat peringkat.",
+      "rowA11y_one": "{{rank}}. {{name}}, {{count}} koin",
+      "rowA11y_other": "{{rank}}. {{name}}, {{count}} koin",
+      "rowA11y": "{{rank}}. {{name}}, {{count}} koin"
+    },
+    "follow": {
+      "action": "Ikuti {{name}}",
+      "failed": "Gagal mengikuti. Coba lagi."
     }
   }
 }
