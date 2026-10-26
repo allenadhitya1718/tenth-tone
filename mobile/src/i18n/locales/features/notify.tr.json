@@ -30,6 +30,12 @@
         "end": "Kapat"
       },
       "callChannel": "Devam eden aramalar"
+    },
+    "chat": {
+      "reply": "Yanıtla",
+      "send": "Gönder",
+      "replyPlaceholder": "Yanıt yaz",
+      "markRead": "Okundu olarak işaretle"
     }
   }
 }

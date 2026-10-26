@@ -30,6 +30,12 @@
         "end": "Turn off"
       },
       "callChannel": "Ongoing calls"
+    },
+    "chat": {
+      "reply": "Reply",
+      "send": "Send",
+      "replyPlaceholder": "Type a reply",
+      "markRead": "Mark as read"
     }
   }
 }

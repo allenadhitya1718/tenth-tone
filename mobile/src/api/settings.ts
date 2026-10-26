@@ -348,7 +348,7 @@ function pushLang(code: string): string {
   return PUSH_LANGS.includes(base) ? base : 'en';
 }
 
-export async function savePushToken(token: string, platform: string, lang: string): Promise<void> {
+export async function savePushToken(token: string, platform: string, lang: string, caps: string[] = []): Promise<void> {
   const me = await uid();
   if (!me || !token) return;
   const row = {
@@ -358,6 +358,8 @@ export async function savePushToken(token: string, platform: string, lang: strin
     // The language the app runs in: send-push writes every push in it (and
     // English for a code it does not know).
     lang: pushLang(lang),
+    // What this install can draw (0160): send-push adapts to it.
+    caps,
     updated_at: new Date().toISOString(),
   };
   const { error } = await supabase.from('push_tokens').upsert(row, { onConflict: 'user_id,token' });

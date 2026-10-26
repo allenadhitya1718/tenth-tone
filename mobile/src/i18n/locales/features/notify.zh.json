@@ -30,6 +30,12 @@
         "end": "关闭"
       },
       "callChannel": "进行中的通话"
+    },
+    "chat": {
+      "reply": "回复",
+      "send": "发送",
+      "replyPlaceholder": "输入回复",
+      "markRead": "标为已读"
     }
   }
 }

@@ -30,6 +30,12 @@
         "end": "बंद करें"
       },
       "callChannel": "चल रही कॉल"
+    },
+    "chat": {
+      "reply": "जवाब दें",
+      "send": "भेजें",
+      "replyPlaceholder": "जवाब लिखें",
+      "markRead": "पढ़ा हुआ मार्क करें"
     }
   }
 }

@@ -18,6 +18,8 @@ import { AppState, Platform } from 'react-native';
 import notifee, { EventType, type Event } from 'react-native-notify-kit';
 
 import { declineCallIfRinging } from '@/api/calls';
+import { getActiveChatId } from '@/features/notifications/activeChat';
+import { CHAT_ACTION_READ, CHAT_ACTION_REPLY, handleChatAction, parseChatPush, showChatMessage } from '@/features/notifications/chatNotification';
 
 import {
   ACTION_ACCEPT,
@@ -134,14 +136,43 @@ export async function handleNotificationEvent({ type, detail }: Event): Promise<
   if (kind === 'missed_call') {
     const route = str(data.route);
     if (route) deliver({ action: 'route', route });
+    return;
+  }
+
+  // WhatsApp-style message notification (features/notifications/chatNotification.ts).
+  if (kind === 'chat_message') {
+    if (id === CHAT_ACTION_REPLY || id === CHAT_ACTION_READ) {
+      await handleChatAction(id, data, detail.input);
+      return;
+    }
+    const route = str(data.route);
+    if (route) deliver({ action: 'route', route });
   }
 }
 
 // ---------- The push task (both platforms) ----------
 
 async function onPush(payload: Notifications.NotificationTaskPayload | undefined) {
-  if (!payload || 'actionIdentifier' in payload) return;
+  if (!payload) return;
+  // iPhone: Reply / Mark as read on a message alert, answered without
+  // opening the app.
+  if ('actionIdentifier' in payload) {
+    const r = payload as unknown as { actionIdentifier: string; userText?: string; notification?: Notifications.Notification };
+    const data = (r.notification?.request.content.data ?? {}) as Record<string, unknown>;
+    if (r.actionIdentifier === CHAT_ACTION_REPLY || r.actionIdentifier === CHAT_ACTION_READ) {
+      await handleChatAction(r.actionIdentifier, data, r.userText);
+    }
+    return;
+  }
   const d = (payload.data ?? {}) as Record<string, unknown>;
+
+  // A message, drawn WhatsApp-style (Android). Not while that chat is open.
+  const chat = parseChatPush(d);
+  if (chat) {
+    if (AppState.currentState === 'active' && getActiveChatId() === chat.chatId) return;
+    await showChatMessage(chat);
+    return;
+  }
 
   const ended = parseCallEnded(d);
   if (ended) {

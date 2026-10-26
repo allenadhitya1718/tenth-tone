@@ -30,6 +30,12 @@
         "end": "Matikan"
       },
       "callChannel": "Panggilan berlangsung"
+    },
+    "chat": {
+      "reply": "Balas",
+      "send": "Kirim",
+      "replyPlaceholder": "Tulis balasan",
+      "markRead": "Tandai sudah dibaca"
     }
   }
 }

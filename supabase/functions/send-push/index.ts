@@ -132,11 +132,12 @@ async function apnsBearer(): Promise<string> {
   apnsJwt = { value: jwt, iat: now };
   return jwt;
 }
-type ApnsOpts = { pushType?: 'alert' | 'background'; priority?: '10' | '5'; collapseId?: string; expiresAt?: number };
+type ApnsOpts = { pushType?: 'alert' | 'background' | 'voip'; priority?: '10' | '5'; collapseId?: string; expiresAt?: number };
 async function sendApns(token: string, payload: Record<string, unknown>, o: ApnsOpts = {}): Promise<Result> {
   const headers: Record<string, string> = {
     authorization: 'bearer ' + await apnsBearer(),
-    'apns-topic': APNS_TOPIC,
+    // A VoIP push goes to the app's ".voip" topic (PushKit, 0160).
+    'apns-topic': o.pushType === 'voip' ? APNS_TOPIC + '.voip' : APNS_TOPIC,
     'apns-push-type': o.pushType ?? 'alert',
     'apns-priority': o.priority ?? '10',
   };
@@ -363,8 +364,9 @@ function compose(n: Row, actor: string, lang: Lang, extra: { unread?: number; ot
       }
       if (kind === 'incoming_call') {
         return {
-          title: fill(S.calling, a),
-          body: p.is_invite ? S.callInvite : (p.call_kind === 'video' ? S.videoCall : S.voiceCall),
+          // WhatsApp: the caller's name, then "Incoming voice call".
+          title: actor,
+          body: p.is_invite ? S.callInvite : (p.call_kind === 'video' ? S.incomingVideo : S.incomingVoice),
           route: p.call_id ? `/call/${p.call_id}` : '/inbox',
           channel: 'calls',
           group: p.call_id ? `call_${p.call_id}` : undefined,
@@ -377,6 +379,32 @@ function compose(n: Row, actor: string, lang: Lang, extra: { unread?: number; ot
 }
 
 // ── delivery of an ordinary notification ──
+
+// WhatsApp-style message (0160 cap 'chat_style', Android): data only, and the
+// app draws a conversation notification with the sender's photo, the last
+// few messages, Reply and Mark as read (mobile/src/features/notifications/
+// chatNotification.ts). Same reserved-key rule as callData below.
+function chatData(row: Row, msg: Msg, S: Strings, sender: { name: string; avatar: string }, chat: { title: string; group: boolean }): Record<string, string> {
+  const p = row.payload || {};
+  return {
+    kind: 'chat_message',
+    type: 'message',
+    notification_id: row.id,
+    route: msg.route,
+    chat_id: String(p.chat_id || ''),
+    message_id: String(p.message_id || ''),
+    sender_id: row.actor_id || '',
+    sender_name: sender.name,
+    sender_avatar: sender.avatar,
+    msg_text: msg.body,
+    chat_title: chat.title,
+    is_group: chat.group ? '1' : '0',
+    sent_at: String(Date.now()),
+    reply_label: S.replyAction,
+    read_label: S.markRead,
+    you_label: S.you,
+  };
+}
 
 function fcmNotification(msg: Msg, data: Record<string, string>) {
   const android: Record<string, unknown> = {
@@ -430,7 +458,7 @@ function callData(n: Row, call: CallRow, msg: Msg, S: Strings, actor: string, av
   };
 }
 
-async function sendIncomingCall(t: TokenRow, n: Row, call: CallRow, msg: Msg, lang: Lang, actor: string, avatar: string): Promise<Result> {
+async function sendIncomingCall(db: Db, t: TokenRow, n: Row, call: CallRow, msg: Msg, lang: Lang, actor: string, avatar: string): Promise<Result> {
   const S = STRINGS[lang];
   const data = callData(n, call, msg, S, actor, avatar);
   const left = Math.max(5_000, RING_MS - (Date.now() - Number(data.created_at)));
@@ -444,10 +472,19 @@ async function sendIncomingCall(t: TokenRow, n: Row, call: CallRow, msg: Msg, la
   }
   if (t.platform === 'ios') {
     if (!apnsReady()) return 'apns not configured';
+    // 0160: an app with a PushKit token gets a VoIP push, and the phone shows
+    // the native CallKit call screen (like WhatsApp). A dead VoIP token falls
+    // back to the alert below and is cleared, never deleting the whole row.
+    if (t.voip_token) {
+      const r = await sendApns(t.voip_token, { ...data, handle: actor }, { pushType: 'voip', expiresAt: Date.now() + left });
+      if (r === true) return true;
+      console.warn('send-push voip', call.id, r);
+      if (r === 'dead') await db.from('push_tokens').update({ voip_token: null }).eq('voip_token', t.voip_token);
+    }
     return await sendApns(t.token, {
       aps: {
         alert: { title: msg.title, body: msg.body },
-        sound: 'default',
+        sound: can(t, 'ringtone') ? 'flyp_ring.caf' : 'default',
         category: 'incoming_call',
         'thread-id': `call_${call.id}`,
         // Breaks through Focus / scheduled summary (needs the
@@ -527,7 +564,9 @@ async function callerAllowed(req: Request, db: Db): Promise<boolean> {
   return !!want && (await safeEqual(given, String(want)));
 }
 
-type TokenRow = { token: string; platform: string; lang: string | null };
+type TokenRow = { token: string; platform: string; lang: string | null; caps?: string[] | null; voip_token?: string | null };
+const TOKEN_COLS = 'token,platform,lang,caps,voip_token';
+const can = (t: TokenRow, cap: string) => Array.isArray(t.caps) && t.caps.includes(cap);
 
 async function actorOf(db: Db, id: string | null): Promise<{ name: string; avatar: string }> {
   if (!id) return { name: 'FLYP', avatar: '' };
@@ -564,7 +603,7 @@ async function handleCallEnded(db: Db, callId: string) {
   if (call.status === 'ringing') return json({ ok: true, skipped: 'still_ringing' });
   // Old rings are long gone from the phone; do not leave a stale "missed".
   if (Date.now() - Date.parse(call.created_at) > 6 * 3600_000) return json({ ok: true, skipped: 'old_call' });
-  const { data: tokens } = await db.from('push_tokens').select('token,platform,lang').eq('user_id', call.callee_id);
+  const { data: tokens } = await db.from('push_tokens').select(TOKEN_COLS).eq('user_id', call.callee_id);
   if (!tokens || !tokens.length) return json({ ok: true, skipped: 'no_tokens' });
   const actor = await actorOf(db, call.caller_id);
   return fanOut(db, tokens as TokenRow[], (t) => sendCallEnded(t, call as CallRow, normLang(t.lang), actor.name), 'call ' + callId);
@@ -599,10 +638,17 @@ async function handleNotification(db: Db, id: string) {
     call = c as CallRow;
   }
 
-  const { data: tokens } = await db.from('push_tokens').select('token,platform,lang').eq('user_id', row.user_id);
+  const { data: tokens } = await db.from('push_tokens').select(TOKEN_COLS).eq('user_id', row.user_id);
   if (!tokens || !tokens.length) return json({ ok: true, skipped: 'no_tokens' });
 
   const actor = await actorOf(db, row.actor_id);
+
+  // A group chat's name, for the conversation notification's title.
+  let chat = { title: '', group: false };
+  if (row.type === 'message' && p.chat_id) {
+    const { data: c } = await db.from('chats').select('name').eq('id', String(p.chat_id)).maybeSingle();
+    if (c && c.name) chat = { title: String(c.name), group: true };
+  }
 
   // Several unread messages from one chat collapse into one notification
   // that says how many.
@@ -631,7 +677,7 @@ async function handleNotification(db: Db, id: string) {
     const lang = normLang(t.lang);
     const msg = msgFor(lang);
     if (!msg) return 'skip';
-    if (call) return await sendIncomingCall(t, row, call, msg, lang, actor.name, actor.avatar);
+    if (call) return await sendIncomingCall(db, t, row, call, msg, lang, actor.name, actor.avatar);
     const data: Record<string, string> = { route: msg.route, notification_id: row.id, type: row.type };
     if (p.kind) data.kind = String(p.kind);
     if (p.chat_id) data.chat_id = String(p.chat_id);
@@ -639,10 +685,22 @@ async function handleNotification(db: Db, id: string) {
     // (mobile/src/features/notifications/push.ts), so the next like starts a
     // fresh count.
     if (recent.ids.length > 1) data.notification_ids = recent.ids.join(',');
-    if (t.platform === 'android') return fcmReady() ? await sendFcm(t.token, fcmNotification(msg, data)) : 'fcm not configured';
+    if (t.platform === 'android') {
+      if (!fcmReady()) return 'fcm not configured';
+      if (row.type === 'message' && can(t, 'chat_style')) {
+        return await sendFcm(t.token, { data: chatData(row, msg, STRINGS[lang], actor, chat), android: { priority: 'high', ttl: '86400s' } });
+      }
+      return await sendFcm(t.token, fcmNotification(msg, data));
+    }
     if (t.platform === 'ios') {
       if (!apnsReady()) return 'apns not configured';
-      return await sendApns(t.token, apnsAlert(msg, data), msg.replace && msg.group ? { collapseId: msg.group } : {});
+      const alert = apnsAlert(msg, data);
+      if (row.type === 'message' && can(t, 'chat_reply')) {
+        // Reply and Mark as read from the lock screen (the app registers it).
+        (alert.aps as Record<string, unknown>).category = 'chat_message';
+        if (can(t, 'ringtone')) (alert.aps as Record<string, unknown>).sound = 'flyp_message.caf';
+      }
+      return await sendApns(t.token, alert, msg.replace && msg.group ? { collapseId: msg.group } : {});
     }
     return 'web: no channel';
   }, row.id);

@@ -37,6 +37,9 @@ import { useCallNotifications } from '@/features/call/useCallNotifications';
 import { go } from '@/features/discover/nav';
 import { useAuth } from '@/providers/AuthProvider';
 
+import { getActiveChatId, setActiveChatId } from './activeChat';
+import { CHAT_ACTION_READ, CHAT_ACTION_REPLY, clearChatNotification, handleChatAction, IOS_CHAT_CATEGORY } from './chatNotification';
+
 // Channel ids send-push puts in android.notification.channel_id (messages,
 // social, live; 'default' for the push test). An incoming call is not a
 // notification push on Android: it arrives data-only and the app draws it in
@@ -56,17 +59,9 @@ const native = Platform.OS === 'ios' || Platform.OS === 'android';
 // Likes, comments, follows: the bell already shows these in the app.
 const SOCIAL_TYPES = new Set(['like', 'comment', 'follow', 'follow_request', 'mention', 'gift']);
 
-// ---------- The chat being viewed ----------
+// ---------- The chat being viewed (activeChat.ts) ----------
 
-let activeChatId: string | null = null;
-
-// The chat screen calls this with its id on focus and null on blur, so a
-// message in the conversation you are reading does not also pop a banner.
-export function setActiveChatId(id: string | null) {
-  activeChatId = id;
-}
-
-export const getActiveChatId = () => activeChatId;
+export { getActiveChatId, setActiveChatId };
 
 type PushData = Record<string, unknown>;
 
@@ -100,7 +95,8 @@ const HIDDEN: Notifications.NotificationBehavior = {
 export function foregroundBehavior(data: PushData): Notifications.NotificationBehavior {
   const type = String(data.type ?? '');
   if (type === 'message') {
-    if (activeChatId && chatIdOf(data) === activeChatId) return HIDDEN;
+    const active = getActiveChatId();
+    if (active && chatIdOf(data) === active) return HIDDEN;
     return { shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false };
   }
   if (isCall(data)) {
@@ -192,8 +188,11 @@ async function allowed(): Promise<boolean> {
   return asked.granted;
 }
 
+// What this build can do with a push (push_tokens.caps, 0160).
+export const PUSH_CAPS: string[] = Platform.OS === 'android' ? ['chat_style'] : Platform.OS === 'ios' ? ['chat_reply'] : [];
+
 async function saveToken(token: string, lang: string) {
-  await savePushToken(token, Platform.OS, lang);
+  await savePushToken(token, Platform.OS, lang, PUSH_CAPS);
   await AsyncStorage.setItem(TOKEN_KEY, token).catch(() => {});
 }
 
@@ -227,6 +226,7 @@ async function register(t: TFunction, lang: string): Promise<boolean> {
   // the app has a channel.
   await ensureChannels(t);
   await ensureCallCategory(t);
+  await ensureChatCategory(t);
   if (!(await allowed())) return true;
   const ok = await fetchAndSaveToken(lang);
   // Android 14+: the ringing call can only take over a locked screen with
@@ -250,6 +250,25 @@ async function ensureCallCategory(t: TFunction) {
       identifier: ACTION_ACCEPT,
       buttonTitle: t('notify.call.accept'),
       options: { opensAppToForeground: true },
+    },
+  ]);
+}
+
+// iPhone: Reply (typed on the lock screen) and Mark as read on a message
+// (send-push aps.category 'chat_message' for apps with cap 'chat_reply').
+async function ensureChatCategory(t: TFunction) {
+  if (Platform.OS !== 'ios') return;
+  await Notifications.setNotificationCategoryAsync(IOS_CHAT_CATEGORY, [
+    {
+      identifier: CHAT_ACTION_REPLY,
+      buttonTitle: t('notify.chat.reply'),
+      textInput: { submitButtonTitle: t('notify.chat.send'), placeholder: t('notify.chat.replyPlaceholder') },
+      options: { opensAppToForeground: false },
+    },
+    {
+      identifier: CHAT_ACTION_READ,
+      buttonTitle: t('notify.chat.markRead'),
+      options: { opensAppToForeground: false },
     },
   ]);
 }
@@ -315,6 +334,11 @@ function openResponse(r: Notifications.NotificationResponse, onRead: () => void)
   if (opened.has(id)) return;
   opened.add(id);
   const data = dataOf(r.notification);
+  // Reply / Mark as read on a message: answered in place, nothing opens.
+  if (r.actionIdentifier === CHAT_ACTION_REPLY || r.actionIdentifier === CHAT_ACTION_READ) {
+    void handleChatAction(r.actionIdentifier, data, r.userText).then(onRead, () => {});
+    return;
+  }
   const callId = isCall(data) ? callIdOf(data) : null;
   // Decline on the iPhone call alert: no screen, just the answer.
   if (callId && r.actionIdentifier === ACTION_DECLINE) {
@@ -431,6 +455,8 @@ export function usePushRegistration() {
 // found by that tag or by the chat_id in their data; on Android the tag is
 // also cancelled directly, in case the list does not report it. Never throws.
 export async function dismissChatNotifications(chatId: string) {
+  // The WhatsApp-style ones the app draws itself (chatNotification.ts).
+  await clearChatNotification(chatId);
   const tag = `chat_${chatId}`;
   try {
     const shown = await Notifications.getPresentedNotificationsAsync();
@@ -457,7 +483,7 @@ export function useActiveChat(chatId: string | null | undefined) {
     });
     return () => {
       sub.remove();
-      if (activeChatId === chatId) setActiveChatId(null);
+      if (getActiveChatId() === chatId) setActiveChatId(null);
     };
   }, [chatId]);
 }

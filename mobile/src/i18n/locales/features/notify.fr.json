@@ -30,6 +30,12 @@
         "end": "Désactiver"
       },
       "callChannel": "Appels en cours"
+    },
+    "chat": {
+      "reply": "Répondre",
+      "send": "Envoyer",
+      "replyPlaceholder": "Écris une réponse",
+      "markRead": "Marquer comme lu"
     }
   }
 }

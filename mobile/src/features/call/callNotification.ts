@@ -117,6 +117,8 @@ async function ensureCallChannel() {
   });
 }
 
+const escapeHtml = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
 /** Rings: the call notification, until answered, declined, cancelled or 45 s. */
 export async function showIncomingCall(c: IncomingCallPush): Promise<void> {
   if (Platform.OS !== 'android') return;
@@ -126,8 +128,8 @@ export async function showIncomingCall(c: IncomingCallPush): Promise<void> {
   await ensureCallChannel();
   const notification: KitNotification = {
     id: callNotificationId(c.callId),
-    title: c.title,
-    body: c.text,
+    title: escapeHtml(c.title),
+    body: escapeHtml(c.text),
     data: { kind: 'incoming_call', call_id: c.callId, notification_id: c.notificationId },
     android: {
       channelId: CALL_CHANNEL,
@@ -149,10 +151,13 @@ export async function showIncomingCall(c: IncomingCallPush): Promise<void> {
       // On a locked or idle phone Android launches the app straight away
       // (needs Full-Screen Intent access, see fullScreenPermission.ts).
       fullScreenAction: { id: ACTION_OPEN, launchActivity: 'default' },
+      // WhatsApp's look: red Decline, green Answer (the action titles take
+      // simple HTML; phones that ignore the colour show plain text).
+      color: '#25D366',
       actions: [
         // No launchActivity: declining never opens the app.
-        { title: c.declineLabel, pressAction: { id: ACTION_DECLINE } },
-        { title: c.acceptLabel, pressAction: { id: ACTION_ACCEPT, launchActivity: 'default' } },
+        { title: `<font color="#E53935"><b>${escapeHtml(c.declineLabel)}</b></font>`, pressAction: { id: ACTION_DECLINE } },
+        { title: `<font color="#1DA851"><b>${escapeHtml(c.acceptLabel)}</b></font>`, pressAction: { id: ACTION_ACCEPT, launchActivity: 'default' } },
       ],
     },
   };
