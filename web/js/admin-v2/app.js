@@ -1015,11 +1015,13 @@
 
   // ---------- videos ----------
   function viewVideos(q) {
-    let filter = q.filter || 'reported';
+    // New uploads must be visible on arrival: open on All, not on the
+    // (usually empty) Reported tab. Reports themselves live on #/reports.
+    let filter = q.filter || 'all';
     const search = h('input', { type: 'search', class: 'input', 'aria-label': L('Search videos', 'ابحث في الفيديوهات'), placeholder: L('Search caption or @handle', 'ابحث في الوصف أو @المعرّف') });
     const grid = h('div', { class: 'cards' });
     const tb = h('div');
-    function drawTabs() { tb.innerHTML = ''; tb.appendChild(tabs([['reported', L('Reported', 'مُبلّغ عنها')], ['hidden', L('Hidden', 'مخفية')], ['published', L('Published', 'منشورة')], ['draft', L('Drafts', 'مسودات')], ['all', L('All', 'الكل')]], filter, (v) => { filter = v; drawTabs(); load(); })); }
+    function drawTabs() { tb.innerHTML = ''; tb.appendChild(tabs([['all', L('All', 'الكل')], ['published', L('Published', 'منشورة')], ['reported', L('Reported', 'مُبلّغ عنها')], ['hidden', L('Hidden', 'مخفية')], ['draft', L('Drafts', 'مسودات')]], filter, (v) => { filter = v; drawTabs(); load(); })); }
     async function load() {
       grid.innerHTML = ''; grid.appendChild(loading());
       try {
@@ -1058,10 +1060,10 @@
 
   // ---------- stories ----------
   function viewStories(q) {
-    let filter = q.filter || 'reported';
+    let filter = q.filter || 'active';
     const grid = h('div', { class: 'cards' });
     const tb = h('div');
-    function drawTabs() { tb.innerHTML = ''; tb.appendChild(tabs([['reported', L('Reported', 'مُبلّغ عنها')], ['active', L('Active (24 h)', 'نشطة (24 س)')], ['all', L('All kept', 'كل المحفوظة')]], filter, (v) => { filter = v; drawTabs(); load(); })); }
+    function drawTabs() { tb.innerHTML = ''; tb.appendChild(tabs([['active', L('Active (24 h)', 'نشطة (24 س)')], ['reported', L('Reported', 'مُبلّغ عنها')], ['all', L('All kept', 'كل المحفوظة')]], filter, (v) => { filter = v; drawTabs(); load(); })); }
     async function load() {
       grid.innerHTML = ''; grid.appendChild(loading());
       try {
