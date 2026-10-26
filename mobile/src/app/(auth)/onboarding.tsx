@@ -41,6 +41,8 @@ function Dot({ active }: { active: boolean }) {
   return <Animated.View style={[styles.dot, a]} />;
 }
 
+const DOCK_GAP = 14; // space between the phone frame and the title
+
 export default function Onboarding() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -49,9 +51,12 @@ export default function Onboarding() {
   const touchX = useRef<number | null>(null);
 
   // The frame is oversized: ~76% of the width and up to 58% of the height. On
-  // short screens it shrinks so the title, dots and button always fit below.
-  const DOCK = 232 - 28; // title block + dots + button, minus the overlap
-  const room = height - insets.top - insets.bottom - 50 - 24 - DOCK;
+  // short screens it shrinks so the title, dots and button always fit below
+  // it. The title sits clear of the frame (it used to overlap its bottom edge
+  // and cover the screenshot).
+  const DOCK = 232 + DOCK_GAP; // title block + dots + button, plus the gap
+  // 50 top bar, 24 root padding (6 + 18), 12 stage padding.
+  const room = height - insets.top - insets.bottom - 50 - 24 - 12 - DOCK;
   const scale = Math.min((width * 0.7) / ART_W, (height * 0.6) / ART_H, room / ART_H, 1.25);
   const last = idx === SLIDES.length - 1;
   const rtl = I18nManager.isRTL;
@@ -132,8 +137,7 @@ const styles = StyleSheet.create({
   skipBtn: { flexShrink: 0 },
   skip: { color: '#94A3B8', fontSize: 15, lineHeight: 22, fontWeight: '600', padding: 8 },
   stage: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 12 },
-  // Pulled up over the faded bottom edge of the frame.
-  dock: { alignItems: 'center', marginTop: -28 },
+  dock: { alignItems: 'center', marginTop: DOCK_GAP },
   title: { color: '#fff', fontSize: 28, fontWeight: '800', letterSpacing: -0.5, textAlign: 'center', marginBottom: 8 },
   sub: { color: '#94A3B8', fontSize: 15, lineHeight: 22, textAlign: 'center', maxWidth: '88%' },
   dots: { flexDirection: 'row', gap: 7, marginTop: 20, marginBottom: 20, alignItems: 'center' },
