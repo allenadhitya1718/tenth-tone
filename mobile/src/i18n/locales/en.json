@@ -153,7 +153,7 @@
     "createTitle": "Create and share",
     "createSub": "Record with filters, trim clips, and add original sounds right in the app",
     "liveTitle": "Go live and host audio rooms",
-    "liveSub": "Host live audio rooms with up to 4 guests on stage, and get gifts from listeners",
+    "liveSub": "Host live audio rooms with up to 30 people on stage, and get gifts from listeners",
     "chatTitle": "Stay close to your friends",
     "chatSub": "1:1 and group chats, walkie-talkie voice mode, and a live friends map",
     "mockFollowing": "Following",
@@ -174,7 +174,7 @@
     "mockHold": "Hold to talk",
     "pillWatch": "🔥 For You · Trending in Riyadh",
     "pillCreate": "🎵 Original sound + filters",
-    "pillLive": "🎙️ Live audio stage · +4 guests",
+    "pillLive": "🎙️ Live audio stage · up to 30 on stage",
     "pillChat": "📍 Friends map & walkie-talkie"
   },
   "legal": {

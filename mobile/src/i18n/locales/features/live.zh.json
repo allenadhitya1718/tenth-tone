@@ -209,7 +209,7 @@
       "host_is_you": "你是这场直播的主播。",
       "blocked": "此账号无法执行该操作。",
       "not_watching": "对方已不在直播间。",
-      "stage_full": "麦位已满（4 位嘉宾）。",
+      "stage_full": "麦位已满（29 位嘉宾）。",
       "removed_by_host": "主播已将你抱下麦。本场直播中你无法再次申请。",
       "too_soon": "请稍等一分钟再试。",
       "no_invitation": "该邀请已失效。",
