@@ -149,14 +149,9 @@
   }
   function tile(name, tone) { return h('span', { class: 'tile' + (tone ? ' ' + tone : '') }, icon(name)); }
   // FLYP mark: a small waveform in a rounded tile (drawn, so it works on any ground).
+  // The FLYP app icon (mobile/assets/icon.png), cropped for small sizes.
   function brandMark(cls) {
-    const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    s.setAttribute('viewBox', '0 0 40 40');
-    s.setAttribute('aria-hidden', 'true');
-    s.setAttribute('class', 'mark' + (cls ? ' ' + cls : ''));
-    s.innerHTML = '<rect width="40" height="40" rx="11" fill="#1e56d6"/><g stroke="#fff" stroke-width="2.6" stroke-linecap="round">'
-      + '<path d="M10 17.5v5"/><path d="M15 13v14"/><path d="M20 9.5v21"/><path d="M25 14v12"/><path d="M30 17.5v5"/></g>';
-    return s;
+    return h('img', { src: 'icons/admin/mark-96.png', alt: '', 'aria-hidden': 'true', class: 'mark' + (cls ? ' ' + cls : ''), draggable: 'false' });
   }
 
   function errorBox(e) { return h('div', { class: 'notice bad', role: 'alert' }, [icon('warn'), h('span', { text: errText(e) })]); }
@@ -566,24 +561,20 @@
 
   // ---------- login ----------
   function viewLogin(note) {
-    let mode = 'password';
     const email = h('input', { type: 'email', id: 'lg-email', class: 'input', autocomplete: 'username', placeholder: 'name@flyp.app' });
     const pass = h('input', { type: 'password', id: 'lg-pass', class: 'input', autocomplete: 'current-password' });
-    const code = h('input', { type: 'text', id: 'lg-code', class: 'input', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: '6', placeholder: '000000' });
     const err = h('div', { class: 'notice bad', role: 'alert', hidden: true });
-    const info = h('div', { class: 'notice', role: 'status', hidden: true });
-    const box = h('div', { class: 'fields' });
-    let otpSent = false;
     const field = (id, label, input) => h('div', { class: 'field' }, [h('label', { for: id, text: label }), input]);
-    const fEmail = field('lg-email', L('Work email', 'البريد الإلكتروني'), email);
     const showPw = h('button', { type: 'button', class: 'pw-toggle', 'aria-label': L('Show password', 'إظهار كلمة المرور'), text: L('Show', 'إظهار'), onclick: () => {
       const on = pass.type === 'password';
       pass.type = on ? 'text' : 'password';
       showPw.textContent = on ? L('Hide', 'إخفاء') : L('Show', 'إظهار');
       showPw.setAttribute('aria-label', on ? L('Hide password', 'إخفاء كلمة المرور') : L('Show password', 'إظهار كلمة المرور'));
     } });
-    const fPass = field('lg-pass', L('Password', 'كلمة المرور'), h('div', { class: 'pw' }, [pass, showPw]));
-    const fCode = field('lg-code', L('6-digit code', 'الرمز المكوّن من 6 أرقام'), code);
+    const box = h('div', { class: 'fields' }, [
+      field('lg-email', L('Work email', 'البريد الإلكتروني'), email),
+      field('lg-pass', L('Password', 'كلمة المرور'), h('div', { class: 'pw' }, [pass, showPw])),
+    ]);
 
     function showErr(e) { err.textContent = typeof e === 'string' ? e : (/Invalid login/i.test((e && e.message) || '') ? L('Wrong email or password.', 'البريد أو كلمة المرور غير صحيحة.') : errText(e)); err.hidden = false; }
 
@@ -603,49 +594,19 @@
       err.hidden = true;
       const em = email.value.trim();
       if (!em) return showErr(L('Enter your email.', 'أدخل بريدك الإلكتروني.'));
+      if (!pass.value) return showErr(L('Enter your password.', 'أدخل كلمة المرور.'));
       try {
-        if (mode === 'password') {
-          await API.signInPassword(em, pass.value);
-          await afterSignIn();
-        } else if (!otpSent) {
-          await API.sendOtp(em);
-          otpSent = true;
-          info.textContent = L('If this email has an account, a 6-digit code is on its way.', 'إذا كان لهذا البريد حساب فسيصلك رمز من 6 أرقام.');
-          info.hidden = false;
-          draw();
-        } else {
-          await API.verifyOtp(em, code.value.trim());
-          await afterSignIn();
-        }
+        await API.signInPassword(em, pass.value);
+        await afterSignIn();
       } catch (e) { showErr(e); }
     }, 'navy wide');
 
-    function draw() {
-      box.innerHTML = '';
-      box.appendChild(fEmail);
-      if (mode === 'password') box.appendChild(fPass);
-      if (mode === 'otp' && otpSent) {
-        box.appendChild(fCode);
-        box.appendChild(h('div', { class: 'resend' }, [
-          h('span', { class: 'muted small', text: L('Code sent to ', 'أُرسل الرمز إلى ') + email.value.trim() }),
-          h('button', { type: 'button', class: 'linkish', text: L('Use another email', 'استخدم بريدًا آخر'), onclick: () => { otpSent = false; info.hidden = true; err.hidden = true; draw(); email.focus(); } }),
-        ]));
-      }
-      submit.textContent = mode === 'password' ? L('Sign in', 'تسجيل الدخول') : otpSent ? L('Verify code', 'تحقق من الرمز') : L('Email me a code', 'أرسل لي رمزًا');
-    }
-    const modeTabs = tabs([['password', L('Password', 'كلمة المرور')], ['otp', L('Email code', 'رمز بالبريد')]], mode, (v) => {
-      mode = v; otpSent = false; info.hidden = true; err.hidden = true;
-      modeTabs.querySelectorAll('button').forEach((b, i) => { const on = (i === 0) === (v === 'password'); b.className = on ? 'on' : ''; b.setAttribute('aria-selected', on ? 'true' : 'false'); });
-      draw();
-    });
-    modeTabs.classList.add('full');
-    draw();
     const form = h('form', { class: 'login-card', novalidate: true, onsubmit: (e) => { e.preventDefault(); submit.click(); } }, [
       h('div', { class: 'wordmark only-narrow' }, [brandMark(), h('span', { text: 'FLYP' })]),
       h('h1', { text: L('Welcome back', 'مرحبًا بعودتك') }),
       h('p', { class: 'login-sub', text: L('Sign in to the FLYP admin portal.', 'سجّل الدخول إلى بوابة إدارة FLYP.') }),
       note ? h('div', { class: 'notice bad', role: 'alert', text: note }) : null,
-      modeTabs, box, err, info, submit,
+      box, err, submit,
       h('button', { type: 'submit', hidden: true }),
       h('p', { class: 'login-foot muted small', text: L('Admin accounts only. Sessions stay on this device, so sign out on shared computers.', 'لحسابات المشرفين فقط. تبقى الجلسة على هذا الجهاز، فسجّل الخروج على الأجهزة المشتركة.') }),
     ]);

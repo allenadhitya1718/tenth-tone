@@ -16,11 +16,11 @@ cd "$(dirname "$0")/.."
 
 out=admin-dist
 rm -rf "$out"
-mkdir -p "$out/css" "$out/js/admin-v2" "$out/icons"
+mkdir -p "$out/css" "$out/js/admin-v2" "$out/icons/admin"
 cp web/admin-v2.html "$out/index.html"
 cp web/css/admin-v2.css "$out/css/"
 cp web/js/admin-v2/*.js "$out/js/admin-v2/"
-cp web/icons/favicon-32.png web/icons/apple-touch-icon.png "$out/icons/"
+cp web/icons/admin/*.png "$out/icons/admin/"
 
 # Cloudflare Pages headers: never framed, no sniffing, no indexing.
 cat > "$out/_headers" <<'EOF'

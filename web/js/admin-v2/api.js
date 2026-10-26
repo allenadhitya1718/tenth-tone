@@ -60,15 +60,6 @@
       const { error } = await sb.auth.signInWithPassword({ email, password });
       fail(error);
     },
-    // shouldCreateUser: false - the login form must never create an account.
-    async sendOtp(email) {
-      const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
-      fail(error);
-    },
-    async verifyOtp(email, token) {
-      const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
-      fail(error);
-    },
     async signOut() { try { await sb.auth.signOut(); } catch (e) { /* already gone */ } },
     // is_admin() answers only for auth.uid() (0002), and stays granted to
     // authenticated after 0124.
