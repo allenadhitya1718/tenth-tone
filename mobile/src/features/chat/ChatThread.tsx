@@ -29,6 +29,7 @@ import {
   declineChatRequest,
   fetchChatInfo,
   fetchChats,
+  setChatMuted,
   type Tick,
   tickFor,
 } from '@/api/chat';
@@ -36,6 +37,7 @@ import { ApiError } from '@/api/client';
 import { type Gif, gifStoredUrl } from '@/api/gifs';
 import type { LocalMedia } from '@/api/upload';
 import { showAlert } from '@/components/Dialog';
+import { showToast as showAppToast } from '@/components/Toast';
 import { NotFoundState } from '@/components/NotFoundState';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/providers/AuthProvider';
@@ -85,6 +87,36 @@ export function ChatThread({ chatId }: { chatId: string }) {
   const listRef = useRef<FlatList<Row>>(null);
 
   const info = useQuery({ queryKey: chatKeys.info(chatId), queryFn: () => fetchChatInfo(chatId) });
+
+  // ---------- mute notifications (0161), as on WhatsApp ----------
+  const mutedUntil = info.data?.mutedUntil ?? null;
+  const mute = useMutation({
+    mutationFn: (until: Date | 'always' | null) => setChatMuted(chatId, until),
+    onSuccess: (_r, until) => {
+      void qc.invalidateQueries({ queryKey: chatKeys.info(chatId) });
+      void qc.invalidateQueries({ queryKey: chatKeys.chats() });
+      showAppToast(t(until ? 'chat.mute.done' : 'chat.mute.undone'), until ? 'notifications-off' : 'notifications');
+    },
+    onError: () => showAlert(t('chat.mute.failed')),
+  });
+  const chooseMute = useCallback(() => {
+    const hours = (h: number) => new Date(Date.now() + h * 3600_000);
+    showAlert(t('chat.mute.title'), t('chat.mute.body'), [
+      { text: t('chat.mute.h8'), onPress: () => mute.mutate(hours(8)) },
+      { text: t('chat.mute.week'), onPress: () => mute.mutate(hours(24 * 7)) },
+      { text: t('chat.mute.always'), onPress: () => mute.mutate('always') },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
+  }, [mute, t]);
+  const openChatMenu = useCallback(() => {
+    showAlert(t('chat.mute.menu'), undefined, [
+      mutedUntil
+        ? { text: t('chat.mute.unmute'), onPress: () => mute.mutate(null) }
+        : { text: t('chat.mute.action'), onPress: chooseMute },
+      { text: t('chatTheme.title'), onPress: () => router.push(`/chat-theme/${chatId}` as Href) },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
+  }, [mutedUntil, mute, chooseMute, chatId, t]);
   // Whether this thread is an unaccepted request comes from the inbox list
   // (chat_request_flags); it is never guessed.
   const chats = useQuery({ queryKey: chatKeys.chats(), queryFn: fetchChats });
@@ -483,16 +515,16 @@ export function ChatThread({ chatId }: { chatId: string }) {
         {isGroup && !isRequest && (info.data?.memberCount ?? 0) >= 2 ? (
           <GroupCallButtons chatId={chatId} title={title} photo={photo} color={ink} />
         ) : null}
-        {/* Chat theme (0149): shared with everyone in the chat. */}
+        {/* WhatsApp's menu: mute notifications and the chat theme (0149). */}
         {(other || isGroup) && !isRequest ? (
           <Pressable
-            onPress={() => router.push(`/chat-theme/${chatId}` as Href)}
+            onPress={openChatMenu}
             hitSlop={8}
             style={styles.headerBtn}
             accessibilityRole="button"
-            accessibilityLabel={t('chatTheme.title')}
+            accessibilityLabel={t('chat.mute.menu')}
           >
-            <Ionicons name="color-palette-outline" size={23} color={ink} />
+            <Ionicons name="ellipsis-vertical" size={22} color={ink} />
           </Pressable>
         ) : null}
       </View>

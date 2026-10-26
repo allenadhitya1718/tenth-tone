@@ -36,6 +36,10 @@
       "send": "Kirim",
       "replyPlaceholder": "Tulis balasan",
       "markRead": "Tandai sudah dibaca"
+    },
+    "missed": {
+      "callBack": "Telepon balik",
+      "message": "Pesan"
     }
   }
 }

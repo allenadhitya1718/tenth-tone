@@ -92,6 +92,8 @@ export type ChatListItem = Chat & {
   is_request: boolean;
   title: string;
   avatar: string | null | undefined;
+  /** 0161: notifications for this chat are muted (WhatsApp's bell-off). */
+  muted: boolean;
 };
 
 export type ChatInfo = {
@@ -105,6 +107,8 @@ export type ChatInfo = {
   // wallpaper is set only with theme 'photo'.
   theme: string | null;
   wallpaper: string | null;
+  // 0161: until when YOUR notifications for it are muted; null = not muted.
+  mutedUntil: string | null;
   // The chat does not exist or you are not in it (a stale link).
   missing?: boolean;
 };
@@ -177,6 +181,7 @@ export async function fetchChatInfo(chatId: Uuid): Promise<ChatInfo> {
     readChatRow(chatId),
     supabase.from('chat_members').select(`user_id, ${MEMBER_PROFILE}`).eq('chat_id', chatId),
   ]);
+  const mine = me ? await myMute(chatId, me) : null;
   // A failed read is an error to retry; only a clean "no such chat" (not a
   // member, or never existed) is reported as missing.
   if (chatRes.error) throw chatRes.error;
@@ -196,8 +201,29 @@ export async function fetchChatInfo(chatId: Uuid): Promise<ChatInfo> {
     photo: isGroup ? c?.photo_url || '' : others[0]?.avatar_url || '',
     theme: c?.theme ?? null,
     wallpaper: c?.theme === 'photo' ? c?.wallpaper_url ?? null : null,
+    mutedUntil: mine,
     ...(c ? {} : { missing: true }),
   };
+}
+
+// Your own mute (0161). null before 0161 or when not muted.
+async function myMute(chatId: Uuid, me: Uuid): Promise<string | null> {
+  const { data, error } = await supabase.from('chat_members').select('muted_until').eq('chat_id', chatId).eq('user_id', me).maybeSingle();
+  if (error) return null;
+  const until = (data as { muted_until?: string | null } | null)?.muted_until ?? null;
+  return until && new Date(until).getTime() > Date.now() ? until : null;
+}
+
+/**
+ * Mutes this chat's notifications until `until` (WhatsApp: 8 hours, 1 week,
+ * always = 'infinity'), or unmutes with null.
+ */
+export async function setChatMuted(chatId: Uuid, until: Date | 'always' | null): Promise<void> {
+  const { error } = await supabase.rpc('set_chat_muted', {
+    p_chat_id: chatId,
+    p_until: until === 'always' ? 'infinity' : until ? until.toISOString() : null,
+  });
+  if (error) throw error;
 }
 
 type ChatRow = Pick<Chat, 'id' | 'type' | 'name' | 'photo_url'> & { theme?: string | null; wallpaper_url?: string | null };
@@ -232,8 +258,17 @@ async function blockedIds(me: Uuid): Promise<Uuid[]> {
 export async function fetchChats(): Promise<ChatListItem[]> {
   const me = await uid();
   if (!me) return [];
-  const { data: memberships } = await supabase.from('chat_members').select('chat_id').eq('user_id', me);
-  const chatIds = ((memberships ?? []) as { chat_id: Uuid }[]).map((r) => r.chat_id);
+  type Membership = { chat_id: Uuid; muted_until?: string | null };
+  const withMute = await supabase.from('chat_members').select('chat_id, muted_until').eq('user_id', me);
+  // Before 0161 there is no muted_until.
+  const memberships =
+    withMute.error?.code === '42703'
+      ? (await supabase.from('chat_members').select('chat_id').eq('user_id', me)).data
+      : withMute.data;
+  const mine = (memberships ?? []) as Membership[];
+  const chatIds = mine.map((r) => r.chat_id);
+  const now = Date.now();
+  const mutedChats = new Set(mine.filter((r) => r.muted_until && new Date(r.muted_until).getTime() > now).map((r) => r.chat_id));
   if (!chatIds.length) return [];
 
   // Loading the inbox means everything up to now has reached this device.
@@ -301,6 +336,7 @@ export async function fetchChats(): Promise<ChatListItem[]> {
         last_message: last,
         unread_count: unreadByChat[c.id] || 0,
         is_request: !!requestByChat[c.id],
+        muted: mutedChats.has(c.id),
         // An empty display name is falsy: try the handle before giving up.
         title:
           c.type === 'group'

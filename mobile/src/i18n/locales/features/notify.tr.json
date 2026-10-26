@@ -36,6 +36,10 @@
       "send": "Gönder",
       "replyPlaceholder": "Yanıt yaz",
       "markRead": "Okundu olarak işaretle"
+    },
+    "missed": {
+      "callBack": "Geri ara",
+      "message": "Mesaj"
     }
   }
 }

@@ -19,10 +19,18 @@ import notifee, { EventType, type Event } from 'react-native-notify-kit';
 
 import { declineCallIfRinging } from '@/api/calls';
 import { getActiveChatId } from '@/features/notifications/activeChat';
-import { CHAT_ACTION_READ, CHAT_ACTION_REPLY, handleChatAction, parseChatPush, showChatMessage } from '@/features/notifications/chatNotification';
+import {
+  CHAT_ACTION_READ,
+  CHAT_ACTION_REPLY,
+  clearChatNotification,
+  handleChatAction,
+  parseChatPush,
+  showChatMessage,
+} from '@/features/notifications/chatNotification';
 
 import {
   ACTION_ACCEPT,
+  ACTION_CALLBACK,
   ACTION_DECLINE,
   ACTION_OPEN,
   dismissIncomingCall,
@@ -40,7 +48,9 @@ export const PUSH_TASK = 'flyp-push-background';
 export type CallAction =
   | { action: 'accept'; callId: string }
   | { action: 'open'; callId: string }
-  | { action: 'route'; route: string };
+  | { action: 'route'; route: string }
+  // Call back from a missed call: dial the caller again, same kind.
+  | { action: 'callback'; peer: { id: string; name: string; avatar: string }; kind: 'audio' | 'video'; chatId: string | null };
 
 type AppHandlers = {
   run: (a: CallAction) => void;
@@ -58,7 +68,8 @@ let pending: (CallAction & { at: number }) | null = null;
 // getInitialNotification); act on it once.
 const recent = new Map<string, number>();
 function firstTime(a: CallAction): boolean {
-  const key = a.action === 'route' ? `route:${a.route}` : `${a.action}:${a.callId}`;
+  const key =
+    a.action === 'route' ? `route:${a.route}` : a.action === 'callback' ? `callback:${a.peer.id}` : `${a.action}:${a.callId}`;
   const now = Date.now();
   const last = recent.get(key);
   recent.set(key, now);
@@ -134,6 +145,16 @@ export async function handleNotificationEvent({ type, detail }: Event): Promise<
   }
 
   if (kind === 'missed_call') {
+    await notifee.cancelNotification(detail.notification?.id ?? '').catch(() => {});
+    if (id === ACTION_CALLBACK && str(data.caller_id)) {
+      deliver({
+        action: 'callback',
+        peer: { id: str(data.caller_id), name: str(data.caller_name), avatar: str(data.caller_avatar) },
+        kind: data.call_kind === 'video' ? 'video' : 'audio',
+        chatId: str(data.chat_id) || null,
+      });
+      return;
+    }
     const route = str(data.route);
     if (route) deliver({ action: 'route', route });
     return;
@@ -165,6 +186,12 @@ async function onPush(payload: Notifications.NotificationTaskPayload | undefined
     return;
   }
   const d = (payload.data ?? {}) as Record<string, unknown>;
+
+  // The chat was read on another phone (0161): its notification goes.
+  if (d.kind === 'chat_read' && typeof d.chat_id === 'string') {
+    await clearChatNotification(d.chat_id);
+    return;
+  }
 
   // A message, drawn WhatsApp-style (Android). Not while that chat is open.
   const chat = parseChatPush(d);

@@ -1,12 +1,27 @@
+import { type Href, router } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import notifee, { EventType } from 'react-native-notify-kit';
 
 import { attachCallActions, handleNotificationEvent, type CallAction } from './background';
 import { startCallKitBridge } from './callkit';
-import { answerWhenReady } from './callSession';
-import { openCallScreen } from './nav';
+import { answerWhenReady, checkReady } from './callSession';
+import { dialPath, openCallScreen } from './nav';
 import { checkIncomingCallsNow } from './useIncomingCalls';
+
+// Call back from a missed-call notification: the same checks as the call
+// buttons, then the dial screen (which rings at once for an in-app intent).
+export async function callBack(a: Extract<CallAction, { action: 'callback' }>) {
+  const ready = await checkReady(a.kind);
+  if (!ready.ok) {
+    // No microphone (or already in a call): the chat, where calling explains why.
+    router.push((a.chatId ? `/chat/${a.chatId}` : '/inbox') as Href);
+    return;
+  }
+  router.push(
+    dialPath({ to: a.peer.id, kind: a.kind, chat: a.chatId, name: a.peer.name || null, handle: null, avatar: a.peer.avatar || null }) as Href,
+  );
+}
 
 // The running app's half of the incoming-call notification (background.ts is
 // the other): Accept opens /call/<id> and answers it, a tap opens it
@@ -19,6 +34,10 @@ export function useCallNotifications(enabled: boolean, openRoute: (route: string
     const run = (a: CallAction) => {
       if (a.action === 'route') {
         openRoute(a.route);
+        return;
+      }
+      if (a.action === 'callback') {
+        void callBack(a);
         return;
       }
       if (a.action === 'accept') answerWhenReady(a.callId);

@@ -105,6 +105,20 @@
     "errGroupName": "Masukkan nama grup.",
     "errGroupMembers": "Pilih minimal satu orang.",
     "notFoundTitle": "Percakapan",
-    "notFound": "Tautan percakapan ini tidak valid."
+    "notFound": "Tautan percakapan ini tidak valid.",
+    "mute": {
+      "menu": "Opsi obrolan",
+      "action": "Bisukan notifikasi",
+      "unmute": "Bunyikan notifikasi",
+      "title": "Bisukan notifikasi",
+      "body": "Orang lain di obrolan tidak akan tahu. Kamu tetap menerima pesan.",
+      "h8": "8 jam",
+      "week": "1 minggu",
+      "always": "Selalu",
+      "done": "Notifikasi dibisukan",
+      "undone": "Notifikasi aktif",
+      "failed": "Gagal mengubah notifikasi. Coba lagi.",
+      "mutedA11y": "Dibisukan"
+    }
   }
 }

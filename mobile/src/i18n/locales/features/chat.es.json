@@ -111,6 +111,20 @@
     "errGroupName": "Escribe un nombre para el grupo.",
     "errGroupMembers": "Elige al menos una persona.",
     "notFoundTitle": "Conversación",
-    "notFound": "Este enlace de conversación no es válido."
+    "notFound": "Este enlace de conversación no es válido.",
+    "mute": {
+      "menu": "Opciones del chat",
+      "action": "Silenciar notificaciones",
+      "unmute": "Activar notificaciones",
+      "title": "Silenciar notificaciones",
+      "body": "Los demás no lo sabrán. Seguirás recibiendo los mensajes.",
+      "h8": "8 horas",
+      "week": "1 semana",
+      "always": "Siempre",
+      "done": "Notificaciones silenciadas",
+      "undone": "Notificaciones activadas",
+      "failed": "No se pudieron cambiar las notificaciones. Inténtalo de nuevo.",
+      "mutedA11y": "Silenciado"
+    }
   }
 }

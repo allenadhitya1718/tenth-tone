@@ -15,6 +15,7 @@
 // is the ROOT call whose status is the session's. They are the same row for a
 // direct call; someone added to a group call (0092) is rung with an invite
 // row whose root_id points at the root. Both carry the same Agora channel.
+import { requireOptionalNativeModule } from 'expo';
 import { Platform, Vibration } from 'react-native';
 import {
   AudioRoute,
@@ -289,16 +290,27 @@ async function takeToken(channel: string, uid: number): Promise<AgoraToken> {
   return warm ?? fetchAgoraToken(channel, uid, 'host');
 }
 
+// Android: the FLYP ringtone on the ring stream, silent when the phone is on
+// silent or vibrate (modules/flyp-ringer). iPhone rings through CallKit.
+const ringer =
+  Platform.OS === 'android' ? requireOptionalNativeModule<{ start(): boolean; stop(): void }>('FlypRinger') : null;
+
 function startRinging() {
   // Off, on, off, on... repeated until cancelled. VIBRATE is in app.json.
   try {
     Vibration.vibrate([0, 900, 700], true);
+  } catch {}
+  try {
+    ringer?.start();
   } catch {}
 }
 
 function stopRinging() {
   try {
     Vibration.cancel();
+  } catch {}
+  try {
+    ringer?.stop();
   } catch {}
 }
 

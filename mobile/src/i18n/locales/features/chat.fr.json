@@ -111,6 +111,20 @@
     "errGroupName": "Saisissez un nom de groupe.",
     "errGroupMembers": "Choisissez au moins une personne.",
     "notFoundTitle": "Discussion",
-    "notFound": "Ce lien de discussion n'est pas valide."
+    "notFound": "Ce lien de discussion n'est pas valide.",
+    "mute": {
+      "menu": "Options de la discussion",
+      "action": "Mettre en sourdine",
+      "unmute": "Réactiver les notifications",
+      "title": "Mettre en sourdine",
+      "body": "Les autres ne le sauront pas. Tu recevras toujours les messages.",
+      "h8": "8 heures",
+      "week": "1 semaine",
+      "always": "Toujours",
+      "done": "Notifications en sourdine",
+      "undone": "Notifications activées",
+      "failed": "Impossible de modifier les notifications. Réessaie.",
+      "mutedA11y": "En sourdine"
+    }
   }
 }

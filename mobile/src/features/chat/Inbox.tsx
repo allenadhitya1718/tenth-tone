@@ -303,8 +303,12 @@ const ChatRow = memo(function ChatRow({ chat, onOpen }: { chat: ChatListItem; on
           >
             {preview}
           </Text>
+          {chat.muted ? (
+            <Ionicons name="notifications-off" size={15} color={colors.muted} accessibilityLabel={t('chat.mute.mutedA11y')} />
+          ) : null}
           {unread ? (
-            <View style={[styles.dot, { backgroundColor: colors.primary }]}>
+            // A muted chat's count is grey, as on WhatsApp.
+            <View style={[styles.dot, { backgroundColor: chat.muted ? colors.muted : colors.primary }]}>
               <Text style={[styles.dotText, { color: colors.onPrimary }]}>
                 {chat.unread_count > 9 ? '9+' : chat.unread_count}
               </Text>

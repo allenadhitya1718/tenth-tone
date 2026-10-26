@@ -105,6 +105,20 @@
     "errGroupName": "请输入群名称。",
     "errGroupMembers": "请至少选择一人。",
     "notFoundTitle": "聊天",
-    "notFound": "此聊天链接无效。"
+    "notFound": "此聊天链接无效。",
+    "mute": {
+      "menu": "聊天选项",
+      "action": "消息免打扰",
+      "unmute": "关闭免打扰",
+      "title": "消息免打扰",
+      "body": "聊天中的其他人不会知道，你仍会收到消息。",
+      "h8": "8 小时",
+      "week": "1 周",
+      "always": "始终",
+      "done": "已开启免打扰",
+      "undone": "已开启通知",
+      "failed": "无法更改通知，请重试。",
+      "mutedA11y": "免打扰"
+    }
   }
 }

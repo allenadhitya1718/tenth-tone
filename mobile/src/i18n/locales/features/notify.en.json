@@ -36,6 +36,10 @@
       "send": "Send",
       "replyPlaceholder": "Type a reply",
       "markRead": "Mark as read"
+    },
+    "missed": {
+      "callBack": "Call back",
+      "message": "Message"
     }
   }
 }

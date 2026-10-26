@@ -36,6 +36,10 @@
       "send": "Enviar",
       "replyPlaceholder": "Escribe una respuesta",
       "markRead": "Marcar como leído"
+    },
+    "missed": {
+      "callBack": "Devolver llamada",
+      "message": "Mensaje"
     }
   }
 }

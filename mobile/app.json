@@ -167,7 +167,11 @@
       [
         "expo-notifications",
         {
-          "enableBackgroundRemoteNotifications": true
+          "enableBackgroundRemoteNotifications": true,
+          "sounds": [
+            "./assets/sounds/flyp_ring.wav",
+            "./assets/sounds/flyp_message.wav"
+          ]
         }
       ],
       "expo-asset",

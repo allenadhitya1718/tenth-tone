@@ -108,6 +108,20 @@
     "errGroupName": "Enter a group name.",
     "errGroupMembers": "Choose at least one person.",
     "notFoundTitle": "Conversation",
-    "notFound": "This conversation link isn't valid."
+    "notFound": "This conversation link isn't valid.",
+    "mute": {
+      "menu": "Chat options",
+      "action": "Mute notifications",
+      "unmute": "Unmute notifications",
+      "title": "Mute notifications",
+      "body": "Other people in the chat won't know. You'll still get the messages.",
+      "h8": "8 hours",
+      "week": "1 week",
+      "always": "Always",
+      "done": "Notifications muted",
+      "undone": "Notifications on",
+      "failed": "Couldn't change notifications. Try again.",
+      "mutedA11y": "Muted"
+    }
   }
 }

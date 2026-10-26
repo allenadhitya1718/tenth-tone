@@ -13,6 +13,7 @@
 // category with Reply (text input) and Mark as read (push.ts), and the
 // answers arrive here through handleChatResponse.
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import notifee, {
   AndroidCategory,
@@ -29,11 +30,17 @@ export const IOS_CHAT_CATEGORY = 'chat_message';
 export const CHAT_ACTION_REPLY = 'chat_reply';
 export const CHAT_ACTION_READ = 'chat_read';
 // push.ts creates it (high importance, sound, private on the lock screen).
-export const CHAT_CHANNEL = 'messages';
+export const CHAT_CHANNEL = 'chats';
 
 const HISTORY = 7;
 const historyKey = (chatId: string) => `tt-chat-notif:${chatId}`;
 export const chatNotificationId = (chatId: string) => `chat_${chatId}`;
+// WhatsApp bundles several chats under one "N messages from M chats" line.
+const GROUP_ID = 'flyp_chats';
+const SUMMARY_ID = 'chat_summary';
+const OPEN_KEY = 'tt-chat-notif-open';
+// send-push's "{n} messages from {c} chats" in the app's language.
+const SUMMARY_LABEL_KEY = 'tt-chat-summary-label';
 
 type Line = { text: string; at: number; mine: boolean; senderId?: string; name?: string; avatar?: string; notificationId?: string };
 
@@ -51,6 +58,7 @@ export type ChatPush = {
   replyLabel: string;
   readLabel: string;
   youLabel: string;
+  summaryLabel?: string;
 };
 
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
@@ -73,6 +81,7 @@ export function parseChatPush(d: Record<string, unknown>): ChatPush | null {
     replyLabel: str(d.reply_label) || 'Reply',
     readLabel: str(d.read_label) || 'Mark as read',
     youLabel: str(d.you_label) || 'You',
+    summaryLabel: str(d.summary_label),
   };
 }
 
@@ -123,6 +132,7 @@ async function draw(meta: Meta, lines: Line[], quiet: boolean) {
     android: {
       channelId: CHAT_CHANNEL,
       category: AndroidCategory.MESSAGE,
+      groupId: GROUP_ID,
       visibility: AndroidVisibility.PRIVATE,
       // A reply redraws without a second sound; a new message alerts again.
       onlyAlertOnce: quiet,
@@ -148,6 +158,62 @@ async function draw(meta: Meta, lines: Line[], quiet: boolean) {
     },
   };
   await notifee.displayNotification(n);
+  await trackOpen(meta.chatId, true);
+  if (meta.summaryLabel) await AsyncStorage.setItem(SUMMARY_LABEL_KEY, meta.summaryLabel).catch(() => {});
+  await drawSummary();
+}
+
+// ---------- the bundle summary ----------
+
+type OpenChat = { chatId: string; title: string; count: number };
+
+async function readOpen(): Promise<OpenChat[]> {
+  try {
+    const raw = await AsyncStorage.getItem(OPEN_KEY);
+    const list = raw ? (JSON.parse(raw) as OpenChat[]) : [];
+    return Array.isArray(list) ? list : [];
+  } catch {
+    return [];
+  }
+}
+
+async function trackOpen(chatId: string, open: boolean) {
+  const list = (await readOpen()).filter((c) => c.chatId !== chatId);
+  if (open) {
+    const lines = await readHistory(chatId);
+    const theirs = lines.filter((l) => !l.mine);
+    const last = theirs[theirs.length - 1];
+    list.push({ chatId, title: last?.name || '', count: theirs.length });
+  }
+  await AsyncStorage.setItem(OPEN_KEY, JSON.stringify(list.slice(-20))).catch(() => {});
+}
+
+// Two or more chats with notifications: one summary on top of them, as
+// WhatsApp shows. One chat: no summary.
+async function drawSummary() {
+  const open = await readOpen();
+  if (open.length < 2) {
+    await notifee.cancelNotification(SUMMARY_ID).catch(() => {});
+    return;
+  }
+  const messages = open.reduce((n, c) => n + c.count, 0);
+  const label = (await AsyncStorage.getItem(SUMMARY_LABEL_KEY).catch(() => null)) || '{n} messages from {c} chats';
+  const text = label.replace('{n}', String(messages)).replace('{c}', String(open.length));
+  await notifee.displayNotification({
+    id: SUMMARY_ID,
+    title: 'FLYP',
+    body: text,
+    android: {
+      channelId: CHAT_CHANNEL,
+      groupId: GROUP_ID,
+      groupSummary: true,
+      onlyAlertOnce: true,
+      autoCancel: true,
+      pressAction: { id: 'default', launchActivity: 'default' },
+      style: { type: AndroidStyle.INBOX, lines: open.map((c) => esc(`${c.title}: ${c.count}`)), summary: esc(text) },
+    },
+    data: { kind: 'chat_message', route: '/inbox' },
+  });
 }
 
 /** A message push arrived: add it to its chat's notification (Android). */
@@ -169,12 +235,32 @@ export async function showChatMessage(c: ChatPush): Promise<void> {
   await draw(c, lines.slice(-HISTORY), false);
 }
 
-/** The chat was opened or read: take its notification away. Never throws. */
+/**
+ * The chat was opened or read (here or on another phone): take its
+ * notifications away, the app-drawn one and any the system drew from a push.
+ * Never throws; safe in the background task.
+ */
 export async function clearChatNotification(chatId: string): Promise<void> {
   try {
     if (Platform.OS === 'android') await notifee.cancelNotification(chatNotificationId(chatId));
   } catch {}
   await AsyncStorage.removeItem(historyKey(chatId)).catch(() => {});
+  if (Platform.OS === 'android') {
+    await trackOpen(chatId, false);
+    await drawSummary().catch(() => {});
+  }
+  try {
+    const shown = await Notifications.getPresentedNotificationsAsync();
+    await Promise.all(
+      shown
+        .filter((n) => {
+          const d = (n.request.content.data ?? {}) as Record<string, unknown>;
+          const route = typeof d.route === 'string' ? d.route : '';
+          return n.request.identifier === chatNotificationId(chatId) || d.chat_id === chatId || route === `/chat/${chatId}`;
+        })
+        .map((n) => Notifications.dismissNotificationAsync(n.request.identifier).catch(() => {})),
+    );
+  } catch {}
 }
 
 async function markRead(chatId: string, lines: Line[]) {

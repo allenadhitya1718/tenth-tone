@@ -24,9 +24,9 @@ import notifee, {
 
 // The 'calls' channel push.ts creates (PUSH_CHANNELS.calls): MAX importance,
 // sound, long vibration, public on the lock screen.
-export const CALL_CHANNEL = 'calls';
+export const CALL_CHANNEL = 'incoming_calls';
 // Missed calls sit with messages: heard, but not a full ring.
-const MISSED_CHANNEL = 'messages';
+const MISSED_CHANNEL = 'chats';
 
 // The caller gives up after 45 s (callSession.ts RING_TIMEOUT_MS).
 export const RING_MS = 45_000;
@@ -57,7 +57,19 @@ export type CallEndedPush = {
   missedTitle: string;
   missedText: string;
   route: string;
+  // For WhatsApp's Call back / Message buttons (empty from an older send-push).
+  callerId: string;
+  callerName: string;
+  callerAvatar: string;
+  kind: 'audio' | 'video';
+  chatId: string;
+  callbackLabel: string;
+  messageLabel: string;
 };
+
+export const ACTION_CALLBACK = 'missed_callback';
+export const ACTION_MESSAGE = 'missed_message';
+export const IOS_MISSED_CATEGORY = 'missed_call';
 
 const s = (v: unknown) => (typeof v === 'string' ? v : v == null ? '' : String(v));
 
@@ -91,6 +103,13 @@ export function parseCallEnded(data: Record<string, unknown> | null | undefined)
     missedTitle: s(data.missed_title),
     missedText: s(data.missed_text),
     route: s(data.route) || '/inbox',
+    callerId: s(data.caller_id),
+    callerName: s(data.caller_name),
+    callerAvatar: s(data.caller_avatar),
+    kind: data.call_kind === 'video' ? 'video' : 'audio',
+    chatId: s(data.chat_id),
+    callbackLabel: s(data.callback_label),
+    messageLabel: s(data.message_label),
   };
 }
 
@@ -111,7 +130,8 @@ async function ensureCallChannel() {
     name: 'Calls',
     importance: AndroidImportance.HIGH,
     visibility: AndroidVisibility.PUBLIC,
-    sound: 'default',
+    // res/raw/flyp_ring (app.json expo-notifications sounds).
+    sound: 'flyp_ring',
     vibration: true,
     vibrationPattern: [300, 800, 400, 800],
   });
@@ -194,11 +214,28 @@ export async function handleCallEnded(e: CallEndedPush): Promise<void> {
       id: missedNotificationId(e.callId),
       title: e.missedTitle,
       body: e.missedText,
-      data: { kind: 'missed_call', call_id: e.callId, route: e.route },
+      data: {
+        kind: 'missed_call',
+        call_id: e.callId,
+        route: e.route,
+        caller_id: e.callerId,
+        caller_name: e.callerName,
+        caller_avatar: e.callerAvatar,
+        call_kind: e.kind,
+        chat_id: e.chatId,
+      },
       android: {
         channelId: MISSED_CHANNEL,
         pressAction: { id: 'default', launchActivity: 'default' },
         autoCancel: true,
+        ...(e.callerAvatar ? { largeIcon: e.callerAvatar, circularLargeIcon: true } : {}),
+        actions:
+          e.callerId && e.callbackLabel
+            ? [
+                { title: e.callbackLabel, pressAction: { id: ACTION_CALLBACK, launchActivity: 'default' } },
+                { title: e.messageLabel || e.callbackLabel, pressAction: { id: ACTION_MESSAGE, launchActivity: 'default' } },
+              ]
+            : undefined,
       },
     });
   } catch {}

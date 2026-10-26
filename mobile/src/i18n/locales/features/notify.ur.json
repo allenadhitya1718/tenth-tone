@@ -36,6 +36,10 @@
       "send": "بھیجیں",
       "replyPlaceholder": "جواب لکھیں",
       "markRead": "پڑھا ہوا نشان زد کریں"
+    },
+    "missed": {
+      "callBack": "واپس کال کریں",
+      "message": "پیغام"
     }
   }
 }

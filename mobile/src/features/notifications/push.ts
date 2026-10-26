@@ -25,16 +25,19 @@ import { markNotificationsRead, notificationKeys } from '@/api/notifications';
 import { removePushToken, savePushToken } from '@/api/settings';
 import {
   ACTION_ACCEPT,
+  ACTION_CALLBACK,
   ACTION_DECLINE,
+  ACTION_MESSAGE,
   dismissIncomingCall,
   IOS_CALL_CATEGORY,
+  IOS_MISSED_CATEGORY,
   markCallOver,
 } from '@/features/call/callNotification';
 import { answerWhenReady, getCallState } from '@/features/call/callSession';
 import { watchVoipToken } from '@/features/call/callkit';
 import { maybeAskFullScreenCalls } from '@/features/call/fullScreenPermission';
 import { openCallScreen } from '@/features/call/nav';
-import { useCallNotifications } from '@/features/call/useCallNotifications';
+import { callBack, useCallNotifications } from '@/features/call/useCallNotifications';
 import { go } from '@/features/discover/nav';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -46,8 +49,10 @@ import { CHAT_ACTION_READ, CHAT_ACTION_REPLY, clearChatNotification, handleChatA
 // notification push on Android: it arrives data-only and the app draws it in
 // the calls channel itself (features/call/callNotification.ts).
 export const PUSH_CHANNELS = {
-  messages: 'messages',
-  calls: 'calls',
+  // Round 4: new ids for the FLYP message tone and ringtone (a channel's
+  // sound is fixed once created). The old 'messages' / 'calls' are deleted.
+  messages: 'chats',
+  calls: 'incoming_calls',
   social: 'social',
   live: 'live',
   // The push test, and pushes from an older send-push.
@@ -138,6 +143,7 @@ async function ensureChannels(t: TFunction) {
       name: t('discover.push.ch_messages'),
       description: t('discover.push.ch_messagesDesc'),
       importance: I.HIGH,
+      sound: 'flyp_message.wav',
       enableVibrate: true,
       vibrationPattern: [0, 200, 120, 200],
       showBadge: true,
@@ -148,6 +154,7 @@ async function ensureChannels(t: TFunction) {
       name: t('discover.push.ch_calls'),
       description: t('discover.push.ch_callsDesc'),
       importance: I.MAX,
+      sound: 'flyp_ring.wav',
       enableVibrate: true,
       vibrationPattern: [0, 800, 400, 800, 400, 800],
       showBadge: false,
@@ -174,6 +181,9 @@ async function ensureChannels(t: TFunction) {
       importance: I.DEFAULT,
       showBadge: true,
     }),
+    // The channels before the FLYP tones, so Settings lists each kind once.
+    Notifications.deleteNotificationChannelAsync('messages').catch(() => {}),
+    Notifications.deleteNotificationChannelAsync('calls').catch(() => {}),
   ]);
 }
 
@@ -190,7 +200,8 @@ async function allowed(): Promise<boolean> {
 }
 
 // What this build can do with a push (push_tokens.caps, 0160).
-export const PUSH_CAPS: string[] = Platform.OS === 'android' ? ['chat_style'] : Platform.OS === 'ios' ? ['chat_reply'] : [];
+export const PUSH_CAPS: string[] =
+  Platform.OS === 'android' ? ['chat_style', 'ringtone'] : Platform.OS === 'ios' ? ['chat_reply', 'ringtone'] : [];
 
 // iPhone: the PushKit token, saved on the same row (callkit.ts).
 let voipToken: string | null | undefined;
@@ -231,6 +242,7 @@ async function register(t: TFunction, lang: string): Promise<boolean> {
   await ensureChannels(t);
   await ensureCallCategory(t);
   await ensureChatCategory(t);
+  await ensureMissedCategory(t);
   if (!(await allowed())) return true;
   const ok = await fetchAndSaveToken(lang);
   // Android 14+: the ringing call can only take over a locked screen with
@@ -274,6 +286,15 @@ async function ensureChatCategory(t: TFunction) {
       buttonTitle: t('notify.chat.markRead'),
       options: { opensAppToForeground: false },
     },
+  ]);
+}
+
+// iPhone: Call back and Message on a missed call, as on WhatsApp.
+async function ensureMissedCategory(t: TFunction) {
+  if (Platform.OS !== 'ios') return;
+  await Notifications.setNotificationCategoryAsync(IOS_MISSED_CATEGORY, [
+    { identifier: ACTION_CALLBACK, buttonTitle: t('notify.missed.callBack'), options: { opensAppToForeground: true } },
+    { identifier: ACTION_MESSAGE, buttonTitle: t('notify.missed.message'), options: { opensAppToForeground: true } },
   ]);
 }
 
@@ -343,7 +364,17 @@ function openResponse(r: Notifications.NotificationResponse, onRead: () => void)
     void handleChatAction(r.actionIdentifier, data, r.userText).then(onRead, () => {});
     return;
   }
-  const callId = isCall(data) ? callIdOf(data) : null;
+  // Call back on a missed call (iPhone category 'missed_call').
+  if (r.actionIdentifier === ACTION_CALLBACK && typeof data.caller_id === 'string' && data.caller_id) {
+    void callBack({
+      action: 'callback',
+      peer: { id: data.caller_id, name: String(data.caller_name ?? ''), avatar: String(data.caller_avatar ?? '') },
+      kind: data.call_kind === 'video' ? 'video' : 'audio',
+      chatId: typeof data.chat_id === 'string' && data.chat_id ? data.chat_id : null,
+    });
+    return;
+  }
+  const callId = data.kind === 'call_cancelled' ? null : isCall(data) ? callIdOf(data) : null;
   // Decline on the iPhone call alert: no screen, just the answer.
   if (callId && r.actionIdentifier === ACTION_DECLINE) {
     markCallOver(callId);

@@ -403,6 +403,7 @@ function chatData(row: Row, msg: Msg, S: Strings, sender: { name: string; avatar
     reply_label: S.replyAction,
     read_label: S.markRead,
     you_label: S.you,
+    summary_label: S.chatSummary,
   };
 }
 
@@ -484,7 +485,7 @@ async function sendIncomingCall(db: Db, t: TokenRow, n: Row, call: CallRow, msg:
     return await sendApns(t.token, {
       aps: {
         alert: { title: msg.title, body: msg.body },
-        sound: can(t, 'ringtone') ? 'flyp_ring.caf' : 'default',
+        sound: can(t, 'ringtone') ? 'flyp_ring.wav' : 'default',
         category: 'incoming_call',
         'thread-id': `call_${call.id}`,
         // Breaks through Focus / scheduled summary (needs the
@@ -499,7 +500,7 @@ async function sendIncomingCall(db: Db, t: TokenRow, n: Row, call: CallRow, msg:
 
 // ── the call stopped ringing: take the ring away, maybe leave "missed call" ──
 
-async function sendCallEnded(t: TokenRow, call: CallRow, lang: Lang, actor: string): Promise<Result> {
+async function sendCallEnded(t: TokenRow, call: CallRow, lang: Lang, actor: string, avatar: string): Promise<Result> {
   const S = STRINGS[lang];
   // Nobody answered: the caller gave up (ended, never answered) or it timed out.
   const missed = !call.answered_at && (call.status === 'missed' || call.status === 'ended');
@@ -511,6 +512,14 @@ async function sendCallEnded(t: TokenRow, call: CallRow, lang: Lang, actor: stri
     missed_title: fill(S.missedCall, { a: actor }),
     missed_text: call.kind === 'video' ? S.videoCall : S.voiceCall,
     route: call.chat_id ? `/chat/${call.chat_id}` : '/inbox',
+    // WhatsApp's missed-call buttons: Call back and Message.
+    caller_id: call.caller_id,
+    caller_name: actor,
+    caller_avatar: avatar,
+    call_kind: call.kind === 'video' ? 'video' : 'audio',
+    chat_id: call.chat_id ?? '',
+    callback_label: S.callBack,
+    message_label: S.messageAction,
   };
   if (t.platform === 'android') {
     if (!fcmReady()) return 'fcm not configured';
@@ -523,7 +532,11 @@ async function sendCallEnded(t: TokenRow, call: CallRow, lang: Lang, actor: stri
     if (missed) {
       // Same collapse id as the ring: the ringing alert is REPLACED in place.
       return await sendApns(t.token, {
-        aps: { alert: { title: data.missed_title, body: data.missed_text }, 'thread-id': `call_${call.id}` },
+        aps: {
+          alert: { title: data.missed_title, body: data.missed_text },
+          'thread-id': `call_${call.id}`,
+          ...(can(t, 'chat_reply') ? { category: 'missed_call' } : {}),
+        },
         ...data,
       }, { collapseId: `call_${call.id}`, priority: '5' });
     }
@@ -606,7 +619,27 @@ async function handleCallEnded(db: Db, callId: string) {
   const { data: tokens } = await db.from('push_tokens').select(TOKEN_COLS).eq('user_id', call.callee_id);
   if (!tokens || !tokens.length) return json({ ok: true, skipped: 'no_tokens' });
   const actor = await actorOf(db, call.caller_id);
-  return fanOut(db, tokens as TokenRow[], (t) => sendCallEnded(t, call as CallRow, normLang(t.lang), actor.name), 'call ' + callId);
+  return fanOut(db, tokens as TokenRow[], (t) => sendCallEnded(t, call as CallRow, normLang(t.lang), actor.name, actor.avatar), 'call ' + callId);
+}
+
+// ── a chat was read on one phone: clear its notification on all (0161) ──
+async function handleChatRead(db: Db, chatId: string, userId: string) {
+  const { data: tokens } = await db.from('push_tokens').select(TOKEN_COLS).eq('user_id', userId);
+  if (!tokens || !tokens.length) return json({ ok: true, skipped: 'no_tokens' });
+  const data = { kind: 'chat_read', chat_id: chatId };
+  return fanOut(db, tokens as TokenRow[], async (t) => {
+    if (t.platform === 'android') {
+      // Only an app that draws its own chat notifications can take one away.
+      if (!can(t, 'chat_style')) return 'skip';
+      return fcmReady() ? await sendFcm(t.token, { data, android: { priority: 'high', ttl: '3600s' } }) : 'fcm not configured';
+    }
+    if (t.platform === 'ios') {
+      if (!can(t, 'chat_reply')) return 'skip';
+      if (!apnsReady()) return 'apns not configured';
+      return await sendApns(t.token, { aps: { 'content-available': 1 }, ...data }, { pushType: 'background', priority: '5' });
+    }
+    return 'skip';
+  }, 'chat_read ' + chatId);
 }
 
 async function handleNotification(db: Db, id: string) {
@@ -620,6 +653,12 @@ async function handleNotification(db: Db, id: string) {
   if (key) {
     const { data: s } = await db.from('user_settings').select(key).eq('user_id', row.user_id).maybeSingle();
     if (s && (s as unknown as Record<string, unknown>)[key] === false) return json({ ok: true, skipped: 'setting_off' });
+  }
+
+  // A muted chat (0161) gets no message push, as on WhatsApp.
+  if (row.type === 'message' && p.chat_id) {
+    const { data: muted } = await db.rpc('chat_is_muted', { p_chat_id: String(p.chat_id), p_user_id: row.user_id });
+    if (muted === true) return json({ ok: true, skipped: 'chat_muted' });
   }
 
   // Is the type pushed at all? (English composes the same cases as every language.)
@@ -698,7 +737,7 @@ async function handleNotification(db: Db, id: string) {
       if (row.type === 'message' && can(t, 'chat_reply')) {
         // Reply and Mark as read from the lock screen (the app registers it).
         (alert.aps as Record<string, unknown>).category = 'chat_message';
-        if (can(t, 'ringtone')) (alert.aps as Record<string, unknown>).sound = 'flyp_message.caf';
+        if (can(t, 'ringtone')) (alert.aps as Record<string, unknown>).sound = 'flyp_message.wav';
       }
       return await sendApns(t.token, alert, msg.replace && msg.group ? { collapseId: msg.group } : {});
     }
@@ -724,13 +763,19 @@ Deno.serve(async (req) => {
   const db = makeDb();
   if (!(await callerAllowed(req, db))) return json({ error: 'unauthorized' }, 401);
 
-  let body: { notification_id?: string; call_id?: string } = {};
+  let body: { notification_id?: string; call_id?: string; chat_read?: { chat_id?: string; user_id?: string } } = {};
   try { body = await req.json(); } catch { return json({ error: 'bad_request' }, 400); }
   const uuid = /^[0-9a-f-]{36}$/i;
   if (body.call_id) {
     const callId = String(body.call_id);
     if (!uuid.test(callId)) return json({ error: 'bad_request' }, 400);
     return handleCallEnded(db, callId);
+  }
+  if (body.chat_read) {
+    const chatId = String(body.chat_read.chat_id || '');
+    const userId = String(body.chat_read.user_id || '');
+    if (!uuid.test(chatId) || !uuid.test(userId)) return json({ error: 'bad_request' }, 400);
+    return handleChatRead(db, chatId, userId);
   }
   const id = String(body.notification_id || '');
   if (!uuid.test(id)) return json({ error: 'bad_request' }, 400);

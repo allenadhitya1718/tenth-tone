@@ -36,6 +36,10 @@
       "send": "إرسال",
       "replyPlaceholder": "اكتب ردًا",
       "markRead": "تعليم كمقروءة"
+    },
+    "missed": {
+      "callBack": "معاودة الاتصال",
+      "message": "مراسلة"
     }
   }
 }

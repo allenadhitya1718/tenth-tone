@@ -44,8 +44,8 @@ final class FlypCallKit: NSObject, CXProviderDelegate, PKPushRegistryDelegate {
     config.maximumCallsPerCallGroup = 1
     config.supportedHandleTypes = [.generic]
     config.includesCallsInRecents = true
-    if Bundle.main.url(forResource: "flyp_ring", withExtension: "caf") != nil {
-      config.ringtoneSound = "flyp_ring.caf"
+    if Bundle.main.url(forResource: "flyp_ring", withExtension: "wav") != nil {
+      config.ringtoneSound = "flyp_ring.wav"
     }
     if let icon = UIImage(named: "CallKitIcon") {
       config.iconTemplateImageData = icon.pngData()

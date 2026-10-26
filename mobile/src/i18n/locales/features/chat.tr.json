@@ -108,6 +108,20 @@
     "errGroupName": "Bir grup adı gir.",
     "errGroupMembers": "En az bir kişi seç.",
     "notFoundTitle": "Sohbet",
-    "notFound": "Bu sohbet bağlantısı geçerli değil."
+    "notFound": "Bu sohbet bağlantısı geçerli değil.",
+    "mute": {
+      "menu": "Sohbet seçenekleri",
+      "action": "Bildirimleri sessize al",
+      "unmute": "Bildirimleri aç",
+      "title": "Bildirimleri sessize al",
+      "body": "Sohbetteki diğer kişiler bilmeyecek. Mesajları almaya devam edeceksin.",
+      "h8": "8 saat",
+      "week": "1 hafta",
+      "always": "Her zaman",
+      "done": "Bildirimler sessize alındı",
+      "undone": "Bildirimler açık",
+      "failed": "Bildirimler değiştirilemedi. Tekrar dene.",
+      "mutedA11y": "Sessiz"
+    }
   }
 }

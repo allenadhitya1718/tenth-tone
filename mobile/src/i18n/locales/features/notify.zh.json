@@ -36,6 +36,10 @@
       "send": "发送",
       "replyPlaceholder": "输入回复",
       "markRead": "标为已读"
+    },
+    "missed": {
+      "callBack": "回拨",
+      "message": "发消息"
     }
   }
 }

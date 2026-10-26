@@ -36,6 +36,10 @@
       "send": "भेजें",
       "replyPlaceholder": "जवाब लिखें",
       "markRead": "पढ़ा हुआ मार्क करें"
+    },
+    "missed": {
+      "callBack": "वापस कॉल करें",
+      "message": "मैसेज"
     }
   }
 }
