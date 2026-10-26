@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Animated, FlatList, I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, FlatList, I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { fetchGifts, giftKeys, sendGift, type Gift } from '@/api/gifts';
 import type { UserSummary } from '@/api/types';
@@ -75,6 +76,14 @@ function GiftsComingSoon({ visible, onClose }: { visible: boolean; onClose: () =
   );
 }
 
+// TikTok's gift panel: tap a gift to select it, tap its Send button to send.
+// Right after a send, a round combo button counts down COMBO_MS; each tap
+// sends the same gift to the same person again and restarts the count. The
+// panel stays open so a viewer can keep gifting.
+const COMBO_MS = 3500;
+
+type Combo = { gift: Gift; user: UserSummary; count: number; key: number };
+
 function GiftPicker({ visible, onClose, liveId, recipients, onSent }: GiftTrayProps) {
   const { t, i18n } = useTranslation();
   const { colors, isDark } = useTheme();
@@ -83,23 +92,36 @@ function GiftPicker({ visible, onClose, liveId, recipients, onSent }: GiftTrayPr
   const wallet = useQuery({ queryKey: walletKeys.balance(), queryFn: fetchWallet, enabled: visible });
   const [selected, setSelected] = useState<Gift | null>(null);
   const [toId, setToId] = useState<string | null>(null);
+  const [combo, setCombo] = useState<Combo | null>(null);
 
   const to = recipients.find((r) => r.id === toId) ?? recipients[0] ?? null;
   const balance = wallet.data?.balance ?? 0;
+
+  // Closing the panel ends any combo.
+  const close = () => {
+    setCombo(null);
+    onClose();
+  };
 
   const send = useMutation({
     mutationFn: ({ gift, user }: { gift: Gift; user: UserSummary }) =>
       sendGift({ toUserId: user.id, giftId: gift.id, liveStreamId: liveId }),
     onSuccess: (txId, { gift, user }) => {
       void qc.invalidateQueries({ queryKey: walletKeys.all() });
+      setCombo((c) =>
+        c && c.gift.id === gift.id && c.user.id === user.id
+          ? { ...c, count: c.count + 1, key: c.key + 1 }
+          : { gift, user, count: 1, key: Date.now() },
+      );
       onSent(txId, gift, user);
     },
     onError: (e) => {
+      setCombo(null);
       void qc.invalidateQueries({ queryKey: walletKeys.balance() });
       if (errorCode(e) === 'insufficient_balance') {
         showAlert(t('live.gifts.lowTitle'), t('live.gifts.lowBody'), [
           { text: t('live.cancel'), style: 'cancel' },
-          { text: t('live.gifts.topUp'), onPress: openWallet },
+          { text: t('live.gifts.recharge'), onPress: openWallet },
         ]);
         return;
       }
@@ -108,19 +130,29 @@ function GiftPicker({ visible, onClose, liveId, recipients, onSent }: GiftTrayPr
   });
 
   function openWallet() {
-    onClose();
+    close();
     router.push('/wallet');
   }
 
-  function submit() {
-    if (!selected || !to || send.isPending) return;
-    send.mutate({ gift: selected, user: to });
+  function sendGiftTo(gift: Gift, user: UserSummary | null) {
+    if (!user) return;
+    // Checked here too so a short balance answers at once, without a round trip.
+    if (wallet.data && balance < gift.price) {
+      showAlert(t('live.gifts.lowTitle'), t('live.gifts.lowBody'), [
+        { text: t('live.cancel'), style: 'cancel' },
+        { text: t('live.gifts.recharge'), onPress: openWallet },
+      ]);
+      return;
+    }
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    send.mutate({ gift, user });
   }
 
+  const endCombo = useCallback(() => setCombo(null), []);
   const tint = isDark ? colors.primary2 : colors.primary;
 
   return (
-    <Sheet visible={visible} onClose={onClose} title={t('live.gifts.title')}>
+    <Sheet visible={visible} onClose={close} title={t('live.gifts.title')}>
       {recipients.length > 1 ? (
         <View style={styles.toRow}>
           <Text style={[styles.toLabel, { color: colors.muted }]}>{t('live.gifts.to')}</Text>
@@ -134,7 +166,10 @@ function GiftPicker({ visible, onClose, liveId, recipients, onSent }: GiftTrayPr
               const on = item.id === to?.id;
               return (
                 <Pressable
-                  onPress={() => setToId(item.id)}
+                  onPress={() => {
+                    setToId(item.id);
+                    setCombo(null);
+                  }}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: on }}
                   accessibilityLabel={item.name || item.handle || t('live.someone')}
@@ -165,18 +200,25 @@ function GiftPicker({ visible, onClose, liveId, recipients, onSent }: GiftTrayPr
           data={gifts.data}
           keyExtractor={(g) => g.id}
           numColumns={4}
-          style={{ maxHeight: 300 }}
+          style={{ maxHeight: 320 }}
           contentContainerStyle={{ padding: 8 }}
+          extraData={selected?.id}
           renderItem={({ item }) => (
             <GiftCell
               gift={item}
               name={giftName(item, i18n.language)}
               selected={selected?.id === item.id}
-              onPress={setSelected}
+              onSelect={(g) => {
+                setSelected(g);
+                if (combo && combo.gift.id !== g.id) setCombo(null);
+              }}
+              onSend={(g) => sendGiftTo(g, to)}
+              sending={send.isPending && selected?.id === item.id}
               tint={tint}
               soft={colors.primarySoft}
               text={colors.text}
               muted={colors.muted}
+              sendLabel={t('live.gifts.sendShort')}
               coinsLabel={t('live.gifts.coins', { count: item.price })}
             />
           )}
@@ -184,31 +226,64 @@ function GiftPicker({ visible, onClose, liveId, recipients, onSent }: GiftTrayPr
       )}
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
-        <Pressable
-          onPress={openWallet}
-          style={styles.balance}
-          accessibilityRole="button"
-          accessibilityLabel={t('live.gifts.balanceA11y', { count: balance })}
-          accessibilityHint={t('live.gifts.openWallet')}
-        >
+        <View style={styles.balance} accessible accessibilityLabel={t('live.gifts.balanceA11y', { count: balance })}>
           <Text style={styles.coin}>🪙</Text>
           {wallet.isLoading ? (
             <ActivityIndicator size="small" color={colors.muted} />
           ) : (
             <Text style={[styles.balanceText, { color: colors.text }]}>{formatCount(balance)}</Text>
           )}
-          <Text style={[styles.topUp, { color: tint }]}>{t('live.gifts.topUp')}</Text>
+        </View>
+        <Pressable
+          onPress={openWallet}
+          style={[styles.recharge, { backgroundColor: colors.primarySoft }]}
+          accessibilityRole="button"
+          accessibilityHint={t('live.gifts.openWallet')}
+        >
+          <Text style={[styles.topUp, { color: tint }]}>{t('live.gifts.recharge')}</Text>
           <Ionicons name={I18nManager.isRTL ? 'chevron-back' : 'chevron-forward'} size={16} color={tint} />
         </Pressable>
-        <Button
-          title={selected ? t('live.gifts.sendNamed', { name: giftName(selected, i18n.language) }) : t('live.gifts.send')}
-          onPress={submit}
-          disabled={!selected || !to}
-          loading={send.isPending}
-          style={styles.sendBtn}
-        />
+        <View style={{ flex: 1 }} />
+        {combo ? (
+          <ComboButton
+            combo={combo}
+            label={t('live.gifts.combo')}
+            a11y={t('live.gifts.comboA11y', { gift: giftName(combo.gift, i18n.language), count: combo.count })}
+            onPress={() => sendGiftTo(combo.gift, combo.user)}
+            onEnd={endCombo}
+          />
+        ) : null}
       </View>
     </Sheet>
+  );
+}
+
+// The round combo button: a ring that empties over COMBO_MS, restarted by
+// every send. When it runs out the combo ends.
+function ComboButton({ combo, label, a11y, onPress, onEnd }: { combo: Combo; label: string; a11y: string; onPress: () => void; onEnd: () => void }) {
+  const [left] = useState(() => new Animated.Value(1));
+  const [pop] = useState(() => new Animated.Value(1));
+  useEffect(() => {
+    left.setValue(1);
+    pop.setValue(1.15);
+    Animated.spring(pop, { toValue: 1, friction: 4, useNativeDriver: true }).start();
+    const run = Animated.timing(left, { toValue: 0, duration: COMBO_MS, easing: Easing.linear, useNativeDriver: false });
+    run.start(({ finished }) => {
+      if (finished) onEnd();
+    });
+    return () => run.stop();
+  }, [combo.key, left, pop, onEnd]);
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={a11y} hitSlop={8}>
+      <Animated.View style={[styles.combo, { transform: [{ scale: pop }] }]}>
+        <Animated.View
+          style={[styles.comboFill, { height: left.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]}
+        />
+        <GiftGlyph gift={combo.gift} size={26} />
+        <Text style={styles.comboLabel}>{label}</Text>
+        <Text style={styles.comboCount}>×{combo.count}</Text>
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -216,36 +291,53 @@ const GiftCell = memo(function GiftCell({
   gift,
   name,
   selected,
-  onPress,
+  onSelect,
+  onSend,
+  sending,
   tint,
   soft,
   text,
   muted,
+  sendLabel,
   coinsLabel,
 }: {
   gift: Gift;
   name: string;
   selected: boolean;
-  onPress: (g: Gift) => void;
+  onSelect: (g: Gift) => void;
+  onSend: (g: Gift) => void;
+  sending: boolean;
   tint: string;
   soft: string;
   text: string;
   muted: string;
+  sendLabel: string;
   coinsLabel: string;
 }) {
   return (
     <Pressable
-      onPress={() => onPress(gift)}
-      accessibilityRole="radio"
+      onPress={() => (selected ? onSend(gift) : onSelect(gift))}
+      accessibilityRole="button"
       accessibilityState={{ selected }}
       accessibilityLabel={`${name}, ${coinsLabel}`}
+      accessibilityHint={selected ? sendLabel : undefined}
       style={[styles.cell, selected && { borderColor: tint, backgroundColor: soft }]}
     >
-      <GiftGlyph gift={gift} size={40} />
-      <Text style={[styles.cellName, { color: text }]} numberOfLines={1}>
-        {name}
-      </Text>
-      <Text style={[styles.cellPrice, { color: muted }]}>🪙 {formatCount(gift.price)}</Text>
+      <View style={selected ? styles.glyphUp : undefined}>
+        <GiftGlyph gift={gift} size={selected ? 46 : 40} />
+      </View>
+      {selected ? (
+        <View style={[styles.sendPill, { backgroundColor: tint }]}>
+          {sending ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.sendPillText}>{sendLabel}</Text>}
+        </View>
+      ) : (
+        <>
+          <Text style={[styles.cellName, { color: text }]} numberOfLines={1}>
+            {name}
+          </Text>
+          <Text style={[styles.cellPrice, { color: muted }]}>🪙 {formatCount(gift.price)}</Text>
+        </>
+      )}
     </Pressable>
   );
 });
@@ -344,7 +436,24 @@ const styles = StyleSheet.create({
   coin: { fontSize: 18 },
   balanceText: { fontSize: 16, fontWeight: '800', marginEnd: 6 },
   topUp: { fontSize: 14, fontWeight: '700' },
-  sendBtn: { flex: 1, height: 46 },
+  recharge: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 36, paddingStart: 12, paddingEnd: 8, borderRadius: 18 },
+  glyphUp: { marginTop: -4 },
+  sendPill: { minWidth: 64, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, marginTop: 4 },
+  sendPillText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  combo: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    backgroundColor: 'rgba(232,71,138,0.45)',
+    borderWidth: 2,
+    borderColor: '#E8478A',
+  },
+  comboFill: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#E8478A' },
+  comboLabel: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  comboCount: { color: '#FFE27A', fontSize: 14, fontWeight: '900' },
   banner: {
     alignSelf: 'flex-start',
     flexDirection: 'row',

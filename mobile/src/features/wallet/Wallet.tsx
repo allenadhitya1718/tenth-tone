@@ -44,7 +44,6 @@ import { useTheme } from '@/providers/ThemeProvider';
 // Buy is hidden on simulators and whenever the store is unavailable.
 
 type Row =
-  | { kind: 'package'; pkg: CoinPackage }
   | { kind: 'tx'; tx: WalletTransaction }
   | { kind: 'topup'; topup: WalletTopup }
   | { kind: 'state'; state: 'loading' | 'error' | 'empty'; retry?: () => void; emptyKey: string };
@@ -111,7 +110,6 @@ export function Wallet() {
   }
 
   const sections = [
-    { key: 'packages', title: t('live.wallet.packages'), data: section(packages, (pkg) => ({ kind: 'package', pkg }), 'live.wallet.noPackages') },
     { key: 'tx', title: t('live.wallet.history'), data: section(txs, (tx) => ({ kind: 'tx', tx }), 'live.wallet.noHistory') },
     { key: 'topups', title: t('live.wallet.topups'), data: section(topups, (topup) => ({ kind: 'topup', topup }), 'live.wallet.noTopups') },
   ];
@@ -126,7 +124,7 @@ export function Wallet() {
       <SectionList
         sections={sections}
         keyExtractor={(r, i) =>
-          r.kind === 'package' ? r.pkg.id : r.kind === 'tx' ? r.tx.id : r.kind === 'topup' ? r.topup.id : `${r.emptyKey}-${i}`
+          r.kind === 'tx' ? r.tx.id : r.kind === 'topup' ? r.topup.id : `${r.emptyKey}-${i}`
         }
         stickySectionHeadersEnabled={false}
         contentContainerStyle={{ paddingBottom: 24 }}
@@ -150,6 +148,12 @@ export function Wallet() {
               <Text style={styles.balanceSub}>{t('live.wallet.balanceSub')}</Text>
             </View>
 
+            <RechargeGrid
+              packages={packages}
+              store={store}
+              onRetry={() => void reconnectStore(productIds)}
+              num={num}
+            />
             <CreatorEarnings />
 
             <View style={[styles.howTo, { backgroundColor: colors.bg2 }]}>
@@ -172,7 +176,6 @@ export function Wallet() {
             <Text style={[styles.sectionTitle, { color: colors.text }]} accessibilityRole="header">
               {s.title}
             </Text>
-            {s.key === 'packages' ? <StoreNote status={store.status} onRetry={() => void reconnectStore(productIds)} /> : null}
           </View>
         )}
         renderItem={({ item }) => {
@@ -193,39 +196,6 @@ export function Wallet() {
                     {t(item.emptyKey)}
                   </AppText>
                 )}
-              </View>
-            );
-          }
-          if (item.kind === 'package') {
-            const p = item.pkg;
-            const total = p.coins + p.bonus_coins;
-            const product = store.products[p.product_id];
-            return (
-              <View style={[styles.row, { borderBottomColor: colors.border }]}>
-                <Text style={styles.rowCoin}>🪙</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.rowTitle, { color: colors.text }]}>{t('live.wallet.coins', { count: total, n: num(total) })}</Text>
-                  {p.bonus_coins ? (
-                    <Text style={[styles.rowSub, { color: colors.success }]}>{t('live.wallet.bonus', { n: num(p.bonus_coins) })}</Text>
-                  ) : null}
-                  {product ? (
-                    <Text style={[styles.rowSub, { color: colors.muted }]}>{product.displayPrice}</Text>
-                  ) : store.status === 'ready' && p.product_id ? (
-                    <Text style={[styles.rowSub, { color: colors.muted }]}>{t('live.wallet.productUnavailable', { store: STORE })}</Text>
-                  ) : null}
-                </View>
-                {store.status === 'connecting' || store.status === 'idle' ? (
-                  <ActivityIndicator color={colors.muted} style={styles.buySpinner} />
-                ) : store.status === 'ready' && product ? (
-                  <Button
-                    title={t('live.wallet.buy')}
-                    variant="secondary"
-                    loading={store.buying === p.product_id}
-                    disabled={!!store.buying && store.buying !== p.product_id}
-                    onPress={() => void buyCoins(p.product_id)}
-                    style={styles.buy}
-                  />
-                ) : null}
               </View>
             );
           }
@@ -279,7 +249,99 @@ export function Wallet() {
   );
 }
 
-// Under "Coin packages": where prices come from, or why Buy is hidden.
+// TikTok's recharge grid: the coin packs as tiles, pick one, then one
+// Recharge button with the store's price on it.
+function RechargeGrid({
+  packages,
+  store,
+  onRetry,
+  num,
+}: {
+  packages: { isLoading: boolean; isError: boolean; data?: CoinPackage[]; refetch: () => unknown };
+  store: ReturnType<typeof getStoreSnapshot>;
+  onRetry: () => void;
+  num: (n: number) => string;
+}) {
+  const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
+  const tint = isDark ? colors.primary2 : colors.primary;
+  const list = packages.data ?? [];
+  const [pick, setPick] = useState<string | null>(null);
+  const chosen = list.find((p) => p.product_id === pick) ?? list[0] ?? null;
+  const product = chosen ? store.products[chosen.product_id] : undefined;
+  const canBuy = store.status === 'ready' && !!product;
+
+  return (
+    <View style={{ gap: 10 }}>
+      <View style={styles.rechargeHead}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]} accessibilityRole="header">
+          {t('live.wallet.recharge')}
+        </Text>
+      </View>
+      {packages.isLoading ? (
+        <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} />
+      ) : packages.isError ? (
+        <View style={styles.state}>
+          <AppText variant="small" muted>
+            {t('live.wallet.loadFailed')}
+          </AppText>
+          <Button title={t('live.retry')} variant="ghost" onPress={() => void packages.refetch()} />
+        </View>
+      ) : !list.length ? (
+        <AppText variant="small" muted center>
+          {t('live.wallet.noPackages')}
+        </AppText>
+      ) : (
+        <View style={styles.grid} accessibilityRole="radiogroup">
+          {list.map((p) => {
+            const total = p.coins + p.bonus_coins;
+            const on = p.product_id === chosen?.product_id;
+            const price = store.products[p.product_id]?.displayPrice ?? p.price_label ?? '';
+            return (
+              <Pressable
+                key={p.id}
+                onPress={() => setPick(p.product_id)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={`${t('live.wallet.coins', { count: total, n: num(total) })}, ${price}`}
+                style={[
+                  styles.tile,
+                  { backgroundColor: on ? colors.primarySoft : colors.bg2, borderColor: on ? tint : 'transparent' },
+                ]}
+              >
+                <View style={styles.tileCoins}>
+                  <Text style={styles.tileCoin}>🪙</Text>
+                  <Text style={[styles.tileValue, { color: colors.text }]}>{num(total)}</Text>
+                </View>
+                {p.bonus_coins ? (
+                  <Text style={[styles.rowSub, { color: colors.success }]}>{t('live.wallet.bonus', { n: num(p.bonus_coins) })}</Text>
+                ) : null}
+                <Text style={[styles.tilePrice, { color: colors.muted }]}>{price}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
+      {list.length ? (
+        <Button
+          title={canBuy ? t('live.wallet.rechargeFor', { price: product!.displayPrice }) : t('live.wallet.recharge')}
+          loading={!!chosen && store.buying === chosen.product_id}
+          disabled={!canBuy || !!store.buying}
+          onPress={() => chosen && void buyCoins(chosen.product_id)}
+        />
+      ) : null}
+      {store.status === 'ready' && chosen && !product ? (
+        <AppText variant="small" muted>
+          {t('live.wallet.productUnavailable', { store: STORE })}
+        </AppText>
+      ) : store.status === 'connecting' || store.status === 'idle' ? null : (
+        <StoreNote status={store.status} onRetry={onRetry} />
+      )}
+    </View>
+  );
+}
+
+// Under the recharge grid: where prices come from, or why Buy is hidden.
 function StoreNote({ status, onRetry }: { status: ReturnType<typeof getStoreSnapshot>['status']; onRetry: () => void }) {
   const { t } = useTranslation();
   if (status === 'simulator' || status === 'unsupported') {
@@ -357,13 +419,17 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 17, fontWeight: '800' },
   state: { alignItems: 'center', paddingVertical: 18, paddingHorizontal: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, minHeight: 56 },
-  rowCoin: { fontSize: 24 },
   rowTitle: { fontSize: 15, fontWeight: '700' },
   rowSub: { fontSize: 12.5, marginTop: 1 },
   amount: { fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  buy: { height: 40, paddingHorizontal: 18, marginVertical: 0 },
+  rechargeHead: { paddingTop: 4 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tile: { width: '31%', flexGrow: 1, borderRadius: 14, borderWidth: 2, paddingVertical: 14, paddingHorizontal: 8, alignItems: 'center', gap: 4, minHeight: 84 },
+  tileCoins: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  tileCoin: { fontSize: 18 },
+  tileValue: { fontSize: 18, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  tilePrice: { fontSize: 13, fontWeight: '600' },
   status: { fontSize: 12, fontWeight: '700', borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, overflow: 'hidden' },
-  buySpinner: { width: 64 },
   storeNote: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   retry: { height: 32, paddingHorizontal: 10, marginVertical: 0 },
   result: { alignItems: 'center', gap: 12, padding: 20 },

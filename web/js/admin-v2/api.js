@@ -250,6 +250,16 @@
       p_refund_lookback_days: p.refund_lookback_days ?? null,
       p_active: p.active ?? null,
     }),
+    // ---------- gift list and coin packs (0158) ----------
+    economy: () => rpc('admin_v2_economy'),
+    saveGift: (g) => rpc('admin_v2_gift_save', {
+      p_id: g.id, p_name: g.name, p_name_en: g.name_en || null, p_emoji: g.emoji || null,
+      p_price: g.price, p_active: !!g.active, p_sort_order: g.sort_order || 0, p_asset_url: g.asset_url || null,
+    }),
+    saveCoinPackage: (p) => rpc('admin_v2_coin_package_save', {
+      p_product_id: p.product_id, p_coins: p.coins, p_bonus_coins: p.bonus_coins || 0,
+      p_price_label: p.price_label || null, p_active: !!p.active, p_sort_order: p.sort_order || 0,
+    }),
     payoutCreator: (userId) => rpc('admin_v2_payout_creator', { p_user: userId }),
     payoutHold: (userId, hold, reason) => rpc('admin_v2_payout_hold', { p_user: userId, p_hold: !!hold, p_reason: reason || null }),
     setEarning: (earningId, action, reason) => rpc('admin_v2_payout_set_earning', { p_earning_id: earningId, p_action: action, p_reason: reason || null }),

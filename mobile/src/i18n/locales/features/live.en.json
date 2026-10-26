@@ -138,12 +138,16 @@
       "balanceA11y_one": "Balance {{count}} coin",
       "balanceA11y_other": "Balance {{count}} coins",
       "lowTitle": "Not enough coins",
-      "lowBody": "Top up your wallet to send this gift.",
+      "lowBody": "Recharge coins to send this gift.",
       "failed": "Couldn't send the gift",
       "banner": "{{sender}} sent {{gift}}",
       "bannerTo": "{{sender}} sent {{gift}} to {{recipient}}",
       "soonTitle": "Gifts are coming soon",
-      "soonBody": "Soon you'll be able to send gifts to creators while they're live."
+      "soonBody": "Soon you'll be able to send gifts to creators while they're live.",
+      "sendShort": "Send",
+      "recharge": "Recharge",
+      "combo": "Combo",
+      "comboA11y": "Send {{gift}} again, {{count}} sent"
     },
     "report": {
       "title": "Report",
@@ -231,7 +235,7 @@
       "balanceFailed": "Couldn't load your balance. Tap to retry.",
       "balanceSub": "Use coins to send gifts in lives.",
       "howTitle": "How to top up",
-      "how1": "Pick a coin package below.",
+      "how1": "Pick a coin pack.",
       "how2": "Pay securely through {{store}}. FLYP never sees your card details.",
       "how3": "Your coins arrive once {{store}} confirms the purchase.",
       "packages": "Coin packages",
@@ -423,7 +427,9 @@
         "earningsTitle": "Earnings",
         "earningsBody": "Earn diamonds from gifts and cash them out.",
         "back": "Got it"
-      }
+      },
+      "recharge": "Recharge",
+      "rechargeFor": "Recharge · {{price}}"
     }
   }
 }

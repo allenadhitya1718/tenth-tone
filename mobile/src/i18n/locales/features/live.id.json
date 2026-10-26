@@ -134,12 +134,16 @@
       "openWallet": "Membuka dompetmu",
       "balanceA11y_other": "Saldo {{count}} koin",
       "lowTitle": "Koin tidak cukup",
-      "lowBody": "Isi ulang dompetmu untuk mengirim hadiah ini.",
+      "lowBody": "Isi ulang koin untuk mengirim hadiah ini.",
       "failed": "Tidak dapat mengirim hadiah",
       "banner": "{{sender}} mengirim {{gift}}",
       "bannerTo": "{{sender}} mengirim {{gift}} ke {{recipient}}",
       "soonTitle": "Hadiah segera hadir",
-      "soonBody": "Sebentar lagi kamu bisa mengirim hadiah ke kreator saat mereka live."
+      "soonBody": "Sebentar lagi kamu bisa mengirim hadiah ke kreator saat mereka live.",
+      "sendShort": "Kirim",
+      "recharge": "Isi ulang",
+      "combo": "Kombo",
+      "comboA11y": "Kirim {{gift}} lagi, {{count}} terkirim"
     },
     "report": {
       "title": "Laporkan",
@@ -226,7 +230,7 @@
       "balanceFailed": "Tidak dapat memuat saldomu. Ketuk untuk mencoba lagi.",
       "balanceSub": "Gunakan koin untuk mengirim hadiah di LIVE.",
       "howTitle": "Cara isi ulang",
-      "how1": "Pilih paket koin di bawah.",
+      "how1": "Pilih paket koin.",
       "how2": "Bayar dengan aman melalui {{store}}. FLYP tidak pernah melihat detail kartumu.",
       "how3": "Koinmu masuk setelah {{store}} mengonfirmasi pembelian.",
       "packages": "Paket koin",
@@ -394,7 +398,9 @@
         "earningsTitle": "Penghasilan",
         "earningsBody": "Dapatkan berlian dari hadiah dan cairkan.",
         "back": "Oke"
-      }
+      },
+      "recharge": "Isi ulang",
+      "rechargeFor": "Isi ulang · {{price}}"
     }
   }
 }

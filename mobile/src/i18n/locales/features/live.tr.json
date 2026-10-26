@@ -138,12 +138,16 @@
       "balanceA11y_one": "Bakiye {{count}} jeton",
       "balanceA11y_other": "Bakiye {{count}} jeton",
       "lowTitle": "Yeterli jeton yok",
-      "lowBody": "Bu hediyeyi göndermek için cüzdanına jeton yükle.",
+      "lowBody": "Bu hediyeyi göndermek için jeton yükle.",
       "failed": "Hediye gönderilemedi",
       "banner": "{{sender}} gönderdi: {{gift}}",
       "bannerTo": "{{sender}} → {{recipient}}: {{gift}}",
       "soonTitle": "Hediyeler çok yakında",
-      "soonBody": "Yakında canlı yayınlarda içerik üreticilerine hediye gönderebileceksin."
+      "soonBody": "Yakında canlı yayınlarda içerik üreticilerine hediye gönderebileceksin.",
+      "sendShort": "Gönder",
+      "recharge": "Yükle",
+      "combo": "Kombo",
+      "comboA11y": "{{gift}} tekrar gönder, {{count}} gönderildi"
     },
     "report": {
       "title": "Şikayet et",
@@ -231,7 +235,7 @@
       "balanceFailed": "Bakiyen yüklenemedi. Tekrar denemek için dokun.",
       "balanceSub": "Canlı yayınlarda hediye göndermek için jeton kullan.",
       "howTitle": "Nasıl yüklenir",
-      "how1": "Aşağıdan bir jeton paketi seç.",
+      "how1": "Bir jeton paketi seç.",
       "how2": "Ödemeyi {{store}} üzerinden güvenle yap. FLYP kart bilgilerini asla görmez.",
       "how3": "Satın alma {{store}} tarafından onaylandığında jetonların hesabına geçer.",
       "packages": "Jeton paketleri",
@@ -402,7 +406,9 @@
         "earningsTitle": "Kazançlar",
         "earningsBody": "Hediyelerden elmas kazan ve nakde çevir.",
         "back": "Tamam"
-      }
+      },
+      "recharge": "Yükle",
+      "rechargeFor": "Yükle · {{price}}"
     }
   }
 }

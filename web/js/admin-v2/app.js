@@ -322,6 +322,7 @@
     ] },
     { sec: () => L('Money', 'المال'), items: [
       { k: 'wallet', i: 'coins', l: () => L('Coins & gifts', 'العملات والهدايا') },
+      { k: 'economy', i: 'gift', l: () => L('Gift list & coin packs', 'الهدايا وباقات العملات') },
       { k: 'payouts', i: 'bank', l: () => L('Payouts', 'الأرباح والسحب'), badge: 'payouts_waiting' },
       { k: 'kyc', i: 'idcard', l: () => L('Identity checks', 'التحقق من الهوية'), badge: 'kyc_pending' },
       { k: 'payout-settings', i: 'sliders', l: () => L('Payout settings', 'إعدادات الأرباح') },
@@ -2276,6 +2277,128 @@
   }
 
   // ---------- payout settings ----------
+  // ---------- gift list and coin packs (0158) ----------
+  // The Saudi gift catalogue and TikTok's coin packs, both editable. Gifts and
+  // packs are retired (hidden), never deleted: old gifts and purchases keep
+  // pointing at them. Every save is written to the audit log by the RPC.
+  function viewEconomy() {
+    const body = h('div', {}, loading());
+    const field = (label, input, hint) => h('label', { class: 'lbl' }, [label, input, hint ? h('span', { class: 'hint', text: hint }) : null]);
+    const inp = (v, attrs) => { const i = h('input', Object.assign({ class: 'input' }, attrs || {})); i.value = v == null ? '' : String(v); return i; };
+    const activeSel = (on) => { const s2 = h('select', { class: 'input' }, [h('option', { value: 'true' }, L('On sale', 'معروضة')), h('option', { value: 'false' }, L('Hidden', 'مخفية'))]); s2.value = on === false ? 'false' : 'true'; return s2; };
+
+    async function editGift(g) {
+      const isNew = !g;
+      g = g || { active: true, sort_order: 200 };
+      const id = inp(g.id, { dir: 'ltr', maxlength: '32', placeholder: 'palm_tree', disabled: isNew ? null : true });
+      const ar = inp(g.name, { dir: 'rtl', maxlength: '40' });
+      const en = inp(g.name_en, { dir: 'ltr', maxlength: '40' });
+      const emoji = inp(g.emoji, { maxlength: '8' });
+      const price = inp(g.price, { type: 'number', min: '1', step: '1', dir: 'ltr' });
+      const sort = inp(g.sort_order, { type: 'number', step: '1', dir: 'ltr' });
+      const art = inp(g.asset_url, { dir: 'ltr', placeholder: 'https://…/camel.webp' });
+      const act = activeSel(g.active);
+      const err = h('div', { class: 'notice bad', role: 'alert', hidden: true });
+      let out = null;
+      const ok = await modal(isNew ? L('Add a gift', 'إضافة هدية') : L('Edit gift', 'تعديل الهدية'), [h('div', { class: 'form' }, [
+        field(L('Id (never changes)', 'المعرّف (لا يتغير)'), id, L('Lowercase letters, digits and _.', 'أحرف إنجليزية صغيرة وأرقام و _.')),
+        field(L('Arabic name', 'الاسم بالعربية'), ar),
+        field(L('English name', 'الاسم بالإنجليزية'), en),
+        field(L('Emoji (shown until artwork is set)', 'رمز تعبيري (يظهر حتى تُضاف الصورة)'), emoji),
+        field(L('Price (coins)', 'السعر (عملات)'), price, L('The receiver earns diamonds for each coin.', 'يربح المستلم ماسات عن كل عملة.')),
+        field(L('Order', 'الترتيب'), sort, L('Lower comes first.', 'الأصغر أولًا.')),
+        field(L('Artwork link', 'رابط الصورة'), art, L('An https PNG, WebP or GIF. Leave empty for the emoji.', 'رابط https لصورة PNG أو WebP أو GIF. اتركه فارغًا لاستخدام الرمز.')),
+        field(L('Status', 'الحالة'), act),
+      ]), err], [{ label: L('Cancel', 'إلغاء'), value: false }, { label: L('Save', 'حفظ'), kind: 'primary', value: () => {
+        const v = Number(price.value);
+        const msg = !/^[a-z0-9_]{2,32}$/.test(id.value.trim()) ? L('Check the id.', 'تحقق من المعرّف.')
+          : !ar.value.trim() ? L('The Arabic name is required.', 'الاسم بالعربية مطلوب.')
+          : !(Number.isInteger(v) && v >= 1 && v <= 1000000) ? L('Price must be a whole number from 1 to 1,000,000.', 'السعر رقم صحيح من 1 إلى 1,000,000.')
+          : art.value.trim() && !/^https:\/\//.test(art.value.trim()) ? L('The artwork link must start with https://', 'يجب أن يبدأ رابط الصورة بـ https://') : null;
+        if (msg) { err.textContent = msg; err.hidden = false; return KEEP; }
+        out = { id: id.value.trim(), name: ar.value.trim(), name_en: en.value.trim(), emoji: emoji.value.trim(), price: v, sort_order: Number(sort.value || 0), asset_url: art.value.trim(), active: act.value === 'true' };
+        return true;
+      } }]);
+      if (!ok || !out) return;
+      if (await payRun(async () => { await API.saveGift(out); toast(L('Saved', 'تم الحفظ')); })) load();
+    }
+
+    async function editPack(p) {
+      const isNew = !p;
+      p = p || { active: true, bonus_coins: 0, sort_order: 100 };
+      const pid = inp(p.product_id, { dir: 'ltr', placeholder: 'flyp.coins.1000', disabled: isNew ? null : true });
+      const coins = inp(p.coins, { type: 'number', min: '1', step: '1', dir: 'ltr' });
+      const bonus = inp(p.bonus_coins, { type: 'number', min: '0', step: '1', dir: 'ltr' });
+      const label = inp(p.price_label, { dir: 'ltr', placeholder: '25.99 SAR' });
+      const sort = inp(p.sort_order, { type: 'number', step: '1', dir: 'ltr' });
+      const act = activeSel(p.active);
+      const err = h('div', { class: 'notice bad', role: 'alert', hidden: true });
+      let out = null;
+      const ok = await modal(isNew ? L('Add a coin pack', 'إضافة باقة عملات') : L('Edit coin pack', 'تعديل باقة العملات'), [h('div', { class: 'form' }, [
+        field(L('Store product id', 'معرّف المنتج في المتجر'), pid, L('Must exist with exactly this id in App Store Connect and Google Play.', 'يجب أن يكون موجودًا بنفس المعرّف في App Store Connect و Google Play.')),
+        field(L('Coins', 'العملات'), coins),
+        field(L('Bonus coins', 'عملات إضافية'), bonus, L('TikTok gives none. Leave 0.', 'تيك توك لا يمنح إضافات. اتركه 0.')),
+        field(L('Price label (fallback)', 'السعر المعروض (احتياطي)'), label, L('The app shows the store\'s own price; this only shows if the store can\'t be reached. Set the real price in the stores.', 'يعرض التطبيق سعر المتجر نفسه؛ هذا يظهر فقط إذا تعذّر الوصول للمتجر. حدّد السعر الحقيقي في المتاجر.')),
+        field(L('Order', 'الترتيب'), sort),
+        field(L('Status', 'الحالة'), act),
+      ]), err], [{ label: L('Cancel', 'إلغاء'), value: false }, { label: L('Save', 'حفظ'), kind: 'primary', value: () => {
+        const c2 = Number(coins.value); const b2 = Number(bonus.value || 0);
+        const msg = !/^flyp\.coins\.[a-z0-9_]{1,32}$/.test(pid.value.trim()) ? L('The product id must look like flyp.coins.1000', 'يجب أن يكون المعرّف مثل flyp.coins.1000')
+          : !(Number.isInteger(c2) && c2 >= 1 && c2 <= 1000000) ? L('Coins must be a whole number from 1 to 1,000,000.', 'العملات رقم صحيح من 1 إلى 1,000,000.')
+          : !(Number.isInteger(b2) && b2 >= 0 && b2 <= c2) ? L('Bonus must be between 0 and the coins.', 'الإضافة بين 0 وعدد العملات.') : null;
+        if (msg) { err.textContent = msg; err.hidden = false; return KEEP; }
+        out = { product_id: pid.value.trim(), coins: c2, bonus_coins: b2, price_label: label.value.trim(), sort_order: Number(sort.value || 0), active: act.value === 'true' };
+        return true;
+      } }]);
+      if (!ok || !out) return;
+      if (await payRun(async () => { await API.saveCoinPackage(out); toast(L('Saved', 'تم الحفظ')); })) load();
+    }
+
+    function table(headers, rows) {
+      return h('div', { class: 'table-wrap' }, h('table', { class: 'table' }, [
+        h('thead', {}, h('tr', {}, headers.map((x) => h('th', { text: x })))),
+        h('tbody', {}, rows.map((cells) => h('tr', {}, cells.map((c, i) => h('td', { 'data-l': headers[i] }, c))))),
+      ]));
+    }
+
+    async function load() {
+      put(body, loading());
+      let e;
+      try { e = await API.economy(); } catch (err) { put(body, errorBox(err)); return; }
+      const c = e.config || {};
+      const spd = Number(c.sar_per_diamond || 0); const dpc = Number(c.diamonds_per_coin || 1);
+      const worth = (coins) => fmtSar(Math.floor(coins * dpc * spd * 100) / 100);
+      const gifts = e.gifts || []; const packs = e.packages || [];
+      put(body,
+        h('div', { class: 'notice info' }, [icon('gift'), h('span', { text: L('Works like TikTok: viewers buy coins in packs through Apple or Google, send gifts that cost coins, and the creator earns diamonds they can withdraw. "Creator gets" uses the rate in Payout settings.', 'يعمل مثل تيك توك: يشتري المشاهدون العملات في باقات عبر Apple أو Google، ويرسلون هدايا بالعملات، ويربح صانع المحتوى ماسات يمكنه سحبها. "يحصل صانع المحتوى" يعتمد على السعر في إعدادات الأرباح.') })]),
+        h('section', { class: 'card flush' }, [
+          h('div', { class: 'card-head' }, [h('div', { class: 'ch-l' }, [tile('gift'), h('h2', { text: L('Gifts', 'الهدايا') })]), btn(L('Add a gift', 'إضافة هدية'), () => editGift(null), 'small')]),
+          gifts.length ? table([L('Gift', 'الهدية'), L('Price', 'السعر'), L('Creator gets', 'يحصل صانع المحتوى'), L('Sent', 'أُرسلت'), L('Status', 'الحالة'), ''],
+            gifts.map((g) => [
+              h('span', {}, [(g.emoji || '🎁') + ' ', h('strong', { text: LANG === 'ar' ? g.name : (g.name_en || g.name) }), h('span', { class: 'muted small', text: ' · ' + g.id })]),
+              num(g.price) + ' 🪙', worth(g.price), num(g.sent || 0),
+              g.active ? badge(L('on sale', 'معروضة'), 'ok') : badge(L('hidden', 'مخفية')),
+              btn(L('Edit', 'تعديل'), () => editGift(g), 'small'),
+            ])) : empty(),
+        ]),
+        h('section', { class: 'card flush' }, [
+          h('div', { class: 'card-head' }, [h('div', { class: 'ch-l' }, [tile('coins'), h('h2', { text: L('Coin packs', 'باقات العملات') })]), btn(L('Add a pack', 'إضافة باقة'), () => editPack(null), 'small')]),
+          packs.length ? table([L('Product id', 'معرّف المنتج'), L('Coins', 'العملات'), L('Price label', 'السعر المعروض'), L('Status', 'الحالة'), ''],
+            packs.map((p) => [
+              h('code', { text: p.product_id }),
+              num(p.coins) + (p.bonus_coins ? ' + ' + num(p.bonus_coins) : ''),
+              p.price_label || '-',
+              p.active ? badge(L('on sale', 'معروضة'), 'ok') : badge(L('hidden', 'مخفية')),
+              btn(L('Edit', 'تعديل'), () => editPack(p), 'small'),
+            ])) : empty(),
+          h('p', { class: 'muted small', style: 'padding: 0 16px 14px', text: L('Each pack needs a matching consumable product in App Store Connect and a one-time product in Google Play, with the price set there.', 'كل باقة تحتاج منتجًا قابلًا للاستهلاك بنفس المعرّف في App Store Connect ومنتجًا لمرة واحدة في Google Play، والسعر يُحدَّد هناك.') }),
+        ]),
+      );
+    }
+    load();
+    return [header(L('Gift list & coin packs', 'الهدايا وباقات العملات'), L('What viewers can buy and send. Changes reach the app within minutes and are logged.', 'ما يمكن للمشاهدين شراؤه وإرساله. تصل التغييرات للتطبيق خلال دقائق وتُسجَّل.')), body];
+  }
+
   function viewPayoutSettings() {
     const body = h('div', {}, loading());
     async function load() {
@@ -2344,7 +2467,7 @@
           h('p', { class: 'muted', text: L('Viewers buy coins in the app and send them as gifts. The creator earns diamonds for each coin (diamonds per coin), and each diamond pays out "SAR per diamond" when withdrawn. Apple and Google keep about 30% of a purchase; the rest is split with the creator.', 'يشتري المشاهدون العملات داخل التطبيق ويرسلونها هدايا. يربح صانع المحتوى ماسات عن كل عملة (ماسات لكل عملة)، وتُصرف كل ماسة بقيمة "ريال لكل ماسة" عند السحب. تحتفظ Apple و Google بنحو 30% من الشراء، ويُقسَّم الباقي مع صانع المحتوى.') }),
           h('div', { class: 'notice info' }, [icon('sliders'), h('span', {}, [
             h('strong', { text: L('Starting rule: ', 'القاعدة الأساسية: ') }),
-            L('cheapest price per coin × 0.70 (after the store fee) × 0.50 (creator share), rounded down to 4 decimals: 0.0102 SAR with the current packages. Creators were promised in-app notice before a rate change.', 'أرخص سعر للعملة × 0.70 (بعد رسوم المتجر) × 0.50 (حصة صانع المحتوى)، مقرّبًا للأسفل إلى 4 منازل: 0.0102 ريال مع الباقات الحالية. وُعد صناع المحتوى بإشعار داخل التطبيق قبل تغيير السعر.'),
+            L('TikTok\'s model: 1 diamond per coin, each diamond worth half a coin\'s price (TikTok: $0.005 = 0.0188 SAR). FLYP pays VAT and the store fee from its own half. Creators were promised in-app notice before a rate change.', 'نموذج تيك توك: ماسة لكل عملة، وقيمة الماسة نصف سعر العملة (تيك توك: 0.005 دولار = 0.0188 ريال). تتحمل FLYP ضريبة القيمة المضافة ورسوم المتجر من نصفها. وُعد صناع المحتوى بإشعار داخل التطبيق قبل تغيير السعر.'),
           ])]),
           example,
         ]),
@@ -2647,7 +2770,7 @@
     dashboard: viewDashboard, reports: viewReports, users: viewUsers, videos: viewVideos,
     stories: viewStories, live: viewLive, moderation: viewModeration, tickets: viewTickets,
     deletions: viewDeletions, exports: viewExports, wallet: viewWallet, storage: viewStorage, logs: viewLogs,
-    usage: viewUsage, payouts: viewPayouts, kyc: viewKyc, appeals: viewAppeals, 'payout-settings': viewPayoutSettings,
+    usage: viewUsage, payouts: viewPayouts, kyc: viewKyc, appeals: viewAppeals, 'payout-settings': viewPayoutSettings, economy: viewEconomy,
   };
   function parseHash() {
     const raw = (location.hash || '#/dashboard').slice(2);

@@ -142,12 +142,16 @@
       "balanceA11y_many": "Solde : {{count}} de pièces",
       "balanceA11y_other": "Solde : {{count}} pièces",
       "lowTitle": "Pièces insuffisantes",
-      "lowBody": "Rechargez votre portefeuille pour envoyer ce cadeau.",
+      "lowBody": "Recharge des pièces pour envoyer ce cadeau.",
       "failed": "Impossible d'envoyer le cadeau",
       "banner": "{{sender}} a envoyé {{gift}}",
       "bannerTo": "{{sender}} a envoyé {{gift}} à {{recipient}}",
       "soonTitle": "Les cadeaux arrivent bientôt",
-      "soonBody": "Bientôt, vous pourrez envoyer des cadeaux aux créateurs pendant leurs lives."
+      "soonBody": "Bientôt, vous pourrez envoyer des cadeaux aux créateurs pendant leurs lives.",
+      "sendShort": "Envoyer",
+      "recharge": "Recharger",
+      "combo": "Combo",
+      "comboA11y": "Renvoyer {{gift}}, {{count}} envoyés"
     },
     "report": {
       "title": "Signaler",
@@ -236,7 +240,7 @@
       "balanceFailed": "Impossible de charger votre solde. Touchez pour réessayer.",
       "balanceSub": "Utilisez vos pièces pour envoyer des cadeaux pendant les LIVE.",
       "howTitle": "Comment recharger",
-      "how1": "Choisissez un pack de pièces ci-dessous.",
+      "how1": "Choisis un pack de pièces.",
       "how2": "Payez en toute sécurité via {{store}}. FLYP n'a jamais accès à vos informations bancaires.",
       "how3": "Vos pièces arrivent dès que {{store}} confirme l'achat.",
       "packages": "Packs de pièces",
@@ -410,7 +414,9 @@
         "earningsTitle": "Gains",
         "earningsBody": "Gagnez des diamants grâce aux cadeaux et encaissez-les.",
         "back": "Compris"
-      }
+      },
+      "recharge": "Recharger",
+      "rechargeFor": "Recharger · {{price}}"
     }
   }
 }

@@ -134,12 +134,16 @@
       "openWallet": "打开你的钱包",
       "balanceA11y_other": "余额 {{count}} 金币",
       "lowTitle": "金币不足",
-      "lowBody": "请为钱包充值后再赠送此礼物。",
+      "lowBody": "充值金币即可赠送此礼物。",
       "failed": "礼物赠送失败",
       "banner": "{{sender}} 送出了{{gift}}",
       "bannerTo": "{{sender}} 送给 {{recipient}} {{gift}}",
       "soonTitle": "礼物即将推出",
-      "soonBody": "很快你就可以在直播中给创作者送礼物了。"
+      "soonBody": "很快你就可以在直播中给创作者送礼物了。",
+      "sendShort": "赠送",
+      "recharge": "充值",
+      "combo": "连送",
+      "comboA11y": "再送一次{{gift}}，已送 {{count}} 个"
     },
     "report": {
       "title": "举报",
@@ -226,7 +230,7 @@
       "balanceFailed": "无法加载余额，轻点重试。",
       "balanceSub": "金币可用于在直播中送礼物。",
       "howTitle": "如何充值",
-      "how1": "在下方选择金币套餐。",
+      "how1": "选择一个金币套餐。",
       "how2": "通过 {{store}} 安全支付。FLYP 不会获取你的银行卡信息。",
       "how3": "{{store}} 确认购买后，金币即会到账。",
       "packages": "金币套餐",
@@ -394,7 +398,9 @@
         "earningsTitle": "收益",
         "earningsBody": "通过礼物赚取钻石并提现。",
         "back": "知道了"
-      }
+      },
+      "recharge": "充值",
+      "rechargeFor": "充值 · {{price}}"
     }
   }
 }
