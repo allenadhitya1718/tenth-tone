@@ -12,6 +12,7 @@
 // after it is created (only by the person in system settings), so these ids
 // and levels are effectively permanent: a different level needs a new id.
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import { AndroidImportance as I, AndroidNotificationVisibility as V } from 'expo-notifications';
@@ -201,7 +202,13 @@ async function allowed(): Promise<boolean> {
 
 // What this build can do with a push (push_tokens.caps, 0160).
 export const PUSH_CAPS: string[] =
-  Platform.OS === 'android' ? ['chat_style', 'ringtone'] : Platform.OS === 'ios' ? ['chat_reply', 'ringtone'] : [];
+  Platform.OS === 'android'
+    ? ['chat_style', 'ringtone']
+    : Platform.OS === 'ios'
+      ? // 'chat_avatar': this build has the Notification Service Extension
+        // that shows the sender's photo (app.config.js FLYP_IOS_COMM_NOTIFS).
+        ['chat_reply', 'ringtone', ...(Constants.expoConfig?.extra?.commNotifs ? ['chat_avatar'] : [])]
+      : [];
 
 // iPhone: the PushKit token, saved on the same row (callkit.ts).
 let voipToken: string | null | undefined;

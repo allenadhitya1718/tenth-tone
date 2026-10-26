@@ -738,6 +738,17 @@ async function handleNotification(db: Db, id: string) {
         // Reply and Mark as read from the lock screen (the app registers it).
         (alert.aps as Record<string, unknown>).category = 'chat_message';
         if (can(t, 'ringtone')) (alert.aps as Record<string, unknown>).sound = 'flyp_message.wav';
+        // The app's Notification Service Extension adds the sender's photo.
+        if (can(t, 'chat_avatar')) {
+          (alert.aps as Record<string, unknown>)['mutable-content'] = 1;
+          Object.assign(alert, {
+            sender_id: row.actor_id || '',
+            sender_name: actor.name,
+            sender_avatar: actor.avatar,
+            chat_title: chat.title,
+            is_group: chat.group ? '1' : '0',
+          });
+        }
       }
       return await sendApns(t.token, alert, msg.replace && msg.group ? { collapseId: msg.group } : {});
     }

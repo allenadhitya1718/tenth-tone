@@ -73,6 +73,10 @@ jobs:
           EXPO_ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           EXPO_APPLE_TEAM_TYPE: COMPANY_OR_ORGANIZATION
+          # Sender photos on message notifications (mobile/app.config.js).
+          # Set the repository variable to 1 once "Communication
+          # Notifications" is enabled for com.flyp.social in the Apple portal.
+          FLYP_IOS_COMM_NOTIFS: ${{ vars.FLYP_IOS_COMM_NOTIFS }}
         run: eas build --platform ios --profile production --local --non-interactive --output ${{ github.workspace }}/flyp.ipa
 
       # eas submit only takes an App Store Connect key from eas.json when it runs
