@@ -20,22 +20,22 @@ import Animated, {
 // logo. In FLYP's colours: electric-blue dots on the night navy, a blue
 // flood that settles into the glow behind the full FLYP logo.
 //
-// It opens on the exact frame of the native splash (the mark, centred, on
-// the same navy) so the hand-off is invisible, and never holds the app back
+// The native splash (app.json) is just the solid dot on the navy, drawn
+// from the same image as below, so the app opens on the first frame of this
+// animation and the logo appears once, at the end. Never holds the app back
 // for longer than MIN_MS. With Reduce Motion on, the logo simply fades in.
 export const SPLASH_BG = '#000421';
 const MARK = 200; // same as `imageWidth` for expo-splash-screen in app.json
-const DOT = 24;
+const DOT = 24; // the dot drawn in assets/splash-dot.png at MARK size
 const ORBIT = 32; // distance of the pale dot from the solid one
-const BLUE = '#3D7BFF'; // theme accent
-const PALE = '#9DBBFF'; // a light tint of it, like the reference's pale dot
+const PALE = '#9DBBFF'; // a light tint of the accent blue, like the reference's pale dot
 const FLOOD = '#1E56D6'; // theme primary
 const LOGO_W = 260;
 const LOGO_H = (LOGO_W * 230) / 472; // flyp-logo-mark.png is 472x230
 const GLOW_MAX = 0.6;
 
 // Timeline (ms).
-const T_DOTS = 150; // dots appear as the native mark shrinks away
+const T_DOTS = 120; // pale dot appears beside the solid one
 const T_ORBIT = 380; // pale dot circles the solid one
 const ORBIT_MS = 1050;
 const T_MERGE = T_ORBIT + ORBIT_MS; // pale dot slides in
@@ -56,8 +56,7 @@ export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; o
   const calm = useReducedMotion();
   const [minPassed, setMinPassed] = useState(false);
 
-  const nativeMark = useSharedValue(1); // the native splash's mark, 1 -> 0
-  const dots = useSharedValue(0); // 0 -> 1 appear
+  const dots = useSharedValue(0); // 0 -> 1 pale dot appears
   const orbit = useSharedValue(0); // 0 -> 1 = one and a half turns
   const merge = useSharedValue(0); // 0 -> 1 pale dot gone into the solid one
   const flood = useSharedValue(0); // 0 -> 1 circle covers the screen
@@ -66,13 +65,11 @@ export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; o
   const out = useSharedValue(0);
 
   useEffect(() => {
-    const all = [nativeMark, dots, orbit, merge, flood, reveal, glow];
+    const all = [dots, orbit, merge, flood, reveal, glow];
     if (calm) {
-      nativeMark.value = withTiming(0, { duration: 400 });
       reveal.value = withTiming(1, { duration: 500 });
       glow.value = withTiming(1, { duration: 500 });
     } else {
-      nativeMark.value = withTiming(0, { duration: 320, easing: SOFT });
       dots.value = withDelay(T_DOTS, withTiming(1, { duration: 300, easing: SOFT }));
       orbit.value = withDelay(T_ORBIT, withTiming(1, { duration: ORBIT_MS, easing: SWING }));
       merge.value = withDelay(T_MERGE, withTiming(1, { duration: MERGE_MS, easing: SWING }));
@@ -95,7 +92,7 @@ export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; o
       clearTimeout(t);
       all.forEach((v) => cancelAnimation(v));
     };
-  }, [calm, nativeMark, dots, orbit, merge, flood, reveal, glow]);
+  }, [calm, dots, orbit, merge, flood, reveal, glow]);
 
   useEffect(() => {
     if (!ready || !minPassed) return;
@@ -115,13 +112,10 @@ export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; o
   const cover = Math.ceil(Math.hypot(width, height)) + 4;
 
   const root = useAnimatedStyle(() => ({ opacity: 1 - out.value }));
-  const markStyle = useAnimatedStyle(() => ({
-    opacity: nativeMark.value,
-    transform: [{ scale: 0.25 + nativeMark.value * 0.75 }],
-  }));
+  // On screen from the first frame, exactly where the native splash drew it.
   const solid = useAnimatedStyle(() => ({
-    opacity: dots.value * (1 - flood.value),
-    transform: [{ scale: dots.value * (1 + merge.value * 0.3) }],
+    opacity: (1 - flood.value) * (1 - reveal.value),
+    transform: [{ scale: 1 + merge.value * 0.3 }],
   }));
   const pale = useAnimatedStyle(() => {
     const a = orbit.value * Math.PI * 3; // one and a half turns
@@ -151,14 +145,12 @@ export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; o
         <Image source={require('../../assets/splash-glow.png')} style={{ width: d, height: d }} resizeMode="stretch" />
       </Animated.View>
 
-      <Animated.View style={[styles.center, markStyle]}>
-        <Image source={require('../../assets/splash-mark.png')} style={{ width: MARK, height: MARK }} resizeMode="contain" />
-      </Animated.View>
-
       <Animated.View style={[styles.center, { width: cover, height: cover, borderRadius: cover / 2, backgroundColor: FLOOD }, floodStyle]} />
 
       <Animated.View style={[styles.center, styles.dot, { backgroundColor: PALE }, pale]} />
-      <Animated.View style={[styles.center, styles.dot, styles.solid, solid]} />
+      <Animated.View style={[styles.center, solid]}>
+        <Image source={require('../../assets/splash-dot.png')} style={{ width: MARK, height: MARK }} resizeMode="contain" />
+      </Animated.View>
 
       <Animated.View style={[styles.center, logo]}>
         <Image
@@ -177,12 +169,4 @@ const styles = StyleSheet.create({
   root: { backgroundColor: SPLASH_BG, alignItems: 'center', justifyContent: 'center', zIndex: 1000, overflow: 'hidden' },
   center: { position: 'absolute' },
   dot: { width: DOT, height: DOT, borderRadius: DOT / 2 },
-  solid: {
-    backgroundColor: BLUE,
-    shadowColor: BLUE,
-    shadowOpacity: 0.8,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
-  },
 });
