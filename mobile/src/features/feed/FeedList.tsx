@@ -81,6 +81,19 @@ export function FeedList({
     return first ? [first, ...all.filter((v) => v.id !== first.id)] : all;
   }, [feed, pin, pinned.data]);
 
+  // While there are only a few videos, For You loops: once the server has
+  // nothing more (no next page), the same videos follow again instead of the
+  // "all caught up" card. With enough videos the server keeps sending new
+  // pages (0108/0157) and this never kicks in. Following still ends.
+  const looping = tab === 'foryou' && !!q.data && !q.hasNextPage && videos.length > 0;
+  const [rounds, setRounds] = useState(1);
+  const items = useMemo(() => {
+    if (!looping) return videos;
+    const out = [...videos];
+    for (let r = 0; r < rounds; r++) out.push(...videos);
+    return out;
+  }, [looping, videos, rounds]);
+
   // Back to the top whenever a video is pinned, so it is the one playing.
   const pinKey = pin ? `${pin.id}:${pin.at}` : '';
   const [seenPin, setSeenPin] = useState(pinKey);
@@ -160,8 +173,9 @@ export function FeedList({
   return (
     <FlatList
       ref={list}
-      data={videos}
-      keyExtractor={(v) => v.id}
+      data={items}
+      // Repeated rounds reuse ids, so the round goes into the key.
+      keyExtractor={(v, i) => (i < videos.length ? v.id : `${v.id}:${Math.floor(i / videos.length)}`)}
       renderItem={renderItem}
       snapToInterval={height}
       snapToAlignment="start"
@@ -177,11 +191,17 @@ export function FeedList({
       maxToRenderPerBatch={2}
       removeClippedSubviews
       onEndReachedThreshold={2}
-      onEndReached={() => q.hasNextPage && !q.isFetchingNextPage && q.fetchNextPage()}
+      onEndReached={() => {
+        if (q.hasNextPage) {
+          if (!q.isFetchingNextPage) void q.fetchNextPage();
+        } else if (looping) {
+          setRounds((r) => Math.min(r + 1, 50));
+        }
+      }}
       // A full-height last page, so a swipe past the final video always lands
       // somewhere and says why there is nothing more (like Instagram).
       ListFooterComponent={
-        q.hasNextPage ? undefined : (
+        q.hasNextPage || looping ? undefined : (
           <View style={[styles.center, { height }]}>
             <Ionicons name="checkmark-circle-outline" size={56} color="#fff" />
             <Text style={styles.endTitle}>{t('feed.caughtUpTitle')}</Text>
@@ -195,6 +215,7 @@ export function FeedList({
           refreshing={q.isRefetching && !q.isFetchingNextPage}
           onRefresh={() => {
             setIndex(0);
+            setRounds(1);
             void q.refetch();
           }}
           tintColor="#fff"
