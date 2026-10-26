@@ -2,7 +2,7 @@
 
 Decisions from the owner after the client's latest notes.
 
-**Progress:** step 1 (gifts and wallet) is built, and `0158_tiktok_economy_saudi_gifts.sql` is applied to Mumbai. Steps 2 to 5 are not started.
+**Progress (27 Oct):** steps 1 to 5 are built, and migrations 0158 to 0161 are applied to Mumbai, with send-push deployed. Nothing is on a phone yet: it all goes into the next test build.
 
 ## 1. Live: audio-only, redesigned like TikTok LIVE (option A)
 Live stays **audio-only** (client note 4 still holds). Only the look and the flow change to match TikTok LIVE.
@@ -61,6 +61,47 @@ Each gift needs artwork: an icon plus an animation, either Lottie or a short Web
 - **Still off until launch:** `WALLET_LAUNCHED` in the app and `app_limits.gifts_enabled` on the server, as before.
 - **Before real sales:** create the 6 products `flyp.coins.65` … `flyp.coins.6607` in App Store Connect (consumable) and Google Play (one-time product), with the SAR prices.
 - **Margin warning:** with the creator getting half the price, FLYP's share of 1 SAR spent is about 0.11 SAR with Apple or Google's 30% fee and 15% VAT. It is about 0.24 SAR under the stores' 15% small-business rate. TikTok's in-app prices carry the same squeeze, so the client should know.
+
+## Steps 2 to 5, built (27 Oct)
+**Live (0159):**
+- Audio-only, laid out like TikTok LIVE:
+  - host capsule with a follow button;
+  - top-gifter avatars and a "Top gifters" ranking;
+  - a listener count, with End (host) or close (viewer);
+  - comments as bubbles at the bottom left, with gift lines among them;
+  - a full-screen moment for gifts of 499 coins and up;
+  - tap anywhere to send hearts.
+- The stage holds **30** (the host plus 29 guests), in a grid that scrolls.
+- **Invite a specific person:** the host searches people (or picks from the people they follow) and taps Invite. The person gets a push and the Join card.
+  - Strangers can't be invited; the invitee needs a follow either way.
+  - At most 30 invites per 10 minutes.
+- The host can mute a guest; their app keeps the mic off until the host unmutes.
+
+**Notifications like WhatsApp (0160, 0161):**
+- **Android messages:**
+  - one conversation per chat, with the sender's photo and the last 7 lines (group chats name each sender);
+  - **Reply** from the notification (sends without opening the app and shows your reply), and **Mark as read**;
+  - several chats bundle under "N messages from M chats".
+- **iPhone messages:** Reply and Mark as read from the lock screen. The sender's photo needs one switch, described in the next section.
+- **Both phones:**
+  - **Mute** a chat for 8 hours, 1 week or always, from the chat's ⋮ menu; the inbox shows a bell-off icon and a grey count;
+  - reading a chat on one phone clears its notification on the others;
+  - missed calls have **Call back** and **Message** buttons.
+- **Calls:**
+  - Android: full-screen ringing, with the caller's name and "Incoming voice call", and a red Decline and a green Answer;
+  - **iPhone: the native CallKit call screen** (like WhatsApp) via VoIP push, with Answer, Decline, Mute and End linked to the FLYP call.
+
+**Ringtone:** `mobile/assets/sounds/flyp_ring.wav` (4 s, loops) and `flyp_message.wav`.
+- Both are original, on the Hijaz scale, with a marimba-like sound and a soft frame-drum.
+- They are used for Android calls and messages, iPhone CallKit and iPhone message alerts.
+- Inside the app, Android plays the ring only when the phone isn't on silent or vibrate.
+
+## Still needs you
+1. **iPhone sender photos:** in the Apple developer portal, enable **Communication Notifications** for `com.flyp.social`, then set the GitHub repository variable `FLYP_IOS_COMM_NOTIFS` to `1`. The next iOS build then adds the Notification Service Extension (`com.flyp.social.notification-service`).
+2. **Listen to the two tones** and confirm them with the client. If they want different ones, they replace the two files.
+3. **Gift artwork:** emoji stand in until designs are uploaded (admin, Gift list & coin packs, Artwork link).
+4. **Coin products** in App Store Connect and Google Play (see Step 1).
+5. **Test build:** two native modules are new (iOS CallKit, Android ringer). They compile only in the GitHub builds, and need a two-phone test of calls and messages.
 
 ## Order of work (suggested)
 1. Gifts and wallet economics: database, admin settings, recharge page, gift panel. This is needed by the live redesign.
