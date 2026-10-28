@@ -270,6 +270,9 @@ function RechargeGrid({
   const chosen = list.find((p) => p.product_id === pick) ?? list[0] ?? null;
   const product = chosen ? store.products[chosen.product_id] : undefined;
   const canBuy = store.status === 'ready' && !!product;
+  // The store's localized price, or the package's own label when the store
+  // returns the product with a blank price (seen on Google Play test builds).
+  const priceOf = (p: CoinPackage) => store.products[p.product_id]?.displayPrice || p.price_label || '';
 
   return (
     <View style={{ gap: 10 }}>
@@ -296,7 +299,7 @@ function RechargeGrid({
           {list.map((p) => {
             const total = p.coins + p.bonus_coins;
             const on = p.product_id === chosen?.product_id;
-            const price = store.products[p.product_id]?.displayPrice ?? p.price_label ?? '';
+            const price = priceOf(p);
             return (
               <Pressable
                 key={p.id}
@@ -324,7 +327,7 @@ function RechargeGrid({
       )}
       {list.length ? (
         <Button
-          title={canBuy ? t('live.wallet.rechargeFor', { price: product!.displayPrice }) : t('live.wallet.recharge')}
+          title={canBuy && chosen && priceOf(chosen) ? t('live.wallet.rechargeFor', { price: priceOf(chosen) }) : t('live.wallet.recharge')}
           loading={!!chosen && store.buying === chosen.product_id}
           disabled={!canBuy || !!store.buying}
           onPress={() => chosen && void buyCoins(chosen.product_id)}
