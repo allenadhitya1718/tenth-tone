@@ -19,7 +19,7 @@ import {
   type WalletTransactionType,
 } from '@/api/wallet';
 import { showToast } from '@/components/Toast';
-import { AppText, Button, TopBar } from '@/components/ui';
+import { AppText, Button, TextField, TopBar } from '@/components/ui';
 import { Sheet } from '@/features/live/Sheet';
 import { CreatorEarnings } from '@/features/wallet/CreatorEarnings';
 import {
@@ -265,9 +265,25 @@ function RechargeGrid({
   const { t } = useTranslation();
   const { colors, isDark } = useTheme();
   const tint = isDark ? colors.primary2 : colors.primary;
-  const list = packages.data ?? [];
+  const list = useMemo(() => packages.data ?? [], [packages.data]);
   const [pick, setPick] = useState<string | null>(null);
-  const chosen = list.find((p) => p.product_id === pick) ?? list[0] ?? null;
+  // Custom amount: the stores only sell fixed products, so the amount typed
+  // picks the smallest pack that covers it (or the biggest pack when it is
+  // more than any single pack holds).
+  const [custom, setCustom] = useState(false);
+  const [customText, setCustomText] = useState('');
+  const wanted = Number(customText.replace(/[^0-9]/g, '')) || 0;
+  const byCoins = useMemo(() => [...list].sort((a, b) => a.coins + a.bonus_coins - (b.coins + b.bonus_coins)), [list]);
+  const customPack = wanted > 0 ? (byCoins.find((p) => p.coins + p.bonus_coins >= wanted) ?? byCoins[byCoins.length - 1] ?? null) : null;
+  const chosen = custom ? customPack : (list.find((p) => p.product_id === pick) ?? list[0] ?? null);
+  // What one coin costs, from the packs' SAR price labels: cheapest and
+  // dearest per coin (bigger packs are cheaper per coin).
+  const perCoin = useMemo(() => {
+    const rates = list
+      .map((p) => Number((p.price_label ?? '').replace(/[^0-9.]/g, '')) / (p.coins + p.bonus_coins))
+      .filter((r) => Number.isFinite(r) && r > 0);
+    return rates.length ? { low: Math.min(...rates), high: Math.max(...rates) } : null;
+  }, [list]);
   const product = chosen ? store.products[chosen.product_id] : undefined;
   const canBuy = store.status === 'ready' && !!product;
   // The store's localized price, or the package's own label when the store
@@ -298,12 +314,15 @@ function RechargeGrid({
         <View style={styles.grid} accessibilityRole="radiogroup">
           {list.map((p) => {
             const total = p.coins + p.bonus_coins;
-            const on = p.product_id === chosen?.product_id;
+            const on = !custom && p.product_id === chosen?.product_id;
             const price = priceOf(p);
             return (
               <Pressable
                 key={p.id}
-                onPress={() => setPick(p.product_id)}
+                onPress={() => {
+                  setCustom(false);
+                  setPick(p.product_id);
+                }}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: on }}
                 accessibilityLabel={`${t('live.wallet.coins', { count: total, n: num(total) })}, ${price}`}
@@ -323,8 +342,46 @@ function RechargeGrid({
               </Pressable>
             );
           })}
+          <Pressable
+            onPress={() => setCustom(true)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: custom }}
+            accessibilityLabel={t('live.wallet.custom')}
+            style={[styles.tile, { backgroundColor: custom ? colors.primarySoft : colors.bg2, borderColor: custom ? tint : 'transparent' }]}
+          >
+            <Ionicons name="create-outline" size={22} color={custom ? tint : colors.text} />
+            <Text style={[styles.tilePrice, { color: custom ? tint : colors.muted }]}>{t('live.wallet.custom')}</Text>
+          </Pressable>
         </View>
       )}
+      {perCoin ? (
+        <AppText variant="small" muted>
+          {perCoin.high - perCoin.low < 0.0005
+            ? t('live.wallet.perCoinOne', { price: perCoin.low.toFixed(3) })
+            : t('live.wallet.perCoin', { low: perCoin.low.toFixed(3), high: perCoin.high.toFixed(3) })}
+        </AppText>
+      ) : null}
+      {custom && list.length ? (
+        <View style={{ gap: 6 }}>
+          <TextField
+            value={customText}
+            onChangeText={(v) => setCustomText(v.replace(/[^0-9]/g, '').slice(0, 7))}
+            placeholder={t('live.wallet.customPlaceholder')}
+            keyboardType="number-pad"
+            autoFocus
+            accessibilityLabel={t('live.wallet.customPlaceholder')}
+          />
+          <AppText variant="small" muted>
+            {!customPack
+              ? t('live.wallet.customHint')
+              : customPack.coins + customPack.bonus_coins === wanted
+                ? t('live.wallet.customExact', { price: priceOf(customPack) })
+                : wanted > customPack.coins + customPack.bonus_coins
+                  ? t('live.wallet.customTooMany', { n: num(customPack.coins + customPack.bonus_coins), price: priceOf(customPack) })
+                  : t('live.wallet.customMatch', { n: num(customPack.coins + customPack.bonus_coins), price: priceOf(customPack) })}
+          </AppText>
+        </View>
+      ) : null}
       {list.length ? (
         <Button
           title={canBuy && chosen && priceOf(chosen) ? t('live.wallet.rechargeFor', { price: priceOf(chosen) }) : t('live.wallet.recharge')}

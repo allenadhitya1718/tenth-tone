@@ -431,7 +431,15 @@
         "back": "Compris"
       },
       "recharge": "Recharger",
-      "rechargeFor": "Recharger · {{price}}"
+      "rechargeFor": "Recharger · {{price}}",
+      "custom": "Personnalisé",
+      "customPlaceholder": "Saisissez le nombre de pièces",
+      "customHint": "Indiquez combien de pièces vous voulez. Nous choisirons le pack qui couvre ce montant.",
+      "customExact": "C'est exactement un pack : {{price}}.",
+      "customMatch": "Pack le plus proche : {{n}} pièces pour {{price}}. Les pièces sont vendues en packs.",
+      "customTooMany": "Le maximum en un achat est de {{n}} pièces pour {{price}}. Achetez à nouveau pour en avoir plus.",
+      "perCoin": "1 pièce coûte de {{low}} à {{high}} SAR. Les gros packs coûtent moins cher par pièce.",
+      "perCoinOne": "1 pièce coûte environ {{price}} SAR."
     },
     "invite": {
       "open": "Inviter quelqu'un",

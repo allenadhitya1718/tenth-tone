@@ -444,7 +444,15 @@
         "back": "Got it"
       },
       "recharge": "Recharge",
-      "rechargeFor": "Recharge · {{price}}"
+      "rechargeFor": "Recharge · {{price}}",
+      "custom": "Custom",
+      "customPlaceholder": "Enter number of coins",
+      "customHint": "Type how many coins you want. We'll pick the pack that covers it.",
+      "customExact": "That's exactly one pack: {{price}}.",
+      "customMatch": "Closest pack: {{n}} coins for {{price}}. Coins are sold in packs.",
+      "customTooMany": "The most in one purchase is {{n}} coins for {{price}}. Buy again for more.",
+      "perCoin": "1 coin costs {{low}}–{{high}} SAR. Bigger packs cost less per coin.",
+      "perCoinOne": "1 coin costs about {{price}} SAR."
     },
     "invite": {
       "open": "Invite someone",

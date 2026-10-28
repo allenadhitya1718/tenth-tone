@@ -431,7 +431,15 @@
         "back": "Entendido"
       },
       "recharge": "Recargar",
-      "rechargeFor": "Recargar · {{price}}"
+      "rechargeFor": "Recargar · {{price}}",
+      "custom": "Personalizado",
+      "customPlaceholder": "Escribe el número de monedas",
+      "customHint": "Escribe cuántas monedas quieres. Elegiremos el paquete que lo cubra.",
+      "customExact": "Es exactamente un paquete: {{price}}.",
+      "customMatch": "Paquete más cercano: {{n}} monedas por {{price}}. Las monedas se venden en paquetes.",
+      "customTooMany": "Lo máximo en una compra son {{n}} monedas por {{price}}. Compra otra vez para tener más.",
+      "perCoin": "1 moneda cuesta {{low}}–{{high}} SAR. Los paquetes más grandes cuestan menos por moneda.",
+      "perCoinOne": "1 moneda cuesta unos {{price}} SAR."
     },
     "invite": {
       "open": "Invitar a alguien",

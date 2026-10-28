@@ -415,7 +415,15 @@
         "back": "Oke"
       },
       "recharge": "Isi ulang",
-      "rechargeFor": "Isi ulang · {{price}}"
+      "rechargeFor": "Isi ulang · {{price}}",
+      "custom": "Kustom",
+      "customPlaceholder": "Masukkan jumlah koin",
+      "customHint": "Ketik berapa koin yang kamu mau. Kami pilihkan paket yang mencukupinya.",
+      "customExact": "Itu tepat satu paket: {{price}}.",
+      "customMatch": "Paket terdekat: {{n}} koin seharga {{price}}. Koin dijual dalam paket.",
+      "customTooMany": "Paling banyak dalam satu pembelian adalah {{n}} koin seharga {{price}}. Beli lagi untuk lebih banyak.",
+      "perCoin": "1 koin seharga {{low}}–{{high}} SAR. Paket lebih besar lebih murah per koin.",
+      "perCoinOne": "1 koin seharga sekitar {{price}} SAR."
     },
     "invite": {
       "open": "Undang seseorang",

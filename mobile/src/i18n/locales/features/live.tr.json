@@ -423,7 +423,15 @@
         "back": "Tamam"
       },
       "recharge": "Yükle",
-      "rechargeFor": "Yükle · {{price}}"
+      "rechargeFor": "Yükle · {{price}}",
+      "custom": "Özel",
+      "customPlaceholder": "Jeton sayısını girin",
+      "customHint": "Kaç jeton istediğini yaz. Bunu karşılayan paketi seçeriz.",
+      "customExact": "Bu tam olarak bir paket: {{price}}.",
+      "customMatch": "En yakın paket: {{price}} karşılığında {{n}} jeton. Jetonlar paket halinde satılır.",
+      "customTooMany": "Tek seferde en fazla {{price}} karşılığında {{n}} jeton alınabilir. Daha fazlası için tekrar satın al.",
+      "perCoin": "1 jeton {{low}}–{{high}} SAR. Büyük paketlerde jeton başına fiyat daha düşük.",
+      "perCoinOne": "1 jeton yaklaşık {{price}} SAR."
     },
     "invite": {
       "open": "Birini davet et",

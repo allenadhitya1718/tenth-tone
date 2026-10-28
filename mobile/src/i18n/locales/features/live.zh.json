@@ -415,7 +415,15 @@
         "back": "知道了"
       },
       "recharge": "充值",
-      "rechargeFor": "充值 · {{price}}"
+      "rechargeFor": "充值 · {{price}}",
+      "custom": "自定义",
+      "customPlaceholder": "输入金币数量",
+      "customHint": "输入你想要的金币数量，我们会选出足够的金币包。",
+      "customExact": "正好是一个金币包：{{price}}。",
+      "customMatch": "最接近的金币包：{{n}} 金币，{{price}}。金币按包出售。",
+      "customTooMany": "单次最多可买 {{n}} 金币，{{price}}。如需更多请再次购买。",
+      "perCoin": "1 金币价格为 {{low}}–{{high}} 沙特里亚尔。金币包越大，每个金币越便宜。",
+      "perCoinOne": "1 金币约 {{price}} 沙特里亚尔。"
     },
     "invite": {
       "open": "邀请某人",
