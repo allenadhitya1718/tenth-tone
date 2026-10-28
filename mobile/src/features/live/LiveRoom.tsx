@@ -438,6 +438,9 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
 
   // ---------- invite a specific person (host) ----------
   const [inviteOpen, setInviteOpen] = useState(false);
+  // An "Only me" live can't take guests (invite_to_live refuses), so the
+  // host gets no invite controls there.
+  const canInvite = isHost && live?.privacy !== 'private';
 
   // ---------- host ----------
   const [managerOpen, setManagerOpen] = useState(false);
@@ -616,7 +619,9 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
               !isLive
                 ? undefined
                 : isHost
-                  ? () => setManagerOpen(true)
+                  ? canInvite
+                    ? () => setManagerOpen(true)
+                    : undefined
                   : !myStatus || myStatus === 'left' || myStatus === 'removed'
                     ? onHandPress
                     : undefined
@@ -675,7 +680,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
                 active={!agora.muted}
               />
             ) : null}
-            {isLive && isHost ? (
+            {isLive && canInvite ? (
               <RoundIcon icon="person-add" label={t('live.invite.open')} onPress={() => setInviteOpen(true)} />
             ) : null}
             {isLive && isHost ? (

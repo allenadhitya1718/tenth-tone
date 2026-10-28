@@ -89,7 +89,7 @@ export type LiveStreamSummary = {
   host: LiveHost | null;
 };
 
-export type LiveStream = LiveStreamSummary & { ended_at: Iso | null };
+export type LiveStream = LiveStreamSummary & { ended_at: Iso | null; privacy?: LivePrivacy };
 
 type HostRow = Pick<UserSummary, 'id' | 'name' | 'handle' | 'avatar_url'>;
 
@@ -421,7 +421,7 @@ export async function fetchLiveStream(id: Uuid): Promise<LiveStream | null> {
     await supabase
       .from('live_streams')
       .select(
-        'id, title, thumbnail, viewer_count, status, started_at, ended_at, host:profiles!live_streams_host_id_fkey (id, name, handle, avatar_url)',
+        'id, title, thumbnail, viewer_count, status, started_at, ended_at, privacy, host:profiles!live_streams_host_id_fkey (id, name, handle, avatar_url)',
       )
       .eq('id', id)
       .maybeSingle(),
