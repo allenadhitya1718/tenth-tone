@@ -416,7 +416,8 @@
           "cannot_cancel": "Cette demande ne peut plus être annulée.",
           "upload_failed": "Impossible d'envoyer la photo. Vérifiez votre connexion et réessayez.",
           "unknown": "Une erreur s'est produite. Veuillez réessayer."
-        }
+        },
+        "empty": "Pas encore de diamants. Lancez un live et recevez des cadeaux pour commencer à gagner."
       },
       "soon": {
         "badge": "BIENTÔT",

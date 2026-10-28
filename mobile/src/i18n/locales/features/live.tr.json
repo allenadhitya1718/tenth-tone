@@ -408,7 +408,8 @@
           "cannot_cancel": "Bu talep artık iptal edilemez.",
           "upload_failed": "Fotoğraf yüklenemedi. Bağlantını kontrol edip tekrar dene.",
           "unknown": "Bir şeyler ters gitti. Lütfen tekrar dene."
-        }
+        },
+        "empty": "Henüz elmas yok. Kazanmaya başlamak için canlı yayın yap ve hediye al."
       },
       "soon": {
         "badge": "ÇOK YAKINDA",

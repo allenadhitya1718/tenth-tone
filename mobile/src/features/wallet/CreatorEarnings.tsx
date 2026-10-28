@@ -33,7 +33,7 @@ import { useTheme } from '@/providers/ThemeProvider';
 
 const KYC_REASONS: PayoutBlockReason[] = ['kyc_missing', 'kyc_pending', 'kyc_rejected'];
 
-export function CreatorEarnings() {
+export function CreatorEarnings({ showEmpty = false }: { showEmpty?: boolean } = {}) {
   const { t, i18n } = useTranslation();
   const { colors, isDark } = useTheme();
   const sar = useSar();
@@ -72,10 +72,28 @@ export function CreatorEarnings() {
     );
   }
   const s = summary.data;
-  // Payouts not on the server yet, or nothing to show this person.
-  if (!s) return null;
   const history = withdrawals.data ?? [];
-  if (s.diamonds.total === 0 && !s.kyc && history.length === 0) return null;
+  // Nothing earned yet. Inside a long page that is no card at all; in the
+  // wallet's own Earnings tab it is an explanation instead of a blank screen.
+  if (!s || (s.diamonds.total === 0 && !s.kyc && history.length === 0)) {
+    if (!showEmpty) return null;
+    return (
+      <View style={[styles.card, styles.empty, { backgroundColor: colors.bg2 }]}>
+        <View style={[styles.emptyIcon, { backgroundColor: colors.primarySoft }]}>
+          <Ionicons name="diamond" size={28} color={tint} />
+        </View>
+        <Text style={[styles.title, { color: colors.text, textAlign: 'center' }]} accessibilityRole="header">
+          {t('live.wallet.creator.title')}
+        </Text>
+        <AppText variant="small" muted center>
+          {t('live.wallet.creator.intro')}
+        </AppText>
+        <AppText variant="small" muted center>
+          {t('live.wallet.creator.empty')}
+        </AppText>
+      </View>
+    );
+  }
 
   const reasons = s.eligibility.reasons;
   const blockers = reasons.filter((r) => !KYC_REASONS.includes(r));
@@ -93,7 +111,9 @@ export function CreatorEarnings() {
   return (
     <View style={[styles.card, { backgroundColor: colors.bg2 }]}>
       <View style={styles.headRow}>
-        <Text style={styles.gem}>💎</Text>
+        <View style={[styles.gemIcon, { backgroundColor: colors.primarySoft }]}>
+          <Ionicons name="diamond" size={18} color={tint} />
+        </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
             {t('live.wallet.creator.title')}
@@ -317,7 +337,9 @@ function WithdrawalRow({
 const styles = StyleSheet.create({
   card: { borderRadius: 16, padding: 14, gap: 10 },
   headRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  gem: { fontSize: 26 },
+  gemIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  empty: { alignItems: 'center', paddingVertical: 28, paddingHorizontal: 20, gap: 10 },
+  emptyIcon: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   title: { fontSize: 17, fontWeight: '800' },
   availableBox: { borderRadius: 14, padding: 12, gap: 2 },
   bigValue: { fontSize: 28, fontWeight: '900', fontVariant: ['tabular-nums'] },

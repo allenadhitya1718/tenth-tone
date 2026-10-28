@@ -416,7 +416,8 @@
           "cannot_cancel": "Esta solicitud ya no se puede cancelar.",
           "upload_failed": "No se pudo subir la foto. Revisa tu conexión e inténtalo de nuevo.",
           "unknown": "Algo salió mal. Inténtalo de nuevo."
-        }
+        },
+        "empty": "Aún no tienes diamantes. Haz un directo y recibe regalos para empezar a ganar."
       },
       "soon": {
         "badge": "PRÓXIMAMENTE",

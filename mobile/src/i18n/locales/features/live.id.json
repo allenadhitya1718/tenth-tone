@@ -400,7 +400,8 @@
           "cannot_cancel": "Permintaan ini tidak bisa dibatalkan lagi.",
           "upload_failed": "Foto tidak dapat diunggah. Periksa koneksimu dan coba lagi.",
           "unknown": "Terjadi kesalahan. Silakan coba lagi."
-        }
+        },
+        "empty": "Belum ada berlian. Mulai live dan terima hadiah untuk mulai menghasilkan."
       },
       "soon": {
         "badge": "SEGERA HADIR",

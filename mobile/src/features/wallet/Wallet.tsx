@@ -1,9 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useMemo, useState, useSyncExternalStore, type ComponentProps, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentProps, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type ScrollViewInstance,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -69,6 +80,7 @@ export function Wallet() {
   const [tab, setTab] = useState<Tab>('recharge');
   const productIds = useMemo(() => (packages.data ?? []).map((p) => p.product_id), [packages.data]);
   const tint = isDark ? colors.primary2 : colors.primary;
+  const scroll = useRef<ScrollViewInstance>(null);
   const num = (n: number) => n.toLocaleString(i18n.language);
   const date = (iso: string) =>
     new Date(iso).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -113,10 +125,14 @@ export function Wallet() {
       list.map((p) => ({ id: p.product_id, rate: Number((p.price_label ?? '').replace(/[^0-9.]/g, '')) / (p.coins + p.bonus_coins) })),
     [list],
   );
-  const valid = rates.filter((r) => Number.isFinite(r.rate) && r.rate > 0);
+  const valid = useMemo(() => rates.filter((r) => Number.isFinite(r.rate) && r.rate > 0), [rates]);
   const perCoin = valid.length ? { low: Math.min(...valid.map((r) => r.rate)), high: Math.max(...valid.map((r) => r.rate)) } : null;
-  const bestId =
-    perCoin && perCoin.high - perCoin.low >= 0.0005 ? (byCoins.find((p) => valid.some((r) => r.id === p.product_id && r.rate - perCoin.low < 0.0005))?.product_id ?? null) : null;
+  // "Best value" only when one pack is clearly cheaper per coin (by 1% or
+  // more) than every other; when several cost the same, no badge.
+  const bestId = useMemo(() => {
+    const sorted = [...valid].sort((a, b) => a.rate - b.rate);
+    return sorted.length > 1 && sorted[0].rate < sorted[1].rate * 0.99 ? sorted[0].id : null;
+  }, [valid]);
   const product = chosen ? store.products[chosen.product_id] : undefined;
   const canBuy = store.status === 'ready' && !!product;
   // The store's localized price, or the package's own label when the store
@@ -141,7 +157,10 @@ export function Wallet() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top', 'bottom']}>
       <TopBar title={t('live.wallet.title')} />
+      {/* The Custom amount field and the checkout stay above the keyboard. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <ScrollView
+        ref={scroll}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.muted} />}
@@ -261,6 +280,7 @@ export function Wallet() {
                     placeholder={t('live.wallet.customPlaceholder')}
                     keyboardType="number-pad"
                     autoFocus
+                    onFocus={() => setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 250)}
                     accessibilityLabel={t('live.wallet.customPlaceholder')}
                   />
                   <AppText variant="small" muted>
@@ -296,7 +316,7 @@ export function Wallet() {
           )
         ) : null}
 
-        {tab === 'earnings' ? <CreatorEarnings /> : null}
+        {tab === 'earnings' ? <CreatorEarnings showEmpty /> : null}
 
         {tab === 'history' ? (
           <View style={{ gap: 18 }}>
@@ -395,6 +415,8 @@ export function Wallet() {
           </View>
         </View>
       ) : null}
+
+      </KeyboardAvoidingView>
 
       <PurchaseResult notice={notice} onClose={() => setNotice(null)} />
     </SafeAreaView>
@@ -504,7 +526,7 @@ function PurchaseResult({ notice, onClose }: { notice: PurchaseNotice | null; on
 const styles = StyleSheet.create({
   scroll: { padding: 16, gap: 16, paddingBottom: 28 },
   hero: { borderRadius: 22, padding: 20, gap: 6, overflow: 'hidden' },
-  heroGlow: { position: 'absolute', width: 220, height: 220, borderRadius: 110, right: -70, top: -90, backgroundColor: 'rgba(91,155,245,0.25)' },
+  heroGlow: { position: 'absolute', width: 220, height: 220, borderRadius: 110, right: -70, top: -90, backgroundColor: 'rgba(91,155,245,0.12)' },
   heroLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 2 },
   heroValue: { color: '#fff', fontSize: 40, fontWeight: '800', fontVariant: ['tabular-nums'], letterSpacing: -0.5, flexShrink: 1 },

@@ -429,7 +429,8 @@
           "cannot_cancel": "This request can no longer be cancelled.",
           "upload_failed": "Couldn't upload the photo. Check your connection and try again.",
           "unknown": "Something went wrong. Please try again."
-        }
+        },
+        "empty": "No diamonds yet. Go live and receive gifts to start earning."
       },
       "soon": {
         "badge": "COMING SOON",
