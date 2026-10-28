@@ -11,6 +11,7 @@ import type { UserSummary } from '@/api/types';
 import { showAlert } from '@/components/Dialog';
 import { formatCount } from '@/features/feed/format';
 import { atHandle } from '@/lib/handle';
+import { CoinIcon } from '@/features/wallet/CoinIcon';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { formatDuration } from './config';
@@ -174,7 +175,10 @@ export function RankingSheet({
                   </Text>
                   {item.handle ? <Text style={[styles.rowSub, { color: colors.muted }]}>{atHandle(item.handle)}</Text> : null}
                 </View>
-                <Text style={[styles.coins, { color: colors.text }]}>🪙 {formatCount(item.coins)}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <CoinIcon size={13} />
+                  <Text style={[styles.coins, { color: colors.text }]}>{formatCount(item.coins)}</Text>
+                </View>
               </Pressable>
             );
           }}

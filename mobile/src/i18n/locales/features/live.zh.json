@@ -423,7 +423,10 @@
       "customMatch": "最接近的金币包：{{n}} 金币，{{price}}。金币按包出售。",
       "customTooMany": "单次最多可买 {{n}} 金币，{{price}}。如需更多请再次购买。",
       "perCoin": "1 金币价格为 {{low}}–{{high}} 沙特里亚尔。金币包越大，每个金币越便宜。",
-      "perCoinOne": "1 金币约 {{price}} 沙特里亚尔。"
+      "perCoinOne": "1 金币约 {{price}} 沙特里亚尔。",
+      "tabEarnings": "收益",
+      "bestValue": "最划算",
+      "secure": "通过 {{store}} 安全支付"
     },
     "invite": {
       "open": "邀请某人",

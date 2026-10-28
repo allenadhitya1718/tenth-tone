@@ -423,7 +423,10 @@
       "customMatch": "Paket terdekat: {{n}} koin seharga {{price}}. Koin dijual dalam paket.",
       "customTooMany": "Paling banyak dalam satu pembelian adalah {{n}} koin seharga {{price}}. Beli lagi untuk lebih banyak.",
       "perCoin": "1 koin seharga {{low}}–{{high}} SAR. Paket lebih besar lebih murah per koin.",
-      "perCoinOne": "1 koin seharga sekitar {{price}} SAR."
+      "perCoinOne": "1 koin seharga sekitar {{price}} SAR.",
+      "tabEarnings": "Penghasilan",
+      "bestValue": "Paling hemat",
+      "secure": "Pembayaran aman lewat {{store}}"
     },
     "invite": {
       "open": "Undang seseorang",

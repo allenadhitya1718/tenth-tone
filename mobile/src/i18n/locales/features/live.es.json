@@ -439,7 +439,10 @@
       "customMatch": "Paquete más cercano: {{n}} monedas por {{price}}. Las monedas se venden en paquetes.",
       "customTooMany": "Lo máximo en una compra son {{n}} monedas por {{price}}. Compra otra vez para tener más.",
       "perCoin": "1 moneda cuesta {{low}}–{{high}} SAR. Los paquetes más grandes cuestan menos por moneda.",
-      "perCoinOne": "1 moneda cuesta unos {{price}} SAR."
+      "perCoinOne": "1 moneda cuesta unos {{price}} SAR.",
+      "tabEarnings": "Ganancias",
+      "bestValue": "Mejor precio",
+      "secure": "Pago seguro con {{store}}"
     },
     "invite": {
       "open": "Invitar a alguien",

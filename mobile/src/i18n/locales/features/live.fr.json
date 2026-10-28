@@ -439,7 +439,10 @@
       "customMatch": "Pack le plus proche : {{n}} pièces pour {{price}}. Les pièces sont vendues en packs.",
       "customTooMany": "Le maximum en un achat est de {{n}} pièces pour {{price}}. Achetez à nouveau pour en avoir plus.",
       "perCoin": "1 pièce coûte de {{low}} à {{high}} SAR. Les gros packs coûtent moins cher par pièce.",
-      "perCoinOne": "1 pièce coûte environ {{price}} SAR."
+      "perCoinOne": "1 pièce coûte environ {{price}} SAR.",
+      "tabEarnings": "Gains",
+      "bestValue": "Meilleur prix",
+      "secure": "Paiement sécurisé via {{store}}"
     },
     "invite": {
       "open": "Inviter quelqu'un",

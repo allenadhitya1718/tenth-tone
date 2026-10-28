@@ -14,6 +14,7 @@ import { showAlert } from '@/components/Dialog';
 import { Button } from '@/components/ui';
 import { formatCount } from '@/features/feed/format';
 import { WALLET_LAUNCHED } from '@/features/wallet/launch';
+import { CoinIcon } from '@/features/wallet/CoinIcon';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { errorCode, liveError } from './errors';
@@ -227,7 +228,7 @@ function GiftPicker({ visible, onClose, liveId, recipients, onSent }: GiftTrayPr
 
       <View style={[styles.footer, { borderTopColor: colors.border }]}>
         <View style={styles.balance} accessible accessibilityLabel={t('live.gifts.balanceA11y', { count: balance })}>
-          <Text style={styles.coin}>🪙</Text>
+          <CoinIcon size={18} />
           {wallet.isLoading ? (
             <ActivityIndicator size="small" color={colors.muted} />
           ) : (
@@ -335,7 +336,10 @@ const GiftCell = memo(function GiftCell({
           <Text style={[styles.cellName, { color: text }]} numberOfLines={1}>
             {name}
           </Text>
-          <Text style={[styles.cellPrice, { color: muted }]}>🪙 {formatCount(gift.price)}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+            <CoinIcon size={11} />
+            <Text style={[styles.cellPrice, { color: muted }]}>{formatCount(gift.price)}</Text>
+          </View>
         </>
       )}
     </Pressable>

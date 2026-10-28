@@ -431,7 +431,10 @@
       "customMatch": "En yakın paket: {{price}} karşılığında {{n}} jeton. Jetonlar paket halinde satılır.",
       "customTooMany": "Tek seferde en fazla {{price}} karşılığında {{n}} jeton alınabilir. Daha fazlası için tekrar satın al.",
       "perCoin": "1 jeton {{low}}–{{high}} SAR. Büyük paketlerde jeton başına fiyat daha düşük.",
-      "perCoinOne": "1 jeton yaklaşık {{price}} SAR."
+      "perCoinOne": "1 jeton yaklaşık {{price}} SAR.",
+      "tabEarnings": "Kazançlar",
+      "bestValue": "En avantajlı",
+      "secure": "{{store}} ile güvenli ödeme"
     },
     "invite": {
       "open": "Birini davet et",

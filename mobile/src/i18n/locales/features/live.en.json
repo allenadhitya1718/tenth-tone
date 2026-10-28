@@ -452,7 +452,10 @@
       "customMatch": "Closest pack: {{n}} coins for {{price}}. Coins are sold in packs.",
       "customTooMany": "The most in one purchase is {{n}} coins for {{price}}. Buy again for more.",
       "perCoin": "1 coin costs {{low}}–{{high}} SAR. Bigger packs cost less per coin.",
-      "perCoinOne": "1 coin costs about {{price}} SAR."
+      "perCoinOne": "1 coin costs about {{price}} SAR.",
+      "tabEarnings": "Earnings",
+      "bestValue": "Best value",
+      "secure": "Secure payment through {{store}}"
     },
     "invite": {
       "open": "Invite someone",
