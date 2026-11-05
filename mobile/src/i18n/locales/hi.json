@@ -196,7 +196,8 @@
     "seeLess": "कम देखें",
     "caughtUpTitle": "आपने सब देख लिया",
     "caughtUpBody": "आपने नवीनतम वीडियो देख लिए। डिस्कवर में और लोग और वीडियो खोजें।",
-    "caughtUpCta": "डिस्कवर खोलें"
+    "caughtUpCta": "डिस्कवर खोलें",
+    "videoUnavailable": "यह वीडियो उपलब्ध नहीं है"
   },
   "comments": {
     "title": "कमेंट ({{count}})",

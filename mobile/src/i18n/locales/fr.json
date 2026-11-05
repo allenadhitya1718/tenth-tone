@@ -196,7 +196,8 @@
     "seeLess": "Voir moins",
     "caughtUpTitle": "Vous êtes à jour",
     "caughtUpBody": "Vous avez vu les dernières vidéos. Trouvez d'autres personnes et vidéos dans Découvrir.",
-    "caughtUpCta": "Ouvrir Découvrir"
+    "caughtUpCta": "Ouvrir Découvrir",
+    "videoUnavailable": "Cette vidéo n'est pas disponible"
   },
   "comments": {
     "title": "Commentaires ({{count}})",

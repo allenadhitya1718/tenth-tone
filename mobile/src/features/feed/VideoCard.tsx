@@ -63,7 +63,15 @@ function Player({ video, active, muted }: { video: Video; active: boolean; muted
     p.muted = muted;
     p.timeUpdateEventInterval = 0.5;
   });
+  const { t } = useTranslation();
   const [firstFrame, setFirstFrame] = useState(false);
+  // The file is gone or cannot be read (a removed upload, no connection):
+  // say so instead of leaving a black card.
+  const [failed, setFailed] = useState(false);
+  useEventListener(player, 'statusChange', ({ status }) => {
+    if (status === 'error') setFailed(true);
+    else if (status === 'readyToPlay') setFailed(false);
+  });
   const watch = useRef({ ms: 0, loops: 0, maxPct: 0, last: 0 });
 
   useEffect(() => {
@@ -120,6 +128,12 @@ function Player({ video, active, muted }: { video: Video; active: boolean; muted
         surfaceType="textureView"
         onFirstFrameRender={() => setFirstFrame(true)}
       />
+      {failed ? (
+        <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: '#111' }]} pointerEvents="none">
+          <Ionicons name="alert-circle-outline" size={40} color="#fff" />
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', textAlign: 'center', paddingHorizontal: 32 }}>{t('feed.videoUnavailable')}</Text>
+        </View>
+      ) : null}
     </>
   );
 }

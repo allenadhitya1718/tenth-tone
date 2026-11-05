@@ -206,7 +206,8 @@
     "seeLess": "عرض أقل",
     "caughtUpTitle": "لقد شاهدت كل شيء",
     "caughtUpBody": "شاهدت أحدث الفيديوهات. اكتشف المزيد من الأشخاص والفيديوهات في استكشاف.",
-    "caughtUpCta": "افتح استكشاف"
+    "caughtUpCta": "افتح استكشاف",
+    "videoUnavailable": "هذا الفيديو غير متاح"
   },
   "comments": {
     "title": "التعليقات ({{count}})",

@@ -196,7 +196,8 @@
     "seeLess": "Ver menos",
     "caughtUpTitle": "Ya lo has visto todo",
     "caughtUpBody": "Has visto los vídeos más recientes. Encuentra más personas y vídeos en Descubrir.",
-    "caughtUpCta": "Abrir Descubrir"
+    "caughtUpCta": "Abrir Descubrir",
+    "videoUnavailable": "Este video no está disponible"
   },
   "comments": {
     "title": "Comentarios ({{count}})",

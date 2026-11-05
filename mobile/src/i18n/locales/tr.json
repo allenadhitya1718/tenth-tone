@@ -196,7 +196,8 @@
     "seeLess": "Daha az",
     "caughtUpTitle": "Hepsini gördün",
     "caughtUpBody": "En yeni videoları izledin. Keşfet'te daha fazla kişi ve video bul.",
-    "caughtUpCta": "Keşfet'i aç"
+    "caughtUpCta": "Keşfet'i aç",
+    "videoUnavailable": "Bu video kullanılamıyor"
   },
   "comments": {
     "title": "Yorumlar ({{count}})",

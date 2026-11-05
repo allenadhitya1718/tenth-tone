@@ -196,7 +196,8 @@
     "seeLess": "Lihat lebih sedikit",
     "caughtUpTitle": "Kamu sudah melihat semuanya",
     "caughtUpBody": "Kamu sudah menonton video terbaru. Temukan lebih banyak orang dan video di Jelajahi.",
-    "caughtUpCta": "Buka Jelajahi"
+    "caughtUpCta": "Buka Jelajahi",
+    "videoUnavailable": "Video ini tidak tersedia"
   },
   "comments": {
     "title": "Komentar ({{count}})",

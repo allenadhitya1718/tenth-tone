@@ -196,7 +196,8 @@
     "seeLess": "收起",
     "caughtUpTitle": "你已看完所有内容",
     "caughtUpBody": "你已看过最新视频。去发现页找更多人和视频。",
-    "caughtUpCta": "去发现"
+    "caughtUpCta": "去发现",
+    "videoUnavailable": "此视频不可用"
   },
   "comments": {
     "title": "评论（{{count}}）",

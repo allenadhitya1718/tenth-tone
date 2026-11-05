@@ -206,7 +206,8 @@
     "seeLess": "See less",
     "caughtUpTitle": "You're all caught up",
     "caughtUpBody": "You've seen the latest videos. Find more people and videos in Discover.",
-    "caughtUpCta": "Explore Discover"
+    "caughtUpCta": "Explore Discover",
+    "videoUnavailable": "This video isn't available"
   },
   "comments": {
     "title": "Comments ({{count}})",
