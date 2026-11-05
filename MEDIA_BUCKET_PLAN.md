@@ -33,6 +33,27 @@ With its own bucket and its own key, nothing from the old app can reach FLYP's m
 | 9 | Once 7 passes: delete our old key `flyp-mumbai`, so the new app has no access to the old bucket either | You | 1 min |
 | 10 | Ask the friends to re-upload the video and story | You | — |
 
+## Security for the new bucket
+**Already in place in the app and upload function (unchanged):**
+- **Sign-in:** every upload needs a signed-in account (JWT checked).
+- **Limits per person:** a storage quota, a 60 MB per-file limit, and 200 upload links per day.
+- **File types:** only `video/mp4`, `video/webm`, `video/quicktime` and `image/jpeg`. The type is part of the upload signature, so it can't be swapped for HTML or SVG.
+- **Upload links:** they last 2 minutes and the server picks every file name (32 random hex characters), so names can't be guessed or overwritten.
+- **Real size:** after each upload the server measures the file in R2 and deletes it if it's over the limit.
+- **Deletes:** only the owner or an admin can delete, and only when nothing in the app still uses the file.
+- **The storage key** lives only in the upload function and is never sent to the app.
+
+**Added with the new bucket:**
+| Setting | Value | Protects against |
+|---|---|---|
+| Key scope | Object Read & Write on `flyp-app-media` only | another app's key deleting FLYP files (what just happened) |
+| Public Development URL (r2.dev) | **Disabled** | a second, unprotected way to read files, outside the rules below |
+| CORS | **none** (the phone apps upload natively and need none) | web pages on other sites using the bucket from a browser |
+| Rate limit on `cdn.flyp-sa.com` | block an IP for 60 s after 300 requests in 10 s | scraping and download floods that run up the bill |
+| `X-Content-Type-Options: nosniff` on `cdn.flyp-sa.com` | response header rule | a browser treating an uploaded file as a web page |
+| Caching | `cdn.flyp-sa.com` responses cached at the edge (files already carry a one-year cache header) | repeated reads hitting R2 and costing money |
+| Bucket lock | none | (a lock would also block legitimate deletes such as account deletion) |
+
 ## Risk and rollback
 - **Rollback:** put the old four secret values back. Uploads then go to `flyp-media` again; nothing else changes.
 - **During the switch:** an upload started in the minute the secrets change may fail once and need a retry.
