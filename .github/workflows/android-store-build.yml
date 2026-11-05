@@ -1,0 +1,123 @@
+# Google Play build of the FLYP app (mobile/): a signed release AAB to upload
+# in the Play Console, as an update to the existing com.flyp.app listing.
+#
+# Signed with the SAME upload key as the old app on Play (repository secrets
+# ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD / ANDROID_KEY_ALIAS /
+# ANDROID_KEY_PASSWORD), so Play accepts it as the next version. The key and
+# the passwords are written to the runner's temp folder only, used through an
+# EAS local credentials file, and deleted at the end.
+#
+# Play refuses an upload whose versionCode is not higher than the last one it
+# has. EAS normally numbers versions on its own server (appVersionSource
+# "remote", starting low), so this build switches to the number given below.
+# Check Play Console → App bundle explorer for the current highest number.
+name: Android store build (Play AAB)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: 'Android versionCode: higher than the last one on Google Play'
+        required: true
+        default: '100'
+
+concurrency:
+  group: android-store-build
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Free disk space
+        working-directory: .
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.0
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Write google-services.json
+        env:
+          CONTENT: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          test -n "$CONTENT" || { echo "Repository secret GOOGLE_SERVICES_JSON is missing"; exit 1; }
+          printf '%s' "$CONTENT" > "$RUNNER_TEMP/google-services.json"
+
+      # Runner-only changes, never committed: the Play upload key as EAS local
+      # credentials, the release profile building an AAB with them, and the
+      # version number taken from the input above.
+      - name: Upload key and version number
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_CODE: ${{ inputs.version_code }}
+        run: |
+          for v in KS_B64 KS_PASS KEY_ALIAS KEY_PASS; do
+            test -n "${!v}" || { echo "Signing secret for $v is missing"; exit 1; }
+          done
+          echo "$VERSION_CODE" | grep -Eq '^[0-9]+$' || { echo "version_code must be a whole number"; exit 1; }
+          printf '%s' "$KS_B64" | base64 --decode > "$RUNNER_TEMP/upload-keystore.jks"
+          KS_PATH="$RUNNER_TEMP/upload-keystore.jks" node -e '
+            const fs = require("fs");
+            fs.writeFileSync("credentials.json", JSON.stringify({ android: { keystore: {
+              keystorePath: process.env.KS_PATH,
+              keystorePassword: process.env.KS_PASS,
+              keyAlias: process.env.KEY_ALIAS,
+              keyPassword: process.env.KEY_PASS,
+            } } }));
+            const eas = JSON.parse(fs.readFileSync("eas.json", "utf8"));
+            eas.cli = { ...eas.cli, appVersionSource: "local" };
+            const p = eas.build.production;
+            delete p.autoIncrement;
+            p.android = { ...(p.android || {}), buildType: "app-bundle", credentialsSource: "local" };
+            fs.writeFileSync("eas.json", JSON.stringify(eas, null, 2));
+            const app = JSON.parse(fs.readFileSync("app.json", "utf8"));
+            app.expo.android = { ...app.expo.android, versionCode: Number(process.env.VERSION_CODE) };
+            fs.writeFileSync("app.json", JSON.stringify(app, null, 2));
+          '
+          echo "versionCode $VERSION_CODE, version $(node -p 'require("./app.json").expo.version')"
+
+      - name: Build AAB
+        env:
+          # Build the folder as it is now (with the runner-only changes above),
+          # not the last commit.
+          EAS_NO_VCS: '1'
+          GOOGLE_SERVICES_JSON: ${{ runner.temp }}/google-services.json
+          GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_KEY }}
+          GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" -Dorg.gradle.daemon=false
+        run: eas build --local --profile production --platform android --non-interactive --output ${{ github.workspace }}/flyp-release.aab
+
+      - name: Remove the upload key from the runner
+        if: always()
+        run: rm -f credentials.json "$RUNNER_TEMP/upload-keystore.jks"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flyp-release-aab
+          path: flyp-release.aab
+          if-no-files-found: error
+          retention-days: 14
