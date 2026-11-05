@@ -24,7 +24,9 @@
 | 8 | Popups looked unprofessional | Menus now open as a **bottom sheet** (clean rows, Cancel apart at the bottom). Yes/No questions keep the centred card. | Yes |
 | 9 | "New story" title sat under the phone clock | Fixed. | Yes |
 | 10 | Story camera did nothing | It was frozen by bug 4; it works now. | Yes |
-| 11 | "Your story is up" needed an OK tap | Now a short toast. | In the app update |
+| 11 | "Your story is up" needed an OK tap | Now a short toast at the top with a green tick. | Yes |
+| 12 | **Story camera photo lost** on phones low on memory: Android closed FLYP while the camera was open, and FLYP reopened on the feed with no photo. Found while testing; it would happen often on cheaper Android phones. | FLYP now reopens the story screen with the photo in place. The same fix covers the chat camera. | Yes, story camera (FLYP killed while the camera was open). Chat camera not tested: it would send a photo to a real person. |
+| 13 | Your own story moved on into a friend's after 5 s, and their heart sits where your delete button is: a tap a moment late **liked their story** (it happened once in testing; I undid it, and no notification was sent). | Like WhatsApp, the viewer closes after your own stories. | Yes |
 
 Also tested and working:
 - **Chat mute:** 8 hours / 1 week / always, the bell-off icon in the inbox, and unmute.
@@ -44,6 +46,7 @@ Also tested and working:
 - **The app's own upload checks are unchanged:** sign-in, a quota per person, size and type limits, and 2-minute upload links.
 
 ## What you do this morning
+0. **Send fixes 12 and 13 to the store builds.** They are on the test APK. TestFlight 11 and the Play AAB get them through an over-the-air update to the "production" channel, which needs your OK. Tell me "publish it", or run GitHub → Actions → "OTA update" with channel `production`.
 1. **Google Play** (Play Console → FLYP → Production → Create new release):
    - Upload `flyp-release.aab` from the GitHub run, write the release notes and roll out.
    - If Play rejects the version number, tell me the number it reports and I'll rebuild with a higher one.
