@@ -20,6 +20,12 @@ on:
         description: 'Android versionCode: higher than the last one on Google Play'
         required: true
         default: '100'
+  # Manual runs only work once this file is on the default branch; until
+  # then, changing this file on the release branch starts a build.
+  push:
+    branches: [feat/rn-phase1-foundation-wzkc56]
+    paths:
+      - '.github/workflows/android-store-build.yml'
 
 concurrency:
   group: android-store-build
@@ -74,7 +80,7 @@ jobs:
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          VERSION_CODE: ${{ inputs.version_code }}
+          VERSION_CODE: ${{ inputs.version_code || '100' }}
         run: |
           for v in KS_B64 KS_PASS KEY_ALIAS KEY_PASS; do
             test -n "${!v}" || { echo "Signing secret for $v is missing"; exit 1; }
