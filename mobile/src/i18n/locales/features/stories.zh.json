@@ -17,7 +17,7 @@
     "loadFailed": "无法加载这些快拍。",
     "noneLeft": "目前没有可显示的快拍。",
     "retry": "重试",
-    "mediaFailed": "无法加载此快拍。",
+    "mediaFailed": "此动态已不可用。",
     "seenByCount_other": "{{count}} 人看过",
     "viewersFailed": "无法加载观看者，轻点重试。",
     "noViewers": "还没有人看过这条快拍。",

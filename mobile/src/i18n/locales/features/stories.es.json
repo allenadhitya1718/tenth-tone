@@ -17,7 +17,7 @@
     "loadFailed": "No se pudieron cargar estas historias.",
     "noneLeft": "No hay historias para mostrar ahora.",
     "retry": "Reintentar",
-    "mediaFailed": "No se pudo cargar esta historia.",
+    "mediaFailed": "Esta historia ya no está disponible.",
     "seenByCount_one": "Visto por {{count}}",
     "seenByCount_many": "Visto por {{count}}",
     "seenByCount_other": "Visto por {{count}}",

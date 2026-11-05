@@ -156,6 +156,15 @@ export function StoryViewer({ userId }: { userId: string }) {
     }
   }, [index, goUser, progress]);
 
+  // A story whose file is gone (or cannot be read) is not left on screen with
+  // an error: after a moment the viewer moves on, as Instagram does.
+  const failedHere = !!story && failedId === story.id;
+  useEffect(() => {
+    if (!failedHere) return;
+    const timer = setTimeout(next, 3000);
+    return () => clearTimeout(timer);
+  }, [failedHere, story?.id, next]);
+
   // ---------- photo timer ----------
   const hasSound = !!story && story.media_kind === 'image' && !!story.sound_audio_url;
   const total = hasSound ? IMAGE_WITH_SOUND_MS : IMAGE_MS;
@@ -440,7 +449,7 @@ export function StoryViewer({ userId }: { userId: string }) {
           </View>
         ) : null}
         {failedId === story.id ? (
-          <View style={[StyleSheet.absoluteFill, styles.center]} pointerEvents="none">
+          <View style={[StyleSheet.absoluteFill, styles.center, styles.failedShade]} pointerEvents="none">
             <Ionicons name="alert-circle-outline" size={36} color="#fff" />
             <Text style={styles.stateText}>{t('stories.mediaFailed')}</Text>
           </View>
@@ -725,7 +734,8 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#000' },
   center: { alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
   stage: { flex: 1, overflow: 'hidden', backgroundColor: '#000' },
-  stateText: { color: '#fff', fontSize: 15, textAlign: 'center' },
+  stateText: { color: '#fff', fontSize: 15, textAlign: 'center', paddingHorizontal: 32 },
+  failedShade: { backgroundColor: 'rgba(0,0,0,0.85)' },
   stateBtn: { paddingHorizontal: 22, minHeight: 44, borderRadius: 22, justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.14)' },
   stateBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   top: { position: 'absolute', top: 0, start: 0, end: 0, paddingHorizontal: 10, paddingBottom: 24 },

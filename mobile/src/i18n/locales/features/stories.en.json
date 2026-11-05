@@ -17,7 +17,7 @@
     "loadFailed": "Could not load these stories.",
     "noneLeft": "There are no stories to show right now.",
     "retry": "Try again",
-    "mediaFailed": "This story could not be loaded.",
+    "mediaFailed": "This story is no longer available.",
     "seenByCount_one": "Seen by {{count}}",
     "seenByCount_other": "Seen by {{count}}",
     "viewersFailed": "Could not load viewers. Tap to try again.",

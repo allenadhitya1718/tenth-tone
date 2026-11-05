@@ -17,7 +17,7 @@
     "loadFailed": "Impossible de charger ces stories.",
     "noneLeft": "Aucune story à afficher pour le moment.",
     "retry": "Réessayer",
-    "mediaFailed": "Impossible de charger cette story.",
+    "mediaFailed": "Cette story n'est plus disponible.",
     "seenByCount_one": "Vue par {{count}} personne",
     "seenByCount_many": "Vue par {{count}} de personnes",
     "seenByCount_other": "Vue par {{count}} personnes",

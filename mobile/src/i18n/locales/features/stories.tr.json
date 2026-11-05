@@ -17,7 +17,7 @@
     "loadFailed": "Bu hikayeler yüklenemedi.",
     "noneLeft": "Şu anda gösterilecek hikaye yok.",
     "retry": "Tekrar dene",
-    "mediaFailed": "Bu hikaye yüklenemedi.",
+    "mediaFailed": "Bu hikâye artık mevcut değil.",
     "seenByCount_one": "{{count}} kişi gördü",
     "seenByCount_other": "{{count}} kişi gördü",
     "viewersFailed": "Görüntüleyenler yüklenemedi. Tekrar denemek için dokun.",
