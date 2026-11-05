@@ -118,7 +118,11 @@
     "commentDenied": "Buraya yorum yapamazsın. Bu videoda yorumlar kapalı olabilir ya da sahibi tarafından sınırlanmış olabilir.",
     "slowDown": "Biraz yavaşla",
     "pageNotFoundTitle": "Bu sayfa mevcut değil",
-    "pageNotFoundBody": "Bağlantı eski ya da bozuk olabilir."
+    "pageNotFoundBody": "Bağlantı eski ya da bozuk olabilir.",
+    "screenTitle": "Bir şeyler ters gitti",
+    "screenBody": "Bu ekranda bir sorun oluştu. Verilerin güvende. Tekrar dene ya da ana sayfaya dön.",
+    "tryAgain": "Tekrar dene",
+    "goHome": "Ana sayfaya git"
   },
   "tabs": {
     "home": "Ana Sayfa",

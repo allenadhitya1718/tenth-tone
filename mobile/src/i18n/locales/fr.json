@@ -118,7 +118,11 @@
     "commentDenied": "Vous ne pouvez pas commenter ici. Les commentaires sont peut-être désactivés pour cette vidéo, ou limités par son auteur.",
     "slowDown": "Doucement",
     "pageNotFoundTitle": "Cette page n'existe pas",
-    "pageNotFoundBody": "Le lien est peut-être ancien ou incorrect."
+    "pageNotFoundBody": "Le lien est peut-être ancien ou incorrect.",
+    "screenTitle": "Un problème est survenu",
+    "screenBody": "Cet écran a rencontré un problème. Tes données sont en sécurité. Réessaie ou retourne à l'accueil.",
+    "tryAgain": "Réessayer",
+    "goHome": "Aller à l'accueil"
   },
   "tabs": {
     "home": "Accueil",

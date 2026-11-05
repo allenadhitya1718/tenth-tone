@@ -118,7 +118,11 @@
     "commentDenied": "No puedes comentar aquí. Los comentarios pueden estar desactivados en este vídeo o limitados por su autor.",
     "slowDown": "Ve un poco más despacio",
     "pageNotFoundTitle": "Esta página no existe",
-    "pageNotFoundBody": "Puede que el enlace sea antiguo o esté roto."
+    "pageNotFoundBody": "Puede que el enlace sea antiguo o esté roto.",
+    "screenTitle": "Algo salió mal",
+    "screenBody": "Esta pantalla tuvo un problema. Tus datos están a salvo. Inténtalo de nuevo o vuelve al inicio.",
+    "tryAgain": "Reintentar",
+    "goHome": "Ir al inicio"
   },
   "tabs": {
     "home": "Inicio",

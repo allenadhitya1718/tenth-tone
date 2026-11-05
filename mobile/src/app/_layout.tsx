@@ -19,8 +19,15 @@ import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { DialogHost } from '@/components/Dialog';
 import { ToastHost } from '@/components/Toast';
 import { CallPill, useIncomingCalls } from '@/features/call';
+import { installCrashGuard } from '@/lib/crashGuard';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+installCrashGuard();
+
+// A screen that throws while rendering shows a recovery screen instead of
+// closing the app (components/AppErrorBoundary.tsx).
+export { AppErrorBoundary as ErrorBoundary } from '@/components/AppErrorBoundary';
+
 
 export default function RootLayout() {
   const [langReady, setLangReady] = useState(false);

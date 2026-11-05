@@ -118,7 +118,11 @@
     "commentDenied": "你无法在此评论。该视频可能已关闭评论，或发布者限制了评论权限。",
     "slowDown": "请稍微慢一点",
     "pageNotFoundTitle": "此页面不存在",
-    "pageNotFoundBody": "链接可能已过期或有误。"
+    "pageNotFoundBody": "链接可能已过期或有误。",
+    "screenTitle": "出了点问题",
+    "screenBody": "此页面遇到问题，你的数据是安全的。请重试或返回首页。",
+    "tryAgain": "重试",
+    "goHome": "返回首页"
   },
   "tabs": {
     "home": "首页",

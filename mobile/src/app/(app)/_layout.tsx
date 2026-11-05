@@ -6,6 +6,10 @@ import { fetchBirthDateStrict, settingsKeys } from '@/api/settings';
 
 import { useTheme } from '@/providers/ThemeProvider';
 
+// A screen that throws while rendering shows a recovery screen instead of
+// closing the app (components/AppErrorBoundary.tsx).
+export { AppErrorBoundary as ErrorBoundary } from '@/components/AppErrorBoundary';
+
 // A call covers everything and is never swiped away by accident: ending it
 // is a deliberate button.
 const CALL_SCREEN = {

@@ -118,7 +118,11 @@
     "commentDenied": "Kamu tidak bisa berkomentar di sini. Komentar mungkin dimatikan untuk video ini, atau dibatasi oleh pemiliknya.",
     "slowDown": "Pelan-pelan dulu",
     "pageNotFoundTitle": "Halaman ini tidak ada",
-    "pageNotFoundBody": "Tautan mungkin sudah lama atau rusak."
+    "pageNotFoundBody": "Tautan mungkin sudah lama atau rusak.",
+    "screenTitle": "Terjadi kesalahan",
+    "screenBody": "Layar ini mengalami masalah. Datamu aman. Coba lagi atau kembali ke beranda.",
+    "tryAgain": "Coba lagi",
+    "goHome": "Ke beranda"
   },
   "tabs": {
     "home": "Beranda",

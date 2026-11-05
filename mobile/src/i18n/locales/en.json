@@ -118,7 +118,11 @@
     "commentDenied": "You can't comment here. Comments may be off for this video, or limited by its owner.",
     "slowDown": "Slow down a little",
     "pageNotFoundTitle": "This page doesn't exist",
-    "pageNotFoundBody": "The link may be old or broken."
+    "pageNotFoundBody": "The link may be old or broken.",
+    "screenTitle": "Something went wrong",
+    "screenBody": "This screen hit a problem. Your data is safe. Try again, or go back to the home screen.",
+    "tryAgain": "Try again",
+    "goHome": "Go to home"
   },
   "tabs": {
     "home": "Home",
