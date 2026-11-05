@@ -54,6 +54,7 @@ import {
 import type { UserSummary } from '@/api/types';
 import { Button } from '@/components/ui';
 import { formatCount } from '@/features/feed/format';
+import { WALLET_LAUNCHED } from '@/features/wallet/launch';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -347,7 +348,8 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
   const hostId = host?.id ?? null;
   const [giftLines, setGiftLines] = useState<GiftLine[]>([]);
   const lastRankingAt = useRef(0);
-  const ranking = useTopGifters(liveId, isLive);
+  // Gifts are "coming soon": no ranking is fetched or shown until launch.
+  const ranking = useTopGifters(liveId, isLive && WALLET_LAUNCHED);
   const [rankingOpen, setRankingOpen] = useState(false);
   const { refetch: refetchRanking } = ranking;
   const addGiftLine = useCallback(
@@ -573,7 +575,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
             onProfile={() => host && router.push(`/user/${host.id}`)}
           />
           <View style={styles.headerRight}>
-            <TopGifterStack gifters={ranking.data ?? []} onPress={() => setRankingOpen(true)} />
+            {WALLET_LAUNCHED ? <TopGifterStack gifters={ranking.data ?? []} onPress={() => setRankingOpen(true)} /> : null}
             <View style={styles.pill} accessible accessibilityLabel={t('live.viewersA11y', { count: live.viewer_count })}>
               <Ionicons name="person" size={11} color="#fff" />
               <Text style={styles.pillText}>{formatCount(live.viewer_count)}</Text>
@@ -599,11 +601,13 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
 
         {/* Second row: ranking chip and the title, like TikTok's "Weekly ranking" line. */}
         <View style={styles.subRow}>
-          <Pressable onPress={() => setRankingOpen(true)} style={styles.rankChip} accessibilityRole="button" accessibilityLabel={t('live.ranking.open')}>
-            <Ionicons name="trophy" size={12} color="#FFC93C" />
-            <Text style={styles.rankChipText}>{t('live.ranking.chip')}</Text>
-            <Ionicons name={I18nManager.isRTL ? 'chevron-back' : 'chevron-forward'} size={12} color="#fff" />
-          </Pressable>
+          {WALLET_LAUNCHED ? (
+            <Pressable onPress={() => setRankingOpen(true)} style={styles.rankChip} accessibilityRole="button" accessibilityLabel={t('live.ranking.open')}>
+              <Ionicons name="trophy" size={12} color="#FFC93C" />
+              <Text style={styles.rankChipText}>{t('live.ranking.chip')}</Text>
+              <Ionicons name={I18nManager.isRTL ? 'chevron-back' : 'chevron-forward'} size={12} color="#fff" />
+            </Pressable>
+          ) : null}
           {live.title ? (
             <Text style={styles.title} numberOfLines={1}>
               {live.title}
