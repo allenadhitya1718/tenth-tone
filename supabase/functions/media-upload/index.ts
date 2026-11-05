@@ -93,6 +93,29 @@ const R2_SECRET_ACCESS_KEY = env('R2_SECRET_ACCESS_KEY');
 const R2_BUCKET = env('R2_BUCKET');
 const R2_PUBLIC_BASE = env('R2_PUBLIC_BASE').replace(/\/+$/, '');
 
+// ── Cloudflare edge cache ──
+// Files carry a one-year cache header, so after a delete Cloudflare would go
+// on serving its cached copy at the old link. Purging the link makes a
+// deleted story or video disappear at once. Needs CF_ZONE_ID (the zone of the
+// public domain) and CF_PURGE_TOKEN (an API token with only Zone → Cache
+// Purge); without them this does nothing. Never fails the delete.
+const CF_ZONE_ID = env('CF_ZONE_ID');
+const CF_PURGE_TOKEN = env('CF_PURGE_TOKEN');
+async function purgeCdn(urls: string[]): Promise<void> {
+  const files = [...new Set(urls.filter((u) => /^https:\/\//.test(u)))];
+  if (!CF_ZONE_ID || !CF_PURGE_TOKEN || !files.length) return;
+  try {
+    const r = await fetch(`https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/purge_cache`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${CF_PURGE_TOKEN}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ files }),
+    });
+    if (!r.ok) console.warn('cdn purge failed:', r.status, (await r.text()).slice(0, 200));
+  } catch (e) {
+    console.warn('cdn purge error:', (e as Error).message);
+  }
+}
+
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
@@ -611,6 +634,7 @@ Deno.serve(async (req) => {
       // here would hide real, billed bytes from the only thing counting them.
       return json({ error: 'r2_delete_failed', status: res.status }, 502);
     }
+    await purgeCdn([`${R2_PUBLIC_BASE}/${row.key}`]);
 
     const { error: updErr } = await db
       .from('media_objects')
