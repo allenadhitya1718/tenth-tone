@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
   I18nManager,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -26,6 +25,7 @@ import type { Sound } from '@/api/sounds';
 import { createStory, storyKeys, type StoryAudience, type StoryKind } from '@/api/stories';
 import type { LocalMedia } from '@/api/upload';
 import { showAlert } from '@/components/Dialog';
+import { showToast } from '@/components/Toast';
 import { AppText, Button, TopBar } from '@/components/ui';
 import { SuggestedHashtags } from '@/features/publish/PublishScreen';
 import { useAuth } from '@/providers/AuthProvider';
@@ -204,7 +204,8 @@ export function StoryComposer() {
       void qc.invalidateQueries({ queryKey: storyKeys.tray() });
       const me = session?.user.id;
       if (me) void qc.invalidateQueries({ queryKey: storyKeys.user(me) });
-      showAlert(t('stories.posted'));
+      // A toast, not a box to dismiss: the same as other confirmations.
+      showToast(t('stories.posted'));
       if (router.canGoBack()) router.back();
       else router.replace('/');
     } catch (e) {
