@@ -40,6 +40,7 @@ import { showAlert } from '@/components/Dialog';
 import { showToast as showAppToast } from '@/components/Toast';
 import { NotFoundState } from '@/components/NotFoundState';
 import { Button } from '@/components/ui';
+import { launchCameraFor, takeRecoveredCamera } from '@/lib/pendingCamera';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -290,7 +291,7 @@ export function ChatThread({ chatId }: { chatId: string }) {
             showAlert(t('attach.cameraDenied'));
             return;
           }
-          res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 });
+          res = await launchCameraFor({ screen: 'chat', chatId }, { mediaTypes: ['images'], quality: 0.8 });
         } else {
           res = await ImagePicker.launchImageLibraryAsync(
             kind === 'video'
@@ -304,8 +305,19 @@ export function ChatThread({ chatId }: { chatId: string }) {
         showToast(t('chat.pickFailed'));
       }
     },
-    [sendAsset, showToast, t],
+    [sendAsset, showToast, t, chatId],
   );
+
+  // Android killed the app while the camera was open: the photo taken then
+  // is sent now, as it would have been (lib/pendingCamera.ts).
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const a = takeRecoveredCamera((o) => o.screen === 'chat' && o.chatId === chatId);
+      if (a) sendAsset(a).catch(() => showToast(t('chat.pickFailed')));
+    }, 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const sendLocation = useCallback(
     async (place: { name: string; lat: number; lng: number }) => {

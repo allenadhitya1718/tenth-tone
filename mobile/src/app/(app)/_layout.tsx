@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { fetchBirthDateStrict, settingsKeys } from '@/api/settings';
+import { recoverPendingCamera } from '@/lib/pendingCamera';
 
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -29,6 +30,12 @@ export default function AppLayout() {
     import('@/features/wallet/store')
       .then((m) => m.startStorePurchaseRecovery())
       .catch(() => {});
+  }, []);
+
+  // Android killed the app while its camera was open: reopen the story or
+  // chat that asked, with the photo (lib/pendingCamera.ts).
+  useEffect(() => {
+    void recoverPendingCamera();
   }, []);
 
   // An account without a birthday is asked for it once, right after signing

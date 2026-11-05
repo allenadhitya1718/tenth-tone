@@ -28,6 +28,7 @@ import { showAlert } from '@/components/Dialog';
 import { showToast } from '@/components/Toast';
 import { AppText, Button, TopBar } from '@/components/ui';
 import { SuggestedHashtags } from '@/features/publish/PublishScreen';
+import { launchCameraFor, takeRecoveredCamera } from '@/lib/pendingCamera';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -135,24 +136,44 @@ export function StoryComposer() {
         allowsMultipleSelection: false,
         videoMaxDuration: MAX_VIDEO_S,
       };
-      const res = source === 'camera' ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts);
+      const res =
+        source === 'camera'
+          ? await launchCameraFor({ screen: 'story', kind }, opts)
+          : await ImagePicker.launchImageLibraryAsync(opts);
       if (res.canceled || !res.assets?.[0]) return;
-      const a = res.assets[0];
-      if (kind === 'video' && a.duration && a.duration / 1000 > MAX_VIDEO_S + 0.5) {
-        showAlert(t('stories.videoTooLong', { n: MAX_VIDEO_S }));
-        return;
-      }
-      setPreparing(true);
-      const p = kind === 'image' ? await preparePhoto(a) : await prepareVideo(a);
-      setPicked(p);
-      if (p.kind === 'video') chooseSound(null);
+      await applyAsset(kind, res.assets[0]);
     } catch (e) {
       console.warn('story pick:', (e as Error)?.message);
       showAlert(t('stories.pickFailed'));
+    }
+  }
+
+  async function applyAsset(kind: StoryKind, a: ImagePicker.ImagePickerAsset) {
+    if (kind === 'video' && a.duration && a.duration / 1000 > MAX_VIDEO_S + 0.5) {
+      showAlert(t('stories.videoTooLong', { n: MAX_VIDEO_S }));
+      return;
+    }
+    setPreparing(true);
+    try {
+      const p = kind === 'image' ? await preparePhoto(a) : await prepareVideo(a);
+      setPicked(p);
+      if (p.kind === 'video') chooseSound(null);
     } finally {
       setPreparing(false);
     }
   }
+
+  // Android killed the app while the camera was open: the photo or clip
+  // taken then comes back here (lib/pendingCamera.ts).
+  useEffect(() => {
+    const a = takeRecoveredCamera((o) => o.screen === 'story');
+    if (!a) return;
+    applyAsset(a.type === 'video' ? 'video' : 'image', a).catch((e) => {
+      console.warn('story recover:', (e as Error)?.message);
+      showAlert(t('stories.pickFailed'));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ---------- song preview ----------
   const audio = useAudioPlayer(null);
