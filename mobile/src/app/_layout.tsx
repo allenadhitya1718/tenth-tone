@@ -19,7 +19,7 @@ import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { DialogHost } from '@/components/Dialog';
 import { ToastHost } from '@/components/Toast';
 import { CallPill, useIncomingCalls } from '@/features/call';
-import { installCrashGuard } from '@/lib/crashGuard';
+import { announceRecovery, installCrashGuard } from '@/lib/crashGuard';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 installCrashGuard();
@@ -38,7 +38,12 @@ export default function RootLayout() {
     // The saved cache (chats, inbox) is read back alongside the language,
     // so the first screen already shows it.
     Promise.all([initI18n(), bootQueryCache()])
-      .then(([{ reloading }]) => !reloading && setLangReady(true))
+      .then(([{ reloading }]) => {
+        if (reloading) return;
+        setLangReady(true);
+        // Restarted by the crash guard: say so once (lib/crashGuard.ts).
+        void announceRecovery();
+      })
       .catch(() => setLangReady(true));
   }, []);
 

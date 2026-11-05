@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack, usePathname } from 'expo-router';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 
 import { fetchBirthDateStrict, settingsKeys } from '@/api/settings';
 
@@ -58,7 +59,12 @@ export default function AppLayout() {
         name="stories/[userId]"
         options={{ presentation: 'transparentModal', animation: 'fade', contentStyle: { backgroundColor: 'transparent' } }}
       />
-      <Stack.Screen name="stories/new" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
+      {/* Android draws a full-screen modal without the status bar inset, so
+          the header sat under the clock; a plain screen sliding up looks the same. */}
+      <Stack.Screen
+        name="stories/new"
+        options={{ presentation: Platform.OS === 'ios' ? 'fullScreenModal' : 'card', animation: 'slide_from_bottom' }}
+      />
       <Stack.Screen name="map" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="confirm-birthday" options={{ gestureEnabled: false }} />
       <Stack.Screen name="call/[id]" options={CALL_SCREEN} />
