@@ -8,7 +8,7 @@
 ## Store builds
 | | Build | Status |
 |---|---|---|
-| iPhone | TestFlight **2.0.0 (11)** | Uploaded to App Store Connect; Apple is processing it. It contains the new CallKit call screen and notification code, which compiled. |
+| iPhone | TestFlight **2.0.0 (11)** | Processed by Apple and ready. It contains the new CallKit call screen and notification code, which compiled. It is not in a tester group yet: in TestFlight, add it to "tester" to install it. |
 | Android | **flyp-release.aab**, versionCode 100, version 2.0.0 | Signed with the **same upload key** as the app already on Google Play. GitHub → Actions → "Android store build (Play AAB)" → artifact `flyp-release-aab`. |
 
 ## Fixed and tested on the Redmi tonight
