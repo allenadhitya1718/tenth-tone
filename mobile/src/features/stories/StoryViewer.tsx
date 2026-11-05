@@ -141,10 +141,13 @@ export function StoryViewer({ userId }: { userId: string }) {
     [qc, userId],
   );
 
+  // After your own stories the viewer closes, as WhatsApp does, instead of
+  // running on into a friend's: the delete button sits where their heart is,
+  // so a tap a moment late liked someone else's story.
   const next = useCallback(() => {
     if (index < list.length - 1) setPicked(index + 1);
-    else if (!goUser(1)) close();
-  }, [index, list.length, goUser]);
+    else if (isMine || !goUser(1)) close();
+  }, [index, list.length, goUser, isMine]);
 
   const prev = useCallback(() => {
     if (index > 0) setPicked(index - 1);
