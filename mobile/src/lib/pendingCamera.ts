@@ -58,7 +58,13 @@ export async function recoverPendingCamera(): Promise<void> {
     await AsyncStorage.removeItem(KEY);
     const note = JSON.parse(raw) as { owner?: CameraOwner; at?: number };
     if (!note.owner || !note.at || Date.now() - note.at > MAX_AGE_MS) return;
-    const res = await ImagePicker.getPendingResultAsync();
+    // After a restart Expo hands the camera's result to the app only once
+    // React is ready, which can be after this runs: ask for a few seconds.
+    let res: Awaited<ReturnType<typeof ImagePicker.getPendingResultAsync>> = null;
+    for (let i = 0; i < 20 && !res; i++) {
+      res = await ImagePicker.getPendingResultAsync();
+      if (!res) await new Promise((r) => setTimeout(r, 500));
+    }
     if (!res || !('canceled' in res) || res.canceled || !res.assets?.[0]) return;
     recovered = { owner: note.owner, asset: res.assets[0] };
     const o = note.owner;
