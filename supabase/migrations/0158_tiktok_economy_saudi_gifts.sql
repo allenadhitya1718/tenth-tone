@@ -109,7 +109,10 @@ update public.payout_config
        sar_per_diamond   = 0.0188,
        min_withdraw_sar  = 40,
        updated_at        = now()
- where id;
+ where id
+   -- Only while the rates are still what 0131 seeded: an admin's edit is never
+   -- overwritten when this file is re-run.
+   and sar_per_diamond = 0.0089 and min_withdraw_sar = 100 and diamonds_per_coin = 1;
 
 insert into public.admin_logs (admin_id, action, target_type, target_id, payload)
 select null, 'payout_config', 'payout_config', null,

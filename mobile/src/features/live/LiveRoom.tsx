@@ -206,12 +206,16 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
   // The host muted me (0159): turn the mic off and keep it off until they
   // unmute. Agora cannot do this from the host's phone, so this app does it.
   const hostMutedMe = myStatus === 'accepted' && !!myGuest?.host_muted;
-  const { setMuted } = agora;
+  const setMutedRef = useRef(agora.setMuted);
+  useEffect(() => {
+    setMutedRef.current = agora.setMuted;
+  });
   useEffect(() => {
     if (!hostMutedMe) return;
-    setMuted(true);
+    setMutedRef.current(true);
     AccessibilityInfo.announceForAccessibility(t('live.guest.mutedByHost'));
-  }, [hostMutedMe, setMuted, t]);
+    // Once per mute, not whenever the audio hook hands back a new function.
+  }, [hostMutedMe, t]);
 
   // ---------- guest actions (RPCs; errors are translated ApiError codes) ----------
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -342,6 +346,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
   const { push: pushSpot } = spotlight;
   const hostId = host?.id ?? null;
   const [giftLines, setGiftLines] = useState<GiftLine[]>([]);
+  const lastRankingAt = useRef(0);
   const ranking = useTopGifters(liveId, isLive);
   const [rankingOpen, setRankingOpen] = useState(false);
   const { refetch: refetchRanking } = ranking;
@@ -350,7 +355,12 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
       const label = giftName(gift, i18n.language);
       setGiftLines((prev) => [...prev, { id, at: new Date().toISOString(), sender, gift: label, emoji: gift.emoji || '🎁' }].slice(-30));
       if (price >= BIG_GIFT) pushSpot({ sender, gift });
-      void refetchRanking();
+      // At most one ranking refresh per 10 s however many gifts arrive.
+      const now = Date.now();
+      if (now - lastRankingAt.current > 10_000) {
+        lastRankingAt.current = now;
+        void refetchRanking();
+      }
     },
     [i18n.language, pushSpot, refetchRanking],
   );

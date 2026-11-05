@@ -272,9 +272,16 @@ async function markRead(chatId: string, lines: Line[]) {
  * Reply or Mark as read pressed on a chat notification (Android, from the
  * notification's own data; iPhone, from the push's data). Never opens the app.
  */
+const handled = new Map<string, number>();
+
 export async function handleChatAction(action: string, data: Record<string, unknown>, input?: string): Promise<void> {
   const chatId = str(data.chat_id);
   if (!chatId) return;
+  // The same press can reach both the app's listener and the background task.
+  const key = `${action}:${chatId}:${input ?? ''}`;
+  const last = handled.get(key);
+  handled.set(key, Date.now());
+  if (last && Date.now() - last < 10_000) return;
   const lines = await readHistory(chatId);
 
   if (action === CHAT_ACTION_READ) {

@@ -120,9 +120,15 @@ final class FlypCallKit: NSObject, CXProviderDelegate, PKPushRegistryDelegate {
     update.supportsUngrouping = false
     update.supportsDTMF = false
 
-    // Already ringing (a repeated push): nothing new to report.
+    // Already ringing (a repeated push). iOS still requires every VoIP push to
+    // be reported, or it stops delivering them: report a throwaway call and
+    // end it at once, leaving the real one ringing.
     if calls[uuid] != nil {
-      completion()
+      let dup = UUID()
+      provider.reportNewIncomingCall(with: dup, update: update) { [weak self] _ in
+        self?.provider.reportCall(with: dup, endedAt: nil, reason: .remoteEnded)
+        completion()
+      }
       return
     }
     calls[uuid] = callId

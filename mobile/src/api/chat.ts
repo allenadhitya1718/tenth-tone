@@ -177,11 +177,11 @@ const MEMBER_PROFILE = 'profiles:profiles!chat_members_user_id_fkey(id, name, ha
 // Details for ONE chat (title, photo, members), for the thread header.
 export async function fetchChatInfo(chatId: Uuid): Promise<ChatInfo> {
   const me = await uid();
-  const [chatRes, { data: members }] = await Promise.all([
+  const [chatRes, { data: members }, mine] = await Promise.all([
     readChatRow(chatId),
     supabase.from('chat_members').select(`user_id, ${MEMBER_PROFILE}`).eq('chat_id', chatId),
+    me ? myMute(chatId, me) : Promise.resolve(null),
   ]);
-  const mine = me ? await myMute(chatId, me) : null;
   // A failed read is an error to retry; only a clean "no such chat" (not a
   // member, or never existed) is reported as missing.
   if (chatRes.error) throw chatRes.error;
