@@ -102,6 +102,11 @@
       "left": "{{actor}} 退出了群组",
       "ownerChanged": "{{actor}} 现在是群主",
       "updated": "群组已更新"
-    }
+    },
+    "adminsOnlyNoteCanAdd": "只有管理员可以更改名称和照片。",
+    "whoCanAddEveryone": "谁可以添加成员：所有人",
+    "whoCanAddAdmins": "谁可以添加成员：仅管理员",
+    "nowEveryoneCanAdd": "现在所有人都可以添加成员",
+    "nowAdminsOnlyAdd": "现在只有管理员可以添加成员"
   }
 }

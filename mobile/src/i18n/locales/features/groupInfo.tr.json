@@ -103,6 +103,11 @@
       "left": "{{actor}} ayrıldı",
       "ownerChanged": "{{actor}} artık grubun sahibi",
       "updated": "Grup güncellendi"
-    }
+    },
+    "adminsOnlyNoteCanAdd": "Adı ve fotoğrafı yalnızca yöneticiler değiştirebilir.",
+    "whoCanAddEveryone": "Üye ekleyebilenler: herkes",
+    "whoCanAddAdmins": "Üye ekleyebilenler: yalnızca yöneticiler",
+    "nowEveryoneCanAdd": "Artık herkes üye ekleyebilir",
+    "nowAdminsOnlyAdd": "Artık yalnızca yöneticiler üye ekleyebilir"
   }
 }

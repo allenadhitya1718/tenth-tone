@@ -45,6 +45,8 @@ export type GroupDetail = {
   photo_url: string | null;
   created_by: Uuid | null;
   created_at: Iso | null;
+  /** 0163: every member may add people (WhatsApp's default); admins can turn it off. */
+  members_can_add: boolean;
   members: GroupMember[];
   myRole: GroupRole | null;
   // The chat does not exist, is not yours to read, or you were removed.
@@ -70,7 +72,7 @@ export function isAdminRole(role: GroupRole | null | undefined) {
 export async function fetchGroup(chatId: Uuid): Promise<GroupDetail> {
   const me = await uid();
   const [chatRes, membersRes] = await Promise.all([
-    supabase.from('chats').select('id, type, name, photo_url, created_by, created_at').eq('id', chatId).maybeSingle(),
+    supabase.from('chats').select('id, type, name, photo_url, created_by, created_at, members_can_add').eq('id', chatId).maybeSingle(),
     supabase.from('chat_members').select(`user_id, role, joined_at, ${MEMBER_PROFILE}`).eq('chat_id', chatId),
   ]);
   if (chatRes.error) throw chatRes.error;
@@ -82,6 +84,7 @@ export async function fetchGroup(chatId: Uuid): Promise<GroupDetail> {
     photo_url: string | null;
     created_by: Uuid | null;
     created_at: Iso | null;
+    members_can_add?: boolean | null;
   } | null;
   const rows = (membersRes.data ?? []) as unknown as {
     user_id: Uuid;
@@ -96,6 +99,7 @@ export async function fetchGroup(chatId: Uuid): Promise<GroupDetail> {
     photo_url: chat?.photo_url ?? null,
     created_by: chat?.created_by ?? null,
     created_at: chat?.created_at ?? null,
+    members_can_add: chat?.members_can_add !== false,
   };
   // Not a member any more: the chat row is still readable by its creator,
   // but the screen has nothing to manage.
@@ -237,6 +241,12 @@ export async function removeMember(chatId: Uuid, userId: Uuid): Promise<void> {
     .select('user_id');
   if (error) throw error;
   if (!data?.length) throw new ApiError('not_admin');
+}
+
+/** Admins: may every member add people, or only admins (0163)? */
+export async function setMembersCanAdd(chatId: Uuid, allow: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_group_members_can_add', { p_chat_id: chatId, p_allow: allow });
+  if (error) throw error;
 }
 
 export async function setAdmin(chatId: Uuid, userId: Uuid, admin: boolean): Promise<void> {

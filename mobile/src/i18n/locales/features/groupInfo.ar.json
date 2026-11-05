@@ -107,6 +107,11 @@
       "left": "غادر {{actor}}",
       "ownerChanged": "أصبح {{actor}} مالك المجموعة",
       "updated": "تم تحديث المجموعة"
-    }
+    },
+    "adminsOnlyNoteCanAdd": "المشرفون فقط يمكنهم تغيير الاسم والصورة.",
+    "whoCanAddEveryone": "من يمكنه إضافة أعضاء: الجميع",
+    "whoCanAddAdmins": "من يمكنه إضافة أعضاء: المشرفون فقط",
+    "nowEveryoneCanAdd": "يمكن للجميع إضافة أعضاء الآن",
+    "nowAdminsOnlyAdd": "المشرفون فقط يمكنهم إضافة أعضاء الآن"
   }
 }

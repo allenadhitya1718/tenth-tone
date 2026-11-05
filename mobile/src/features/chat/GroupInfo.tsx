@@ -33,6 +33,7 @@ import {
   renameGroup,
   setAdmin,
   setGroupPhoto,
+  setMembersCanAdd,
 } from '@/api/groups';
 import type { LocalMedia } from '@/api/upload';
 import { showAlert } from '@/components/Dialog';
@@ -78,11 +79,24 @@ export function GroupInfo({ chatId }: { chatId: string }) {
   const myRole: GroupRole | null = data?.myRole ?? null;
   const admin = isAdminRole(myRole);
   const owner = myRole === 'owner';
+  // 0163: as on WhatsApp, every member can add people unless an admin
+  // switched that to admins only.
+  const canAdd = admin || !!data?.members_can_add;
   const title = translateTitle(data?.name || t('chat.groupFallback'), t);
   const members = data?.members;
   const memberCount = members?.length ?? 0;
 
   const [photoMenu, setPhotoMenu] = useState(false);
+
+  // Admins: who may add people (0163).
+  const canAddToggle = useMutation({
+    mutationFn: (allow: boolean) => setMembersCanAdd(chatId, allow),
+    onSuccess: (_r, allow) => {
+      void qc.invalidateQueries({ queryKey: groupKeys.detail(chatId) });
+      showToast(t(allow ? 'groupInfo.nowEveryoneCanAdd' : 'groupInfo.nowAdminsOnlyAdd'), allow ? 'people' : 'shield-checkmark');
+    },
+    onError: (e) => showAlert(t(groupErrorKey(e))),
+  });
   const [viewing, setViewing] = useState<string | null>(null);
   const [memberMenu, setMemberMenu] = useState<GroupMember | null>(null);
   const [editing, setEditing] = useState(false);
@@ -440,7 +454,11 @@ export function GroupInfo({ chatId }: { chatId: string }) {
         <Text style={[styles.sub, { color: colors.muted }]}>
           {[t('chat.members', { count: memberCount }), createdLabel].filter(Boolean).join(' · ')}
         </Text>
-        {!admin ? <Text style={[styles.note, { color: colors.muted }]}>{t('groupInfo.adminsOnlyNote')}</Text> : null}
+        {!admin ? (
+          <Text style={[styles.note, { color: colors.muted }]}>
+            {t(canAdd ? 'groupInfo.adminsOnlyNoteCanAdd' : 'groupInfo.adminsOnlyNote')}
+          </Text>
+        ) : null}
       </View>
 
       <View style={[styles.sectionHead, { borderTopColor: colors.border }]}>
@@ -448,7 +466,7 @@ export function GroupInfo({ chatId }: { chatId: string }) {
           {t('chat.members', { count: memberCount })}
         </Text>
       </View>
-      {admin ? (
+      {canAdd ? (
         <Pressable
           onPress={() => router.push(`/chat-add/${chatId}` as Href)}
           style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.bg2 }]}
@@ -467,6 +485,15 @@ export function GroupInfo({ chatId }: { chatId: string }) {
   const footer = (
     <View style={[styles.actions, { borderTopColor: colors.border }]}>
       <ActionRow icon="color-palette-outline" label={t('chatTheme.title')} onPress={() => router.push(`/chat-theme/${chatId}` as Href)} />
+      {admin ? (
+        <ActionRow
+          icon={data?.members_can_add ? 'people-outline' : 'shield-checkmark-outline'}
+          label={t(data?.members_can_add ? 'groupInfo.whoCanAddEveryone' : 'groupInfo.whoCanAddAdmins')}
+          busy={canAddToggle.isPending}
+          disabled={busyAll}
+          onPress={() => canAddToggle.mutate(!data?.members_can_add)}
+        />
+      ) : null}
       <ActionRow icon="exit-outline" label={t('groupInfo.leave')} danger busy={leave.isPending} disabled={busyAll} onPress={confirmLeave} />
       {owner ? (
         <ActionRow icon="trash-outline" label={t('groupInfo.delete')} danger busy={remove.isPending} disabled={busyAll} onPress={confirmDelete} />

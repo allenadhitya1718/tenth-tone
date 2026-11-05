@@ -140,7 +140,9 @@ export function AddGroupMembers({ chatId }: { chatId: string }) {
     [memberIds, selected, refused, onPick],
   );
 
-  if (group.data && (group.data.missing || group.data.notGroup || !isAdminRole(group.data.myRole))) {
+  // 0163: admins, or any member while the group lets members add people.
+  const mayAdd = !!group.data && (isAdminRole(group.data.myRole) || group.data.members_can_add);
+  if (group.data && (group.data.missing || group.data.notGroup || !mayAdd)) {
     return (
       <NotFoundState
         icon="people-outline"

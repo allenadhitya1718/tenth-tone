@@ -102,6 +102,11 @@
       "left": "{{actor}} keluar",
       "ownerChanged": "{{actor}} sekarang pemilik grup",
       "updated": "Grup diperbarui"
-    }
+    },
+    "adminsOnlyNoteCanAdd": "Hanya admin yang bisa mengubah nama dan foto.",
+    "whoCanAddEveryone": "Siapa yang bisa menambah anggota: semua",
+    "whoCanAddAdmins": "Siapa yang bisa menambah anggota: hanya admin",
+    "nowEveryoneCanAdd": "Sekarang semua bisa menambah anggota",
+    "nowAdminsOnlyAdd": "Sekarang hanya admin yang bisa menambah anggota"
   }
 }

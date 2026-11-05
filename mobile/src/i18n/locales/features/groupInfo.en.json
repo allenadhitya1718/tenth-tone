@@ -103,6 +103,11 @@
       "left": "{{actor}} left",
       "ownerChanged": "{{actor}} is now the group owner",
       "updated": "The group was updated"
-    }
+    },
+    "adminsOnlyNoteCanAdd": "Only admins can change the name and photo.",
+    "whoCanAddEveryone": "Who can add members: everyone",
+    "whoCanAddAdmins": "Who can add members: only admins",
+    "nowEveryoneCanAdd": "Everyone can add members now",
+    "nowAdminsOnlyAdd": "Only admins can add members now"
   }
 }

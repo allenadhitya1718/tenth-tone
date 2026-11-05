@@ -103,6 +103,11 @@
       "left": "{{actor}} ने ग्रुप छोड़ दिया",
       "ownerChanged": "{{actor}} अब ग्रुप के मालिक हैं",
       "updated": "ग्रुप अपडेट हो गया"
-    }
+    },
+    "adminsOnlyNoteCanAdd": "केवल एडमिन नाम और फ़ोटो बदल सकते हैं।",
+    "whoCanAddEveryone": "कौन सदस्य जोड़ सकता है: सभी",
+    "whoCanAddAdmins": "कौन सदस्य जोड़ सकता है: केवल एडमिन",
+    "nowEveryoneCanAdd": "अब सभी सदस्य जोड़ सकते हैं",
+    "nowAdminsOnlyAdd": "अब केवल एडमिन सदस्य जोड़ सकते हैं"
   }
 }
