@@ -28,7 +28,7 @@
       "cancelRequestKeep": "Keep request"
     },
     "search": {
-      "placeholder": "Search people, videos, sounds",
+      "placeholder": "Search people, sounds, hashtags",
       "openHint": "Opens search",
       "clearText": "Clear search",
       "tab_top": "Top",

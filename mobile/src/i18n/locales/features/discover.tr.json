@@ -26,7 +26,7 @@
       "cancelRequestKeep": "İsteği koru"
     },
     "search": {
-      "placeholder": "Kişi, video, ses ara",
+      "placeholder": "Kişi, ses, hashtag ara",
       "openHint": "Aramayı açar",
       "clearText": "Aramayı temizle",
       "tab_top": "Öne çıkanlar",

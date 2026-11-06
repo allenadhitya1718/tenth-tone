@@ -31,7 +31,7 @@
       "cancelRequestKeep": "Garder la demande"
     },
     "search": {
-      "placeholder": "Rechercher des personnes, vidéos, sons",
+      "placeholder": "Rechercher des personnes, sons, hashtags",
       "openHint": "Ouvre la recherche",
       "clearText": "Effacer la recherche",
       "tab_top": "Top",
