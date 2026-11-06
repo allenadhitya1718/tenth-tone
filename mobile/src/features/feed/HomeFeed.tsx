@@ -9,9 +9,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FeedList, type Pin } from './FeedList';
 import { LiveTab } from './LiveTab';
 
-const TABS = ['following', 'forYou', 'live'] as const;
+const TABS = ['following', 'live', 'forYou'] as const;
+// Lives are the heart of FLYP (client, Nov 2026): Live sits in the middle and
+// Home opens on it.
+const LIVE_PAGE = 1;
+const FOR_YOU_PAGE = 2;
 
-// Home: Following / For You / Live. Client note 24: the tabs switch by
+// Home: Following / Live / For You. Client note 24: the tabs switch by
 // swiping as well as tapping, so they sit in a native horizontal pager.
 export function HomeFeed({ pin }: { pin?: Pin }) {
   const { t } = useTranslation();
@@ -25,7 +29,7 @@ export function HomeFeed({ pin }: { pin?: Pin }) {
     }, []),
   );
   const pager = useRef<PagerView>(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(LIVE_PAGE);
   const [height, setHeight] = useState(0);
   const [muted, setMuted] = useState(false);
   const toggleMute = useCallback(() => setMuted((m) => !m), []);
@@ -37,7 +41,7 @@ export function HomeFeed({ pin }: { pin?: Pin }) {
   // A video opened from a profile, a notification or a link lands on For You.
   const pinKey = pin ? `${pin.id}:${pin.at}` : '';
   useEffect(() => {
-    if (pinKey) pager.current?.setPage(1);
+    if (pinKey) pager.current?.setPage(FOR_YOU_PAGE);
   }, [pinKey]);
 
   return (
@@ -56,7 +60,7 @@ export function HomeFeed({ pin }: { pin?: Pin }) {
       <PagerView
         ref={pager}
         style={StyleSheet.absoluteFill}
-        initialPage={1}
+        initialPage={LIVE_PAGE}
         layoutDirection={I18nManager.isRTL ? 'rtl' : 'ltr'}
         onPageSelected={(e) => {
           setPage(e.nativeEvent.position);
@@ -66,11 +70,11 @@ export function HomeFeed({ pin }: { pin?: Pin }) {
         <View key="following">
           <FeedList tab="following" height={height} focused={screenFocused && page === 0} muted={muted} onToggleMute={toggleMute} />
         </View>
-        <View key="foryou">
-          <FeedList tab="foryou" pin={pin} height={height} focused={screenFocused && page === 1} muted={muted} onToggleMute={toggleMute} />
-        </View>
         <View key="live">
-          <LiveTab height={height} focused={screenFocused && page === 2} />
+          <LiveTab height={height} focused={screenFocused && page === LIVE_PAGE} />
+        </View>
+        <View key="foryou">
+          <FeedList tab="foryou" pin={pin} height={height} focused={screenFocused && page === FOR_YOU_PAGE} muted={muted} onToggleMute={toggleMute} />
         </View>
       </PagerView>
 
