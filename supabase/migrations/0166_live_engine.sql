@@ -1,6 +1,10 @@
 -- ============================================================
 -- 0166 - which audio/video system a live runs on (LiveKit move, Nov 2026)
 --
+-- APPLIED 6 Nov 2026. LiveKit is PARKED (owner: launch on Agora): the app code
+-- that uses this column lives on branch livekit-parked. Until then every live
+-- is 'agora' (the default), so the column is harmless.
+--
 -- MUMBAI PROJECT ONLY (vfkwipvinmnybilcrdzr). Apply AFTER 0165.
 -- Safe to re-run.
 --

@@ -1,6 +1,10 @@
 // =============================================================
 // live-token
 //
+// PARKED (6 Nov 2026, owner: launch on Agora). The app code that calls this
+// is on branch livekit-parked. Deployed but inert: without the LIVEKIT_*
+// secrets it answers 503 "live server not configured".
+//
 // Lives on FLYP's own LiveKit server (infra/live-server). The LiveKit
 // counterpart of agora-token's live-stream branch, with the same rules:
 //

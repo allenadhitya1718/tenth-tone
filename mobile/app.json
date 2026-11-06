@@ -188,24 +188,7 @@
           }
         }
       ],
-      "expo-iap",
-      [
-        "@livekit/react-native-expo-plugin",
-        {
-          "android": {
-            "audioType": "communication"
-          }
-        }
-      ],
-      "@config-plugins/react-native-webrtc",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "extraProguardRules": "# LiveKit WebRTC (@livekit/react-native-webrtc): JniZeroJni is generated at\n# build time and not in the jar; its consumer rules keep the rest.\n-dontwarn livekit.org.jni_zero.JniZeroJni"
-          }
-        }
-      ]
+      "expo-iap"
     ],
     "experiments": {
       "typedRoutes": true

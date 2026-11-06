@@ -240,8 +240,7 @@
       "same_uid_login": "Bu canlı yayın, hesabınla başka bir cihazda açık.",
       "not_connected": "Yalnızca takip ettiğin veya seni takip edenleri davet edebilirsin.",
       "cannot_see_live": "Bu kişi LIVE'ını açamaz (yalnızca arkadaşlar).",
-      "invite_limit": "Çok fazla davet. Birkaç dakika bekle.",
-      "update_app": "Bu canlı yayına katılmak için FLYP'i güncelle."
+      "invite_limit": "Çok fazla davet. Birkaç dakika bekle."
     },
     "wallet": {
       "title": "Cüzdan",

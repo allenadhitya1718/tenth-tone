@@ -54,9 +54,6 @@ export const liveKeys = {
 export type LiveStatus = 'live' | 'ended' | 'banned';
 // Live streams say 'friends' where videos say 'followers'.
 export type LivePrivacy = 'public' | 'friends' | 'private';
-// Which audio system the live runs on (0166). Missing on rows read before
-// 0166 was applied: those are Agora.
-export type LiveEngine = 'agora' | 'livekit';
 
 // public.live_streams as stored.
 export type LiveStreamRow = {
@@ -70,7 +67,6 @@ export type LiveStreamRow = {
   privacy: LivePrivacy;
   started_at: Iso;
   ended_at: Iso | null;
-  engine?: LiveEngine;
 };
 
 // The list card reads host.avatar while the stream screen reads
@@ -93,7 +89,7 @@ export type LiveStreamSummary = {
   host: LiveHost | null;
 };
 
-export type LiveStream = LiveStreamSummary & { ended_at: Iso | null; privacy?: LivePrivacy; engine?: LiveEngine };
+export type LiveStream = LiveStreamSummary & { ended_at: Iso | null; privacy?: LivePrivacy };
 
 type HostRow = Pick<UserSummary, 'id' | 'name' | 'handle' | 'avatar_url'>;
 
@@ -359,8 +355,6 @@ export type StartLiveInput = {
   title?: string | null;
   thumbnail?: string | null;
   privacy?: LivePrivacy | string;
-  /** Which audio system the live runs on (0166). */
-  engine?: LiveEngine;
 };
 
 // privacy MUST be sent. It once was not (the chooser's answer never reached
@@ -370,7 +364,6 @@ export async function startLive({
   title,
   thumbnail,
   privacy = 'public',
-  engine = 'agora',
 }: StartLiveInput): Promise<LiveStreamRow> {
   const me = await requireUid();
   // Guard the value: an unknown string would fail the check constraint and
@@ -386,17 +379,13 @@ export async function startLive({
     if (verdict.blocked) throw new ApiError('content_blocked', verdict.message ?? undefined);
   }
 
-  const row: Record<string, unknown> = { host_id: me, title, thumbnail, status: 'live', privacy: p };
-  let res = await supabase
-    .from('live_streams')
-    .insert(engine === 'agora' ? row : { ...row, engine })
-    .select()
-    .single<LiveStreamRow>();
-  // 0166 not applied yet (no engine column): an Agora live, as before.
-  if (res.error?.code === 'PGRST204' || res.error?.code === '42703') {
-    res = await supabase.from('live_streams').insert(row).select().single<LiveStreamRow>();
-  }
-  const data = must(res) as LiveStreamRow;
+  const data = must(
+    await supabase
+      .from('live_streams')
+      .insert({ host_id: me, title, thumbnail, status: 'live', privacy: p })
+      .select()
+      .single<LiveStreamRow>(),
+  ) as LiveStreamRow;
   if (verdict && data?.id) void attach(verdict, 'live_stream', data.id);
   return data;
 }
@@ -428,12 +417,15 @@ export async function fetchLiveStreams(): Promise<LiveStreamSummary[]> {
 }
 
 export async function fetchLiveStream(id: Uuid): Promise<LiveStream | null> {
-  const cols =
-    'id, title, thumbnail, viewer_count, status, started_at, ended_at, privacy, host:profiles!live_streams_host_id_fkey (id, name, handle, avatar_url)';
-  let res = await supabase.from('live_streams').select(`${cols}, engine`).eq('id', id).maybeSingle();
-  // 0166 not applied yet: no engine column, every live is Agora.
-  if (res.error?.code === '42703') res = await supabase.from('live_streams').select(cols).eq('id', id).maybeSingle();
-  const data = must(res) as unknown as LiveStreamQueryRow | null;
+  const data = must(
+    await supabase
+      .from('live_streams')
+      .select(
+        'id, title, thumbnail, viewer_count, status, started_at, ended_at, privacy, host:profiles!live_streams_host_id_fkey (id, name, handle, avatar_url)',
+      )
+      .eq('id', id)
+      .maybeSingle(),
+  ) as unknown as LiveStreamQueryRow | null;
   if (!data) return null;
   return { ...data, host: shapeHost(data.host) };
 }

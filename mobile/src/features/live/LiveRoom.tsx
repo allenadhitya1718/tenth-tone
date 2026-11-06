@@ -58,7 +58,6 @@ import { WALLET_LAUNCHED } from '@/features/wallet/launch';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
-import { revokeLiveSpeaker } from '@/api/livekit';
 import { agoraUidFor, formatDuration, liveLink, MAX_COMMENT, MAX_GUESTS } from './config';
 import { liveError, serverDetail } from './errors';
 import { BIG_GIFT, GiftBanner, giftName, GiftSpotlight, GiftTray, useGiftBanner, useGiftSpotlight } from './Gifts';
@@ -70,7 +69,6 @@ import { createSpeakingStore } from './speakingStore';
 import { Stage, type StageSpeaker } from './Stage';
 import { StageManager } from './StageManager';
 import { useAgoraAudio } from './useAgoraAudio';
-import { useLiveKitAudio } from './useLiveKitAudio';
 import {
   useElapsed,
   useHostHeartbeat,
@@ -169,26 +167,14 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
     }
   }, [isHost, liveId, queryClient]);
 
-  // Lives run on Agora or on FLYP's own LiveKit server (0166); both hooks
-  // are always called (hooks cannot be conditional), only one is enabled.
-  const engine = live?.engine ?? 'agora';
-  const agoraAudio = useAgoraAudio({
+  const agora = useAgoraAudio({
     channel: live ? liveId : null,
     uid: me ? agoraUidFor(me) : null,
     role: amSpeaker ? 'host' : 'audience',
-    enabled: isLive && !!me && engine === 'agora',
+    enabled: isLive && !!me,
     speaking,
     onLeave: leaveFromNotification,
   });
-  const livekitAudio = useLiveKitAudio({
-    liveId: live ? liveId : null,
-    me: me ?? null,
-    role: amSpeaker ? 'host' : 'audience',
-    enabled: isLive && !!me && engine === 'livekit',
-    speaking,
-    onLeave: leaveFromNotification,
-  });
-  const agora = engine === 'livekit' ? livekitAudio : agoraAudio;
 
   const speakers = useMemo<StageSpeaker[]>(() => {
     if (!host) return [];
@@ -445,18 +431,10 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
             modGuest?.host_muted
               ? { label: t('live.stage.unmuteGuest'), icon: 'mic-outline' as const, onPress: () => void muteGuest(modUserId, false) }
               : { label: t('live.stage.muteGuest'), icon: 'mic-off-outline' as const, onPress: () => void muteGuest(modUserId, true) },
-            { label: t('live.stage.remove'), icon: 'remove-circle-outline' as const, onPress: () => void guestAction(modUserId, () => removeGuest(modUserId)) },
+            { label: t('live.stage.remove'), icon: 'remove-circle-outline' as const, onPress: () => void guestAction(modUserId, () => removeLiveGuest(liveId, modUserId)) },
           ]
         : [{ label: t('live.stage.inviteToSpeak'), icon: 'person-add-outline' as const, onPress: () => void guestAction(modUserId, () => inviteToLive(liveId, modUserId)) }]
       : [];
-
-  // Taking a guest off stage. On LiveKit the server also stops their
-  // microphone at once, whatever their app does (live-token 'revoke').
-  async function removeGuest(userId: string) {
-    const status = await removeLiveGuest(liveId, userId);
-    if (engine === 'livekit') void revokeLiveSpeaker(liveId, userId).catch((e) => console.warn('revoke:', (e as Error)?.message));
-    return status;
-  }
 
   async function muteGuest(userId: string, muted: boolean) {
     setBusyId(userId);
@@ -782,7 +760,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
           myId={me}
           busyId={busyId}
           onApprove={(id) => void guestAction(id, () => approveLiveGuest(liveId, id))}
-          onRemove={(id) => void guestAction(id, () => removeGuest(id))}
+          onRemove={(id) => void guestAction(id, () => removeLiveGuest(liveId, id))}
           onInvite={(id) => void guestAction(id, () => inviteToLive(liveId, id))}
           onPerson={(user) => {
             setManagerOpen(false);
