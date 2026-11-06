@@ -1,0 +1,7 @@
+[Unit]
+Description=FLYP live server watchdog
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/flyp-live-watchdog

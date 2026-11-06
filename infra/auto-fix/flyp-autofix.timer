@@ -1,0 +1,11 @@
+[Unit]
+Description=Check the FLYP incident queue (at start-up, then every 2 minutes)
+
+[Timer]
+OnBootSec=1min
+OnStartupSec=1min
+OnUnitInactiveSec=2min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

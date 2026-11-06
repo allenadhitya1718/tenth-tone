@@ -1,0 +1,50 @@
+# FLYP live server: LiveKit (live rooms), Egress (recording to our
+# Cloudflare bucket), Redis (shared by both), Caddy (HTTPS for the app).
+# Host networking: WebRTC needs the real ports, and nothing here is
+# reachable from outside except what install.sh opens in the firewall.
+# Every service restarts by itself if it stops; watchdog.sh checks they
+# answer, not just that they run.
+#
+# Versions are pinned. To update: change the tag, `docker compose pull`,
+# `docker compose up -d`, check RUNBOOK.md "After an update".
+services:
+  redis:
+    image: redis:7.4-alpine
+    network_mode: host
+    command: ["redis-server", "--bind", "127.0.0.1", "--port", "6379", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:v1.13.3
+    network_mode: host
+    command: ["--config", "/etc/livekit.yaml"]
+    volumes:
+      - ./rendered/livekit.yaml:/etc/livekit.yaml:ro
+    depends_on: [redis]
+    restart: unless-stopped
+    logging: { driver: json-file, options: { max-size: "20m", max-file: "5" } }
+
+  egress:
+    image: livekit/egress:v1.12.0
+    network_mode: host
+    environment:
+      EGRESS_CONFIG_FILE: /etc/egress.yaml
+    volumes:
+      - ./rendered/egress.yaml:/etc/egress.yaml:ro
+      - /var/lib/flyp-live/egress-tmp:/home/egress/tmp
+    cap_add: [SYS_ADMIN]
+    depends_on: [redis, livekit]
+    restart: unless-stopped
+    logging: { driver: json-file, options: { max-size: "20m", max-file: "5" } }
+
+  caddy:
+    image: caddy:2.8-alpine
+    network_mode: host
+    volumes:
+      - ./rendered/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    restart: unless-stopped
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+volumes:
+  caddy-data:

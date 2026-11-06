@@ -1,0 +1,5 @@
+# HTTPS for the app's connection to LiveKit. Caddy gets and renews the
+# certificate by itself (needs ports 80 and 443 open and the DNS record).
+${LIVE_DOMAIN} {
+	reverse_proxy 127.0.0.1:7880
+}

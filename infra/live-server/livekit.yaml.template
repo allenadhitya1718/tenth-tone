@@ -1,0 +1,30 @@
+# Rendered by install.sh into rendered/livekit.yaml (never commit that file:
+# it holds the API secret).
+port: 7880
+log_level: info
+logging:
+  json: true
+rtc:
+  tcp_port: 7881
+  udp_port: 7882
+  use_external_ip: true
+redis:
+  address: 127.0.0.1:6379
+keys:
+  ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+turn:
+  # For phones on networks that block normal WebRTC traffic.
+  enabled: true
+  udp_port: 3478
+  domain: ${LIVE_DOMAIN}
+room:
+  # A room with nobody left closes after 5 minutes.
+  empty_timeout: 300
+  departure_timeout: 20
+webhook:
+  # Room and recording events go to Supabase (live-webhook function).
+  api_key: ${LIVEKIT_API_KEY}
+  urls:
+    - ${SUPABASE_URL}/functions/v1/live-webhook
+# Health numbers for monitoring, reachable only on the server itself.
+prometheus_port: 6789

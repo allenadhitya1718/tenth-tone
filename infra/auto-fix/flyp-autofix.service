@@ -1,0 +1,9 @@
+[Unit]
+Description=FLYP auto-fix worker (Claude Code on incidents)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/share/flyp-autofix/worker.sh
+TimeoutStartSec=3h
+Nice=5

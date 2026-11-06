@@ -79,3 +79,16 @@ Also tested and working:
 
 ## Tested on
 Redmi Note (Android 12), FLYP test build with the latest over-the-air update. Screenshots are on the laptop in `test-results/2026-11-06/` (not committed: the repo is public and they show people's names).
+
+## Added after the release was put on hold
+- **Redesign, first part:**
+  - **Create (+)** offers *Add to your story* or *Go live*.
+  - **Discover is now Explore:** search, live rooms, then "Clips from lives" (clipping comes later).
+  - **Posting videos is removed:** old links open the story screen.
+  - **"Use this sound"** opens a story with the song chosen.
+  - The **Drafts** tab is gone.
+  - On the test channel only; **not yet checked on the Redmi** (it disconnected).
+- **Your friend's post deleted** (with its 2 likes and Rhithish's broken re-share). The "Coming soon" post stays, but its video file is also missing: send the file to restore it.
+- **Error reports (0164):** every error the app catches is logged on the server. On the test channel. The database part needs your OK to apply; until then, reports wait on the phone.
+- **Live server, ready to install** (`infra/live-server`): LiveKit, recorder to our bucket, HTTPS, auto-restart, watchdog, Better Stack heartbeat, restricted login for auto-fix, and a runbook. Waiting for your Oracle account (Jeddah, Pay-As-You-Go).
+- **Auto-fix** (`infra/auto-fix`, 0165, `ops-alert`): alerts go into a queue, and your laptop runs Claude Code on them as soon as it's on. Code fixes become draft pull requests for your review; it never publishes or changes the database by itself. Waiting for the live server, two Supabase secrets and your OK.
