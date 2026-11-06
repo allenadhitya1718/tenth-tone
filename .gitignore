@@ -81,3 +81,7 @@ mobile/.env.testaccount
 builds/
 supabase/supabase/
 admin-dist/
+
+# App signing keys never go in the repo
+*.jks
+*.keystore
