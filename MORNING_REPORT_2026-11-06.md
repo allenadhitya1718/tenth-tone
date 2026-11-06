@@ -96,3 +96,17 @@ Redmi Note (Android 12), FLYP test build with the latest over-the-air update. Sc
 - **Incident queue (0165)** is applied. The `ops-alert` function is not deployed yet (it needs the two `OPS_*` secrets first).
 - **Live server, ready to install** (`infra/live-server`): LiveKit, recorder to our bucket, HTTPS, auto-restart, watchdog, Better Stack heartbeat, restricted login for auto-fix, and a runbook. Waiting for your Oracle account (Jeddah, Pay-As-You-Go).
 - **Auto-fix** (`infra/auto-fix`, 0165, `ops-alert`): alerts go into a queue, and your laptop runs Claude Code on them as soon as it's on. Code fixes become draft pull requests for your review; it never publishes or changes the database by itself. Waiting for the live server and two Supabase secrets.
+
+## Client clarified (6 Nov evening): audio-only lives, 1-minute highlights
+- **Lives stay on Agora** (audio only is cheap: about $0.99 per 1,000 listener-minutes, 10,000 free a month). The LiveKit / own-server work is parked on branch `livekit-parked`, to bring back if the Agora bill passes about $50–100 a month. The laptop test server, tunnel and temporary secrets are removed.
+- **Home opens on Live**, the middle tab (Following · Live · For You).
+- **Splash opens on the brand blue** (no spinning dots), then the logo. The plain-blue native splash comes with the next build.
+- **Highlights (0167, tested end to end on the Redmi):**
+  - **Recording:** the host's phone records the live, everyone on stage mixed; it stays on the phone for 2 days, at most 3 recordings.
+  - **Notice:** everyone in the room sees "The host can save a 1-minute highlight from this live."
+  - **Making one:** after the live, **Make a highlight** → tap to place the minute, nudge ±5 s, listen to exactly that minute, optional title, **Post**.
+  - **Where it appears:** in Explore ("Clips from lives") and on the host's profile (new first tab), with a full-screen player. The host can delete; the file is then removed.
+  - **Size:** a minute uploads about 190 KB.
+  - **Bugs found and fixed while testing:** the progress showed bytes; the preview started at 0:00 (raw AAC can't be jumped into on Android, so the preview now plays a trimmed copy); after posting it dropped to Home; a lone card stretched full width; "1 plays".
+  - **Not tested yet:** the iPhone, and a highlight with real guests on stage (needs a second phone).
+- **Production changes made with your OK:** database changes 0166 and 0167; `media-upload` and `media-delete-queue` redeployed. `media-delete-queue` was briefly deployed with the sign-in check by mistake; I redeployed it correctly about 2 minutes later.
