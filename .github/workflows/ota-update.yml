@@ -2,10 +2,13 @@
 # installed FLYP builds without a new APK or TestFlight build. Phones fetch
 # it when the app opens and switch to it on the next launch.
 #
-# Only for changes inside the JS bundle. A native change (new library,
-# permission, config plugin, app.json native fields) needs a full build AND
-# a bump of "version" in mobile/app.json, because builds only take updates
-# made for their own app version (runtimeVersion policy appVersion).
+# Builds only take updates whose native fingerprint matches their own
+# (runtimeVersion policy "fingerprint", mobile/fingerprint.config.js). An
+# update made after a native change (new library, permission, config plugin,
+# app.json native fields) gets a new fingerprint, so older builds simply don't
+# receive it and keep working; it reaches only builds made since that change.
+# The job summary shows each update's fingerprint; the build workflows show
+# theirs. If they differ, the update won't reach that build.
 #
 # Channels: the Android test APK listens on "preview"; the store builds
 # (TestFlight and the Google Play AAB) on "production" (mobile/eas.json).
@@ -71,6 +74,24 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The Android fingerprint includes this file's contents, so the update
+      # needs the same file the builds use (not committed: the repo is public).
+      - name: Write google-services.json
+        env:
+          CONTENT: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          test -n "$CONTENT" || { echo "Repository secret GOOGLE_SERVICES_JSON is missing"; exit 1; }
+          printf '%s' "$CONTENT" > "$RUNNER_TEMP/google-services.json"
+          echo "GOOGLE_SERVICES_JSON=$RUNNER_TEMP/google-services.json" >> "$GITHUB_ENV"
+
+      - name: Native fingerprints
+        run: |
+          fp() { npx expo-updates fingerprint:generate --platform "$1" | node -p 'JSON.parse(require("fs").readFileSync(0)).hash'; }
+          echo "Android fingerprint: \`$(fp android)\`" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "iOS fingerprint: \`$(FLYP_IOS_COMM_NOTIFS="$COMM" fp ios)\`" | tee -a "$GITHUB_STEP_SUMMARY"
+        env:
+          COMM: ${{ vars.FLYP_IOS_COMM_NOTIFS }}
+
       - name: Publish to preview (Android test builds)
         if: inputs.channels == 'both' || inputs.channels == 'preview'
         run: eas update --channel preview --environment preview --platform android --message "$MESSAGE" --non-interactive
@@ -83,7 +104,9 @@ jobs:
       - name: Publish to production (TestFlight and Play builds)
         if: inputs.channels == 'both' || inputs.channels == 'production'
         run: |
-          eas update --channel production --environment production --platform ios --message "$MESSAGE" --non-interactive
+          FLYP_IOS_COMM_NOTIFS="$COMM" eas update --channel production --environment production --platform ios --message "$MESSAGE" --non-interactive
           eas update --channel production --environment production --platform android --message "$MESSAGE" --non-interactive
         env:
           MESSAGE: ${{ inputs.message }}
+          # Same value as the TestFlight build (it changes the iOS fingerprint).
+          COMM: ${{ vars.FLYP_IOS_COMM_NOTIFS }}

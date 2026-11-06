@@ -64,6 +64,13 @@ jobs:
           test -n "$CONTENT" || { echo "Repository secret GOOGLE_SERVICES_JSON is missing"; exit 1; }
           printf '%s' "$CONTENT" > "$RUNNER_TEMP/google-services.json"
 
+      # Updates only reach builds with this exact fingerprint (mobile/fingerprint.config.js).
+      - name: Native fingerprint
+        env:
+          GOOGLE_SERVICES_JSON: ${{ runner.temp }}/google-services.json
+        run: |
+          echo "Android fingerprint: \`$(npx expo-updates fingerprint:generate --platform android | node -p 'JSON.parse(require("fs").readFileSync(0)).hash')\`" | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Build APK
         env:
           GOOGLE_SERVICES_JSON: ${{ runner.temp }}/google-services.json

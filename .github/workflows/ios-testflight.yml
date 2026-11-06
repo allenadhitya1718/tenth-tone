@@ -66,6 +66,13 @@ jobs:
           test -n "$KEY_B64" || { echo "Secret APP_STORE_CONNECT_KEY_BASE64 is missing"; exit 1; }
           printf '%s' "$KEY_B64" | base64 --decode > "$RUNNER_TEMP/asc_api_key.p8"
 
+      # Updates only reach builds with this exact fingerprint (mobile/fingerprint.config.js).
+      - name: Native fingerprint
+        env:
+          FLYP_IOS_COMM_NOTIFS: ${{ vars.FLYP_IOS_COMM_NOTIFS }}
+        run: |
+          echo "iOS fingerprint: \`$(npx expo-updates fingerprint:generate --platform ios | node -p 'JSON.parse(require("fs").readFileSync(0)).hash')\`" | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Build IPA
         env:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc_api_key.p8

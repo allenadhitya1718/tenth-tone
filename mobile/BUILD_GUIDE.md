@@ -185,6 +185,15 @@ npx eas-cli@latest update --channel production --message "Fix …"
 Only JavaScript and assets change this way. Anything that adds a native
 library needs a new build and store release.
 
+Each update only reaches builds with the same **native fingerprint**
+(`runtimeVersion` policy `fingerprint`, see `fingerprint.config.js`). After a
+native change the fingerprint changes, so older builds don't receive the
+update and keep running their last one, instead of crashing on a missing
+native module. The build and update workflows print their fingerprints in the
+GitHub job summary; if an update didn't arrive on a phone, compare the two.
+Builds made before 6 Nov 2026 used the app version (2.0.0) instead and get no
+further updates; replace them with a new build.
+
 ## 9. Test before each release
 
 1. Sign up with a new email → 6-digit code → profile set-up.
