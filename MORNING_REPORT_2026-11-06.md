@@ -57,7 +57,7 @@ Also tested and working:
 - **The app's own upload checks are unchanged:** sign-in, a quota per person, size and type limits, and 2-minute upload links.
 
 ## What you do this morning
-0. ~~Send fixes 12 and 13 to the store builds~~ **Done**: published to the "production" channel at your OK. TestFlight 11 and the Play AAB pick them up on first launch.
+0. **Fixes 12 and 13 reached TestFlight 11 only.** Correction: the update workflow published "production" for iOS only, so the **Play AAB did not get them**. It's fixed now (production goes to Android too), and the next Play build will be a new one anyway, because LiveKit adds native code.
 1. **Google Play** (Play Console → FLYP → Production → Create new release):
    - Upload `flyp-release.aab` from the GitHub run, write the release notes and roll out.
    - If Play rejects the version number, tell me the number it reports and I'll rebuild with a higher one.

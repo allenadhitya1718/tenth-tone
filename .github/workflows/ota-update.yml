@@ -7,10 +7,10 @@
 # a bump of "version" in mobile/app.json, because builds only take updates
 # made for their own app version (runtimeVersion policy appVersion).
 #
-# Channels: the Android test APK listens on "preview", TestFlight builds on
-# "production" (mobile/eas.json). Each is published for its own platform
-# only: the app has no web build (Agora is native-only), and the default
-# "all" would try to bundle one.
+# Channels: the Android test APK listens on "preview"; the store builds
+# (TestFlight and the Google Play AAB) on "production" (mobile/eas.json).
+# Platforms are named one by one: the app has no web build (Agora is
+# native-only), and the default "all" would try to bundle one.
 name: OTA update
 
 on:
@@ -24,6 +24,11 @@ on:
       message:
         description: 'What changed (shown in the Expo dashboard)'
         required: true
+      live_engine:
+        description: 'Which system NEW lives start on (running lives keep theirs)'
+        type: choice
+        options: [agora, livekit]
+        default: agora
 
 concurrency:
   group: ota-update
@@ -46,6 +51,8 @@ jobs:
     env:
       EXPO_PUBLIC_SUPABASE_URL: https://vfkwipvinmnybilcrdzr.supabase.co
       EXPO_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_dgWbaJlmKOgP3VDEriA7Lg_LDHOiomD
+      # New lives on Agora or FLYP's own LiveKit server (0166, features/live/config.ts).
+      EXPO_PUBLIC_LIVE_ENGINE: ${{ inputs.live_engine || 'agora' }}
       GOOGLE_MAPS_ANDROID_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_KEY }}
     steps:
       - uses: actions/checkout@v4
@@ -70,8 +77,13 @@ jobs:
         env:
           MESSAGE: ${{ inputs.message }}
 
-      - name: Publish to production (TestFlight builds)
+      # The store builds: TestFlight (iOS) and the Google Play AAB (Android)
+      # both listen on "production". (Until Nov 2026 this step published iOS
+      # only, so Play builds never got updates.)
+      - name: Publish to production (TestFlight and Play builds)
         if: inputs.channels == 'both' || inputs.channels == 'production'
-        run: eas update --channel production --environment production --platform ios --message "$MESSAGE" --non-interactive
+        run: |
+          eas update --channel production --environment production --platform ios --message "$MESSAGE" --non-interactive
+          eas update --channel production --environment production --platform android --message "$MESSAGE" --non-interactive
         env:
           MESSAGE: ${{ inputs.message }}
