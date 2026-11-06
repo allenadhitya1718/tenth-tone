@@ -1,5 +1,6 @@
 import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from 'expo-audio';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { NativeModules } from 'react-native';
 
 import { fetchLiveKitToken, type LiveKitRole } from '@/api/livekit';
 import { claimAgora } from '@/api/walkie';
@@ -47,6 +48,15 @@ type LKNative = typeof import('@livekit/react-native');
 let lib: { lk: LK; native: LKNative } | null | undefined;
 function loadLiveKit(): { lk: LK; native: LKNative } | null {
   if (lib !== undefined) return lib;
+  // Check the native parts BEFORE loading: React Native's module loader
+  // reports a module that throws while loading as a fatal error even when the
+  // caller catches it (seen on the Redmi with an older build: the app
+  // reloaded instead of saying "update the app").
+  const mods = NativeModules as Record<string, unknown>;
+  if (!mods.WebRTCModule || !mods.LivekitReactNativeModule) {
+    lib = null;
+    return lib;
+  }
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const native = require('@livekit/react-native') as LKNative;
