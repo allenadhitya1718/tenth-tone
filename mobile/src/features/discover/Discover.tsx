@@ -107,7 +107,7 @@ function ClipsSection({ items }: { items: LiveHighlight[] }) {
       {rows.length ? (
         <View style={styles.clipGrid}>
           {rows.map((row) => (
-            <View key={row[0]!.id} style={styles.gridRow}>
+            <View key={row[0]!.id} style={styles.clipRow}>
               {row.map((h) => (
                 <HighlightCard key={h.id} item={h} />
               ))}
@@ -152,6 +152,8 @@ const styles = StyleSheet.create({
   gridRow: { gap: 10, paddingHorizontal: 16 },
   gridContent: { gap: 10, paddingBottom: 40 },
   clipGrid: { gap: 10 },
+  // Two highlights side by side (a manual row, not a FlatList column).
+  clipRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16 },
   noLive: {
     marginHorizontal: 16,
     padding: 20,

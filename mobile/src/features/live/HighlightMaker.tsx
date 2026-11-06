@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import { File, Paths } from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import { Image } from 'expo-image';
 import { type Href, router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -40,11 +40,18 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
   const live = useQuery({ queryKey: liveKeys.stream(liveId), queryFn: () => fetchLiveStream(liveId) });
   const [file] = useState(() => recordingFor(liveId));
 
-  const player = useAudioPlayer(file ? { uri: file.uri } : null);
-  const status = useAudioPlayerStatus(player);
-  const total = status.duration > 0 ? status.duration : 0;
+  // The full recording, only for its length: a raw AAC recording has no
+  // index, so Android cannot jump into it (it played from 0:00 on the Redmi).
+  const full = useAudioPlayer(file ? { uri: file.uri } : null);
+  const fullStatus = useAudioPlayerStatus(full);
+  const total = fullStatus.duration > 0 ? fullStatus.duration : 0;
   const windowS = Math.min(WINDOW_S, total);
   const maxStart = Math.max(0, total - windowS);
+
+  // The preview plays the chosen minute trimmed into its own small file,
+  // exactly what will be posted.
+  const preview = useAudioPlayer(null);
+  const previewStatus = useAudioPlayerStatus(preview);
 
   const [startS, setStartS] = useState(0);
   const [previewing, setPreviewing] = useState(false);
@@ -55,28 +62,40 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
 
   const clamp = (s: number) => Math.max(0, Math.min(maxStart, s));
   const stop = () => {
-    player.pause();
+    preview.pause();
     setPreviewing(false);
   };
-  // Play first, then jump: on Android a jump made while the player is still
-  // stopped is dropped (it played from 0:00 on the Redmi).
-  const playMinute = () => {
+  const playMinute = async () => {
+    if (!file) return;
     setPreviewing(true);
-    player.play();
-    void player.seekTo(startS);
+    const clip = new File(Paths.cache, `highlight-preview-${Date.now()}.aac`);
+    try {
+      await trimAac(file, clip, startS * 1000, windowS * 1000);
+      preview.replace({ uri: clip.uri });
+      preview.play();
+    } catch (e) {
+      setPreviewing(false);
+      showAlert(t('live.errors.title'), e instanceof NotAacError ? t('live.highlight.notAac') : t('live.errors.generic'));
+    }
   };
   const nudge = (d: number) => {
     stop();
     setStartS((s) => clamp(s + d));
   };
-
-  // Play only the chosen minute: the player stops itself at its end.
-  const currentTime = status.currentTime;
-  useEffect(() => {
-    if (status.playing && currentTime >= startS + windowS) player.pause();
-  }, [status.playing, currentTime, startS, windowS, player]);
-  useEffect(() => () => player.pause(), [player]);
-  const playingMinute = previewing && status.playing;
+  useEffect(() => () => preview.pause(), [preview]);
+  // Old preview files out of the cache when the screen closes.
+  useEffect(
+    () => () => {
+      try {
+        for (const e of new Directory(Paths.cache).list()) {
+          if (e instanceof File && e.name.startsWith('highlight-preview-')) e.delete();
+        }
+      } catch {}
+    },
+    [],
+  );
+  const playingMinute = previewing && previewStatus.playing;
+  const currentTime = startS + (playingMinute ? previewStatus.currentTime : 0);
 
   const isHost = !!me && live.data?.host?.id === me;
   const cover = live.data?.thumbnail || live.data?.host?.avatar_url || null;
@@ -131,7 +150,7 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
         text: t('live.highlight.discard'),
         style: 'destructive',
         onPress: () => {
-          player.pause();
+          stop();
           deleteRecordings(liveId);
           router.back();
         },
@@ -213,7 +232,7 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
           <Button
             title={playingMinute ? t('live.highlight.pause') : t('live.highlight.playMinute')}
             variant="secondary"
-            onPress={playingMinute ? stop : playMinute}
+            onPress={playingMinute ? stop : () => void playMinute()}
           />
         </>
       )}
