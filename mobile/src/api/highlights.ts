@@ -85,7 +85,10 @@ export async function postHighlight({ liveId, audio, title, startMs, durationMs 
     const verdict = await checkText('live_title', clean);
     if (verdict.blocked) throw new ApiError('content_blocked', verdict.message ?? undefined);
   }
-  const url = await uploadToR2({ ...audio, mimeType: 'audio/aac', name: 'highlight.aac' }, onProgress);
+  // uploadToR2 reports bytes; the caller wants a fraction.
+  const url = await uploadToR2({ ...audio, mimeType: 'audio/aac', name: 'highlight.aac' }, (sent, total) =>
+    onProgress?.(total > 0 ? Math.min(1, sent / total) : 0),
+  );
   try {
     const { data, error } = await supabase.rpc('create_live_highlight', {
       p_live_id: liveId,

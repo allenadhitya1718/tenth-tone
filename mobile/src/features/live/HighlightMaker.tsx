@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { File, Paths } from 'expo-file-system';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -58,9 +58,12 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
     player.pause();
     setPreviewing(false);
   };
+  // Play first, then jump: on Android a jump made while the player is still
+  // stopped is dropped (it played from 0:00 on the Redmi).
   const playMinute = () => {
     setPreviewing(true);
-    void player.seekTo(startS).then(() => player.play());
+    player.play();
+    void player.seekTo(startS);
   };
   const nudge = (d: number) => {
     stop();
@@ -86,7 +89,7 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
     const out = new File(Paths.cache, `highlight-${Date.now()}.aac`);
     try {
       const cut = await trimAac(file, out, startS * 1000, windowS * 1000);
-      await postHighlight(
+      const posted = await postHighlight(
         {
           liveId,
           audio: { uri: out.uri, mimeType: 'audio/aac', size: cut.bytes, name: 'highlight.aac' },
@@ -98,7 +101,8 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
       );
       void qc.invalidateQueries({ queryKey: highlightKeys.all });
       showToast(t('live.highlight.posted'));
-      router.back();
+      // Straight to the new highlight, so the host hears what they posted.
+      router.replace(`/highlight/${posted.id}` as Href);
     } catch (e) {
       const code = e instanceof ApiError ? e.code : null;
       const msg =
