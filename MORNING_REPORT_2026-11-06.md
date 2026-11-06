@@ -5,6 +5,17 @@
 - Everything below is fixed and tested on the Redmi, and both store builds are made and signed, ready for when the redesign is done.
 - **Not tested:** anything that needs two phones (calls, receiving messages and notifications, live guests). The iPhone was tested only through the store build (it compiles and uploads); nobody has tapped through it.
 
+## Client redesign: stories and lives (started 6 Nov)
+Done (on the test APK's update channel only; **not yet checked on the phone**, because the Redmi disconnected):
+- **Create (+)** opens a menu: Add to your story / Go live. The video camera and post screen are gone, and old links open the story screen.
+- **Discover is now Explore:** search, who is live now (with Go live when nobody is), then a "Clips from lives" section.
+- **"Use this sound"** opens a new story with that song chosen.
+- **Profile:** the Drafts tab is gone, and the empty grid points to stories and live clips.
+- **Posts:** your friend's post was deleted (with its 2 likes and Rhithish's re-share story, at your OK). Only "Coming soon" is left, but **its video file is missing too** (it was in the old bucket). Send the file to put it back.
+
+Decided: our own live server (LiveKit, open source) instead of paying Agora per viewer, with recording and 1-minute clips on that server. Calls stay on Agora.
+Open: audio or video lives (client), and which server to rent.
+
 ## Store builds
 | | Build | Status |
 |---|---|---|
