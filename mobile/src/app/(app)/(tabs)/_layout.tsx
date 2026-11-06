@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import { chatKeys, countUnreadChats } from '@/api/chat';
+import { showAlert } from '@/components/Dialog';
 import { useTheme } from '@/providers/ThemeProvider';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -50,11 +51,16 @@ export default function TabsLayout() {
       <Tabs.Screen name="discover" options={{ title: t('tabs.discover'), tabBarAccessibilityLabel: t('tabs.discover'), tabBarIcon: icon('search', 'search-outline') }} />
       <Tabs.Screen
         name="create"
-        // The + opens the camera full screen instead of switching tabs.
+        // The + offers the two ways to share on FLYP: a story or a live
+        // (client change, Nov 2026: no more permanent posts).
         listeners={{
           tabPress: (e) => {
             e.preventDefault();
-            router.push('/camera');
+            showAlert(t('tabs.create'), undefined, [
+              { text: t('stories.addStory'), onPress: () => router.push('/stories/new') },
+              { text: t('feed.goLive'), onPress: () => router.push('/live/start') },
+              { text: t('common.cancel'), style: 'cancel' },
+            ]);
           },
         }}
         options={{

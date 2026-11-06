@@ -126,7 +126,7 @@
   },
   "tabs": {
     "home": "Home",
-    "discover": "Discover",
+    "discover": "Explore",
     "create": "Create",
     "inbox": "Chat",
     "profile": "Profile"
@@ -253,8 +253,8 @@
     "updateFailed": "Could not update",
     "chatFailed": "Could not open the chat",
     "pinned": "Pinned",
-    "empty_videos": "No videos",
-    "empty_videos_me": "You haven't posted a video yet. Make your first one and share it with the world.",
+    "empty_videos": "No clips yet",
+    "empty_videos_me": "Share photos and videos as stories. Clips from your lives will show here.",
     "empty_audio": "No audio yet",
     "empty_audio_me": "Original sounds from your public videos appear here.",
     "empty_map": "Places added to posts appear here on the map.",

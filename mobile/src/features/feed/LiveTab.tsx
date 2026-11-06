@@ -49,7 +49,7 @@ export function LiveTab({ height, focused }: { height: number; focused: boolean 
   );
 }
 
-function LiveCard({ stream }: { stream: LiveStreamSummary }) {
+export function LiveCard({ stream }: { stream: LiveStreamSummary }) {
   const { t } = useTranslation();
   return (
     <Pressable style={styles.card} onPress={() => router.push(`/live/${stream.id}`)} accessibilityRole="button">

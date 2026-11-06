@@ -1,5 +1,7 @@
-import { CameraScreen } from '@/features/camera/CameraScreen';
+import { Redirect } from 'expo-router';
 
+// Posting videos was removed (client change, Nov 2026): photos and videos are
+// shared as stories. Old links to the camera open the story screen.
 export default function CameraRoute() {
-  return <CameraScreen />;
+  return <Redirect href="/stories/new" />;
 }

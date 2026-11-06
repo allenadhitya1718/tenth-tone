@@ -1,6 +1,6 @@
 {
   "discover": {
-    "title": "Discover",
+    "title": "Explore",
     "trendingRank": "Trending number {{rank}}, #{{tag}}, {{count}}",
     "common": {
       "loading": "Loading",
@@ -168,6 +168,12 @@
       "ch_live": "Live",
       "ch_liveDesc": "When people you follow go live",
       "ch_other": "Other"
+    },
+    "explore": {
+      "liveNow": "Live now",
+      "noLive": "Nobody is live right now. Start one and you'll be here.",
+      "clips": "Clips from lives",
+      "clipsSoon": "Highlights cut from lives will show here."
     }
   }
 }

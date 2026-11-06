@@ -166,6 +166,12 @@
       "ch_live": "Canlı",
       "ch_liveDesc": "Takip ettiğin kişiler canlı yayına başladığında",
       "ch_other": "Diğer"
+    },
+    "explore": {
+      "liveNow": "Şu an canlı",
+      "noLive": "Şu anda kimse canlı yayında değil. Bir yayın başlat, burada görün.",
+      "clips": "Canlı yayın klipleri",
+      "clipsSoon": "Canlı yayınlardan kesilen öne çıkan anlar burada görünecek."
     }
   }
 }

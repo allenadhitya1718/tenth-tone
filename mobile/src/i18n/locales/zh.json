@@ -126,7 +126,7 @@
   },
   "tabs": {
     "home": "首页",
-    "discover": "发现",
+    "discover": "探索",
     "create": "创作",
     "inbox": "聊天",
     "profile": "我"
@@ -244,8 +244,8 @@
     "chatFailed": "无法打开聊天",
     "pinned": "置顶",
     "soundUses": "已被使用 {{count}} 次",
-    "empty_videos": "暂无视频",
-    "empty_videos_me": "你还没有发布视频。拍下第一条，与世界分享吧。",
+    "empty_videos": "还没有片段",
+    "empty_videos_me": "以快拍分享照片和视频。你直播的片段会显示在这里。",
     "empty_audio": "暂无音频",
     "empty_audio_me": "你公开视频中的原声会显示在这里。",
     "empty_map": "添加到作品中的地点会显示在这张地图上。",

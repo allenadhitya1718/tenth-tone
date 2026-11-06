@@ -126,7 +126,7 @@
   },
   "tabs": {
     "home": "Accueil",
-    "discover": "Découvrir",
+    "discover": "Explorer",
     "create": "Créer",
     "inbox": "Messages",
     "profile": "Profil"
@@ -244,8 +244,8 @@
     "chatFailed": "Impossible d'ouvrir la discussion",
     "pinned": "Épinglé",
     "soundUses": "Utilisé {{count}} fois",
-    "empty_videos": "Aucune vidéo",
-    "empty_videos_me": "Vous n'avez encore publié aucune vidéo. Créez votre première et partagez-la avec le monde.",
+    "empty_videos": "Pas encore d'extraits",
+    "empty_videos_me": "Partagez photos et vidéos en story. Les extraits de vos lives apparaîtront ici.",
     "empty_audio": "Aucun audio pour le moment",
     "empty_audio_me": "Les sons originaux de vos vidéos publiques apparaissent ici.",
     "empty_map": "Les lieux ajoutés aux publications apparaissent ici sur la carte.",

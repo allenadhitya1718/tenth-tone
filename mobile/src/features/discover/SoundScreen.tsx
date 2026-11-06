@@ -22,7 +22,7 @@ import { Button, TopBar } from '@/components/ui';
 import { formatCount } from '@/features/feed/format';
 import { useTheme } from '@/providers/ThemeProvider';
 
-import { setPendingSound } from '@/features/publish/pendingSound';
+import { setPendingStorySound } from '@/features/stories/pendingStorySound';
 
 import { go, isImageUrl, userPath } from './nav';
 import { EmptyState, ErrorState, LoadingState } from './parts';
@@ -30,7 +30,7 @@ import { VideoGrid } from './VideoGrid';
 import { atHandle } from '@/lib/handle';
 
 // A sound: who made it, how often it is used, a favourite toggle, "Use this
-// sound" (opens the camera with it), then every video that uses it.
+// sound" (opens a new story with it), then every video that uses it.
 export function SoundScreen({ soundId }: { soundId: string }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -118,11 +118,10 @@ function SoundHeader({ sound, count }: { sound: Sound; count: number }) {
         <Button
           title={t('discover.sound.use')}
           style={styles.use}
-          // The pick is parked in pendingSound for the Post screen to link the
-          // video to it; soundId stays on the route for the camera.
+          // Opens a new story with this song chosen (photo stories play it).
           onPress={() => {
-            setPendingSound({ id: sound.id, title: sound.title });
-            router.push({ pathname: '/camera', params: { soundId: sound.id } });
+            setPendingStorySound(sound);
+            router.push('/stories/new');
           }}
         />
       </View>

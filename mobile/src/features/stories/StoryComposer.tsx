@@ -33,6 +33,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { storyError } from './errors';
+import { clearPendingStorySound, peekPendingStorySound } from './pendingStorySound';
 import { formatClock, SoundPicker } from './SoundPicker';
 
 const MAX_CAPTION = 500;
@@ -112,7 +113,9 @@ export function StoryComposer() {
   const [preparing, setPreparing] = useState(false);
   const [caption, setCaption] = useState('');
   const [audience, setAudience] = useState<StoryAudience>('followers');
-  const [sound, setSound] = useState<Sound | null>(null);
+  // A song chosen with "Use this sound" on a sound page comes in preselected.
+  const [sound, setSound] = useState<Sound | null>(() => peekPendingStorySound());
+  useEffect(() => clearPendingStorySound, []);
   const [startS, setStartS] = useState(0);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [busy, setBusy] = useState(false);

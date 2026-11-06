@@ -126,7 +126,7 @@
   },
   "tabs": {
     "home": "Inicio",
-    "discover": "Descubrir",
+    "discover": "Explorar",
     "create": "Crear",
     "inbox": "Chat",
     "profile": "Perfil"
@@ -243,8 +243,8 @@
     "updateFailed": "No se pudo actualizar",
     "chatFailed": "No se pudo abrir el chat",
     "pinned": "Fijado",
-    "empty_videos": "Sin videos",
-    "empty_videos_me": "Aún no has publicado ningún video. Crea el primero y compártelo con el mundo.",
+    "empty_videos": "Aún no hay clips",
+    "empty_videos_me": "Comparte fotos y vídeos como historias. Aquí aparecerán los clips de tus directos.",
     "empty_audio": "Aún no hay audios",
     "empty_audio_me": "Aquí aparecen los sonidos originales de tus videos públicos.",
     "empty_map": "Los lugares que añadas a tus publicaciones aparecen aquí en el mapa.",

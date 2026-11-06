@@ -1,10 +1,7 @@
-import { Redirect, useLocalSearchParams } from 'expo-router';
+import { Redirect } from 'expo-router';
 
-import { PublishScreen } from '@/features/publish/PublishScreen';
-
+// Posting videos was removed (client change, Nov 2026): photos and videos are
+// shared as stories. Old links to the post screen open the story screen.
 export default function PublishRoute() {
-  const { uri, mime, size } = useLocalSearchParams<{ uri?: string; mime?: string; size?: string }>();
-  // flyp://publish with no clip has nothing to post: back to the camera.
-  if (!uri || typeof uri !== 'string') return <Redirect href="/camera" />;
-  return <PublishScreen uri={uri} mime={mime} size={size ? Number(size) || undefined : undefined} />;
+  return <Redirect href="/stories/new" />;
 }

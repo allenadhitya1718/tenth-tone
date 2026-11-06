@@ -163,6 +163,12 @@
       "ch_live": "LIVE",
       "ch_liveDesc": "Saat orang yang kamu ikuti mulai LIVE",
       "ch_other": "Lainnya"
+    },
+    "explore": {
+      "liveNow": "Sedang live",
+      "noLive": "Belum ada yang live. Mulai live dan kamu akan muncul di sini.",
+      "clips": "Klip dari live",
+      "clipsSoon": "Momen terbaik dari live akan muncul di sini."
     }
   }
 }

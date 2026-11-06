@@ -1,6 +1,6 @@
 {
   "discover": {
-    "title": "Découvrir",
+    "title": "Explorer",
     "trendingRank": "Tendance numéro {{rank}}, #{{tag}}, {{count}}",
     "common": {
       "loading": "Chargement",
@@ -173,6 +173,12 @@
       "ch_live": "LIVE",
       "ch_liveDesc": "Quand les personnes que vous suivez passent en LIVE",
       "ch_other": "Autres"
+    },
+    "explore": {
+      "liveNow": "En direct",
+      "noLive": "Personne n'est en direct. Lancez un live pour apparaître ici.",
+      "clips": "Extraits de lives",
+      "clipsSoon": "Les meilleurs moments des lives apparaîtront ici."
     }
   }
 }

@@ -1,6 +1,6 @@
 {
   "discover": {
-    "title": "发现",
+    "title": "探索",
     "trendingRank": "热门第 {{rank}} 名，#{{tag}}，{{count}}",
     "common": {
       "loading": "加载中",
@@ -163,6 +163,12 @@
       "ch_live": "直播",
       "ch_liveDesc": "你关注的人开播时",
       "ch_other": "其他"
+    },
+    "explore": {
+      "liveNow": "正在直播",
+      "noLive": "现在没有人在直播。开播后你会出现在这里。",
+      "clips": "直播片段",
+      "clipsSoon": "直播精彩片段将显示在这里。"
     }
   }
 }

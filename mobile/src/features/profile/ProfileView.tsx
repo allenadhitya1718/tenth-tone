@@ -67,7 +67,8 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
   const del = useDeleteVideo();
 
   const profile = useQuery({ queryKey: profileKeys.profile(userId), queryFn: () => fetchProfile(userId) });
-  const tabs: Tab[] = isMe ? ['videos', 'audio', 'map', 'saved', 'drafts'] : ['videos', 'audio', 'map'];
+  // No Drafts tab: posting videos was removed (client change, Nov 2026).
+  const tabs: Tab[] = isMe ? ['videos', 'audio', 'map', 'saved'] : ['videos', 'audio', 'map'];
 
   const videos = useQuery({
     queryKey: videoKeys.userVideos(userId),
