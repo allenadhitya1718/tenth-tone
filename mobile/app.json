@@ -37,7 +37,7 @@
           "audio",
           "voip"
         ],
-        "NSCameraUsageDescription": "FLYP uses the camera to record videos and go live.",
+        "NSCameraUsageDescription": "FLYP uses the camera to take photos and videos for your story and chats, and for video calls.",
         "NSMicrophoneUsageDescription": "FLYP uses the microphone for videos, voice messages, live audio and calls.",
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryAddUsageDescription": "FLYP saves videos and photos you choose to your library."
@@ -155,14 +155,14 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "FLYP uses your location to show you on the friends map and to tag places on posts, only when you choose to share it."
+          "locationWhenInUsePermission": "FLYP uses your location to show you on the friends map and to tag places, only when you choose to share it."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "FLYP needs access to your photos to post them and to set your profile picture.",
-          "cameraPermission": "FLYP uses the camera to take photos."
+          "photosPermission": "FLYP needs access to your photos to share them in your story or chats and to set your profile picture.",
+          "cameraPermission": "FLYP uses the camera to take photos and videos for your story and chats, and for video calls."
         }
       ],
       [
