@@ -508,7 +508,9 @@
       "deleteBody": "Il sera retiré d'Explorer et de votre profil.",
       "deleted": "Extrait supprimé",
       "gone": "Cet extrait n'est pas disponible.",
-      "by": "Du live de {{name}}"
+      "by": "Du live de {{name}}",
+      "busiest": "Commence à la minute la plus animée : le plus de commentaires et de réactions. Les barres montrent où le live s’est animé.",
+      "toBusiest": "Revenir à la minute la plus animée"
     }
   }
 }

@@ -24,7 +24,7 @@ import { startAudioForeground } from '@/lib/audioForeground';
 
 import { AGORA_APP_ID } from './config';
 import { liveError } from './errors';
-import { nativePath, newRecordingFile } from './liveRecording';
+import { endMoments, nativePath, newRecordingFile } from './liveRecording';
 import type { SpeakingStore } from './speakingStore';
 
 // One audio-only Agora session for a live room (client note 4: no camera).
@@ -153,8 +153,12 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave, 
           recordingChannel: 1,
         });
         recording = rc >= 0;
-        if (rc < 0) console.warn('live recording: start', rc);
+        if (rc < 0) {
+          endMoments();
+          console.warn('live recording: start', rc);
+        }
       } catch (e) {
+        endMoments();
         console.warn('live recording:', (e as Error)?.message);
       }
     };
@@ -275,6 +279,7 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave, 
         try {
           engine.stopAudioRecording();
         } catch {}
+        endMoments();
       }
       try {
         engine.leaveChannel();

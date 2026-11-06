@@ -492,7 +492,9 @@
       "deleteBody": "Sorotan akan dihapus dari Jelajahi dan profil kamu.",
       "deleted": "Sorotan dihapus",
       "gone": "Sorotan ini tidak tersedia.",
-      "by": "Dari live {{name}}"
+      "by": "Dari live {{name}}",
+      "busiest": "Dimulai dari menit paling ramai: komentar dan reaksi terbanyak. Batang menunjukkan saat live paling ramai.",
+      "toBusiest": "Kembali ke menit paling ramai"
     }
   }
 }

@@ -508,7 +508,9 @@
       "deleteBody": "Se quitará de Explorar y de tu perfil.",
       "deleted": "Destacado borrado",
       "gone": "Este destacado no está disponible.",
-      "by": "Del directo de {{name}}"
+      "by": "Del directo de {{name}}",
+      "busiest": "Empieza en el minuto más animado: más comentarios y reacciones. Las barras muestran dónde se animó el directo.",
+      "toBusiest": "Volver al minuto más animado"
     }
   }
 }

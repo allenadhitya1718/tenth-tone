@@ -521,7 +521,9 @@
       "deleteBody": "It will be removed from Explore and your profile.",
       "deleted": "Highlight deleted",
       "gone": "This highlight isn't available.",
-      "by": "From {{name}}'s live"
+      "by": "From {{name}}'s live",
+      "busiest": "Starts on the busiest minute: the most comments and reactions. The bars show where the live got busy.",
+      "toBusiest": "Back to the busiest minute"
     }
   }
 }

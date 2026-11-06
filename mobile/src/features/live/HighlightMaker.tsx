@@ -4,7 +4,7 @@ import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Directory, File, Paths } from 'expo-file-system';
 import { Image } from 'expo-image';
 import { type Href, router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -19,17 +19,21 @@ import { NotAacError, trimAac } from '@/lib/aacTrim';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
-import { deleteRecordings, recordingFor } from './liveRecording';
+import { BUCKET_S, busiestStart, deleteRecordings, momentsFor, recordingFor } from './liveRecording';
 
 const WINDOW_S = 60;
 const MIN_S = 5;
 const STEP_S = 5;
 const MAX_TITLE = 80;
+// At most this many activity bars on the trim bar, however long the live.
+const MAX_BARS = 90;
 
 // After a live: the host picks the best minute of their recording and posts
 // it as a highlight to Explore and their profile (0167). Only that minute is
-// uploaded. Tap the bar to place the minute, nudge it by 5 seconds, listen
-// to it, add an optional title, post.
+// uploaded. The screen starts on the busiest minute (most comments,
+// reactions and gifts, from the host phone's moments log) and draws that
+// activity on the bar. Tap the bar to place the minute, nudge it by 5
+// seconds, listen to it, add an optional title, post.
 export function HighlightMaker({ liveId }: { liveId: string }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -39,6 +43,7 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
 
   const live = useQuery({ queryKey: liveKeys.stream(liveId), queryFn: () => fetchLiveStream(liveId) });
   const [file] = useState(() => recordingFor(liveId));
+  const [moments] = useState(() => (file ? momentsFor(file) : []));
 
   // The full recording, only for its length: a raw AAC recording has no
   // index, so Android cannot jump into it (it played from 0:00 on the Redmi).
@@ -53,7 +58,11 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
   const preview = useAudioPlayer(null);
   const previewStatus = useAudioPlayerStatus(preview);
 
-  const [startS, setStartS] = useState(0);
+  // Where the minute starts: the host's choice once they move it, until
+  // then the busiest minute (or the start, when nothing happened).
+  const suggested = total ? busiestStart(moments, total, windowS) : null;
+  const [picked, setPicked] = useState<number | null>(null);
+  const startS = picked ?? suggested ?? 0;
   const [previewing, setPreviewing] = useState(false);
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);
@@ -80,8 +89,26 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
   };
   const nudge = (d: number) => {
     stop();
-    setStartS((s) => clamp(s + d));
+    setPicked(clamp(startS + d));
   };
+  const toBusiest = () => {
+    stop();
+    setPicked(null);
+  };
+  // The activity, merged into at most MAX_BARS bars across the recording.
+  const bars = useMemo(() => {
+    if (!total || !moments.some((v) => v > 0)) return [];
+    const buckets = Math.ceil(total / BUCKET_S);
+    const per = Math.max(1, Math.ceil(buckets / MAX_BARS));
+    const out: number[] = [];
+    for (let i = 0; i < buckets; i += per) {
+      let sum = 0;
+      for (let j = i; j < Math.min(buckets, i + per); j++) sum += moments[j] ?? 0;
+      out.push(sum);
+    }
+    const max = Math.max(...out);
+    return out.map((v, i) => ({ i, h: v / max, x: (i * per * BUCKET_S) / total, w: (per * BUCKET_S) / total }));
+  }, [moments, total]);
   useEffect(() => () => preview.pause(), [preview]);
   // Old preview files out of the cache when the screen closes.
   useEffect(
@@ -204,17 +231,42 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
               if (!barW || !total) return;
               stop();
               // Tap = the middle of the minute.
-              setStartS(clamp(Math.round((e.nativeEvent.locationX / barW) * total - windowS / 2)));
+              setPicked(clamp(Math.round((e.nativeEvent.locationX / barW) * total - windowS / 2)));
             }}
             style={[styles.bar, { backgroundColor: colors.bg3 }]}
           >
             <View style={[styles.window, { left: winLeft, width: winWidth, backgroundColor: colors.primary }]} />
+            {bars.map((b) =>
+              b.h > 0 ? (
+                <View
+                  key={b.i}
+                  pointerEvents="none"
+                  style={[
+                    styles.activity,
+                    { left: b.x * barW, width: Math.max(1.5, b.w * barW - 1), height: 4 + b.h * 30, backgroundColor: colors.text },
+                  ]}
+                />
+              ) : null,
+            )}
             {playingMinute ? <View style={[styles.playhead, { left: playedX }]} /> : null}
           </Pressable>
           <View style={styles.barLabels}>
             <Text style={[styles.small, { color: colors.muted }]}>0:00</Text>
             <Text style={[styles.small, { color: colors.muted }]}>{formatClock(total)}</Text>
           </View>
+          {suggested !== null ? (
+            picked === null || picked === suggested ? (
+              <View style={styles.busyRow}>
+                <Ionicons name="flame" size={15} color={colors.primary} />
+                <Text style={[styles.small, styles.busyText, { color: colors.muted }]}>{t('live.highlight.busiest')}</Text>
+              </View>
+            ) : (
+              <Pressable onPress={toBusiest} style={styles.busyRow} accessibilityRole="button" hitSlop={8}>
+                <Ionicons name="flame" size={15} color={colors.primary} />
+                <Text style={[styles.small, styles.busyText, { color: colors.primary, fontWeight: '700' }]}>{t('live.highlight.toBusiest')}</Text>
+              </Pressable>
+            )
+          ) : null}
 
           <View style={styles.controls}>
             <Pressable onPress={() => nudge(-STEP_S)} style={[styles.round, { backgroundColor: colors.bg2 }]} accessibilityLabel={t('live.highlight.back5')} hitSlop={6}>
@@ -269,6 +321,9 @@ const styles = StyleSheet.create({
   sub: { marginBottom: 18 },
   bar: { height: 44, borderRadius: 10, overflow: 'hidden', justifyContent: 'center' },
   window: { position: 'absolute', top: 0, bottom: 0, borderRadius: 8, opacity: 0.85 },
+  activity: { position: 'absolute', bottom: 0, borderTopLeftRadius: 1.5, borderTopRightRadius: 1.5, opacity: 0.45 },
+  busyRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -6, marginBottom: 14 },
+  busyText: { flex: 1 },
   playhead: { position: 'absolute', top: 0, bottom: 0, width: 2, backgroundColor: '#fff' },
   barLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, marginBottom: 14 },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },

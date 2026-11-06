@@ -69,7 +69,7 @@ import { Avatar, OptionRow, Sheet } from './Sheet';
 import { createSpeakingStore } from './speakingStore';
 import { Stage, type StageSpeaker } from './Stage';
 import { StageManager } from './StageManager';
-import { recordingFor } from './liveRecording';
+import { noteMoment, recordingFor } from './liveRecording';
 import { useAgoraAudio } from './useAgoraAudio';
 import {
   useElapsed,
@@ -281,6 +281,16 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
 
   // ---------- chat ----------
   const chat = useLiveComments(liveId, !!live, hidden);
+  // The host's busy-moments log (for picking a highlight): each comment once,
+  // at its own time. noteMoment ignores it unless this phone is recording.
+  const notedComments = useRef(new Set<string>());
+  useEffect(() => {
+    for (const c of chat.comments) {
+      if (notedComments.current.has(c.id)) continue;
+      notedComments.current.add(c.id);
+      if (c.user?.id !== me) noteMoment(liveId, 'comment', Date.parse(c.created_at));
+    }
+  }, [chat.comments, liveId, me]);
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -316,7 +326,10 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
   useEffect(() => {
     if (!isLive) return;
     let active = true;
-    void joinLiveReactions(liveId, (emoji) => spawn(emoji)).then((r) => {
+    void joinLiveReactions(liveId, (emoji) => {
+      spawn(emoji);
+      noteMoment(liveId, 'reaction');
+    }).then((r) => {
       if (active) reactions.current = r;
       else r.unsubscribe();
     });
@@ -387,6 +400,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
     let active = true;
     const unsub = subscribeToLiveGifts(liveId, (row) => {
       if (sentByMe.current.has(row.id)) return;
+      noteMoment(liveId, 'gift');
       void (async () => {
         const catalogue = qc.getQueryData<Gift[]>(giftKeys.catalogue());
         const gift = catalogue?.find((g) => g.id === row.gift_id) ?? { name: row.gift_id, name_en: row.gift_id, emoji: '🎁', asset_url: null };
