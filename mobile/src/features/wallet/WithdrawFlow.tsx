@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
