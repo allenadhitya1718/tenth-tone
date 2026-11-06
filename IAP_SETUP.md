@@ -9,6 +9,20 @@ Everything in the app and on the server is ready (checked 28 Oct 2026):
 
 What is left needs the owner's accounts. Do the steps in order.
 
+## Status, 6 Nov 2026
+| Item | State |
+|---|---|
+| App buy flow, server functions (`verify-purchase`, `apple-notifications`, `play-voided-purchases`) | Done, deployed |
+| Coin packs (8 active), gifts (15 active), payout rules (min 40 SAR, 7-day hold, 18+) | Done, in the database |
+| Server gift switch (`app_limits.gifts_enabled`) | On (harmless: nobody holds coins) |
+| App switch `WALLET_LAUNCHED` | Off ("Coming soon"); turned on by an over-the-air update at launch |
+| Agreements and bank (step 1) | **Owner: not confirmed** |
+| Coin products in App Store Connect (step 2) | **Not created** (none exist) |
+| Coin products in Play Console (step 2) | **Not checked**: no Play API access from here |
+| Store keys on the server (step 3) | **Not set**: no `APPLE_IAP_*`, no `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` |
+| Apple notifications URL (step 4) | **Owner: not confirmed** |
+| Test purchases (step 5) | Not done |
+
 ## 1. Agreements and bank (start first, approval takes 1-2 days)
 
 - **Apple:** App Store Connect, Business: sign the **Paid Apps** agreement and add the bank account and tax forms.
