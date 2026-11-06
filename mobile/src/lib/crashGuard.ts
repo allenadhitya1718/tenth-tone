@@ -16,6 +16,7 @@ import * as Updates from 'expo-updates';
 
 import { showToast } from '@/components/Toast';
 import i18n from '@/i18n';
+import { reportError } from '@/lib/errorReport';
 
 type Handler = (error: unknown, isFatal?: boolean) => void;
 type ErrorUtilsLike = { getGlobalHandler: () => Handler; setGlobalHandler: (h: Handler) => void };
@@ -35,14 +36,15 @@ export function installCrashGuard() {
     console.error('FLYP JS error', isFatal ? '(fatal)' : '', e?.message, e?.stack);
     if (__DEV__ || !isFatal) {
       if (__DEV__) previous(error, isFatal);
+      else void reportError('handled', error);
       return;
     }
     if (reloading) return;
     reloading = true;
-    // The flag is written synchronously enough in practice; the reload waits
-    // for it, and the default handler is the fallback if reloading fails.
-    void AsyncStorage.setItem(RECOVERED_KEY, '1')
-      .catch(() => {})
+    // The report is queued on the phone and sent after the reload (no time
+    // to send it now). The reload waits for both writes, and the default
+    // handler is the fallback if reloading fails.
+    void Promise.all([AsyncStorage.setItem(RECOVERED_KEY, '1').catch(() => {}), reportError('fatal', error, false)])
       .then(() => Updates.reloadAsync())
       .catch(() => previous(error, isFatal));
   });

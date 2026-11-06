@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import i18n from '@/i18n';
+import { reportError } from '@/lib/errorReport';
 
 // What the person sees instead of the app closing when a screen throws while
 // it renders. Exported as `ErrorBoundary` from the root layout and the
@@ -25,6 +26,7 @@ export function AppErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   useEffect(() => {
     // Kept in the device log (adb logcat / Console) for the next bug report.
     console.error('FLYP screen error:', error?.message, error?.stack);
+    void reportError('screen', error);
   }, [error]);
 
   const goHome = () => {

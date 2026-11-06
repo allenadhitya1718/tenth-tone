@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { LocaleProvider, Stack } from 'expo-router';
+import { LocaleProvider, Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -20,6 +20,7 @@ import { DialogHost } from '@/components/Dialog';
 import { ToastHost } from '@/components/Toast';
 import { CallPill, useIncomingCalls } from '@/features/call';
 import { announceRecovery, installCrashGuard } from '@/lib/crashGuard';
+import { flushErrorReports, setErrorScreen } from '@/lib/errorReport';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 installCrashGuard();
@@ -68,6 +69,13 @@ export default function RootLayout() {
 
 function RootNavigator() {
   const { session, ready, recovering } = useAuth();
+  // Error reports: which screen was on show, and send any left from before
+  // (a crash reloads the app before its report can go out).
+  const pathname = usePathname();
+  useEffect(() => setErrorScreen(pathname), [pathname]);
+  useEffect(() => {
+    if (ready) void flushErrorReports();
+  }, [ready]);
   const { colors, isDark } = useTheme();
   const { i18n } = useTranslation();
   usePushRegistration();
