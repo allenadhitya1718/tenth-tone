@@ -140,7 +140,12 @@ export function HighlightPlayer({ id }: { id: string }) {
               <Ionicons name={status.playing ? 'pause' : 'play'} size={34} color="#fff" style={status.playing ? undefined : { marginStart: 4 }} />
             )}
           </Pressable>
-          {h.plays_count ? <Text style={styles.plays}>{t('live.highlight.plays', { n: formatCount(h.plays_count) })}</Text> : null}
+          {h.plays_count ? (
+            <View style={styles.playsRow} accessibilityLabel={t('live.highlight.plays', { n: formatCount(h.plays_count) })}>
+              <Ionicons name="play" size={12} color="rgba(255,255,255,0.7)" />
+              <Text style={styles.plays}>{formatCount(h.plays_count)}</Text>
+            </View>
+          ) : null}
         </View>
       </SafeAreaView>
     </View>
@@ -171,7 +176,8 @@ const styles = StyleSheet.create({
   times: { alignSelf: 'stretch', flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, marginBottom: 18 },
   time: { color: 'rgba(255,255,255,0.75)', fontSize: 12 },
   playBtn: { width: 76, height: 76, borderRadius: 38, backgroundColor: '#1E56D6', alignItems: 'center', justifyContent: 'center' },
-  plays: { color: 'rgba(255,255,255,0.7)', fontSize: 12.5, marginTop: 14 },
+  playsRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 14 },
+  plays: { color: 'rgba(255,255,255,0.7)', fontSize: 12.5 },
   gone: { color: '#fff', fontSize: 15, textAlign: 'center', paddingHorizontal: 24 },
   goneBack: { paddingHorizontal: 18, paddingVertical: 10 },
   goneBackText: { color: '#9DBBFF', fontWeight: '700' },

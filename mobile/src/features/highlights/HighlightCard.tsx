@@ -38,9 +38,18 @@ export const HighlightCard = memo(function HighlightCard({ item }: { item: LiveH
         <Text style={styles.title} numberOfLines={2}>
           {label}
         </Text>
-        <Text style={styles.meta} numberOfLines={1}>
-          {[host, item.plays_count ? t('live.highlight.plays', { n: formatCount(item.plays_count) }) : null].filter(Boolean).join(' · ')}
-        </Text>
+        <View style={styles.metaRow}>
+          <Text style={[styles.meta, styles.metaHost]} numberOfLines={1}>
+            {host}
+          </Text>
+          {/* An icon and a number: reads right in every language (no plural forms). */}
+          {item.plays_count ? (
+            <View style={styles.plays} accessibilityLabel={t('live.highlight.plays', { n: formatCount(item.plays_count) })}>
+              <Ionicons name="play" size={10} color="rgba(255,255,255,0.85)" />
+              <Text style={styles.meta}>{formatCount(item.plays_count)}</Text>
+            </View>
+          ) : null}
+        </View>
       </View>
     </Pressable>
   );
@@ -76,5 +85,8 @@ const styles = StyleSheet.create({
   },
   foot: { position: 'absolute', bottom: 8, start: 8, end: 8 },
   title: { color: '#fff', fontWeight: '800', fontSize: 13 },
-  meta: { color: 'rgba(255,255,255,0.85)', fontSize: 11.5, marginTop: 2 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+  meta: { color: 'rgba(255,255,255,0.85)', fontSize: 11.5 },
+  metaHost: { flexShrink: 1 },
+  plays: { flexDirection: 'row', alignItems: 'center', gap: 3 },
 });
