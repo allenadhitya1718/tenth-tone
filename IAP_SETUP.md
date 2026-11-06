@@ -25,8 +25,22 @@ What is left needs the owner's accounts. Do the steps in order.
 
 ## 1. Agreements and bank (start first, approval takes 1-2 days)
 
-- **Apple:** App Store Connect, Business: sign the **Paid Apps** agreement and add the bank account and tax forms.
-- **Google:** Play Console, Settings, Payments profile: create the merchant account and add the bank account.
+Have ready: the legal name exactly as it appears on the developer accounts, the address, and the bank's IBAN and SWIFT code. The bank account must belong to the same person or company that owns the developer account, because that is who the stores pay.
+
+- **Apple:**
+  1. Sign in to App Store Connect as the **Account Holder**. Only that person can accept the agreement.
+  2. Go to Business, Paid Apps, and choose **View and Agree to Terms**.
+  3. Add the bank account (Saudi Arabia, IBAN).
+  4. Fill in the U.S. tax form: W-8BEN-E for a company or W-8BEN for a person. Saudi Arabia has no tax treaty with the U.S., so leave the treaty part empty.
+  5. Add the contacts (Finance, Legal and the others). One person can fill every role.
+  6. The status goes from "Processing" to "Active", usually within a day.
+  7. Then join the **App Store Small Business Program** (developer.apple.com). It cuts Apple's fee from 30% to 15% while yearly sales stay under $1M.
+- **Google:**
+  1. Sign in to Play Console as the account owner.
+  2. Go to Settings, Payments profile, and create the payments (merchant) profile with the same legal name.
+  3. Add the bank account at payments.google.com.
+  4. Google sends a small test deposit within about 5 days. Enter the exact amount to confirm the account.
+  5. If Play Console asks you to set up an account group for the 15% fee, do it.
 
 ## 2. The 8 coin products
 
