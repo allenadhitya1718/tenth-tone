@@ -461,13 +461,11 @@
       "failed": "Gagal mengikuti. Coba lagi."
     },
     "highlight": {
-      "notice": "Host bisa menyimpan sorotan 1 menit dari live ini.",
+      "notice": "Host bisa menyimpan sorotan hingga 1 menit dari live ini.",
       "make": "Buat sorotan",
-      "sub": "Pilih menit terbaik dari live kamu. Hanya menit itu yang diposting.",
-      "playMinute": "Putar menit ini",
+      "sub": "Pilih bagian terbaik dari live kamu, hingga 1 menit. Hanya bagian itu yang diposting.",
       "pause": "Jeda",
       "startsAt": "Mulai di {{time}}",
-      "length": "Durasi {{time}}",
       "back5": "Mundur 5 detik",
       "fwd5": "Maju 5 detik",
       "titlePh": "Tambahkan judul (opsional)",
@@ -493,8 +491,15 @@
       "deleted": "Sorotan dihapus",
       "gone": "Sorotan ini tidak tersedia.",
       "by": "Dari live {{name}}",
-      "busiest": "Dimulai dari menit paling ramai: komentar dan reaksi terbanyak. Batang menunjukkan saat live paling ramai.",
-      "toBusiest": "Kembali ke menit paling ramai"
+      "busiest": "Dimulai dari bagian paling ramai: komentar dan reaksi terbanyak. Batang menunjukkan saat live paling ramai.",
+      "toBusiest": "Kembali ke bagian paling ramai",
+      "play": "Putar",
+      "playPart": "Putar bagian yang dipilih",
+      "moveHint": "Geser bagian tengah atau pakai panah untuk memindahkan",
+      "lengthIs": "Durasi {{time}}",
+      "lengthHint": "Geser salah satu ujung, atau pakai − dan +",
+      "shorter": "5 detik lebih pendek",
+      "longer": "5 detik lebih panjang"
     }
   }
 }

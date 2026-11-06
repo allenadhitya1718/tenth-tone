@@ -132,7 +132,7 @@ export function HighlightPlayer({ id }: { id: string }) {
             onPress={toggle}
             style={styles.playBtn}
             accessibilityRole="button"
-            accessibilityLabel={status.playing ? t('live.highlight.pause') : t('live.highlight.playMinute')}
+            accessibilityLabel={status.playing ? t('live.highlight.pause') : t('live.highlight.play')}
           >
             {status.isBuffering && status.playing ? (
               <ActivityIndicator color="#fff" />

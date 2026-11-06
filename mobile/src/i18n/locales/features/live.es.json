@@ -477,13 +477,11 @@
       "failed": "No se pudo seguir. Inténtalo de nuevo."
     },
     "highlight": {
-      "notice": "El anfitrión puede guardar un momento destacado de 1 minuto de este directo.",
+      "notice": "El anfitrión puede guardar un momento destacado de hasta 1 minuto de este directo.",
       "make": "Crear un destacado",
-      "sub": "Elige el mejor minuto de tu directo. Solo se publica ese minuto.",
-      "playMinute": "Reproducir este minuto",
+      "sub": "Elige la mejor parte de tu directo, hasta 1 minuto. Solo se publica esa parte.",
       "pause": "Pausa",
       "startsAt": "Empieza en {{time}}",
-      "length": "Dura {{time}}",
       "back5": "Atrás 5 segundos",
       "fwd5": "Adelante 5 segundos",
       "titlePh": "Añade un título (opcional)",
@@ -509,8 +507,15 @@
       "deleted": "Destacado borrado",
       "gone": "Este destacado no está disponible.",
       "by": "Del directo de {{name}}",
-      "busiest": "Empieza en el minuto más animado: más comentarios y reacciones. Las barras muestran dónde se animó el directo.",
-      "toBusiest": "Volver al minuto más animado"
+      "busiest": "Empieza en la parte más animada: más comentarios y reacciones. Las barras muestran dónde se animó el directo.",
+      "toBusiest": "Volver a la parte más animada",
+      "play": "Reproducir",
+      "playPart": "Reproducir la parte elegida",
+      "moveHint": "Arrastra el centro o usa las flechas para moverla",
+      "lengthIs": "Duración {{time}}",
+      "lengthHint": "Arrastra un extremo o usa − y +",
+      "shorter": "5 segundos menos",
+      "longer": "5 segundos más"
     }
   }
 }

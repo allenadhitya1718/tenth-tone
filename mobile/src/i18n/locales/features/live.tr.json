@@ -469,13 +469,11 @@
       "failed": "Takip edilemedi. Tekrar dene."
     },
     "highlight": {
-      "notice": "Yayıncı bu canlı yayından 1 dakikalık bir öne çıkan an kaydedebilir.",
+      "notice": "Yayıncı bu canlı yayından en fazla 1 dakikalık bir öne çıkan kaydedebilir.",
       "make": "Öne çıkan an oluştur",
-      "sub": "Canlı yayınının en iyi dakikasını seç. Yalnızca o dakika paylaşılır.",
-      "playMinute": "Bu dakikayı oynat",
+      "sub": "Canlı yayınının en iyi bölümünü seç, en fazla 1 dakika. Yalnızca o bölüm paylaşılır.",
       "pause": "Duraklat",
       "startsAt": "{{time}} itibarıyla başlar",
-      "length": "Süre {{time}}",
       "back5": "5 saniye geri",
       "fwd5": "5 saniye ileri",
       "titlePh": "Başlık ekle (isteğe bağlı)",
@@ -501,8 +499,15 @@
       "deleted": "Öne çıkan an silindi",
       "gone": "Bu öne çıkan an kullanılamıyor.",
       "by": "{{name}} adlı kişinin canlı yayınından",
-      "busiest": "En hareketli dakikadan başlar: en çok yorum ve tepki. Çubuklar yayının nerede hareketlendiğini gösterir.",
-      "toBusiest": "En hareketli dakikaya dön"
+      "busiest": "En hareketli bölümden başlar: en çok yorum ve tepki. Çubuklar yayının nerede hareketlendiğini gösterir.",
+      "toBusiest": "En hareketli bölüme dön",
+      "play": "Oynat",
+      "playPart": "Seçilen bölümü oynat",
+      "moveHint": "Taşımak için ortasını sürükle ya da okları kullan",
+      "lengthIs": "Süre {{time}}",
+      "lengthHint": "Bir ucunu sürükle ya da − ve + kullan",
+      "shorter": "5 saniye kısa",
+      "longer": "5 saniye uzun"
     }
   }
 }

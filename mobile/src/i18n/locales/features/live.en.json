@@ -490,13 +490,11 @@
       "failed": "Couldn't follow. Try again."
     },
     "highlight": {
-      "notice": "The host can save a 1-minute highlight from this live.",
+      "notice": "The host can save a highlight of up to 1 minute from this live.",
       "make": "Make a highlight",
-      "sub": "Pick the best minute of your live. Only that minute is posted.",
-      "playMinute": "Play this minute",
+      "sub": "Pick the best part of your live, up to 1 minute. Only that part is posted.",
       "pause": "Pause",
       "startsAt": "Starts at {{time}}",
-      "length": "{{time}} long",
       "back5": "Back 5 seconds",
       "fwd5": "Forward 5 seconds",
       "titlePh": "Add a title (optional)",
@@ -522,8 +520,15 @@
       "deleted": "Highlight deleted",
       "gone": "This highlight isn't available.",
       "by": "From {{name}}'s live",
-      "busiest": "Starts on the busiest minute: the most comments and reactions. The bars show where the live got busy.",
-      "toBusiest": "Back to the busiest minute"
+      "busiest": "Starts on the busiest part: the most comments and reactions. The bars show where the live got busy.",
+      "toBusiest": "Back to the busiest part",
+      "play": "Play",
+      "playPart": "Play the selected part",
+      "moveHint": "Drag the middle or use the arrows to move it",
+      "lengthIs": "Length {{time}}",
+      "lengthHint": "Drag either end, or use − and +",
+      "shorter": "5 seconds shorter",
+      "longer": "5 seconds longer"
     }
   }
 }
