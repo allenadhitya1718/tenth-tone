@@ -475,6 +475,40 @@
     "follow": {
       "action": "Suivre {{name}}",
       "failed": "Impossible de suivre. Réessaie."
+    },
+    "highlight": {
+      "notice": "L'hôte peut garder un extrait d'1 minute de ce live.",
+      "make": "Créer un extrait",
+      "sub": "Choisissez la meilleure minute de votre live. Seule cette minute est publiée.",
+      "playMinute": "Écouter cette minute",
+      "pause": "Pause",
+      "startsAt": "Commence à {{time}}",
+      "length": "Durée {{time}}",
+      "back5": "Reculer de 5 secondes",
+      "fwd5": "Avancer de 5 secondes",
+      "titlePh": "Ajouter un titre (facultatif)",
+      "post": "Publier l'extrait",
+      "posting": "Publication…",
+      "posted": "Extrait publié dans Explorer",
+      "discard": "Supprimer l'enregistrement",
+      "discardTitle": "Supprimer l'enregistrement de ce live ?",
+      "discardBody": "Vous ne pourrez plus en tirer d'extrait.",
+      "none": "Aucun enregistrement de ce live sur ce téléphone.",
+      "keepNote": "Les enregistrements restent 2 jours sur votre téléphone, puis sont supprimés.",
+      "limitLive": "Vous avez déjà publié 3 extraits de ce live.",
+      "limitDay": "Vous pouvez publier jusqu'à 10 extraits par jour.",
+      "failed": "Impossible de publier l'extrait. Réessayez.",
+      "notAac": "Cet enregistrement ne peut pas être découpé.",
+      "section": "Extraits",
+      "empty": "Pas encore d'extraits",
+      "emptySub": "Les extraits des lives apparaîtront ici.",
+      "plays": "{{n}} écoutes",
+      "delete": "Supprimer l'extrait",
+      "deleteTitle": "Supprimer cet extrait ?",
+      "deleteBody": "Il sera retiré d'Explorer et de votre profil.",
+      "deleted": "Extrait supprimé",
+      "gone": "Cet extrait n'est pas disponible.",
+      "by": "Du live de {{name}}"
     }
   }
 }

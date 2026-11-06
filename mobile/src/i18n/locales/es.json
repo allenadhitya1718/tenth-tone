@@ -254,7 +254,10 @@
     "empty_drafts_me": "Los clips que guardes como borrador aparecen aquí antes de publicarlos.",
     "soundUses_one": "Usado {{count}} vez",
     "soundUses_many": "Usado {{count}} de veces",
-    "soundUses_other": "Usado {{count}} veces"
+    "soundUses_other": "Usado {{count}} veces",
+    "tab_highlights": "Destacados",
+    "empty_highlights": "Aún no hay destacados",
+    "empty_highlights_me": "Haz un directo y recorta tu mejor minuto como destacado."
   },
   "camera": {
     "permTitle": "Permite el acceso a la cámara y al micrófono",

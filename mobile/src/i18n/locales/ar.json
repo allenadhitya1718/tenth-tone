@@ -267,7 +267,10 @@
     "soundUses_two": "استُخدم مرتين",
     "soundUses_few": "استُخدم {{count}} مرات",
     "soundUses_many": "استُخدم {{count}} مرة",
-    "soundUses_other": "استُخدم {{count}} مرة"
+    "soundUses_other": "استُخدم {{count}} مرة",
+    "tab_highlights": "المقاطع المميزة",
+    "empty_highlights": "لا توجد مقاطع مميزة بعد",
+    "empty_highlights_me": "ابدأ بثًا مباشرًا، ثم اقتطع أفضل دقيقة منه كمقطع مميز."
   },
   "camera": {
     "permTitle": "اسمح بالوصول إلى الكاميرا والميكروفون",

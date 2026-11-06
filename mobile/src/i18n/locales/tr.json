@@ -252,7 +252,10 @@
     "empty_saved": "Kaydedilen bir şey yok",
     "empty_saved_me": "Videoları daha sonra izlemek için kaydet. Burada görünürler.",
     "empty_drafts": "Taslak yok",
-    "empty_drafts_me": "Taslak olarak kaydettiğin klipler paylaşmadan önce burada görünür."
+    "empty_drafts_me": "Taslak olarak kaydettiğin klipler paylaşmadan önce burada görünür.",
+    "tab_highlights": "Öne çıkanlar",
+    "empty_highlights": "Henüz öne çıkan an yok",
+    "empty_highlights_me": "Canlı yayın yap, sonra en iyi dakikanı öne çıkan an yap."
   },
   "camera": {
     "permTitle": "Kamera ve mikrofona izin ver",

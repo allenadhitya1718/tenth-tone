@@ -467,6 +467,40 @@
     "follow": {
       "action": "{{name}} kişisini takip et",
       "failed": "Takip edilemedi. Tekrar dene."
+    },
+    "highlight": {
+      "notice": "Yayıncı bu canlı yayından 1 dakikalık bir öne çıkan an kaydedebilir.",
+      "make": "Öne çıkan an oluştur",
+      "sub": "Canlı yayınının en iyi dakikasını seç. Yalnızca o dakika paylaşılır.",
+      "playMinute": "Bu dakikayı oynat",
+      "pause": "Duraklat",
+      "startsAt": "{{time}} itibarıyla başlar",
+      "length": "Süre {{time}}",
+      "back5": "5 saniye geri",
+      "fwd5": "5 saniye ileri",
+      "titlePh": "Başlık ekle (isteğe bağlı)",
+      "post": "Öne çıkan anı paylaş",
+      "posting": "Paylaşılıyor…",
+      "posted": "Öne çıkan an Keşfet'te paylaşıldı",
+      "discard": "Kaydı sil",
+      "discardTitle": "Bu canlı yayının kaydı silinsin mi?",
+      "discardBody": "Ondan öne çıkan an oluşturamazsın.",
+      "none": "Bu telefonda bu canlı yayının kaydı yok.",
+      "keepNote": "Kayıtlar telefonunda 2 gün kalır, sonra silinir.",
+      "limitLive": "Bu canlı yayından zaten 3 öne çıkan an paylaştın.",
+      "limitDay": "Günde en fazla 10 öne çıkan an paylaşabilirsin.",
+      "failed": "Öne çıkan an paylaşılamadı. Tekrar dene.",
+      "notAac": "Bu kayıt kırpılamıyor.",
+      "section": "Öne çıkanlar",
+      "empty": "Henüz öne çıkan an yok",
+      "emptySub": "Canlı yayınlardan öne çıkan anlar burada görünecek.",
+      "plays": "{{n}} dinlenme",
+      "delete": "Öne çıkan anı sil",
+      "deleteTitle": "Bu öne çıkan an silinsin mi?",
+      "deleteBody": "Keşfet'ten ve profilinden kaldırılacak.",
+      "deleted": "Öne çıkan an silindi",
+      "gone": "Bu öne çıkan an kullanılamıyor.",
+      "by": "{{name}} adlı kişinin canlı yayınından"
     }
   }
 }

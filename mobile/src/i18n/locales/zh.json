@@ -252,7 +252,10 @@
     "empty_saved": "暂无收藏",
     "empty_saved_me": "收藏视频以便稍后观看，它们会显示在这里。",
     "empty_drafts": "暂无草稿",
-    "empty_drafts_me": "存为草稿的视频会在发布前显示在这里。"
+    "empty_drafts_me": "存为草稿的视频会在发布前显示在这里。",
+    "tab_highlights": "精彩片段",
+    "empty_highlights": "还没有精彩片段",
+    "empty_highlights_me": "开播后，把最精彩的一分钟剪成精彩片段。"
   },
   "camera": {
     "permTitle": "允许访问相机和麦克风",

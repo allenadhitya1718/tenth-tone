@@ -475,6 +475,40 @@
     "follow": {
       "action": "Seguir a {{name}}",
       "failed": "No se pudo seguir. Inténtalo de nuevo."
+    },
+    "highlight": {
+      "notice": "El anfitrión puede guardar un momento destacado de 1 minuto de este directo.",
+      "make": "Crear un destacado",
+      "sub": "Elige el mejor minuto de tu directo. Solo se publica ese minuto.",
+      "playMinute": "Reproducir este minuto",
+      "pause": "Pausa",
+      "startsAt": "Empieza en {{time}}",
+      "length": "Dura {{time}}",
+      "back5": "Atrás 5 segundos",
+      "fwd5": "Adelante 5 segundos",
+      "titlePh": "Añade un título (opcional)",
+      "post": "Publicar destacado",
+      "posting": "Publicando…",
+      "posted": "Destacado publicado en Explorar",
+      "discard": "Borrar grabación",
+      "discardTitle": "¿Borrar la grabación de este directo?",
+      "discardBody": "No podrás crear un destacado con ella.",
+      "none": "No hay grabación de este directo en este teléfono.",
+      "keepNote": "Las grabaciones se guardan 2 días en tu teléfono y luego se borran.",
+      "limitLive": "Ya publicaste 3 destacados de este directo.",
+      "limitDay": "Puedes publicar hasta 10 destacados al día.",
+      "failed": "No se pudo publicar el destacado. Inténtalo de nuevo.",
+      "notAac": "Esta grabación no se puede recortar.",
+      "section": "Destacados",
+      "empty": "Aún no hay destacados",
+      "emptySub": "Aquí aparecerán los destacados de los directos.",
+      "plays": "{{n}} reproducciones",
+      "delete": "Borrar destacado",
+      "deleteTitle": "¿Borrar este destacado?",
+      "deleteBody": "Se quitará de Explorar y de tu perfil.",
+      "deleted": "Destacado borrado",
+      "gone": "Este destacado no está disponible.",
+      "by": "Del directo de {{name}}"
     }
   }
 }

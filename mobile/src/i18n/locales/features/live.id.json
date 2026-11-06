@@ -459,6 +459,40 @@
     "follow": {
       "action": "Ikuti {{name}}",
       "failed": "Gagal mengikuti. Coba lagi."
+    },
+    "highlight": {
+      "notice": "Host bisa menyimpan sorotan 1 menit dari live ini.",
+      "make": "Buat sorotan",
+      "sub": "Pilih menit terbaik dari live kamu. Hanya menit itu yang diposting.",
+      "playMinute": "Putar menit ini",
+      "pause": "Jeda",
+      "startsAt": "Mulai di {{time}}",
+      "length": "Durasi {{time}}",
+      "back5": "Mundur 5 detik",
+      "fwd5": "Maju 5 detik",
+      "titlePh": "Tambahkan judul (opsional)",
+      "post": "Posting sorotan",
+      "posting": "Memposting…",
+      "posted": "Sorotan diposting ke Jelajahi",
+      "discard": "Hapus rekaman",
+      "discardTitle": "Hapus rekaman live ini?",
+      "discardBody": "Kamu tidak bisa membuat sorotan darinya lagi.",
+      "none": "Tidak ada rekaman live ini di ponsel ini.",
+      "keepNote": "Rekaman disimpan 2 hari di ponsel kamu, lalu dihapus.",
+      "limitLive": "Kamu sudah memposting 3 sorotan dari live ini.",
+      "limitDay": "Kamu bisa memposting hingga 10 sorotan sehari.",
+      "failed": "Sorotan gagal diposting. Coba lagi.",
+      "notAac": "Rekaman ini tidak bisa dipotong.",
+      "section": "Sorotan",
+      "empty": "Belum ada sorotan",
+      "emptySub": "Sorotan dari live akan muncul di sini.",
+      "plays": "{{n}} kali diputar",
+      "delete": "Hapus sorotan",
+      "deleteTitle": "Hapus sorotan ini?",
+      "deleteBody": "Sorotan akan dihapus dari Jelajahi dan profil kamu.",
+      "deleted": "Sorotan dihapus",
+      "gone": "Sorotan ini tidak tersedia.",
+      "by": "Dari live {{name}}"
     }
   }
 }

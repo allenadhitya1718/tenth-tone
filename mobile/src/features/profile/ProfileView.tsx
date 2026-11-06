@@ -31,6 +31,7 @@ import {
   profileKeys,
   unfollow,
 } from '@/api/profiles';
+import { fetchUserHighlights, highlightKeys, type LiveHighlight } from '@/api/highlights';
 import { fetchUserSounds, type Sound, soundKeys } from '@/api/sounds';
 import { fetchDrafts, fetchSavedVideos, fetchUserVideos, videoKeys, type VideoTile } from '@/api/videos';
 import { tagKeys } from '@/api/tags';
@@ -41,6 +42,7 @@ import { DraftSheet } from '@/features/drafts/DraftSheet';
 import { useDeleteVideo } from '@/features/feed/useDeleteVideo';
 import { ProfilePlacesMap } from '@/features/map/ProfilePlacesMap';
 import { formatCount } from '@/features/feed/format';
+import { HighlightCard } from '@/features/highlights/HighlightCard';
 import { BottomSheet } from '@/features/safety/BottomSheet';
 import { ReportSheet } from '@/features/safety/ReportSheet';
 import { useBlock } from '@/features/safety/useBlock';
@@ -49,7 +51,7 @@ import { ProfileStoryAvatar } from '@/features/stories/ProfileStoryAvatar';
 import { atHandle } from '@/lib/handle';
 import { useTheme } from '@/providers/ThemeProvider';
 
-type Tab = 'videos' | 'audio' | 'map' | 'saved' | 'drafts';
+type Tab = 'highlights' | 'videos' | 'audio' | 'map' | 'saved' | 'drafts';
 
 // One screen for your own profile and everyone else's. Client note 28: a
 // profile shows audio and maps as well as videos.
@@ -60,7 +62,8 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<Tab>('videos');
+  // Lives are FLYP's focus (Nov 2026): a profile opens on its highlights.
+  const [tab, setTab] = useState<Tab>('highlights');
   // Client note 2: a draft opens its own sheet, never the For You feed.
   const [openDraft, setOpenDraft] = useState<VideoTile | null>(null);
   // Long-press on one of your own posts offers Delete video.
@@ -68,7 +71,7 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
 
   const profile = useQuery({ queryKey: profileKeys.profile(userId), queryFn: () => fetchProfile(userId) });
   // No Drafts tab: posting videos was removed (client change, Nov 2026).
-  const tabs: Tab[] = isMe ? ['videos', 'audio', 'map', 'saved'] : ['videos', 'audio', 'map'];
+  const tabs: Tab[] = isMe ? ['highlights', 'videos', 'audio', 'map', 'saved'] : ['highlights', 'videos', 'audio', 'map'];
 
   const videos = useQuery({
     queryKey: videoKeys.userVideos(userId),
@@ -77,6 +80,11 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
   });
   const saved = useQuery({ queryKey: videoKeys.saved(), queryFn: fetchSavedVideos, enabled: isMe && tab === 'saved' });
   const drafts = useQuery({ queryKey: videoKeys.drafts(), queryFn: fetchDrafts, enabled: isMe && tab === 'drafts' });
+  const highlights = useQuery({
+    queryKey: highlightKeys.byUser(userId),
+    queryFn: () => fetchUserHighlights(userId),
+    enabled: tab === 'highlights',
+  });
   const sounds = useQuery({
     queryKey: soundKeys.byUser(userId),
     queryFn: () => fetchUserSounds(userId),
@@ -111,17 +119,39 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
     </>
   );
 
-  const refreshing = profile.isRefetching || !!grid?.isRefetching || sounds.isRefetching;
+  const refreshing = profile.isRefetching || !!grid?.isRefetching || sounds.isRefetching || highlights.isRefetching;
   const onRefresh = () => {
     void profile.refetch();
     if (grid) void grid.refetch();
     if (tab === 'audio') void sounds.refetch();
+    if (tab === 'highlights') void highlights.refetch();
     if (tab === 'map') void qc.invalidateQueries({ queryKey: tagKeys.profilePlaces(userId) });
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-      {grid ? (
+      {tab === 'highlights' ? (
+        <FlatList<LiveHighlight>
+          key="highlights"
+          data={highlights.data ?? []}
+          numColumns={2}
+          keyExtractor={(h) => h.id}
+          ListHeaderComponent={header}
+          columnWrapperStyle={styles.hlRow}
+          contentContainerStyle={styles.hlList}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          ListEmptyComponent={
+            highlights.isLoading ? <Spinner /> : <Empty icon={TAB_ICON.highlights} text={t(`profile.empty_highlights${isMe ? '_me' : ''}`)} />
+          }
+          renderItem={({ item, index }) => (
+            <>
+              <HighlightCard item={item} />
+              {/* Keep a lone last card half width. */}
+              {index === (highlights.data?.length ?? 0) - 1 && index % 2 === 0 ? <View style={{ flex: 1 }} /> : null}
+            </>
+          )}
+        />
+      ) : grid ? (
         <FlatList<VideoTile>
           key={`grid-${tab}`}
           data={grid.data ?? []}
@@ -183,6 +213,7 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
 }
 
 const TAB_ICON: Record<Tab, keyof typeof Ionicons.glyphMap> = {
+  highlights: 'mic-outline',
   videos: 'grid-outline',
   audio: 'musical-notes-outline',
   map: 'map-outline',
@@ -472,6 +503,8 @@ function Spinner() {
 const normalizeLink = (l: string) => (/^https?:\/\//i.test(l) ? l : `https://${l}`);
 
 const styles = StyleSheet.create({
+  hlRow: { gap: 8, paddingHorizontal: 8 },
+  hlList: { gap: 8, paddingBottom: 40 },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 48 },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 16 },

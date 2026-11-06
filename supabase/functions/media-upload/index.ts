@@ -124,8 +124,10 @@ const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 // escape the per-bucket rules below.
 const BUCKETS: Record<string, { exts: string[]; types: string[]; max: number }> = {
   videos: {
-    exts: ['mp4', 'webm', 'mov', 'jpg', 'jpeg'],   // jpg: poster + live cover
-    types: ['video/mp4', 'video/webm', 'video/quicktime', 'image/jpeg'],
+    // jpg: poster + live cover. aac: a live highlight (0167), one minute of
+    // audio trimmed on the host's phone.
+    exts: ['mp4', 'webm', 'mov', 'jpg', 'jpeg', 'aac'],
+    types: ['video/mp4', 'video/webm', 'video/quicktime', 'image/jpeg', 'audio/aac'],
     max: 62914560,                                  // 60 MB, matches app_limits
   },
 };
@@ -186,6 +188,10 @@ const REFERENCED_BY: { table: string; column: string }[] = [
   // failure mode is "nothing deleted", never "wrong thing deleted".
   { table: 'stories',      column: 'media_url' },
   { table: 'stories',      column: 'poster_url' },
+  // Live highlights (0167): the trimmed audio, and the cover it borrows from
+  // the live.
+  { table: 'live_highlights', column: 'audio_url' },
+  { table: 'live_highlights', column: 'cover_url' },
 ];
 
 Deno.serve(async (req) => {
@@ -248,6 +254,12 @@ Deno.serve(async (req) => {
     if (!Number.isFinite(size) || size <= 0) return json({ error: 'bad_size' }, 400);
     if (!rules.exts.includes(ext)) return json({ error: 'bad_extension' }, 400);
     if (!rules.types.includes(contentType)) return json({ error: 'bad_content_type' }, 400);
+    // Audio is only ever a one-minute highlight (about half a megabyte):
+    // nothing bigger is a highlight.
+    const AUDIO_MAX = 3 * 1024 * 1024;
+    if (contentType.startsWith('audio/') && size > AUDIO_MAX) {
+      return json({ error: 'file_too_large', max_bytes: AUDIO_MAX }, 413);
+    }
 
     // ── The ceilings ──
     // upload_quota_status() runs as the caller and returns WHICH limit was hit,

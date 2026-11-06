@@ -6,9 +6,11 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { fetchRecentHighlights, highlightKeys, type LiveHighlight } from '@/api/highlights';
 import { fetchLiveStreams, liveKeys, type LiveStreamSummary } from '@/api/live';
 import { Button } from '@/components/ui';
 import { LiveCard } from '@/features/feed/LiveTab';
+import { HighlightCard } from '@/features/highlights/HighlightCard';
 import { NotificationsBell } from '@/features/notifications/NotificationsBell';
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -28,8 +30,14 @@ export function Discover() {
     queryFn: fetchLiveStreams,
     refetchInterval: focused ? 20_000 : false,
   });
+  // Highlights cut from lives by their hosts (0167).
+  const clips = useQuery({ queryKey: highlightKeys.recent(), queryFn: () => fetchRecentHighlights(30) });
   const { refetch } = lives;
-  const onRefresh = useCallback(() => void refetch(), [refetch]);
+  const { refetch: refetchClips } = clips;
+  const onRefresh = useCallback(() => {
+    void refetch();
+    void refetchClips();
+  }, [refetch, refetchClips]);
 
   const renderItem = useCallback(({ item }: { item: LiveStreamSummary }) => <LiveCard stream={item} />, []);
 
@@ -64,7 +72,7 @@ export function Discover() {
         ListHeaderComponent={<SectionHead title={t('discover.explore.liveNow')} />}
         columnWrapperStyle={styles.gridRow}
         contentContainerStyle={styles.gridContent}
-        refreshControl={<RefreshControl refreshing={lives.isRefetching} onRefresh={onRefresh} tintColor={colors.muted} />}
+        refreshControl={<RefreshControl refreshing={lives.isRefetching || clips.isRefetching} onRefresh={onRefresh} tintColor={colors.muted} />}
         ListEmptyComponent={
           lives.isLoading ? (
             <LoadingState />
@@ -78,7 +86,7 @@ export function Discover() {
             </View>
           )
         }
-        ListFooterComponent={<ClipsSection />}
+        ListFooterComponent={<ClipsSection items={clips.data ?? []} />}
       />
     </SafeAreaView>
   );
@@ -88,16 +96,31 @@ const keyOf = (s: LiveStreamSummary) => s.id;
 
 // Clips cut from lives land here once clipping is built; until then the
 // section says what it is for, so the tab doesn't look unfinished.
-function ClipsSection() {
+function ClipsSection({ items }: { items: LiveHighlight[] }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const rows: LiveHighlight[][] = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
   return (
     <View>
       <SectionHead title={t('discover.explore.clips')} />
-      <View style={[styles.clipsSoon, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
-        <Ionicons name="film-outline" size={28} color={colors.muted} />
-        <Text style={[styles.noLiveText, { color: colors.muted }]}>{t('discover.explore.clipsSoon')}</Text>
-      </View>
+      {rows.length ? (
+        <View style={styles.clipGrid}>
+          {rows.map((row) => (
+            <View key={row[0]!.id} style={styles.gridRow}>
+              {row.map((h) => (
+                <HighlightCard key={h.id} item={h} />
+              ))}
+              {row.length === 1 ? <View style={{ flex: 1 }} /> : null}
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View style={[styles.clipsSoon, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
+          <Ionicons name="mic-outline" size={28} color={colors.muted} />
+          <Text style={[styles.noLiveText, { color: colors.muted }]}>{t('discover.explore.clipsSoon')}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -128,6 +151,7 @@ const styles = StyleSheet.create({
   searchText: { flex: 1, fontSize: 15 },
   gridRow: { gap: 10, paddingHorizontal: 16 },
   gridContent: { gap: 10, paddingBottom: 40 },
+  clipGrid: { gap: 10 },
   noLive: {
     marginHorizontal: 16,
     padding: 20,

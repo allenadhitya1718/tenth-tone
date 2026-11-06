@@ -252,7 +252,10 @@
     "empty_saved": "Belum ada yang disimpan",
     "empty_saved_me": "Simpan video untuk ditonton nanti. Video akan muncul di sini.",
     "empty_drafts": "Tidak ada draf",
-    "empty_drafts_me": "Klip yang kamu simpan sebagai draf akan muncul di sini sebelum diposting."
+    "empty_drafts_me": "Klip yang kamu simpan sebagai draf akan muncul di sini sebelum diposting.",
+    "tab_highlights": "Sorotan",
+    "empty_highlights": "Belum ada sorotan",
+    "empty_highlights_me": "Mulai live, lalu potong menit terbaikmu jadi sorotan."
   },
   "camera": {
     "permTitle": "Izinkan kamera dan mikrofon",

@@ -2,7 +2,9 @@ import { getRecordingPermissionsAsync, requestRecordingPermissionsAsync } from '
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AudienceLatencyLevelType,
+  AudioFileRecordingType,
   AudioProfileType,
+  AudioRecordingQualityType,
   AudioScenarioType,
   ChannelProfileType,
   ClientRoleType,
@@ -22,6 +24,7 @@ import { startAudioForeground } from '@/lib/audioForeground';
 
 import { AGORA_APP_ID } from './config';
 import { liveError } from './errors';
+import { nativePath, newRecordingFile } from './liveRecording';
 import type { SpeakingStore } from './speakingStore';
 
 // One audio-only Agora session for a live room (client note 4: no camera).
@@ -57,6 +60,12 @@ type Options = {
    * without it; tapping the notification still brings the room back.
    */
   onLeave?: () => void;
+  /**
+   * The live's HOST records it on their phone (everyone on stage, mixed) so
+   * they can trim a one-minute highlight afterwards (0167, liveRecording.ts).
+   * The live id; null for guests, listeners, calls and walkie-talkie.
+   */
+  recordLiveId?: string | null;
 };
 
 // Volume is 0-255. Below this is breathing and room noise.
@@ -74,7 +83,7 @@ async function micAllowed(): Promise<boolean> {
   }
 }
 
-export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave }: Options) {
+export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave, recordLiveId }: Options) {
   const [status, setStatus] = useState<AgoraStatus>('idle');
   const [error, setError] = useState<ErrorMsg>(null);
   const [muted, setMutedState] = useState(false);
@@ -94,6 +103,7 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave }
   useEffect(() => {
     if (!enabled || !channel || !uid) return;
     let cancelled = false;
+    const recordLive = recordLiveId ?? null;
     const seqRef = switchSeq;
     let engine: IRtcEngine;
     // Stops a running walkie-talkie first: the engine is one shared object.
@@ -128,6 +138,27 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave }
     const remotes = new Set<number>();
     const publishSpeaking = () => speaking.set(localSpeaking ? [...remoteSpeaking, uid] : remoteSpeaking);
 
+    // Highlight recording (host only). Started once the channel is joined;
+    // a reconnect does not restart it. A failure only costs the highlight.
+    let recording = false;
+    const startRecording = () => {
+      if (recording || !recordLive || joinedRole.current !== 'host') return;
+      try {
+        const rc = engine.startAudioRecording({
+          filePath: nativePath(newRecordingFile(recordLive)),
+          encode: true,
+          sampleRate: 32000,
+          fileRecordingType: AudioFileRecordingType.AudioFileRecordingMixed,
+          quality: AudioRecordingQualityType.AudioRecordingQualityMedium,
+          recordingChannel: 1,
+        });
+        recording = rc >= 0;
+        if (rc < 0) console.warn('live recording: start', rc);
+      } catch (e) {
+        console.warn('live recording:', (e as Error)?.message);
+      }
+    };
+
     const renew = (forRole: AgoraRole) => {
       fetchAgoraToken(channel, uid, forRole)
         .then((t) => {
@@ -141,7 +172,9 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave }
     let kicked = false;
     const handler: IRtcEngineEventHandler = {
       onJoinChannelSuccess: () => {
-        if (!cancelled) setStatus('connected');
+        if (cancelled) return;
+        setStatus('connected');
+        startRecording();
       },
       onConnectionStateChanged: (_c, state, reason) => {
         if (cancelled || kicked) return;
@@ -238,6 +271,11 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave }
       try {
         engine.unregisterEventHandler(handler);
       } catch {}
+      if (recording) {
+        try {
+          engine.stopAudioRecording();
+        } catch {}
+      }
       try {
         engine.leaveChannel();
       } catch {}
@@ -253,7 +291,7 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave }
       setMutedState(false);
       setStatus('idle');
     };
-  }, [channel, uid, enabled, speaking]);
+  }, [channel, uid, enabled, speaking, recordLiveId]);
 
   // ---------- role switching (guests, client note 6) ----------
   useEffect(() => {

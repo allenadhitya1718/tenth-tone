@@ -488,6 +488,40 @@
     "follow": {
       "action": "Follow {{name}}",
       "failed": "Couldn't follow. Try again."
+    },
+    "highlight": {
+      "notice": "The host can save a 1-minute highlight from this live.",
+      "make": "Make a highlight",
+      "sub": "Pick the best minute of your live. Only that minute is posted.",
+      "playMinute": "Play this minute",
+      "pause": "Pause",
+      "startsAt": "Starts at {{time}}",
+      "length": "{{time}} long",
+      "back5": "Back 5 seconds",
+      "fwd5": "Forward 5 seconds",
+      "titlePh": "Add a title (optional)",
+      "post": "Post highlight",
+      "posting": "Posting…",
+      "posted": "Highlight posted to Explore",
+      "discard": "Delete recording",
+      "discardTitle": "Delete this live's recording?",
+      "discardBody": "You won't be able to make a highlight from it.",
+      "none": "There's no recording of this live on this phone.",
+      "keepNote": "Recordings stay on your phone for 2 days, then are deleted.",
+      "limitLive": "You've already posted 3 highlights from this live.",
+      "limitDay": "You can post up to 10 highlights a day.",
+      "failed": "Couldn't post the highlight. Try again.",
+      "notAac": "This recording can't be trimmed.",
+      "section": "Highlights",
+      "empty": "No highlights yet",
+      "emptySub": "Highlights from lives will show here.",
+      "plays": "{{n}} plays",
+      "delete": "Delete highlight",
+      "deleteTitle": "Delete this highlight?",
+      "deleteBody": "It will be removed from Explore and your profile.",
+      "deleted": "Highlight deleted",
+      "gone": "This highlight isn't available.",
+      "by": "From {{name}}'s live"
     }
   }
 }

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { fetchBirthDateStrict, settingsKeys } from '@/api/settings';
+import { cleanupRecordings } from '@/features/live/liveRecording';
 import { recoverPendingCamera } from '@/lib/pendingCamera';
 
 import { useTheme } from '@/providers/ThemeProvider';
@@ -30,6 +31,12 @@ export default function AppLayout() {
     import('@/features/wallet/store')
       .then((m) => m.startStorePurchaseRecovery())
       .catch(() => {});
+  }, []);
+
+  // Live recordings (kept for highlights) older than 2 days, or beyond the
+  // 3 newest, are deleted so they never fill the phone (liveRecording.ts).
+  useEffect(() => {
+    cleanupRecordings();
   }, []);
 
   // Android killed the app while its camera was open: reopen the story or
@@ -73,6 +80,8 @@ export default function AppLayout() {
         options={{ presentation: Platform.OS === 'ios' ? 'fullScreenModal' : 'card', animation: 'slide_from_bottom' }}
       />
       <Stack.Screen name="map" options={{ animation: 'slide_from_bottom' }} />
+      {/* A highlight plays full screen, sliding up like a music player. */}
+      <Stack.Screen name="highlight/[id]" options={{ animation: 'slide_from_bottom', contentStyle: { backgroundColor: '#000421' } }} />
       <Stack.Screen name="confirm-birthday" options={{ gestureEnabled: false }} />
       <Stack.Screen name="call/[id]" options={CALL_SCREEN} />
       <Stack.Screen name="call/dial" options={CALL_SCREEN} />

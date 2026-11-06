@@ -252,7 +252,10 @@
     "empty_saved": "Aucun favori",
     "empty_saved_me": "Enregistrez des vidéos pour les regarder plus tard. Elles apparaissent ici.",
     "empty_drafts": "Aucun brouillon",
-    "empty_drafts_me": "Les clips enregistrés en brouillon apparaissent ici avant leur publication."
+    "empty_drafts_me": "Les clips enregistrés en brouillon apparaissent ici avant leur publication.",
+    "tab_highlights": "Extraits",
+    "empty_highlights": "Pas encore d'extraits",
+    "empty_highlights_me": "Lancez un live, puis gardez votre meilleure minute en extrait."
   },
   "camera": {
     "permTitle": "Autoriser la caméra et le micro",

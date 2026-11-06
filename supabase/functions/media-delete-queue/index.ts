@@ -127,6 +127,9 @@ const REFERENCED_BY: { table: string; column: string }[] = [
   { table: 'live_streams', column: 'thumbnail' },
   { table: 'stories',      column: 'media_url' },
   { table: 'stories',      column: 'poster_url' },
+  // Live highlights (0167).
+  { table: 'live_highlights', column: 'audio_url' },
+  { table: 'live_highlights', column: 'cover_url' },
 ];
 
 const r2 = new AwsClient({

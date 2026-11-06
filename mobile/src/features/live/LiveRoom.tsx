@@ -30,6 +30,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isCommentBlocked } from '@/api/comments';
 import { showAlert } from '@/components/Dialog';
+import { showToast } from '@/components/Toast';
 import { refusalKind } from '@/lib/serverError';
 import { giftKeys, subscribeToLiveGifts, type Gift } from '@/api/gifts';
 import {
@@ -68,6 +69,7 @@ import { Avatar, OptionRow, Sheet } from './Sheet';
 import { createSpeakingStore } from './speakingStore';
 import { Stage, type StageSpeaker } from './Stage';
 import { StageManager } from './StageManager';
+import { recordingFor } from './liveRecording';
 import { useAgoraAudio } from './useAgoraAudio';
 import {
   useElapsed,
@@ -92,6 +94,8 @@ import {
 // Nothing here leaves the room by navigating within it: every panel is a
 // Modal sheet, because for the host leaving is ending.
 
+// Lives whose highlight notice this app already showed (once per live).
+const toldAboutHighlights = new Set<string>();
 const BG = '#000421';
 const DIM = 'rgba(255,255,255,0.72)';
 
@@ -174,6 +178,8 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
     enabled: isLive && !!me,
     speaking,
     onLeave: leaveFromNotification,
+    // The host's phone records the live for a highlight (0167).
+    recordLiveId: isHost ? liveId : null,
   });
 
   const speakers = useMemo<StageSpeaker[]>(() => {
@@ -203,6 +209,15 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
       showAlert(t('live.guest.declinedTitle'));
     }
   }, [myStatus, isHost, t]);
+
+  // Listeners and guests hear once per live that the host can keep a
+  // highlight (the host's phone records the live, 0167).
+  useEffect(() => {
+    if (!isLive || isHost || !me || toldAboutHighlights.has(liveId)) return;
+    toldAboutHighlights.add(liveId);
+    const timer = setTimeout(() => showToast(t('live.highlight.notice'), 'mic-outline'), 1500);
+    return () => clearTimeout(timer);
+  }, [isLive, isHost, me, liveId, t]);
 
   // The host muted me (0159): turn the mic off and keep it off until they
   // unmute. Agora cannot do this from the host's phone, so this app does it.
@@ -956,7 +971,11 @@ const CommentList = memo(function CommentList({
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.chatEmpty}>{failed ? t('live.chat.loadFailed') : t('live.chat.empty')}</Text>
+            <>
+              <Text style={styles.chatEmpty}>{failed ? t('live.chat.loadFailed') : t('live.chat.empty')}</Text>
+              {/* Everyone in the room is told the host can keep a highlight. */}
+              {failed ? null : <Text style={styles.chatNotice}>{t('live.highlight.notice')}</Text>}
+            </>
           )}
         </View>
       }
@@ -1001,6 +1020,8 @@ const CommentRow = memo(function CommentRow({ comment, onPress }: { comment: Liv
 
 function EndedCard({ live, isHost, peak, onDone }: { live: LiveStream; isHost: boolean; peak: number; onDone: () => void }) {
   const { t } = useTranslation();
+  // The host's recording on this phone, for a highlight (0167).
+  const [canHighlight] = useState(() => isHost && !!recordingFor(live.id));
   const seconds = live.ended_at
     ? (new Date(live.ended_at).getTime() - new Date(live.started_at).getTime()) / 1000
     : 0;
@@ -1016,7 +1037,15 @@ function EndedCard({ live, isHost, peak, onDone }: { live: LiveStream; isHost: b
             ? t('live.ended.summary', { time: formatDuration(seconds), count: Math.max(peak, live.viewer_count) })
             : t('live.ended.thanks')}
         </Text>
-        <Button title={isHost ? t('live.ended.done') : t('live.ended.more')} onPress={onDone} style={styles.wide} />
+        {canHighlight ? (
+          <Button title={t('live.highlight.make')} onPress={() => router.replace(`/live/highlight/${live.id}`)} style={styles.wide} />
+        ) : null}
+        <Button
+          title={isHost ? t('live.ended.done') : t('live.ended.more')}
+          onPress={onDone}
+          variant={canHighlight ? 'secondary' : 'primary'}
+          style={styles.wide}
+        />
       </View>
     </View>
   );
@@ -1056,6 +1085,7 @@ const styles = StyleSheet.create({
   commentText: { color: '#fff', fontSize: 14, lineHeight: 19, flexShrink: 1, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3 },
   commentName: { color: 'rgba(255,255,255,0.75)', fontWeight: '800' },
   chatEmpty: { color: DIM, fontSize: 13, textAlign: 'center', paddingVertical: 8 },
+  chatNotice: { color: 'rgba(255,255,255,0.6)', fontSize: 12, marginTop: 6, textAlign: 'center' },
   bar: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingTop: 8 },
   inputWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 22, paddingStart: 14, paddingEnd: 4, minHeight: 44 },
   input: { flex: 1, color: '#fff', fontSize: 15, paddingVertical: 10 },
