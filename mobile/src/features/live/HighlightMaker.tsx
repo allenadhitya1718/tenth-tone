@@ -256,7 +256,8 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
       >
         {cover ? <Image source={{ uri: cover }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={18} /> : null}
         <View style={styles.coverShade} />
-        {cover ? <Image source={{ uri: cover }} style={styles.coverArt} contentFit="cover" /> : <Ionicons name="radio" size={48} color="#fff" />}
+        {/* No cover photo: the play button alone (an icon behind it looked broken). */}
+        {cover ? <Image source={{ uri: cover }} style={styles.coverArt} contentFit="cover" /> : <View style={styles.coverArt} />}
         <View style={styles.playBig}>
           {trimming ? (
             <ActivityIndicator color="#fff" />
@@ -422,7 +423,12 @@ function createTrimPan(box: DragBox, v: TrimView, a: TrimActions): PanResponderI
       const right = ((v.startS + v.windowS) / T) * W;
       const dl = Math.abs(x - left);
       const dr = Math.abs(x - right);
-      const mode = Math.min(dl, dr) <= HANDLE_PX ? (dl < dr ? 'start' : 'end') : x > left && x < right ? 'move' : 'tap';
+      const inside = x > left && x < right;
+      // A narrow selection is all handles: a touch inside it moves it, and
+      // its ends are dragged from just outside.
+      const narrow = right - left < HANDLE_PX * 3;
+      const nearEnd = Math.min(dl, dr) <= HANDLE_PX;
+      const mode = inside && (narrow || !nearEnd) ? 'move' : nearEnd ? (dl < dr ? 'start' : 'end') : 'tap';
       box.d = { mode, x0: x, pageX0: e.nativeEvent.pageX, s0: v.startS, l0: v.windowS };
       a.stop();
     },
