@@ -46,14 +46,19 @@ type LK = typeof import('livekit-client');
 type LKNative = typeof import('@livekit/react-native');
 
 let lib: { lk: LK; native: LKNative } | null | undefined;
+
+/** This build has LiveKit's native parts (newer binaries only). */
+export function liveKitSupported(): boolean {
+  const mods = NativeModules as Record<string, unknown>;
+  return !!mods.WebRTCModule && !!mods.LivekitReactNativeModule;
+}
 function loadLiveKit(): { lk: LK; native: LKNative } | null {
   if (lib !== undefined) return lib;
   // Check the native parts BEFORE loading: React Native's module loader
   // reports a module that throws while loading as a fatal error even when the
   // caller catches it (seen on the Redmi with an older build: the app
   // reloaded instead of saying "update the app").
-  const mods = NativeModules as Record<string, unknown>;
-  if (!mods.WebRTCModule || !mods.LivekitReactNativeModule) {
+  if (!liveKitSupported()) {
     lib = null;
     return lib;
   }

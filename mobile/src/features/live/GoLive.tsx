@@ -15,6 +15,7 @@ import { AppText, Button, ErrorBox, Screen, TextField, TopBar, type ErrorMsg } f
 import { useTheme } from '@/providers/ThemeProvider';
 
 import { MAX_TITLE, NEW_LIVE_ENGINE } from './config';
+import { liveKitSupported } from './useLiveKitAudio';
 import { errorCode, liveError, serverDetail } from './errors';
 
 // Go live (client note 4): audio only, so there is no camera and no camera
@@ -101,7 +102,10 @@ export function GoLive() {
 
     setBusy('start');
     try {
-      const row = await startLive({ title: title.trim() || null, thumbnail, privacy, engine: NEW_LIVE_ENGINE });
+      // LiveKit only when this build has it: an older binary that got the
+      // switch by update keeps starting Agora lives it can speak in.
+      const engine = NEW_LIVE_ENGINE === 'livekit' && liveKitSupported() ? 'livekit' : 'agora';
+      const row = await startLive({ title: title.trim() || null, thumbnail, privacy, engine });
       void qc.invalidateQueries({ queryKey: liveKeys.list() });
       router.replace({ pathname: '/live/[id]', params: { id: row.id, host: '1' } });
     } catch (e) {
