@@ -14,41 +14,28 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-// Boot screen shown over the app while it signs in, after a Dribbble
-// reference (owner, Oct 2026): two dots, one orbiting the other, merge into
-// one, which swells into a flood of the brand colour that gives way to the
-// logo. In FLYP's colours: electric-blue dots on the night navy, a blue
-// flood that settles into the glow behind the full FLYP logo.
+// Boot screen shown over the app while it signs in. It opens on the brand
+// blue (the native splash in app.json is the same plain blue, so the hand-
+// over is seamless), which then settles into the night navy as the FLYP
+// logo comes in with a soft glow behind it. (Owner, Nov 2026: no spinning
+// dots, start from the blue screen.)
 //
-// The native splash (app.json) is just the solid dot on the navy, drawn
-// from the same image as below, so the app opens on the first frame of this
-// animation and the logo appears once, at the end. Never holds the app back
-// for longer than MIN_MS. With Reduce Motion on, the logo simply fades in.
+// Never holds the app back for longer than MIN_MS. With Reduce Motion on,
+// the blue simply fades to the logo.
 export const SPLASH_BG = '#000421';
-const MARK = 200; // same as `imageWidth` for expo-splash-screen in app.json
-const DOT = 24; // the dot drawn in assets/splash-dot.png at MARK size
-const ORBIT = 32; // distance of the pale dot from the solid one
-const PALE = '#9DBBFF'; // a light tint of the accent blue, like the reference's pale dot
-const FLOOD = '#1E56D6'; // theme primary
+const FLOOD = '#1E56D6'; // theme primary, and the native splash colour
+const MARK = 200;
 const LOGO_W = 260;
 const LOGO_H = (LOGO_W * 230) / 472; // flyp-logo-mark.png is 472x230
 const GLOW_MAX = 0.6;
 
 // Timeline (ms).
-const T_DOTS = 120; // pale dot appears beside the solid one
-const T_ORBIT = 380; // pale dot circles the solid one
-const ORBIT_MS = 1050;
-const T_MERGE = T_ORBIT + ORBIT_MS; // pale dot slides in
-const MERGE_MS = 260;
-const T_FLOOD = T_MERGE + MERGE_MS; // merged dot swells over the screen
-const FLOOD_MS = 560;
-const T_REVEAL = T_FLOOD + FLOOD_MS; // flood settles into the glow, logo in
-const REVEAL_MS = 520;
-const MIN_MS = T_REVEAL + REVEAL_MS + 250;
+const HOLD_MS = 220; // the blue on its own, as the native splash showed it
+const REVEAL_MS = 620; // blue settles into navy, logo in
+const MIN_MS = HOLD_MS + REVEAL_MS + 350;
 const OUT_MS = 450;
 
 const SOFT = Easing.bezier(0.22, 1, 0.36, 1);
-const SWING = Easing.inOut(Easing.cubic);
 const BREATHE = Easing.inOut(Easing.sin);
 
 export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; onShown?: () => void; onFinish: () => void }) {
@@ -56,43 +43,33 @@ export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; o
   const calm = useReducedMotion();
   const [minPassed, setMinPassed] = useState(false);
 
-  const dots = useSharedValue(0); // 0 -> 1 pale dot appears
-  const orbit = useSharedValue(0); // 0 -> 1 = one and a half turns
-  const merge = useSharedValue(0); // 0 -> 1 pale dot gone into the solid one
-  const flood = useSharedValue(0); // 0 -> 1 circle covers the screen
-  const reveal = useSharedValue(0); // 0 -> 1 flood gone, logo in
+  const reveal = useSharedValue(0); // 0 = all blue, 1 = navy with the logo
   const glow = useSharedValue(0);
   const out = useSharedValue(0);
 
   useEffect(() => {
-    const all = [dots, orbit, merge, flood, reveal, glow];
-    if (calm) {
-      reveal.value = withTiming(1, { duration: 500 });
-      glow.value = withTiming(1, { duration: 500 });
-    } else {
-      dots.value = withDelay(T_DOTS, withTiming(1, { duration: 300, easing: SOFT }));
-      orbit.value = withDelay(T_ORBIT, withTiming(1, { duration: ORBIT_MS, easing: SWING }));
-      merge.value = withDelay(T_MERGE, withTiming(1, { duration: MERGE_MS, easing: SWING }));
-      flood.value = withDelay(T_FLOOD, withTiming(1, { duration: FLOOD_MS, easing: Easing.inOut(Easing.quad) }));
-      reveal.value = withDelay(T_REVEAL, withTiming(1, { duration: REVEAL_MS, easing: SOFT }));
-      glow.value = withDelay(
-        T_REVEAL,
-        withSequence(
-          withTiming(1, { duration: REVEAL_MS, easing: SOFT }),
-          // A slow, shallow breath while sign-in finishes.
-          withRepeat(
-            withSequence(withTiming(0.8, { duration: 1500, easing: BREATHE }), withTiming(1, { duration: 1500, easing: BREATHE })),
-            -1,
+    const delay = calm ? 0 : HOLD_MS;
+    reveal.value = withDelay(delay, withTiming(1, { duration: calm ? 500 : REVEAL_MS, easing: SOFT }));
+    glow.value = withDelay(
+      delay,
+      calm
+        ? withTiming(1, { duration: 500 })
+        : withSequence(
+            withTiming(1, { duration: REVEAL_MS, easing: SOFT }),
+            // A slow, shallow breath while sign-in finishes.
+            withRepeat(
+              withSequence(withTiming(0.8, { duration: 1500, easing: BREATHE }), withTiming(1, { duration: 1500, easing: BREATHE })),
+              -1,
+            ),
           ),
-        ),
-      );
-    }
+    );
     const t = setTimeout(() => setMinPassed(true), calm ? 900 : MIN_MS);
     return () => {
       clearTimeout(t);
-      all.forEach((v) => cancelAnimation(v));
+      cancelAnimation(reveal);
+      cancelAnimation(glow);
     };
-  }, [calm, dots, orbit, merge, flood, reveal, glow]);
+  }, [calm, reveal, glow]);
 
   useEffect(() => {
     if (!ready || !minPassed) return;
@@ -108,31 +85,13 @@ export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; o
     return () => clearTimeout(t);
   }, [ready, minPassed, onFinish]);
 
-  // Big enough to cover the screen from its centre.
-  const cover = Math.ceil(Math.hypot(width, height)) + 4;
-
   const root = useAnimatedStyle(() => ({ opacity: 1 - out.value }));
-  // On screen from the first frame, exactly where the native splash drew it.
-  const solid = useAnimatedStyle(() => ({
-    opacity: (1 - flood.value) * (1 - reveal.value),
-    transform: [{ scale: 1 + merge.value * 0.3 }],
-  }));
-  const pale = useAnimatedStyle(() => {
-    const a = orbit.value * Math.PI * 3; // one and a half turns
-    const r = ORBIT * (1 - merge.value);
-    return {
-      opacity: dots.value * 0.6 * (1 - merge.value),
-      transform: [{ translateX: Math.cos(a) * r }, { translateY: Math.sin(a) * r }, { scale: dots.value }],
-    };
-  });
-  const floodStyle = useAnimatedStyle(() => ({
-    opacity: flood.value > 0 ? 1 - reveal.value : 0,
-    transform: [{ scale: interpolate(flood.value, [0, 1], [(DOT * 1.3) / cover, 1]) }],
-  }));
+  // Full screen from the first frame, exactly like the native splash.
+  const floodStyle = useAnimatedStyle(() => ({ opacity: 1 - reveal.value }));
   const halo = useAnimatedStyle(() => ({ opacity: glow.value * GLOW_MAX }));
   const logo = useAnimatedStyle(() => ({
     opacity: reveal.value,
-    transform: [{ scale: 0.92 + reveal.value * 0.08 + out.value * 0.04 }],
+    transform: [{ scale: interpolate(reveal.value, [0, 1], [0.92, 1]) + out.value * 0.04 }],
   }));
 
   // A soft pool behind the logo rather than a full-screen wash.
@@ -145,12 +104,7 @@ export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; o
         <Image source={require('../../assets/splash-glow.png')} style={{ width: d, height: d }} resizeMode="stretch" />
       </Animated.View>
 
-      <Animated.View style={[styles.center, { width: cover, height: cover, borderRadius: cover / 2, backgroundColor: FLOOD }, floodStyle]} />
-
-      <Animated.View style={[styles.center, styles.dot, { backgroundColor: PALE }, pale]} />
-      <Animated.View style={[styles.center, solid]}>
-        <Image source={require('../../assets/splash-dot.png')} style={{ width: MARK, height: MARK }} resizeMode="contain" />
-      </Animated.View>
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: FLOOD }, floodStyle]} />
 
       <Animated.View style={[styles.center, logo]}>
         <Image
@@ -168,5 +122,4 @@ export function AnimatedSplash({ ready, onShown, onFinish }: { ready: boolean; o
 const styles = StyleSheet.create({
   root: { backgroundColor: SPLASH_BG, alignItems: 'center', justifyContent: 'center', zIndex: 1000, overflow: 'hidden' },
   center: { position: 'absolute' },
-  dot: { width: DOT, height: DOT, borderRadius: DOT / 2 },
 });
