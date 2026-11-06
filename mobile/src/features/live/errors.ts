@@ -40,7 +40,16 @@ const KNOWN = new Set([
   'agora_join_failed',
   'mic_denied',
   'same_uid_login',
+  'update_app',
 ]);
+
+// LiveKit (api/livekit.ts) reports the same situations as Agora: same words.
+const ALIAS: Record<string, string> = {
+  live_bad_request: 'agora_bad_request',
+  live_forbidden: 'agora_forbidden',
+  live_unavailable: 'agora_unavailable',
+  live_no_token: 'agora_no_token',
+};
 
 export function errorCode(e: unknown): string | null {
   return e instanceof ApiError ? e.code : null;
@@ -49,7 +58,8 @@ export function errorCode(e: unknown): string | null {
 // A translation key (not text), so a message on screen follows a language
 // switch, the same convention as ErrorBox.
 export function liveError(e: unknown, fallback = 'live.errors.generic'): NonNullable<ErrorMsg> {
-  const code = errorCode(e);
+  const raw = errorCode(e);
+  const code = raw ? (ALIAS[raw] ?? raw) : null;
   if (code && KNOWN.has(code)) return { key: `live.errors.${code}` };
   // A database rate limit ("too many ... please wait"), or no connection.
   const kind = refusalKind(e);

@@ -188,7 +188,16 @@
           }
         }
       ],
-      "expo-iap"
+      "expo-iap",
+      [
+        "@livekit/react-native-expo-plugin",
+        {
+          "android": {
+            "audioType": "communication"
+          }
+        }
+      ],
+      "@config-plugins/react-native-webrtc"
     ],
     "experiments": {
       "typedRoutes": true

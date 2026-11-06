@@ -236,7 +236,8 @@
       "same_uid_login": "你的账号已在另一台设备上打开此直播。",
       "not_connected": "只能邀请你关注的人或关注你的人。",
       "cannot_see_live": "此人无法观看你的直播（仅好友可见）。",
-      "invite_limit": "邀请过多，请稍等几分钟。"
+      "invite_limit": "邀请过多，请稍等几分钟。",
+      "update_app": "请更新 FLYP 以加入此直播。"
     },
     "wallet": {
       "title": "钱包",

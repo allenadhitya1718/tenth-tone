@@ -244,7 +244,8 @@
       "same_uid_login": "Este directo está abierto en otro dispositivo con tu cuenta.",
       "not_connected": "Solo puedes invitar a quien sigues o te sigue.",
       "cannot_see_live": "Esta persona no puede abrir tu LIVE (solo amigos).",
-      "invite_limit": "Demasiadas invitaciones. Espera unos minutos."
+      "invite_limit": "Demasiadas invitaciones. Espera unos minutos.",
+      "update_app": "Actualiza FLYP para unirte a este directo."
     },
     "wallet": {
       "title": "Billetera",

@@ -236,7 +236,8 @@
       "same_uid_login": "LIVE ini sedang dibuka di perangkat lain dengan akunmu.",
       "not_connected": "Kamu hanya bisa mengundang orang yang kamu ikuti atau yang mengikutimu.",
       "cannot_see_live": "Orang ini tidak bisa membuka LIVE kamu (khusus teman).",
-      "invite_limit": "Terlalu banyak undangan. Tunggu beberapa menit."
+      "invite_limit": "Terlalu banyak undangan. Tunggu beberapa menit.",
+      "update_app": "Perbarui FLYP untuk bergabung ke live ini."
     },
     "wallet": {
       "title": "Dompet",

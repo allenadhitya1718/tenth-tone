@@ -244,7 +244,8 @@
       "same_uid_login": "Ce LIVE est ouvert sur un autre appareil avec votre compte.",
       "not_connected": "Tu ne peux inviter que les personnes que tu suis ou qui te suivent.",
       "cannot_see_live": "Cette personne ne peut pas ouvrir ton LIVE (amis seulement).",
-      "invite_limit": "Trop d'invitations. Attends quelques minutes."
+      "invite_limit": "Trop d'invitations. Attends quelques minutes.",
+      "update_app": "Mettez FLYP à jour pour rejoindre ce live."
     },
     "wallet": {
       "title": "Portefeuille",

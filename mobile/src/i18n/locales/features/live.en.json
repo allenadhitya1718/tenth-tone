@@ -240,7 +240,8 @@
       "same_uid_login": "This live is open on another device with your account.",
       "not_connected": "You can only invite people you follow or who follow you.",
       "cannot_see_live": "This person can't open your LIVE (friends only).",
-      "invite_limit": "Too many invites. Wait a few minutes."
+      "invite_limit": "Too many invites. Wait a few minutes.",
+      "update_app": "Update FLYP to join this live."
     },
     "wallet": {
       "title": "Wallet",

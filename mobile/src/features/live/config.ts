@@ -14,6 +14,13 @@ export const liveLink = (id: string) => `${LINK_ORIGIN}/live/${encodeURIComponen
 // The reaction tray, the same six as the web app (V.live REACTIONS).
 export const REACTIONS = ['❤️', '🔥', '👏', '😂', '😮', '💯'] as const;
 
+// Which audio system NEW lives start on (0166). 'agora' until FLYP's own
+// LiveKit server is live (infra/live-server); a build or an over-the-air
+// update switches it with EXPO_PUBLIC_LIVE_ENGINE=livekit. Lives already
+// running keep the system they started on.
+export const NEW_LIVE_ENGINE: 'agora' | 'livekit' =
+  process.env.EXPO_PUBLIC_LIVE_ENGINE === 'livekit' ? 'livekit' : 'agora';
+
 export const MAX_TITLE = 60; // the web go-live input's maxlength
 export const MAX_COMMENT = 500; // live_comments column limit
 export const MAX_GUESTS = 29; // 0159: at most 29 accepted guests plus the host (30 on stage)
