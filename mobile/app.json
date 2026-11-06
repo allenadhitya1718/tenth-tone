@@ -135,11 +135,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-blank.png",
-          "imageWidth": 200,
-          "backgroundColor": "#1E56D6",
+          "image": "./assets/flyp-logo-mark.png",
+          "imageWidth": 180,
+          "backgroundColor": "#000421",
           "dark": {
-            "backgroundColor": "#1E56D6"
+            "image": "./assets/flyp-logo-mark.png",
+            "backgroundColor": "#000421"
           }
         }
       ],
