@@ -1,8 +1,8 @@
 # FLYP: overnight report (6 Nov 2026)
 
 ## Verdict
-- **The app is ready to submit as an update, on both stores.** Everything below was fixed and tested on the Redmi, and both store builds are made and signed.
-- **The submission itself needs you**, because it uses your Apple and Google accounts. It takes about 15 minutes; see "What you do this morning".
+- **Release on hold (6 Nov):** the client asked for a stories-and-lives redesign (no more posts, Explore for lives and clips from lives), and it goes into this release. **Don't upload the AAB or submit to the App Store yet.**
+- Everything below is fixed and tested on the Redmi, and both store builds are made and signed, ready for when the redesign is done.
 - **Not tested:** anything that needs two phones (calls, receiving messages and notifications, live guests). The iPhone was tested only through the store build (it compiles and uploads); nobody has tapped through it.
 
 ## Store builds
