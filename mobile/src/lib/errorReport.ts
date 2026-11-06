@@ -55,16 +55,19 @@ async function readQueue(): Promise<Report[]> {
   }
 }
 
-/** Queue an error; `send` false when the app is about to reload. */
-export async function reportError(kind: ErrorKind, error: unknown, send = true): Promise<void> {
+/** Queue an error; `send` false when the app is about to reload. `screen`
+ *  when the caller knows it better (a screen that fails while drawing fails
+ *  before the root layout records it). */
+export async function reportError(kind: ErrorKind, error: unknown, send = true, screen?: string): Promise<void> {
   try {
     if (__DEV__) return;
     const { message, stack } = describe(error);
-    const sig = `${kind}|${message}|${lastScreen ?? ''}`;
+    const where = screen ?? lastScreen;
+    const sig = `${kind}|${message}|${where ?? ''}`;
     if (seen.has(sig)) return;
     seen.add(sig);
     const q = await readQueue();
-    q.push({ kind, message, stack, screen: lastScreen, at: new Date().toISOString() });
+    q.push({ kind, message, stack, screen: where, at: new Date().toISOString() });
     await AsyncStorage.setItem(KEY, JSON.stringify(q.slice(-MAX_QUEUE)));
     if (send) void flushErrorReports();
   } catch {}

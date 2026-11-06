@@ -74,7 +74,7 @@ export function Discover() {
             <View style={[styles.noLive, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
               <Ionicons name="radio-outline" size={32} color={colors.muted} />
               <Text style={[styles.noLiveText, { color: colors.muted }]}>{t('discover.explore.noLive')}</Text>
-              <Button title={t('feed.goLive')} onPress={() => router.push('/live/start')} />
+              <Button title={t('feed.goLive')} onPress={() => router.push('/live/start')} style={styles.goLive} />
             </View>
           )
         }
@@ -137,6 +137,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   noLiveText: { fontSize: 14.5, textAlign: 'center', lineHeight: 20 },
+  // The card centres its content, which squeezed the button into a circle.
+  goLive: { alignSelf: 'stretch' },
   clipsSoon: {
     marginHorizontal: 16,
     paddingVertical: 28,

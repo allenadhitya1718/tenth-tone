@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, type ErrorBoundaryProps } from 'expo-router';
+import { router, usePathname, type ErrorBoundaryProps } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -23,11 +23,13 @@ const T = (key: string, fallback: string) => {
 };
 
 export function AppErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  // The screen that failed (the root layout has not recorded it yet).
+  const pathname = usePathname();
   useEffect(() => {
     // Kept in the device log (adb logcat / Console) for the next bug report.
     console.error('FLYP screen error:', error?.message, error?.stack);
-    void reportError('screen', error);
-  }, [error]);
+    void reportError('screen', error, true, pathname);
+  }, [error, pathname]);
 
   const goHome = () => {
     try {
