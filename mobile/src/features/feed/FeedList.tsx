@@ -190,11 +190,21 @@ export function FeedList({
   }
 
   if (!videos.length) {
+    // Following with nothing to show: say why (posts are gone, highlights
+    // are what appears here) and give a way on, instead of bare text.
+    if (tab === 'following') {
+      return (
+        <View style={[styles.center, { height }]}>
+          <Ionicons name="mic-outline" size={48} color="#fff" />
+          <Text style={styles.endTitle}>{t(followsSomeone.data ? 'live.highlight.followingQuietTitle' : 'live.highlight.followingNoneTitle')}</Text>
+          <Text style={styles.msg}>{t(followsSomeone.data ? 'live.highlight.followingQuiet' : 'live.highlight.followingNone')}</Text>
+          <Button title={t('live.highlight.toExplore')} onPress={() => router.navigate('/discover')} style={{ paddingHorizontal: 28 }} />
+        </View>
+      );
+    }
     return (
       <View style={[styles.center, { height }]}>
-        <Text style={styles.msg}>
-          {t(tab !== 'following' ? 'feed.empty' : followsSomeone.data ? 'polish.feed.followingNoPosts' : 'feed.emptyFollowing')}
-        </Text>
+        <Text style={styles.msg}>{t('feed.empty')}</Text>
       </View>
     );
   }

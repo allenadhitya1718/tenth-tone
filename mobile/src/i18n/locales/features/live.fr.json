@@ -525,7 +525,12 @@
       "coverChange": "Changer",
       "coverReset": "Par défaut",
       "coverPickFailed": "Impossible d’ouvrir vos photos. Réessayez.",
-      "network": "Votre connexion a coupé pendant la publication. Vérifiez-la et réessayez."
+      "network": "Votre connexion a coupé pendant la publication. Vérifiez-la et réessayez.",
+      "followingNoneTitle": "Abonnez-vous pour les écouter ici",
+      "followingNone": "Les moments forts des lives des personnes que vous suivez apparaissent ici.",
+      "followingQuietTitle": "Rien de nouveau de vos abonnements",
+      "followingQuiet": "Quand ils enregistrent un moment fort d’un live, il apparaît ici. Découvrez-en plus dans Explorer.",
+      "toExplore": "Aller à Explorer"
     }
   }
 }

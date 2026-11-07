@@ -509,7 +509,12 @@
       "coverChange": "更换",
       "coverReset": "使用默认",
       "coverPickFailed": "无法打开你的照片，请重试。",
-      "network": "发布时网络中断了。请检查网络后重试。"
+      "network": "发布时网络中断了。请检查网络后重试。",
+      "followingNoneTitle": "关注他人，在这里收听他们",
+      "followingNone": "你关注的人的直播精彩片段会显示在这里。",
+      "followingQuietTitle": "你关注的人暂时没有新内容",
+      "followingQuiet": "他们从直播保存精彩片段后会显示在这里。去“探索”发现更多。",
+      "toExplore": "前往探索"
     }
   }
 }

@@ -509,7 +509,12 @@
       "coverChange": "Ganti",
       "coverReset": "Bawaan",
       "coverPickFailed": "Tidak bisa membuka fotomu. Coba lagi.",
-      "network": "Koneksimu terputus saat memposting. Periksa lalu coba lagi."
+      "network": "Koneksimu terputus saat memposting. Periksa lalu coba lagi.",
+      "followingNoneTitle": "Ikuti orang untuk mendengar mereka di sini",
+      "followingNone": "Sorotan dari live orang yang kamu ikuti muncul di tab ini.",
+      "followingQuietTitle": "Belum ada yang baru dari yang kamu ikuti",
+      "followingQuiet": "Saat mereka menyimpan sorotan dari live, itu muncul di sini. Temukan lebih banyak di Jelajahi.",
+      "toExplore": "Ke Jelajahi"
     }
   }
 }

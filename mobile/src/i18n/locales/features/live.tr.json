@@ -517,7 +517,12 @@
       "coverChange": "Değiştir",
       "coverReset": "Varsayılan",
       "coverPickFailed": "Fotoğrafların açılamadı. Tekrar dene.",
-      "network": "Paylaşırken bağlantın koptu. Kontrol edip tekrar dene."
+      "network": "Paylaşırken bağlantın koptu. Kontrol edip tekrar dene.",
+      "followingNoneTitle": "Burada dinlemek için insanları takip et",
+      "followingNone": "Takip ettiklerinin canlı yayınlarından öne çıkanlar bu sekmede görünür.",
+      "followingQuietTitle": "Takip ettiklerinden yeni bir şey yok",
+      "followingQuiet": "Bir canlı yayından öne çıkan kaydettiklerinde burada görünür. Keşfet'te daha fazlasını bul.",
+      "toExplore": "Keşfet'e git"
     }
   }
 }

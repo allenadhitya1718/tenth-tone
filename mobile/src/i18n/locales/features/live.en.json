@@ -538,7 +538,12 @@
       "coverChange": "Change",
       "coverReset": "Use default",
       "coverPickFailed": "Couldn't open your photos. Try again.",
-      "network": "Your connection dropped while posting. Check it and try again."
+      "network": "Your connection dropped while posting. Check it and try again.",
+      "followingNoneTitle": "Follow people to hear them here",
+      "followingNone": "Highlights from the lives of people you follow show up in this tab.",
+      "followingQuietTitle": "Nothing new from people you follow",
+      "followingQuiet": "When they save a highlight from a live, it shows up here. Find more in Explore.",
+      "toExplore": "Go to Explore"
     }
   }
 }

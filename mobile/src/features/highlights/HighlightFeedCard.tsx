@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { countHighlightPlay, type LiveHighlight } from '@/api/highlights';
 import { go, isImageUrl, userPath } from '@/features/discover/nav';
@@ -40,9 +40,22 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
     if (!active) setPaused(false);
   }
 
+  // The play / pause mark flashes and fades, as on Instagram, instead of
+  // sitting on the cover (it hid the FLYP card's logo). The stopped
+  // progress line shows that it is paused.
+  const [flash] = useState(() => new Animated.Value(0));
+  const [flashIcon, setFlashIcon] = useState<'play' | 'pause'>('pause');
   const onPress = () => {
-    if (muted) onToggleMute();
-    else setPaused((p) => !p);
+    if (muted) {
+      onToggleMute();
+      return;
+    }
+    const next = !paused;
+    setPaused(next);
+    setFlashIcon(next ? 'pause' : 'play');
+    flash.stopAnimation();
+    flash.setValue(1);
+    Animated.timing(flash, { toValue: 0, duration: 650, delay: 250, useNativeDriver: true }).start();
   };
 
   return (
@@ -64,11 +77,9 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
         </View>
         <View style={styles.art}>
           <HighlightCover uri={cover} hostName={host} recyclingKey={item.id} />
-          {paused ? (
-            <View style={styles.pausedMark}>
-              <Ionicons name="play" size={34} color="#fff" style={{ marginStart: 4 }} />
-            </View>
-          ) : null}
+          <Animated.View style={[styles.pausedMark, { opacity: flash }]}>
+            <Ionicons name={flashIcon} size={34} color="#fff" style={flashIcon === 'play' ? { marginStart: 4 } : undefined} />
+          </Animated.View>
         </View>
       </View>
 
