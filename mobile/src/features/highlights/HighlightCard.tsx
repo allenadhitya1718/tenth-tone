@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { LiveHighlight } from '@/api/highlights';
-import { go, isImageUrl } from '@/features/discover/nav';
+import { go } from '@/features/discover/nav';
 import { formatCount } from '@/features/feed/format';
 import { formatClock } from '@/features/stories/SoundPicker';
+
+import { HighlightCover, highlightCoverUri } from './HighlightCover';
 
 export const highlightPath = (id: string) => `/highlight/${encodeURIComponent(id)}`;
 
@@ -16,7 +17,7 @@ export const highlightPath = (id: string) => `/highlight/${encodeURIComponent(id
 export const HighlightCard = memo(function HighlightCard({ item }: { item: LiveHighlight }) {
   const { t } = useTranslation();
   const host = item.host?.name || item.host?.handle || '';
-  const cover = isImageUrl(item.cover_url) ? item.cover_url : isImageUrl(item.host?.avatar_url) ? item.host!.avatar_url : null;
+  const cover = highlightCoverUri(item.cover_url, item.host?.avatar_url);
   const label = item.title || t('live.highlight.by', { name: host });
   return (
     <Pressable
@@ -25,7 +26,7 @@ export const HighlightCard = memo(function HighlightCard({ item }: { item: LiveH
       accessibilityRole="button"
       accessibilityLabel={`${label}, ${formatClock(item.duration_ms / 1000)}`}
     >
-      {cover ? <Image source={{ uri: cover }} style={StyleSheet.absoluteFill} contentFit="cover" recyclingKey={item.id} /> : null}
+      <HighlightCover uri={cover} hostName={host} compact recyclingKey={item.id} />
       <View style={styles.shade} />
       <View style={styles.badge}>
         <Ionicons name="mic" size={10} color="#fff" />

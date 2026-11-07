@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Directory, File, Paths } from 'expo-file-system';
-import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { type Href, router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,10 +10,13 @@ import { ActivityIndicator, PanResponder, type PanResponderInstance, Pressable, 
 
 import { ApiError } from '@/api/client';
 import { highlightKeys, postHighlight } from '@/api/highlights';
+import type { LocalMedia } from '@/api/upload';
 import { fetchLiveStream, liveKeys } from '@/api/live';
 import { showAlert } from '@/components/Dialog';
 import { showToast } from '@/components/Toast';
 import { AppText, Button, Screen, TopBar } from '@/components/ui';
+import { HighlightCover } from '@/features/highlights/HighlightCover';
+import { isImageUrl } from '@/features/discover/nav';
 import { formatClock } from '@/features/stories/SoundPicker';
 import { aacDurationMs, NotAacError, trimAac } from '@/lib/aacTrim';
 import { useAuth } from '@/providers/AuthProvider';
@@ -168,8 +171,24 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
   const currentTime = startS + elapsed;
 
   const isHost = !!me && live.data?.host?.id === me;
-  const cover = live.data?.thumbnail || live.data?.host?.avatar_url || null;
   const hostName = live.data?.host?.name || live.data?.host?.handle || '';
+  // The cover: a photo picked here, else the live's cover, else the host's
+  // profile photo, else the FLYP card with their name (HighlightCover).
+  const [pickedCover, setPickedCover] = useState<LocalMedia | null>(null);
+  const liveCover = isImageUrl(live.data?.thumbnail) ? live.data!.thumbnail : null;
+  const profileCover = isImageUrl(live.data?.host?.avatar_url) ? live.data!.host!.avatar_url : null;
+  const cover = pickedCover?.uri ?? liveCover ?? profileCover;
+  const coverSource = pickedCover ? 'coverChosen' : liveCover ? 'coverFromLive' : profileCover ? 'coverFromProfile' : 'coverBrand';
+  async function pickCover() {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+      if (res.canceled || !res.assets[0]) return;
+      const a = res.assets[0];
+      setPickedCover({ uri: a.uri, mimeType: a.mimeType ?? 'image/jpeg', size: a.fileSize ?? null, name: a.fileName ?? null });
+    } catch {
+      showAlert(t('live.errors.title'), t('live.highlight.coverPickFailed'));
+    }
+  }
 
   async function post() {
     if (!file || busy || windowS < MIN_S) return;
@@ -186,6 +205,7 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
           title,
           startMs: startS * 1000,
           durationMs: cut.durationMs,
+          cover: pickedCover,
         },
         setProgress,
       );
@@ -264,10 +284,12 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
         accessibilityLabel={playingMinute ? t('live.highlight.pause') : t('live.highlight.playPart')}
         style={[styles.cover, { backgroundColor: colors.bg2 }]}
       >
-        {cover ? <Image source={{ uri: cover }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={18} /> : null}
+        <HighlightCover uri={cover} hostName={hostName} blurRadius={18} />
         <View style={styles.coverShade} />
-        {/* No cover photo: the play button alone (an icon behind it looked broken). */}
-        {cover ? <Image source={{ uri: cover }} style={styles.coverArt} contentFit="cover" /> : <View style={styles.coverArt} />}
+        {/* The picture that goes with the audio, as it will be posted. */}
+        <View style={styles.coverArt}>
+          <HighlightCover uri={cover} hostName={hostName} compact />
+        </View>
         <View style={styles.playBig}>
           {trimming ? (
             <ActivityIndicator color="#fff" />
@@ -395,6 +417,27 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
         editable={!busy}
       />
 
+      {/* The cover goes with the audio everywhere the highlight is shown. */}
+      <View style={[styles.coverRow, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
+        <View style={styles.coverThumb}>
+          <HighlightCover uri={cover} hostName={hostName} compact />
+        </View>
+        <View style={styles.coverText}>
+          <AppText style={{ fontWeight: '700' }}>{t('live.highlight.coverLabel')}</AppText>
+          <Text style={[styles.small, { color: colors.muted }]} numberOfLines={2}>
+            {t(`live.highlight.${coverSource}`)}
+          </Text>
+        </View>
+        {pickedCover ? (
+          <Pressable onPress={() => setPickedCover(null)} disabled={busy} hitSlop={8} accessibilityRole="button" style={styles.coverBtn}>
+            <Text style={[styles.small, { color: colors.muted, fontWeight: '700' }]}>{t('live.highlight.coverReset')}</Text>
+          </Pressable>
+        ) : null}
+        <Pressable onPress={() => void pickCover()} disabled={busy} hitSlop={8} accessibilityRole="button" style={styles.coverBtn}>
+          <Text style={{ color: colors.primary, fontWeight: '800' }}>{t('live.highlight.coverChange')}</Text>
+        </Pressable>
+      </View>
+
       <Button
         title={busy ? `${t('live.highlight.posting')} ${progress ? Math.round(progress * 100) + '%' : ''}`.trim() : t('live.highlight.post')}
         onPress={() => void post()}
@@ -478,7 +521,19 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', gap: 12, marginTop: 80, paddingHorizontal: 24 },
   cover: { height: 220, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   coverShade: { position: 'absolute', top: 0, bottom: 0, start: 0, end: 0, backgroundColor: 'rgba(0,4,33,0.45)' },
-  coverArt: { width: 104, height: 104, borderRadius: 14, marginBottom: 40 },
+  coverArt: { width: 104, height: 104, borderRadius: 14, marginBottom: 40, overflow: 'hidden' },
+  coverRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 16,
+  },
+  coverThumb: { width: 52, height: 52, borderRadius: 10, overflow: 'hidden' },
+  coverText: { flex: 1, gap: 2 },
+  coverBtn: { paddingHorizontal: 6, paddingVertical: 6 },
   playBig: {
     position: 'absolute',
     top: 64,

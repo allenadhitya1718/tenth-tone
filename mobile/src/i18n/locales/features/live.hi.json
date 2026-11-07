@@ -508,7 +508,15 @@
       "lengthHint": "किसी भी किनारे को खींचें, या − और + दबाएँ",
       "shorter": "5 सेकंड छोटा",
       "longer": "5 सेकंड लंबा",
-      "feedChip": "लाइव हाइलाइट"
+      "feedChip": "लाइव हाइलाइट",
+      "coverLabel": "कवर",
+      "coverFromLive": "आपके लाइव की कवर फ़ोटो",
+      "coverFromProfile": "आपकी प्रोफ़ाइल फ़ोटो",
+      "coverBrand": "आपके नाम के साथ FLYP कवर",
+      "coverChosen": "आपकी चुनी हुई फ़ोटो",
+      "coverChange": "बदलें",
+      "coverReset": "डिफ़ॉल्ट",
+      "coverPickFailed": "आपकी फ़ोटो नहीं खुल सकीं। फिर से कोशिश करें।"
     }
   }
 }

@@ -529,7 +529,15 @@
       "lengthHint": "Drag either end, or use − and +",
       "shorter": "5 seconds shorter",
       "longer": "5 seconds longer",
-      "feedChip": "Live highlight"
+      "feedChip": "Live highlight",
+      "coverLabel": "Cover",
+      "coverFromLive": "Your live's cover photo",
+      "coverFromProfile": "Your profile photo",
+      "coverBrand": "FLYP cover with your name",
+      "coverChosen": "Your chosen photo",
+      "coverChange": "Change",
+      "coverReset": "Use default",
+      "coverPickFailed": "Couldn't open your photos. Try again."
     }
   }
 }

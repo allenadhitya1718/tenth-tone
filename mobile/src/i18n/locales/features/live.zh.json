@@ -500,7 +500,15 @@
       "lengthHint": "拖动任一端，或使用 − 和 +",
       "shorter": "缩短 5 秒",
       "longer": "延长 5 秒",
-      "feedChip": "直播精彩片段"
+      "feedChip": "直播精彩片段",
+      "coverLabel": "封面",
+      "coverFromLive": "直播的封面照片",
+      "coverFromProfile": "你的头像",
+      "coverBrand": "带你名字的 FLYP 封面",
+      "coverChosen": "你选择的照片",
+      "coverChange": "更换",
+      "coverReset": "使用默认",
+      "coverPickFailed": "无法打开你的照片，请重试。"
     }
   }
 }

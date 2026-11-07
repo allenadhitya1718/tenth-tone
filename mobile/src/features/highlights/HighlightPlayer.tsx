@@ -11,10 +11,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { countHighlightPlay, deleteHighlight, fetchHighlight, highlightKeys } from '@/api/highlights';
 import { showAlert } from '@/components/Dialog';
 import { showToast } from '@/components/Toast';
-import { go, isImageUrl, userPath } from '@/features/discover/nav';
+import { go, userPath } from '@/features/discover/nav';
 import { formatCount } from '@/features/feed/format';
 import { formatClock } from '@/features/stories/SoundPicker';
 import { useAuth } from '@/providers/AuthProvider';
+
+import { HighlightCover, highlightCoverUri } from './HighlightCover';
 
 const BG = '#000421';
 
@@ -69,7 +71,7 @@ export function HighlightPlayer({ id }: { id: string }) {
 
   const isMine = session?.user.id === h.host_id;
   const host = h.host?.name || h.host?.handle || '';
-  const cover = isImageUrl(h.cover_url) ? h.cover_url : isImageUrl(h.host?.avatar_url) ? h.host!.avatar_url : null;
+  const cover = highlightCoverUri(h.cover_url, h.host?.avatar_url);
   const total = status.duration > 0 ? status.duration : h.duration_ms / 1000;
   const pct = total ? Math.min(1, status.currentTime / total) : 0;
 
@@ -110,7 +112,7 @@ export function HighlightPlayer({ id }: { id: string }) {
 
         <View style={styles.middle}>
           <View style={styles.art}>
-            {cover ? <Image source={{ uri: cover }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <Ionicons name="radio" size={64} color="#fff" />}
+            <HighlightCover uri={cover} hostName={host} />
           </View>
           <Text style={styles.title} numberOfLines={3}>
             {h.title || t('live.highlight.by', { name: host })}

@@ -519,7 +519,15 @@
       "lengthHint": "اسحب أي طرف، أو استخدم − و +",
       "shorter": "أقصر بـ 5 ثوانٍ",
       "longer": "أطول بـ 5 ثوانٍ",
-      "feedChip": "لقطة من بث مباشر"
+      "feedChip": "لقطة من بث مباشر",
+      "coverLabel": "الغلاف",
+      "coverFromLive": "صورة غلاف البث",
+      "coverFromProfile": "صورة ملفك الشخصي",
+      "coverBrand": "غلاف FLYP مع اسمك",
+      "coverChosen": "الصورة التي اخترتها",
+      "coverChange": "تغيير",
+      "coverReset": "الافتراضي",
+      "coverPickFailed": "تعذّر فتح صورك. حاول مرة أخرى."
     }
   }
 }

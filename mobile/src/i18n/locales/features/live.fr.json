@@ -516,7 +516,15 @@
       "lengthHint": "Faites glisser un bord, ou utilisez − et +",
       "shorter": "5 secondes de moins",
       "longer": "5 secondes de plus",
-      "feedChip": "Moment fort du live"
+      "feedChip": "Moment fort du live",
+      "coverLabel": "Couverture",
+      "coverFromLive": "La photo de couverture de votre live",
+      "coverFromProfile": "Votre photo de profil",
+      "coverBrand": "Couverture FLYP avec votre nom",
+      "coverChosen": "La photo que vous avez choisie",
+      "coverChange": "Changer",
+      "coverReset": "Par défaut",
+      "coverPickFailed": "Impossible d’ouvrir vos photos. Réessayez."
     }
   }
 }

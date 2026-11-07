@@ -508,7 +508,15 @@
       "lengthHint": "Bir ucunu sürükle ya da − ve + kullan",
       "shorter": "5 saniye kısa",
       "longer": "5 saniye uzun",
-      "feedChip": "Canlı yayın öne çıkanı"
+      "feedChip": "Canlı yayın öne çıkanı",
+      "coverLabel": "Kapak",
+      "coverFromLive": "Canlı yayınının kapak fotoğrafı",
+      "coverFromProfile": "Profil fotoğrafın",
+      "coverBrand": "Adınla FLYP kapağı",
+      "coverChosen": "Seçtiğin fotoğraf",
+      "coverChange": "Değiştir",
+      "coverReset": "Varsayılan",
+      "coverPickFailed": "Fotoğrafların açılamadı. Tekrar dene."
     }
   }
 }

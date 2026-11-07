@@ -4,11 +4,11 @@
 // ApiError codes:
 //   not_host, live_not_found, bad_duration, title_too_long,
 //   audio_not_uploaded, highlight_limit_live (3 per live),
-//   highlight_limit_day (10 a day), content_blocked
+//   highlight_limit_day (10 a day), content_blocked, cover_not_uploaded
 import type { PostgrestError } from '@supabase/supabase-js';
 
 import { ApiError, fireAndForget, must, supabase, uid } from './client';
-import { checkText } from './moderation';
+import { checkImage, checkText } from './moderation';
 import type { Iso, UserSummary, Uuid } from './types';
 import { type LocalMedia, uploadToR2 } from './upload';
 
@@ -44,6 +44,7 @@ const KNOWN = new Set([
   'audio_not_uploaded',
   'highlight_limit_live',
   'highlight_limit_day',
+  'cover_not_uploaded',
 ]);
 
 function asHighlightError(e: unknown): unknown {
@@ -98,26 +99,46 @@ export type PostHighlightInput = {
   title?: string | null;
   startMs: number;
   durationMs: number;
+  /** A photo the host picked for the cover; none = the live's cover, else
+   *  their profile photo (decided by the server). */
+  cover?: LocalMedia | null;
 };
 
-export async function postHighlight({ liveId, audio, title, startMs, durationMs }: PostHighlightInput, onProgress?: (p: number) => void) {
+// The server before 0169 has no p_cover_url: PostgREST answers that no
+// function matches. The highlight is then posted with the default cover.
+function isMissingCoverArg(e: unknown): boolean {
+  const err = e as PostgrestError | null;
+  return err?.code === 'PGRST202' || /create_live_highlight/.test(err?.message ?? '');
+}
+
+export async function postHighlight({ liveId, audio, title, startMs, durationMs, cover }: PostHighlightInput, onProgress?: (p: number) => void) {
   const clean = title?.trim() || null;
   if (clean) {
     const verdict = await checkText('live_title', clean);
     if (verdict.blocked) throw new ApiError('content_blocked', verdict.message ?? undefined);
+  }
+  // The chosen cover is screened like a live cover, then uploaded first (it
+  // is small); the audio's progress is what the bar shows.
+  let coverUrl: string | null = null;
+  if (cover) {
+    const verdict = await checkImage('live_cover', cover);
+    if (verdict.blocked) throw new ApiError('content_blocked', verdict.message ?? undefined);
+    coverUrl = await uploadToR2({ ...cover, mimeType: cover.mimeType || 'image/jpeg' });
   }
   // uploadToR2 reports bytes; the caller wants a fraction.
   const url = await uploadToR2({ ...audio, mimeType: 'audio/aac', name: 'highlight.aac' }, (sent, total) =>
     onProgress?.(total > 0 ? Math.min(1, sent / total) : 0),
   );
   try {
-    const { data, error } = await supabase.rpc('create_live_highlight', {
+    const args = {
       p_live_id: liveId,
       p_audio_url: url,
       p_title: clean,
       p_start_ms: Math.round(startMs),
       p_duration_ms: Math.round(durationMs),
-    });
+    };
+    let { data, error } = await supabase.rpc('create_live_highlight', coverUrl ? { ...args, p_cover_url: coverUrl } : args);
+    if (error && coverUrl && isMissingCoverArg(error)) ({ data, error } = await supabase.rpc('create_live_highlight', args));
     if (error) throw asHighlightError(error);
     return data as unknown as LiveHighlight;
   } catch (e) {

@@ -516,7 +516,15 @@
       "lengthHint": "Arrastra un extremo o usa − y +",
       "shorter": "5 segundos menos",
       "longer": "5 segundos más",
-      "feedChip": "Momento del directo"
+      "feedChip": "Momento del directo",
+      "coverLabel": "Portada",
+      "coverFromLive": "La portada de tu directo",
+      "coverFromProfile": "Tu foto de perfil",
+      "coverBrand": "Portada de FLYP con tu nombre",
+      "coverChosen": "La foto que elegiste",
+      "coverChange": "Cambiar",
+      "coverReset": "Predeterminada",
+      "coverPickFailed": "No se pudieron abrir tus fotos. Inténtalo de nuevo."
     }
   }
 }

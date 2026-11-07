@@ -508,7 +508,15 @@
       "lengthHint": "کسی بھی سرے کو کھینچیں، یا − اور + استعمال کریں",
       "shorter": "5 سیکنڈ چھوٹا",
       "longer": "5 سیکنڈ لمبا",
-      "feedChip": "لائیو ہائی لائٹ"
+      "feedChip": "لائیو ہائی لائٹ",
+      "coverLabel": "کور",
+      "coverFromLive": "آپ کے لائیو کی کور تصویر",
+      "coverFromProfile": "آپ کی پروفائل تصویر",
+      "coverBrand": "آپ کے نام کے ساتھ FLYP کور",
+      "coverChosen": "آپ کی منتخب کردہ تصویر",
+      "coverChange": "تبدیل کریں",
+      "coverReset": "ڈیفالٹ",
+      "coverPickFailed": "آپ کی تصاویر نہیں کھل سکیں۔ دوبارہ کوشش کریں۔"
     }
   }
 }

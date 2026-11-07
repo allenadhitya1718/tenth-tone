@@ -500,7 +500,15 @@
       "lengthHint": "Geser salah satu ujung, atau pakai − dan +",
       "shorter": "5 detik lebih pendek",
       "longer": "5 detik lebih panjang",
-      "feedChip": "Sorotan live"
+      "feedChip": "Sorotan live",
+      "coverLabel": "Sampul",
+      "coverFromLive": "Foto sampul live kamu",
+      "coverFromProfile": "Foto profil kamu",
+      "coverBrand": "Sampul FLYP dengan namamu",
+      "coverChosen": "Foto pilihanmu",
+      "coverChange": "Ganti",
+      "coverReset": "Bawaan",
+      "coverPickFailed": "Tidak bisa membuka fotomu. Coba lagi."
     }
   }
 }

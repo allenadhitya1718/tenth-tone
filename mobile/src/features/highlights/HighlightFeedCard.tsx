@@ -10,6 +10,8 @@ import { countHighlightPlay, type LiveHighlight } from '@/api/highlights';
 import { go, isImageUrl, userPath } from '@/features/discover/nav';
 import { formatClock } from '@/features/stories/SoundPicker';
 
+import { HighlightCover, highlightCoverUri } from './HighlightCover';
+
 type Props = {
   item: LiveHighlight;
   height: number;
@@ -28,7 +30,7 @@ type Props = {
 export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height, active, near, muted, onToggleMute }: Props) {
   const { t } = useTranslation();
   const host = item.host?.name || item.host?.handle || '';
-  const cover = isImageUrl(item.cover_url) ? item.cover_url : isImageUrl(item.host?.avatar_url) ? item.host!.avatar_url : null;
+  const cover = highlightCoverUri(item.cover_url, item.host?.avatar_url);
   const avatar = isImageUrl(item.host?.avatar_url) ? item.host!.avatar_url : null;
   const [paused, setPaused] = useState(false);
   // Leaving the page forgets a pause, as videos do.
@@ -61,12 +63,7 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
           <Text style={styles.chipText}>{t('live.highlight.feedChip')}</Text>
         </View>
         <View style={styles.art}>
-          {cover ? (
-            <Image source={{ uri: cover }} style={StyleSheet.absoluteFill} contentFit="cover" recyclingKey={item.id} />
-          ) : paused ? null : (
-            // No cover: the icon makes way for the play mark when paused.
-            <Ionicons name="radio" size={72} color="#fff" />
-          )}
+          <HighlightCover uri={cover} hostName={host} recyclingKey={item.id} />
           {paused ? (
             <View style={styles.pausedMark}>
               <Ionicons name="play" size={34} color="#fff" style={{ marginStart: 4 }} />
