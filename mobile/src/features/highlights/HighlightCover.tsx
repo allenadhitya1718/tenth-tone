@@ -38,7 +38,8 @@ export function HighlightCover({
   }
   return (
     <View style={[StyleSheet.absoluteFill, styles.brand, style]} pointerEvents="none">
-      <LinearGradient colors={['#0a1650', '#000421']} style={StyleSheet.absoluteFill} />
+      {/* Stops short of the app's navy (#000421), so the card's edge shows on a navy page. */}
+      <LinearGradient colors={['#13246e', '#081245']} style={StyleSheet.absoluteFill} />
       {blurRadius ? null : (
         <>
           <Image

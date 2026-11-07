@@ -32,8 +32,9 @@ export const HighlightCard = memo(function HighlightCard({ item }: { item: LiveH
         <Ionicons name="mic" size={10} color="#fff" />
         <Text style={styles.badgeText}>{formatClock(item.duration_ms / 1000)}</Text>
       </View>
+      {/* Top corner, so the picture (or the FLYP card) shows in full. */}
       <View style={styles.play}>
-        <Ionicons name="play" size={22} color="#fff" />
+        <Ionicons name="play" size={16} color="#fff" />
       </View>
       <View style={styles.foot}>
         <Text style={styles.title} numberOfLines={2}>
@@ -74,11 +75,11 @@ const styles = StyleSheet.create({
   badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   play: {
     position: 'absolute',
-    alignSelf: 'center',
-    top: '38%',
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    top: 6,
+    end: 6,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: 'rgba(30,86,214,0.9)',
     alignItems: 'center',
     justifyContent: 'center',

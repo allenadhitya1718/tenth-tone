@@ -286,16 +286,19 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
       >
         <HighlightCover uri={cover} hostName={hostName} blurRadius={18} />
         <View style={styles.coverShade} />
-        {/* The picture that goes with the audio, as it will be posted. */}
-        <View style={styles.coverArt}>
-          <HighlightCover uri={cover} hostName={hostName} compact />
-        </View>
-        <View style={styles.playBig}>
-          {trimming ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Ionicons name={playingMinute ? 'pause' : 'play'} size={26} color="#fff" style={playingMinute ? undefined : { marginStart: 3 }} />
-          )}
+        {/* The picture that goes with the audio, as it will be posted, and
+            the play button beside it (never on top of it). */}
+        <View style={styles.previewRow}>
+          <View style={styles.coverArt}>
+            <HighlightCover uri={cover} hostName={hostName} compact />
+          </View>
+          <View style={styles.playBig}>
+            {trimming ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Ionicons name={playingMinute ? 'pause' : 'play'} size={26} color="#fff" style={playingMinute ? undefined : { marginStart: 3 }} />
+            )}
+          </View>
         </View>
         <View style={styles.previewFoot} pointerEvents="none">
           <Text style={styles.previewTitle} numberOfLines={1}>
@@ -521,7 +524,8 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', gap: 12, marginTop: 80, paddingHorizontal: 24 },
   cover: { height: 220, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   coverShade: { position: 'absolute', top: 0, bottom: 0, start: 0, end: 0, backgroundColor: 'rgba(0,4,33,0.45)' },
-  coverArt: { width: 104, height: 104, borderRadius: 14, marginBottom: 40, overflow: 'hidden' },
+  previewRow: { flexDirection: 'row', alignItems: 'center', gap: 22, marginBottom: 44 },
+  coverArt: { width: 112, height: 112, borderRadius: 14, overflow: 'hidden' },
   coverRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -535,9 +539,6 @@ const styles = StyleSheet.create({
   coverText: { flex: 1, gap: 2 },
   coverBtn: { paddingHorizontal: 6, paddingVertical: 6 },
   playBig: {
-    position: 'absolute',
-    top: 64,
-    alignSelf: 'center',
     width: 56,
     height: 56,
     borderRadius: 28,
