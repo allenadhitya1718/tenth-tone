@@ -515,7 +515,8 @@
       "lengthIs": "Durée {{time}}",
       "lengthHint": "Faites glisser un bord, ou utilisez − et +",
       "shorter": "5 secondes de moins",
-      "longer": "5 secondes de plus"
+      "longer": "5 secondes de plus",
+      "feedChip": "Moment fort du live"
     }
   }
 }

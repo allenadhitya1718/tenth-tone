@@ -499,7 +499,8 @@
       "lengthIs": "时长 {{time}}",
       "lengthHint": "拖动任一端，或使用 − 和 +",
       "shorter": "缩短 5 秒",
-      "longer": "延长 5 秒"
+      "longer": "延长 5 秒",
+      "feedChip": "直播精彩片段"
     }
   }
 }

@@ -515,7 +515,8 @@
       "lengthIs": "Duración {{time}}",
       "lengthHint": "Arrastra un extremo o usa − y +",
       "shorter": "5 segundos menos",
-      "longer": "5 segundos más"
+      "longer": "5 segundos más",
+      "feedChip": "Momento del directo"
     }
   }
 }

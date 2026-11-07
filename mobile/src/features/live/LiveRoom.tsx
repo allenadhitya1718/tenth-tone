@@ -181,6 +181,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
     // The host's phone records the live for a highlight (0167).
     recordLiveId: isHost ? liveId : null,
   });
+  const { stopRecording, resumeRecording } = agora;
 
   const speakers = useMemo<StageSpeaker[]>(() => {
     if (!host) return [];
@@ -495,12 +496,16 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
         style: 'destructive',
         onPress: async () => {
           setEnding(true);
+          // The highlight recording ends at the tap: on a slow connection the
+          // server's answer took ~3 min on the Redmi, and the recording ran on.
+          stopRecording();
           try {
             await endLive(liveId);
             qc.setQueryData<LiveStream | null>(liveKeys.stream(liveId), (old) =>
               old ? { ...old, status: 'ended', ended_at: new Date().toISOString() } : old,
             );
           } catch {
+            resumeRecording();
             showAlert(t('live.end.failed'));
           } finally {
             setEnding(false);
@@ -508,7 +513,7 @@ export function LiveRoom({ liveId, hostHint }: { liveId: string; hostHint: boole
         },
       },
     ]);
-  }, [liveId, qc, t]);
+  }, [liveId, qc, t, stopRecording, resumeRecording]);
 
   // The host leaves only by ending: back is turned into the End prompt, and
   // the iOS swipe-back is switched off below while the stream runs.

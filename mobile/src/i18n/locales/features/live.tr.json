@@ -507,7 +507,8 @@
       "lengthIs": "Süre {{time}}",
       "lengthHint": "Bir ucunu sürükle ya da − ve + kullan",
       "shorter": "5 saniye kısa",
-      "longer": "5 saniye uzun"
+      "longer": "5 saniye uzun",
+      "feedChip": "Canlı yayın öne çıkanı"
     }
   }
 }

@@ -528,7 +528,8 @@
       "lengthIs": "Length {{time}}",
       "lengthHint": "Drag either end, or use − and +",
       "shorter": "5 seconds shorter",
-      "longer": "5 seconds longer"
+      "longer": "5 seconds longer",
+      "feedChip": "Live highlight"
     }
   }
 }

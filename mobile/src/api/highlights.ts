@@ -7,7 +7,7 @@
 //   highlight_limit_day (10 a day), content_blocked
 import type { PostgrestError } from '@supabase/supabase-js';
 
-import { ApiError, fireAndForget, must, supabase } from './client';
+import { ApiError, fireAndForget, must, supabase, uid } from './client';
 import { checkText } from './moderation';
 import type { Iso, UserSummary, Uuid } from './types';
 import { type LocalMedia, uploadToR2 } from './upload';
@@ -28,6 +28,7 @@ export type LiveHighlight = {
 export const highlightKeys = {
   all: ['highlights'] as const,
   recent: () => ['highlights', 'recent'] as const,
+  following: () => ['highlights', 'following'] as const,
   byUser: (userId: string) => ['highlights', 'user', userId] as const,
   one: (id: string) => ['highlights', 'one', id] as const,
 };
@@ -54,6 +55,26 @@ function asHighlightError(e: unknown): unknown {
 export async function fetchRecentHighlights(limit = 30): Promise<LiveHighlight[]> {
   const data = must(
     await supabase.from('live_highlights').select(COLS).eq('is_hidden', false).order('created_at', { ascending: false }).limit(limit),
+  );
+  return (data ?? []) as unknown as LiveHighlight[];
+}
+
+/** Newest first, from the people you follow (Home → Following). */
+export async function fetchFollowingHighlights(limit = 50): Promise<LiveHighlight[]> {
+  const me = await uid();
+  if (!me) return [];
+  const { data: f, error: fe } = await supabase.from('follows').select('followed_id').eq('follower_id', me);
+  if (fe) throw fe;
+  const ids = ((f ?? []) as { followed_id: Uuid }[]).map((r) => r.followed_id);
+  if (!ids.length) return [];
+  const data = must(
+    await supabase
+      .from('live_highlights')
+      .select(COLS)
+      .in('host_id', ids)
+      .eq('is_hidden', false)
+      .order('created_at', { ascending: false })
+      .limit(limit),
   );
   return (data ?? []) as unknown as LiveHighlight[];
 }

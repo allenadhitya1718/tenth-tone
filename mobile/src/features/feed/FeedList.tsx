@@ -14,10 +14,12 @@ import {
   View,
 } from 'react-native';
 
+import { fetchFollowingHighlights, fetchRecentHighlights, highlightKeys, type LiveHighlight } from '@/api/highlights';
 import { fetchProfile, profileKeys } from '@/api/profiles';
 import type { Video } from '@/api/types';
 import { type FeedTab, fetchVideo, videoKeys } from '@/api/videos';
 import { NotFoundState } from '@/components/NotFoundState';
+import { HighlightFeedCard } from '@/features/highlights/HighlightFeedCard';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -27,11 +29,19 @@ import { VideoCard } from './VideoCard';
 
 type ViewToken = { isViewable: boolean; index?: number | null };
 
+// A page of the feed: a video, or a live highlight (lives are audio, and
+// permanent posts are gone, so highlights are most of what there is).
+type FeedItem = { kind: 'video'; id: string; at: number; v: Video } | { kind: 'highlight'; id: string; at: number; h: LiveHighlight };
+const asVideo = (v: Video): FeedItem => ({ kind: 'video', id: v.id, at: Date.parse(v.created_at) || 0, v });
+const asHighlight = (h: LiveHighlight): FeedItem => ({ kind: 'highlight', id: h.id, at: Date.parse(h.created_at) || 0, h });
+
 // A video to show first, ahead of the normal feed (`at` changes on every
 // open, so the same clip can be pinned again).
 export type Pin = { id: string; at: string };
 
-// One tab of the home feed: a vertical pager of full-height clips. It snaps
+// One tab of the home feed: a vertical pager of full-height clips, videos
+// and live highlights together, newest first (For You: everyone's
+// highlights; Following: those of people you follow). It snaps
 // every `height` with interval momentum off, so any flick, however light,
 // or a drag past half way moves exactly one clip, as on Reels / TikTok.
 // (pagingEnabled on Android only turned the page on a hard fling, and a
@@ -58,7 +68,13 @@ export function FeedList({
   const pin = pinProp && !wasDeletedHere(pinProp.id) ? pinProp : undefined;
   const q = useFeed(tab);
   const [index, setIndex] = useState(0);
-  const list = useRef<FlatList<Video>>(null);
+  const list = useRef<FlatList<FeedItem>>(null);
+  // A failure here only leaves highlights out; the videos still show.
+  const hl = useQuery({
+    queryKey: tab === 'following' ? highlightKeys.following() : highlightKeys.recent(),
+    queryFn: () => (tab === 'following' ? fetchFollowingHighlights() : fetchRecentHighlights(50)),
+    staleTime: 30_000,
+  });
   const pinned = useQuery({
     queryKey: videoKeys.video(pin?.id ?? ''),
     queryFn: () => fetchVideo(pin!.id),
@@ -72,14 +88,17 @@ export function FeedList({
   const followsSomeone = useQuery({
     queryKey: profileKeys.profile(me ?? ''),
     queryFn: () => fetchProfile(me),
-    enabled: tab === 'following' && !!me && q.isSuccess && !(feed?.some((p) => p.length) ?? false),
+    enabled: tab === 'following' && !!me && q.isSuccess && !(feed?.some((p) => p.length) ?? false) && !hl.data?.length,
     select: (p) => (p?.following_count ?? 0) > 0,
   });
   const videos = useMemo(() => {
-    const all = feed?.flat() ?? [];
     const first = pin && pinned.data?.id === pin.id ? pinned.data : null;
-    return first ? [first, ...all.filter((v) => v.id !== first.id)] : all;
-  }, [feed, pin, pinned.data]);
+    const rest = [...(feed?.flat() ?? []).filter((v) => v.id !== first?.id).map(asVideo), ...(hl.data ?? []).map(asHighlight)].sort(
+      (a, b) => b.at - a.at,
+    );
+    // A pinned video stays first.
+    return first ? [asVideo(first), ...rest] : rest;
+  }, [feed, hl.data, pin, pinned.data]);
 
   // While there are only a few videos, For You loops: once the server has
   // nothing more (no next page), the same videos follow again instead of the
@@ -120,16 +139,26 @@ export function FeedList({
   );
 
   const renderItem = useCallback(
-    ({ item, index: i }: { item: Video; index: number }) => (
-      <VideoCard
-        video={item}
-        height={height}
-        active={focused && i === index}
-        near={Math.abs(i - index) <= 1}
-        muted={muted}
-        onToggleMute={onToggleMute}
-      />
-    ),
+    ({ item, index: i }: { item: FeedItem; index: number }) =>
+      item.kind === 'video' ? (
+        <VideoCard
+          video={item.v}
+          height={height}
+          active={focused && i === index}
+          near={Math.abs(i - index) <= 1}
+          muted={muted}
+          onToggleMute={onToggleMute}
+        />
+      ) : (
+        <HighlightFeedCard
+          item={item.h}
+          height={height}
+          active={focused && i === index}
+          near={Math.abs(i - index) <= 1}
+          muted={muted}
+          onToggleMute={onToggleMute}
+        />
+      ),
     [height, focused, index, muted, onToggleMute],
   );
 
@@ -175,7 +204,7 @@ export function FeedList({
       ref={list}
       data={items}
       // Repeated rounds reuse ids, so the round goes into the key.
-      keyExtractor={(v, i) => (i < videos.length ? v.id : `${v.id}:${Math.floor(i / videos.length)}`)}
+      keyExtractor={(v, i) => (i < videos.length ? `${v.kind}:${v.id}` : `${v.kind}:${v.id}:${Math.floor(i / videos.length)}`)}
       renderItem={renderItem}
       snapToInterval={height}
       snapToAlignment="start"
@@ -217,6 +246,7 @@ export function FeedList({
             setIndex(0);
             setRounds(1);
             void q.refetch();
+            void hl.refetch();
           }}
           tintColor="#fff"
           colors={['#1e56d6']}

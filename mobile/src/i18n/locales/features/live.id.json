@@ -499,7 +499,8 @@
       "lengthIs": "Durasi {{time}}",
       "lengthHint": "Geser salah satu ujung, atau pakai − dan +",
       "shorter": "5 detik lebih pendek",
-      "longer": "5 detik lebih panjang"
+      "longer": "5 detik lebih panjang",
+      "feedChip": "Sorotan live"
     }
   }
 }

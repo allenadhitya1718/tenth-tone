@@ -94,6 +94,9 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave, 
   const joinedRole = useRef<AgoraRole | null>(null);
   const wantedRole = useRef<AgoraRole>(role);
   const switchSeq = useRef(0);
+  // Pause / resume the highlight recording from outside the engine effect
+  // (End live stops it at the tap, not when the server answers).
+  const recordingCtl = useRef<{ stop: () => void; resume: () => void }>({ stop: () => {}, resume: () => {} });
   // Declared before the lifecycle effect, so a join reads the current role.
   useEffect(() => {
     wantedRole.current = role;
@@ -140,9 +143,12 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave, 
 
     // Highlight recording (host only). Started once the channel is joined;
     // a reconnect does not restart it. A failure only costs the highlight.
+    // Once the host taps End live it stays stopped (held), unless ending
+    // fails and the live carries on.
     let recording = false;
+    let held = false;
     const startRecording = () => {
-      if (recording || !recordLive || joinedRole.current !== 'host') return;
+      if (held || recording || !recordLive || joinedRole.current !== 'host') return;
       try {
         const rc = engine.startAudioRecording({
           filePath: nativePath(newRecordingFile(recordLive)),
@@ -161,6 +167,24 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave, 
         endMoments();
         console.warn('live recording:', (e as Error)?.message);
       }
+    };
+
+    const stopRecording = () => {
+      held = true;
+      if (!recording) return;
+      recording = false;
+      try {
+        engine.stopAudioRecording();
+      } catch {}
+      endMoments();
+    };
+    recordingCtl.current = {
+      stop: stopRecording,
+      // Ending failed: carry on recording, as a new part of the same live.
+      resume: () => {
+        held = false;
+        startRecording();
+      },
     };
 
     const renew = (forRole: AgoraRole) => {
@@ -272,6 +296,7 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave, 
     return () => {
       cancelled = true;
       seqRef.current++;
+      recordingCtl.current = { stop: () => {}, resume: () => {} };
       try {
         engine.unregisterEventHandler(handler);
       } catch {}
@@ -371,8 +396,22 @@ export function useAgoraAudio({ channel, uid, role, enabled, speaking, onLeave, 
   const publishing = enabled && activeRole === 'host';
   useEffect(() => {
     if (!publishing) return;
-    return startAudioForeground('live', hasLeave ? { onEnd: () => onLeaveRef.current?.() } : {});
+    return startAudioForeground(
+      'live',
+      // Ending from the notification stops the highlight recording at once too.
+      hasLeave
+        ? {
+            onEnd: () => {
+              recordingCtl.current.stop();
+              onLeaveRef.current?.();
+            },
+          }
+        : {},
+    );
   }, [publishing, hasLeave]);
 
-  return { status, error, clearError, muted, setMuted, activeRole, remoteCount };
+  const stopRecording = useCallback(() => recordingCtl.current.stop(), []);
+  const resumeRecording = useCallback(() => recordingCtl.current.resume(), []);
+
+  return { status, error, clearError, muted, setMuted, activeRole, remoteCount, stopRecording, resumeRecording };
 }
