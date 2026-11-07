@@ -61,7 +61,12 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
           <Text style={styles.chipText}>{t('live.highlight.feedChip')}</Text>
         </View>
         <View style={styles.art}>
-          {cover ? <Image source={{ uri: cover }} style={StyleSheet.absoluteFill} contentFit="cover" recyclingKey={item.id} /> : <Ionicons name="radio" size={72} color="#fff" />}
+          {cover ? (
+            <Image source={{ uri: cover }} style={StyleSheet.absoluteFill} contentFit="cover" recyclingKey={item.id} />
+          ) : paused ? null : (
+            // No cover: the icon makes way for the play mark when paused.
+            <Ionicons name="radio" size={72} color="#fff" />
+          )}
           {paused ? (
             <View style={styles.pausedMark}>
               <Ionicons name="play" size={34} color="#fff" style={{ marginStart: 4 }} />
