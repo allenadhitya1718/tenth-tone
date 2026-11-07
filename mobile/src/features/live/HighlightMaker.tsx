@@ -19,6 +19,7 @@ import { HighlightCover } from '@/features/highlights/HighlightCover';
 import { isImageUrl } from '@/features/discover/nav';
 import { formatClock } from '@/features/stories/SoundPicker';
 import { aacDurationMs, NotAacError, trimAac } from '@/lib/aacTrim';
+import { reportError } from '@/lib/errorReport';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -214,6 +215,8 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
       // Straight to the new highlight, so the host hears what they posted.
       router.replace(`/highlight/${posted.id}` as Href);
     } catch (e) {
+      // The alert is generic; the real reason goes to the error log (0164).
+      reportError('handled', e, true, 'highlight-post');
       const code = e instanceof ApiError ? e.code : null;
       const msg =
         e instanceof NotAacError

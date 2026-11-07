@@ -61,10 +61,18 @@ function describe(media: LocalMedia) {
   return { type, ext };
 }
 
+// The upload is signed for an exact byte count (media-upload puts
+// content-length into the signature), so the size must be the file's real
+// size. The picker's own figure is only a fallback: for a cropped photo it
+// was not the cropped file's size on the Redmi, and R2 refused the upload.
 async function fileSize(uri: string, known?: number | null) {
+  try {
+    const { File } = await import('expo-file-system');
+    const measured = new File(uri).size;
+    if (measured && measured > 0) return measured;
+  } catch {}
   if (known) return known;
-  const { File } = await import('expo-file-system');
-  return new File(uri).size;
+  throw new ApiError('bad_size', 'could not read the file size');
 }
 
 export type Progress = (sent: number, total: number) => void;
