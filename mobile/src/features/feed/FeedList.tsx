@@ -162,7 +162,11 @@ export function FeedList({
     [height, focused, index, muted, onToggleMute],
   );
 
-  if (q.isLoading || height === 0 || (pin && pinned.isLoading)) {
+  // Videos and highlights load separately; wait for both, so the feed is
+  // not re-sorted under the viewer when the second one arrives (on the
+  // Redmi's slow 4G the video showed first, then the highlight slid in).
+  // A failed highlight query is not loading, so it never blocks the videos.
+  if (q.isLoading || hl.isLoading || height === 0 || (pin && pinned.isLoading)) {
     return (
       <View style={[styles.center, { height }]}>
         <ActivityIndicator color="#fff" />
