@@ -227,7 +227,9 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
               ? t('live.highlight.limitDay')
               : code === 'content_blocked'
                 ? t('live.errors.content_blocked')
-                : t('live.highlight.failed');
+                : code === 'network'
+                  ? t('live.highlight.network')
+                  : t('live.highlight.failed');
       showAlert(t('live.errors.title'), msg);
     } finally {
       try {

@@ -524,7 +524,8 @@
       "coverChosen": "La foto que elegiste",
       "coverChange": "Cambiar",
       "coverReset": "Predeterminada",
-      "coverPickFailed": "No se pudieron abrir tus fotos. Inténtalo de nuevo."
+      "coverPickFailed": "No se pudieron abrir tus fotos. Inténtalo de nuevo.",
+      "network": "Se cortó tu conexión al publicar. Revísala e inténtalo de nuevo."
     }
   }
 }

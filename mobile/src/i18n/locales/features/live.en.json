@@ -537,7 +537,8 @@
       "coverChosen": "Your chosen photo",
       "coverChange": "Change",
       "coverReset": "Use default",
-      "coverPickFailed": "Couldn't open your photos. Try again."
+      "coverPickFailed": "Couldn't open your photos. Try again.",
+      "network": "Your connection dropped while posting. Check it and try again."
     }
   }
 }

@@ -508,7 +508,8 @@
       "coverChosen": "Foto pilihanmu",
       "coverChange": "Ganti",
       "coverReset": "Bawaan",
-      "coverPickFailed": "Tidak bisa membuka fotomu. Coba lagi."
+      "coverPickFailed": "Tidak bisa membuka fotomu. Coba lagi.",
+      "network": "Koneksimu terputus saat memposting. Periksa lalu coba lagi."
     }
   }
 }

@@ -92,13 +92,25 @@ export async function uploadToR2(media: LocalMedia, onProgress?: Progress): Prom
   delete headers['Content-Length'];
 
   const { File, UploadType } = await import('expo-file-system');
-  const task = new File(media.uri).createUploadTask(sig.uploadUrl, {
-    httpMethod: 'PUT',
-    uploadType: UploadType.BINARY_CONTENT,
-    headers,
-    onProgress: onProgress ? ({ bytesSent, totalBytes }) => onProgress(bytesSent, totalBytes) : undefined,
-  });
-  const put = await task.uploadAsync();
+  // A dropped connection mid-upload ("Connection reset" on the Redmi's weak
+  // 4G) is tried again, up to 3 times in all, on the same signed URL. A
+  // refusal (an HTTP answer) is not.
+  let put: Awaited<ReturnType<ReturnType<InstanceType<typeof File>['createUploadTask']>['uploadAsync']>> | null = null;
+  for (let attempt = 1; ; attempt++) {
+    const task = new File(media.uri).createUploadTask(sig.uploadUrl, {
+      httpMethod: 'PUT',
+      uploadType: UploadType.BINARY_CONTENT,
+      headers,
+      onProgress: onProgress ? ({ bytesSent, totalBytes }) => onProgress(bytesSent, totalBytes) : undefined,
+    });
+    try {
+      put = await task.uploadAsync();
+      break;
+    } catch (e) {
+      if (attempt >= 3) throw new ApiError('network', (e as Error)?.message ?? 'upload interrupted');
+      await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
+  }
   if (!put || put.status < 200 || put.status >= 300) {
     // The bytes may be stored behind an unconfirmed ledger row; the hourly
     // sweeper removes those. Do not retry elsewhere.

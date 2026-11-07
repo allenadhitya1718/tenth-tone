@@ -508,7 +508,8 @@
       "coverChosen": "你选择的照片",
       "coverChange": "更换",
       "coverReset": "使用默认",
-      "coverPickFailed": "无法打开你的照片，请重试。"
+      "coverPickFailed": "无法打开你的照片，请重试。",
+      "network": "发布时网络中断了。请检查网络后重试。"
     }
   }
 }

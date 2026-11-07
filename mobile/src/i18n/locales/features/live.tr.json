@@ -516,7 +516,8 @@
       "coverChosen": "Seçtiğin fotoğraf",
       "coverChange": "Değiştir",
       "coverReset": "Varsayılan",
-      "coverPickFailed": "Fotoğrafların açılamadı. Tekrar dene."
+      "coverPickFailed": "Fotoğrafların açılamadı. Tekrar dene.",
+      "network": "Paylaşırken bağlantın koptu. Kontrol edip tekrar dene."
     }
   }
 }
