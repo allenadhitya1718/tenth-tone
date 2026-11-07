@@ -12,8 +12,10 @@ import { HighlightCover, highlightCoverUri } from './HighlightCover';
 
 export const highlightPath = (id: string) => `/highlight/${encodeURIComponent(id)}`;
 
-// A highlight in a grid (Explore, profile): the live's cover, a play mark,
-// its length, the title or "From X's live", and the host.
+// A highlight in a grid (Explore, profile), like an Instagram grid tile: the
+// picture, a small corner badge (mic and length), the title or "From X's
+// live" and the host. No play button (owner: it looked awkward); a tap
+// anywhere opens it.
 export const HighlightCard = memo(function HighlightCard({ item }: { item: LiveHighlight }) {
   const { t } = useTranslation();
   const host = item.host?.name || item.host?.handle || '';
@@ -31,10 +33,6 @@ export const HighlightCard = memo(function HighlightCard({ item }: { item: LiveH
       <View style={styles.badge}>
         <Ionicons name="mic" size={10} color="#fff" />
         <Text style={styles.badgeText}>{formatClock(item.duration_ms / 1000)}</Text>
-      </View>
-      {/* Top corner, so the picture (or the FLYP card) shows in full. */}
-      <View style={styles.play}>
-        <Ionicons name="play" size={16} color="#fff" />
       </View>
       <View style={styles.foot}>
         <Text style={styles.title} numberOfLines={2}>
@@ -73,18 +71,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  play: {
-    position: 'absolute',
-    top: 6,
-    end: 6,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(30,86,214,0.9)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingStart: 3,
-  },
   foot: { position: 'absolute', bottom: 8, start: 8, end: 8 },
   title: { color: '#fff', fontWeight: '800', fontSize: 13 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
