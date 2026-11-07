@@ -15,7 +15,7 @@ import { showAlert } from '@/components/Dialog';
 import { showToast } from '@/components/Toast';
 import { AppText, Button, Screen, TopBar } from '@/components/ui';
 import { formatClock } from '@/features/stories/SoundPicker';
-import { NotAacError, trimAac } from '@/lib/aacTrim';
+import { aacDurationMs, NotAacError, trimAac } from '@/lib/aacTrim';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -50,11 +50,20 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
   const [file] = useState(() => recordingFor(liveId));
   const [moments] = useState(() => (file ? momentsFor(file) : []));
 
-  // The full recording, only for its length: a raw AAC recording has no
-  // index, so Android cannot jump into it (it played from 0:00 on the Redmi).
-  const full = useAudioPlayer(file ? { uri: file.uri } : null);
+  // The recording's exact length, by counting its audio frames. Android's
+  // player only estimates a raw AAC file's length (0:23 for a quiet 1:16
+  // live on the Redmi), so it is the fallback for a file that can't be read.
+  const exact = useQuery({
+    queryKey: ['live-recording-length', file?.uri ?? ''],
+    queryFn: () => aacDurationMs(file!),
+    enabled: !!file,
+    staleTime: Infinity,
+    gcTime: 0,
+    retry: false,
+  });
+  const full = useAudioPlayer(file && exact.isError ? { uri: file.uri } : null);
   const fullStatus = useAudioPlayerStatus(full);
-  const total = fullStatus.duration > 0 ? fullStatus.duration : 0;
+  const total = exact.data ? exact.data / 1000 : exact.isError && fullStatus.duration > 0 ? fullStatus.duration : 0;
   // The length: the host's choice once they change it, else a minute (or
   // the whole live when shorter).
   const longest = Math.min(WINDOW_S, total);

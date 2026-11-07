@@ -19,6 +19,88 @@ export class NotAacError extends Error {
   }
 }
 
+type Scan = { t: number; frames: number; frameMs: number; startOff: number; endOff: number; startT: number; size: number };
+
+type Handle = ReturnType<File['open']>;
+
+// Walks the ADTS frames from the start of the file. With startMs = Infinity
+// it reads every header and returns the exact length in `t`.
+async function scan(handle: Handle, startMs: number, durationMs: number): Promise<Scan> {
+  const size = handle.size ?? 0;
+  let base = 0; // file offset of buf[0]
+  let buf = new Uint8Array(0);
+  let t = 0; // ms at the start of the current frame
+  let frameMs = 0;
+  let frames = 0;
+  let startOff = -1;
+  let endOff = -1;
+  let startT = 0;
+
+  outer: while (base + buf.length < size || buf.length >= 7) {
+    // Top up the buffer.
+    if (buf.length < 8192 && base + buf.length < size) {
+      handle.offset = base + buf.length;
+      const more = await handle.readBytes(Math.min(CHUNK, size - (base + buf.length)));
+      const joined = new Uint8Array(buf.length + more.length);
+      joined.set(buf);
+      joined.set(more, buf.length);
+      buf = joined;
+    }
+    let i = 0;
+    while (i + 7 <= buf.length) {
+      // ADTS sync word: 12 bits set.
+      if (buf[i] !== 0xff || (buf[i + 1]! & 0xf0) !== 0xf0) {
+        i++;
+        continue;
+      }
+      const len = ((buf[i + 3]! & 0x03) << 11) | (buf[i + 4]! << 3) | ((buf[i + 5]! & 0xe0) >> 5);
+      if (len < 7) {
+        i++;
+        continue;
+      }
+      if (i + len > buf.length && base + buf.length < size) break; // finish this frame next round
+      if (!frameMs) {
+        const sr = SAMPLE_RATES[(buf[i + 2]! >> 2) & 0x0f];
+        if (!sr) throw new NotAacError();
+        frameMs = (1024 * 1000) / sr;
+      }
+      if (startOff < 0 && t + frameMs > startMs) {
+        startOff = base + i;
+        startT = t;
+      }
+      t += frameMs;
+      frames++;
+      if (startOff >= 0 && t >= startT + durationMs) {
+        endOff = Math.min(base + i + len, size);
+        break outer;
+      }
+      i += len;
+    }
+    // Keep the unread tail and move on.
+    base += i;
+    buf = buf.slice(i);
+    if (base + buf.length >= size && buf.length < 7) break;
+    if (i === 0 && base + buf.length >= size) break;
+  }
+  return { t, frames, frameMs, startOff, endOff, startT, size };
+}
+
+/**
+ * The exact length of a recording in ms, by counting its frames (1024
+ * samples each). Android's player only estimates a raw AAC file's length
+ * from its first seconds, which was 0:23 for a 1:16 quiet live.
+ */
+export async function aacDurationMs(src: File): Promise<number> {
+  const handle = src.open(FileMode.ReadOnly);
+  try {
+    const r = await scan(handle, Infinity, 0);
+    if (!r.frames || !r.frameMs) throw new NotAacError();
+    return Math.round(r.t);
+  } finally {
+    handle.close();
+  }
+}
+
 /**
  * Copies [startMs, startMs + durationMs) of `src` into `dest` (overwritten).
  * A recording shorter than that yields what there is from startMs on.
@@ -26,66 +108,10 @@ export class NotAacError extends Error {
 export async function trimAac(src: File, dest: File, startMs: number, durationMs: number): Promise<TrimResult> {
   const handle = src.open(FileMode.ReadOnly);
   try {
-    const size = handle.size ?? 0;
-    let base = 0; // file offset of buf[0]
-    let buf = new Uint8Array(0);
-    let t = 0; // ms at the start of the current frame
-    let frameMs = 0;
-    let frames = 0;
-    let startOff = -1;
-    let endOff = -1;
-    let startT = 0;
-
-    outer: while (base + buf.length < size || buf.length >= 7) {
-      // Top up the buffer.
-      if (buf.length < 8192 && base + buf.length < size) {
-        handle.offset = base + buf.length;
-        const more = await handle.readBytes(Math.min(CHUNK, size - (base + buf.length)));
-        const joined = new Uint8Array(buf.length + more.length);
-        joined.set(buf);
-        joined.set(more, buf.length);
-        buf = joined;
-      }
-      let i = 0;
-      while (i + 7 <= buf.length) {
-        // ADTS sync word: 12 bits set.
-        if (buf[i] !== 0xff || (buf[i + 1]! & 0xf0) !== 0xf0) {
-          i++;
-          continue;
-        }
-        const len = ((buf[i + 3]! & 0x03) << 11) | (buf[i + 4]! << 3) | ((buf[i + 5]! & 0xe0) >> 5);
-        if (len < 7) {
-          i++;
-          continue;
-        }
-        if (i + len > buf.length && base + buf.length < size) break; // finish this frame next round
-        if (!frameMs) {
-          const sr = SAMPLE_RATES[(buf[i + 2]! >> 2) & 0x0f];
-          if (!sr) throw new NotAacError();
-          frameMs = (1024 * 1000) / sr;
-        }
-        if (startOff < 0 && t + frameMs > startMs) {
-          startOff = base + i;
-          startT = t;
-        }
-        t += frameMs;
-        frames++;
-        if (startOff >= 0 && t >= startT + durationMs) {
-          endOff = Math.min(base + i + len, size);
-          break outer;
-        }
-        i += len;
-      }
-      // Keep the unread tail and move on.
-      base += i;
-      buf = buf.slice(i);
-      if (base + buf.length >= size && buf.length < 7) break;
-      if (i === 0 && base + buf.length >= size) break;
-    }
-
+    const { t, frames, frameMs, startOff, endOff: found, startT, size } = await scan(handle, startMs, durationMs);
     if (!frames || !frameMs) throw new NotAacError();
     if (startOff < 0) throw new RangeError('start_after_end');
-    if (endOff < 0) endOff = size;
+    const endOff = found < 0 ? size : found;
 
     handle.offset = startOff;
     const bytes = await handle.readBytes(endOff - startOff);
