@@ -48,9 +48,34 @@ export type AgoraToken = {
 
 type FunctionsErrorLike = { message?: string; context?: Response };
 
+// One try waits at most this long. On the Redmi a token once took ~40 s on
+// 4G, and the host's live stayed silent all that time; a stuck request is
+// now dropped and tried again instead.
+const TOKEN_TIMEOUT_MS = 10_000;
+const TOKEN_TRIES = 3;
+
 export async function fetchAgoraToken(channel: string, uid: number, role: AgoraRole): Promise<AgoraToken> {
+  let last: unknown = null;
+  for (let attempt = 1; attempt <= TOKEN_TRIES; attempt++) {
+    try {
+      return await fetchAgoraTokenOnce(channel, uid, role);
+    } catch (e) {
+      last = e;
+      // Only a timeout or a network failure is worth another go; a refusal
+      // (signed out, not allowed, bad request) would only be refused again.
+      const status = e instanceof ApiError ? ((e.detail as { status?: number } | undefined)?.status ?? 0) : 0;
+      const retryable = !(e instanceof ApiError) || (e.code === 'agora_unavailable' && (status === 0 || status >= 500));
+      if (!retryable || attempt === TOKEN_TRIES) break;
+      await new Promise((r) => setTimeout(r, 500 * attempt));
+    }
+  }
+  throw last;
+}
+
+async function fetchAgoraTokenOnce(channel: string, uid: number, role: AgoraRole): Promise<AgoraToken> {
   const { data, error } = await supabase.functions.invoke<AgoraToken>('agora-token', {
     body: { channel: String(channel), uid, role },
+    timeout: TOKEN_TIMEOUT_MS,
   });
   if (error) {
     // The function returns a readable reason in the body; the SDK only says

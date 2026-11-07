@@ -249,7 +249,8 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
   const winWidth = total ? Math.max(14, (windowS / total) * barW) : 0;
   const playedX = total ? Math.min(barW, (currentTime / total) * barW) : 0;
 
-  const label = title.trim() || t('live.highlight.by', { name: hostName });
+  // Empty until the host's name has loaded (it read "From 's live").
+  const label = title.trim() || (hostName ? t('live.highlight.by', { name: hostName }) : '');
   const endS = startS + windowS;
 
   return (
