@@ -189,7 +189,22 @@
           }
         }
       ],
-      "expo-iap"
+      "expo-iap",
+      [
+        "expo-share-intent",
+        {
+          "iosShareExtensionName": "FLYP",
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsImageWithMaxCount": 1,
+            "NSExtensionActivationSupportsMovieWithMaxCount": 1
+          },
+          "iosHideView": true,
+          "androidIntentFilters": [
+            "image/*",
+            "video/*"
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

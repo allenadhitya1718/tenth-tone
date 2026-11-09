@@ -32,6 +32,22 @@
     "cardA11yPlain": "Video dari {{handle}}",
     "cardError": "Tidak dapat memuat video. Ketuk untuk mencoba lagi.",
     "loadingVideo": "Memuat video",
-    "openHint": "Membuka video"
+    "openHint": "Membuka video",
+    "in": {
+      "title": "Bagikan ke FLYP",
+      "story": "Tambahkan ke cerita",
+      "storySub": "Membuka ceritamu dengan foto atau video ini",
+      "chat": "Kirim di chat",
+      "chatSub": "Pilih salah satu chatmu",
+      "pickChat": "Pilih chat",
+      "confirmTitle": "Kirim ke {{name}}?",
+      "send": "Kirim",
+      "cancel": "Batal",
+      "back": "Kembali",
+      "noChats": "Kamu belum punya chat.",
+      "nothing": "Tidak ada yang dibagikan.",
+      "unsupported": "FLYP hanya bisa membagikan foto dan video.",
+      "home": "Buka FLYP"
+    }
   }
 }

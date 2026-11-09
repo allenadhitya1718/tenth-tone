@@ -32,6 +32,22 @@
     "cardA11yPlain": "Video de {{handle}}",
     "cardError": "No se pudo cargar el video. Toca para reintentar.",
     "loadingVideo": "Cargando video",
-    "openHint": "Abre el video"
+    "openHint": "Abre el video",
+    "in": {
+      "title": "Compartir en FLYP",
+      "story": "Añadir a tu historia",
+      "storySub": "Abre tu historia con esta foto o vídeo",
+      "chat": "Enviar en un chat",
+      "chatSub": "Elige uno de tus chats",
+      "pickChat": "Elige un chat",
+      "confirmTitle": "¿Enviar a {{name}}?",
+      "send": "Enviar",
+      "cancel": "Cancelar",
+      "back": "Atrás",
+      "noChats": "Aún no tienes chats.",
+      "nothing": "No hay nada que compartir.",
+      "unsupported": "FLYP solo puede compartir fotos y vídeos.",
+      "home": "Ir a FLYP"
+    }
   }
 }

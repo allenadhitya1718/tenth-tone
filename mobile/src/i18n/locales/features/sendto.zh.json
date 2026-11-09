@@ -32,6 +32,22 @@
     "cardA11yPlain": "{{handle}} 的视频",
     "cardError": "无法加载视频。点按重试。",
     "loadingVideo": "正在加载视频",
-    "openHint": "打开视频"
+    "openHint": "打开视频",
+    "in": {
+      "title": "分享到 FLYP",
+      "story": "添加到你的快拍",
+      "storySub": "用这张照片或视频打开你的快拍",
+      "chat": "在聊天中发送",
+      "chatSub": "选择你的一个聊天",
+      "pickChat": "选择聊天",
+      "confirmTitle": "发送给 {{name}}？",
+      "send": "发送",
+      "cancel": "取消",
+      "back": "返回",
+      "noChats": "你还没有聊天。",
+      "nothing": "没有可分享的内容。",
+      "unsupported": "FLYP 只能分享照片和视频。",
+      "home": "前往 FLYP"
+    }
   }
 }

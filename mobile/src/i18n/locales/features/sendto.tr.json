@@ -32,6 +32,22 @@
     "cardA11yPlain": "{{handle}} videosu",
     "cardError": "Video yüklenemedi. Tekrar denemek için dokun.",
     "loadingVideo": "Video yükleniyor",
-    "openHint": "Videoyu açar"
+    "openHint": "Videoyu açar",
+    "in": {
+      "title": "FLYP'ta paylaş",
+      "story": "Hikayene ekle",
+      "storySub": "Bu fotoğraf veya videoyla hikayeni açar",
+      "chat": "Sohbette gönder",
+      "chatSub": "Sohbetlerinden birini seç",
+      "pickChat": "Sohbet seç",
+      "confirmTitle": "{{name}} kişisine gönderilsin mi?",
+      "send": "Gönder",
+      "cancel": "İptal",
+      "back": "Geri",
+      "noChats": "Henüz sohbetin yok.",
+      "nothing": "Paylaşılacak bir şey yok.",
+      "unsupported": "FLYP yalnızca fotoğraf ve video paylaşabilir.",
+      "home": "FLYP'a git"
+    }
   }
 }

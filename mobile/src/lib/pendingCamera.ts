@@ -34,6 +34,13 @@ export async function launchCameraFor(
   }
 }
 
+/** Hands a photo or clip to a screen that is about to open (a gallery
+ *  share into FLYP, features/share/ShareIncoming.tsx); that screen takes it
+ *  with takeRecoveredCamera(), exactly as after a camera recovery. */
+export function handOverMedia(owner: CameraOwner, asset: ImagePicker.ImagePickerAsset) {
+  recovered = { owner, asset };
+}
+
 /** The recovered photo or clip for this screen, once. */
 export function takeRecoveredCamera(match: (o: CameraOwner) => boolean): ImagePicker.ImagePickerAsset | null {
   if (!recovered || !match(recovered.owner)) return null;

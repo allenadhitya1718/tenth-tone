@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ShareIntentProvider } from 'expo-share-intent';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { bootQueryCache, queryClient } from '@/api/queryClient';
@@ -51,6 +52,9 @@ export default function RootLayout() {
   if (!langReady) return null;
 
   return (
+    // A photo or video shared into FLYP from another app (the gallery's
+    // Share menu) arrives here; features/share/ShareIncoming.tsx uses it.
+    <ShareIntentProvider>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
@@ -64,6 +68,7 @@ export default function RootLayout() {
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
+    </ShareIntentProvider>
   );
 }
 
