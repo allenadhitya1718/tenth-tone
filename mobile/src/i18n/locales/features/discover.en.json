@@ -172,8 +172,8 @@
     "explore": {
       "liveNow": "Live now",
       "noLive": "Nobody is live right now. Start one and you'll be here.",
-      "clips": "Clips from lives",
-      "clipsSoon": "Highlights cut from lives will show here."
+      "clips": "Clips",
+      "clipsSoon": "Highlights from lives and voice clips will show here."
     }
   }
 }

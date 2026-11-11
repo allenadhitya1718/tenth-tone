@@ -14,6 +14,9 @@ import { type LocalMedia, uploadToR2 } from './upload';
 
 export type LiveHighlight = {
   id: Uuid;
+  /** 'live' = cut from a live; 'voice' = a voice clip recorded in the app
+   *  (0170). Missing before 0170 is applied: treat as 'live'. */
+  kind?: 'live' | 'voice';
   live_id: Uuid | null;
   host_id: Uuid;
   title: string | null;
@@ -33,8 +36,9 @@ export const highlightKeys = {
   one: (id: string) => ['highlights', 'one', id] as const,
 };
 
-const COLS =
-  'id, live_id, host_id, title, audio_url, cover_url, duration_ms, plays_count, created_at, host:profiles!live_highlights_host_id_fkey (id, name, handle, avatar_url)';
+// Every column (so `kind` comes along once 0170 adds it, and nothing breaks
+// before), plus the host.
+const COLS = '*, host:profiles!live_highlights_host_id_fkey (id, name, handle, avatar_url)';
 
 const KNOWN = new Set([
   'not_host',
@@ -139,6 +143,46 @@ export async function postHighlight({ liveId, audio, title, startMs, durationMs,
     };
     let { data, error } = await supabase.rpc('create_live_highlight', coverUrl ? { ...args, p_cover_url: coverUrl } : args);
     if (error && coverUrl && isMissingCoverArg(error)) ({ data, error } = await supabase.rpc('create_live_highlight', args));
+    if (error) throw asHighlightError(error);
+    return data as unknown as LiveHighlight;
+  } catch (e) {
+    throw asHighlightError(e);
+  }
+}
+
+export type PostVoiceClipInput = {
+  /** The recording: .m4a from the in-app recorder. */
+  audio: LocalMedia;
+  durationMs: number;
+  title?: string | null;
+  /** A background photo; none = the person's profile photo (server). */
+  cover?: LocalMedia | null;
+};
+
+/** A voice clip recorded in the app, up to 5 minutes (0170). Shown with
+ *  highlights in Explore, Home and on the profile. */
+export async function postVoiceClip({ audio, durationMs, title, cover }: PostVoiceClipInput, onProgress?: (p: number) => void) {
+  const clean = title?.trim() || null;
+  if (clean) {
+    const verdict = await checkText('live_title', clean);
+    if (verdict.blocked) throw new ApiError('content_blocked', verdict.message ?? undefined);
+  }
+  let coverUrl: string | null = null;
+  if (cover) {
+    const verdict = await checkImage('live_cover', cover);
+    if (verdict.blocked) throw new ApiError('content_blocked', verdict.message ?? undefined);
+    coverUrl = await uploadToR2({ ...cover, mimeType: cover.mimeType || 'image/jpeg' });
+  }
+  const url = await uploadToR2({ ...audio, mimeType: 'audio/mp4', name: 'voice.m4a' }, (sent, total) =>
+    onProgress?.(total > 0 ? Math.min(1, sent / total) : 0),
+  );
+  try {
+    const { data, error } = await supabase.rpc('create_voice_clip', {
+      p_audio_url: url,
+      p_title: clean,
+      p_duration_ms: Math.round(durationMs),
+      p_cover_url: coverUrl,
+    });
     if (error) throw asHighlightError(error);
     return data as unknown as LiveHighlight;
   } catch (e) {

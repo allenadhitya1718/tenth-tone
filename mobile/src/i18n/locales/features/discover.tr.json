@@ -170,8 +170,8 @@
     "explore": {
       "liveNow": "Şu an canlı",
       "noLive": "Şu anda kimse canlı yayında değil. Bir yayın başlat, burada görün.",
-      "clips": "Canlı yayın klipleri",
-      "clipsSoon": "Canlı yayınlardan kesilen öne çıkan anlar burada görünecek."
+      "clips": "Klipler",
+      "clipsSoon": "Canlı yayın öne çıkanları ve ses klipleri burada görünecek."
     }
   }
 }

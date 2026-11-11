@@ -16,7 +16,7 @@ import { formatCount } from '@/features/feed/format';
 import { formatClock } from '@/features/stories/SoundPicker';
 import { useAuth } from '@/providers/AuthProvider';
 
-import { HighlightCover, highlightCoverUri } from './HighlightCover';
+import { clipByKey, HighlightCover, highlightCoverUri } from './HighlightCover';
 
 const BG = '#000421';
 
@@ -115,10 +115,10 @@ export function HighlightPlayer({ id }: { id: string }) {
             <HighlightCover uri={cover} hostName={host} />
           </View>
           <Text style={styles.title} numberOfLines={3}>
-            {h.title || t('live.highlight.by', { name: host })}
+            {h.title || t(clipByKey(h.kind), { name: host })}
           </Text>
           <Pressable onPress={() => go(userPath(h.host_id))} accessibilityRole="link" hitSlop={6}>
-            <Text style={styles.host}>{h.title ? t('live.highlight.by', { name: host }) : host}</Text>
+            <Text style={styles.host}>{h.title ? t(clipByKey(h.kind), { name: host }) : host}</Text>
           </Pressable>
         </View>
 
@@ -173,9 +173,9 @@ const styles = StyleSheet.create({
   title: { color: '#fff', fontSize: 20, fontWeight: '800', textAlign: 'center' },
   host: { color: 'rgba(255,255,255,0.8)', fontSize: 14.5, fontWeight: '600' },
   bottom: { paddingBottom: 24, alignItems: 'center' },
-  track: { alignSelf: 'stretch', height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' },
+  track: { direction: 'ltr', alignSelf: 'stretch', height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' },
   fill: { height: 4, backgroundColor: '#fff' },
-  times: { alignSelf: 'stretch', flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, marginBottom: 18 },
+  times: { direction: 'ltr', alignSelf: 'stretch', flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, marginBottom: 18 },
   time: { color: 'rgba(255,255,255,0.75)', fontSize: 12 },
   playBtn: { width: 76, height: 76, borderRadius: 38, backgroundColor: '#1E56D6', alignItems: 'center', justifyContent: 'center' },
   playsRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 14 },

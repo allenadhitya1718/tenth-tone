@@ -167,8 +167,8 @@
     "explore": {
       "liveNow": "Sedang live",
       "noLive": "Belum ada yang live. Mulai live dan kamu akan muncul di sini.",
-      "clips": "Klip dari live",
-      "clipsSoon": "Momen terbaik dari live akan muncul di sini."
+      "clips": "Klip",
+      "clipsSoon": "Sorotan dari live dan klip suara akan muncul di sini."
     }
   }
 }

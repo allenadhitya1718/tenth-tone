@@ -124,10 +124,11 @@ const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 // escape the per-bucket rules below.
 const BUCKETS: Record<string, { exts: string[]; types: string[]; max: number }> = {
   videos: {
-    // jpg: poster + live cover. aac: a live highlight (0167), one minute of
-    // audio trimmed on the host's phone.
-    exts: ['mp4', 'webm', 'mov', 'jpg', 'jpeg', 'aac'],
-    types: ['video/mp4', 'video/webm', 'video/quicktime', 'image/jpeg', 'audio/aac'],
+    // jpg: poster, live and highlight covers. aac: a live highlight (0167),
+    // trimmed on the host's phone. m4a: a voice clip recorded in the app
+    // (0170, up to 5 minutes at speech bitrate, about 2.4 MB).
+    exts: ['mp4', 'webm', 'mov', 'jpg', 'jpeg', 'aac', 'm4a'],
+    types: ['video/mp4', 'video/webm', 'video/quicktime', 'image/jpeg', 'audio/aac', 'audio/mp4', 'audio/m4a'],
     max: 62914560,                                  // 60 MB, matches app_limits
   },
 };
@@ -256,7 +257,8 @@ Deno.serve(async (req) => {
     if (!rules.types.includes(contentType)) return json({ error: 'bad_content_type' }, 400);
     // Audio is only ever a one-minute highlight (about half a megabyte):
     // nothing bigger is a highlight.
-    const AUDIO_MAX = 3 * 1024 * 1024;
+    // A 5-minute voice clip at 64 kbps is ~2.4 MB; 4 MB leaves room.
+    const AUDIO_MAX = 4 * 1024 * 1024;
     if (contentType.startsWith('audio/') && size > AUDIO_MAX) {
       return json({ error: 'file_too_large', max_bytes: AUDIO_MAX }, 413);
     }

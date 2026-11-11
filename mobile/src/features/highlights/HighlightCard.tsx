@@ -8,7 +8,7 @@ import { go } from '@/features/discover/nav';
 import { formatCount } from '@/features/feed/format';
 import { formatClock } from '@/features/stories/SoundPicker';
 
-import { HighlightCover, highlightCoverUri } from './HighlightCover';
+import { clipByKey, HighlightCover, highlightCoverUri } from './HighlightCover';
 
 export const highlightPath = (id: string) => `/highlight/${encodeURIComponent(id)}`;
 
@@ -20,7 +20,7 @@ export const HighlightCard = memo(function HighlightCard({ item }: { item: LiveH
   const { t } = useTranslation();
   const host = item.host?.name || item.host?.handle || '';
   const cover = highlightCoverUri(item.cover_url, item.host?.avatar_url);
-  const label = item.title || t('live.highlight.by', { name: host });
+  const label = item.title || t(clipByKey(item.kind), { name: host });
   return (
     <Pressable
       style={styles.card}

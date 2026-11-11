@@ -10,7 +10,7 @@ import { countHighlightPlay, type LiveHighlight } from '@/api/highlights';
 import { go, isImageUrl, userPath } from '@/features/discover/nav';
 import { formatClock } from '@/features/stories/SoundPicker';
 
-import { HighlightCover, highlightCoverUri } from './HighlightCover';
+import { clipByKey, HighlightCover, highlightCoverUri } from './HighlightCover';
 
 type Props = {
   item: LiveHighlight;
@@ -63,7 +63,7 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
       onPress={onPress}
       style={[styles.card, { height }]}
       accessibilityRole="button"
-      accessibilityLabel={`${item.title || t('live.highlight.by', { name: host })}, ${formatClock(item.duration_ms / 1000)}`}
+      accessibilityLabel={`${item.title || t(clipByKey(item.kind), { name: host })}, ${formatClock(item.duration_ms / 1000)}`}
       accessibilityHint={muted ? t('feed.tapForSound') : undefined}
     >
       {cover ? <Image source={{ uri: cover }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={30} recyclingKey={item.id} /> : null}
@@ -73,7 +73,7 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
       <View style={styles.middle} pointerEvents="none">
         <View style={styles.chip}>
           <Ionicons name="mic" size={12} color="#fff" />
-          <Text style={styles.chipText}>{t('live.highlight.feedChip')}</Text>
+          <Text style={styles.chipText}>{item.kind === 'voice' ? t('voice.chip') : t('live.highlight.feedChip')}</Text>
         </View>
         <View style={styles.art}>
           <HighlightCover uri={cover} hostName={host} recyclingKey={item.id} />
@@ -104,7 +104,7 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
           </Text>
         </Pressable>
         <Text style={styles.title} numberOfLines={2}>
-          {item.title || t('live.highlight.by', { name: host })}
+          {item.title || t(clipByKey(item.kind), { name: host })}
         </Text>
         <View style={styles.metaRow}>
           <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.85)" />
@@ -212,6 +212,6 @@ const styles = StyleSheet.create({
   title: { color: '#fff', fontSize: 15, lineHeight: 21, fontWeight: '600', textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 4 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   meta: { color: 'rgba(255,255,255,0.85)', fontSize: 13 },
-  track: { position: 'absolute', start: 0, end: 0, bottom: 0, height: 3, backgroundColor: 'rgba(255,255,255,0.2)' },
+  track: { direction: 'ltr', position: 'absolute', start: 0, end: 0, bottom: 0, height: 3, backgroundColor: 'rgba(255,255,255,0.2)' },
   fill: { height: 3, backgroundColor: '#fff' },
 });

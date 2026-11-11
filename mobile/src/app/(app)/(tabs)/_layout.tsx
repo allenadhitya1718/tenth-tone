@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { router, Tabs, usePathname } from 'expo-router';
+import { router, Tabs, usePathname, type Href } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
@@ -59,6 +59,7 @@ export default function TabsLayout() {
             showAlert(t('tabs.create'), undefined, [
               { text: t('stories.addStory'), onPress: () => router.push('/stories/new') },
               { text: t('feed.goLive'), onPress: () => router.push('/live/start') },
+              { text: t('voice.createOption'), onPress: () => router.push('/voice/new' as Href) },
               { text: t('common.cancel'), style: 'cancel' },
             ]);
           },

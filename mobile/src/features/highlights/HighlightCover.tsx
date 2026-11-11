@@ -59,6 +59,11 @@ export function HighlightCover({
   );
 }
 
+/** The i18n key for "From X's live" or "X's voice clip" (0170 kinds). */
+export function clipByKey(kind: 'live' | 'voice' | undefined): string {
+  return kind === 'voice' ? 'voice.by' : 'live.highlight.by';
+}
+
 /** The best picture a highlight has: its cover, else the host's photo. */
 export function highlightCoverUri(cover: string | null | undefined, hostAvatar: string | null | undefined): string | null {
   if (isImageUrl(cover)) return cover;

@@ -177,8 +177,8 @@
     "explore": {
       "liveNow": "En direct",
       "noLive": "Personne n'est en direct. Lancez un live pour apparaître ici.",
-      "clips": "Extraits de lives",
-      "clipsSoon": "Les meilleurs moments des lives apparaîtront ici."
+      "clips": "Clips",
+      "clipsSoon": "Les moments forts des lives et les clips vocaux apparaîtront ici."
     }
   }
 }

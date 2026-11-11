@@ -26,12 +26,12 @@ import { useTheme } from '@/providers/ThemeProvider';
 import { BUCKET_S, busiestStart, deleteRecordings, momentsFor, recordingFor } from './liveRecording';
 
 // A highlight is any length from 5 seconds to 1 minute (0167 allows 5-61 s).
-const WINDOW_S = 60;
+const WINDOW_S = 120; // up to 2 minutes (0170; client, Nov 2026)
 const MIN_S = 5;
 const STEP_S = 5;
 // How close (px) a touch must be to an end of the selection to drag that end.
 const HANDLE_PX = 24;
-const MAX_TITLE = 80;
+const MAX_TITLE = 150; // the caption (0170)
 // At most this many activity bars on the trim bar, however long the live.
 const MAX_BARS = 90;
 
@@ -380,7 +380,8 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
               <Ionicons name="play-back" size={20} color={colors.text} />
             </Pressable>
             <View style={styles.times}>
-              <AppText style={{ fontWeight: '700' }}>{`${formatClock(startS)} – ${formatClock(endS)}`}</AppText>
+              <AppText style={{ fontWeight: '700' }}>{/* LTR isolate: in Arabic the range read "0:18 – 0:05". */}
+              {`\u2066${formatClock(startS)} – ${formatClock(endS)}\u2069`}</AppText>
               <Text style={[styles.small, { color: colors.muted }]}>{t('live.highlight.moveHint')}</Text>
             </View>
             <Pressable onPress={() => nudge(STEP_S)} style={[styles.round, { backgroundColor: colors.bg2 }]} accessibilityLabel={t('live.highlight.fwd5')} hitSlop={6}>
@@ -418,6 +419,8 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
       <TextInput
         value={title}
         onChangeText={(v) => setTitle(v.slice(0, MAX_TITLE))}
+        multiline
+        textAlignVertical="top"
         placeholder={t('live.highlight.titlePh')}
         placeholderTextColor={colors.muted}
         style={[styles.input, { color: colors.text, backgroundColor: colors.bg2, borderColor: colors.border }]}
@@ -553,12 +556,12 @@ const styles = StyleSheet.create({
   },
   previewFoot: { position: 'absolute', start: 14, end: 14, bottom: 10 },
   previewTitle: { color: '#fff', fontWeight: '800', fontSize: 14, marginBottom: 6 },
-  previewTrack: { height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)', overflow: 'hidden' },
+  previewTrack: { direction: 'ltr', height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)', overflow: 'hidden' },
   previewFill: { height: 3, backgroundColor: '#fff' },
-  previewTimes: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+  previewTimes: { direction: 'ltr', flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
   previewTime: { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '600' },
   sub: { marginBottom: 18 },
-  bar: { height: 52, borderRadius: 10, justifyContent: 'center' },
+  bar: { direction: 'ltr', height: 52, borderRadius: 10, justifyContent: 'center' },
   window: {
     position: 'absolute',
     top: 0,
@@ -579,12 +582,12 @@ const styles = StyleSheet.create({
   busyRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -6, marginBottom: 14 },
   busyText: { flex: 1 },
   playhead: { position: 'absolute', top: 0, bottom: 0, width: 2, backgroundColor: '#fff' },
-  barLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, marginBottom: 14 },
+  barLabels: { direction: 'ltr', flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, marginBottom: 14 },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   round: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   times: { alignItems: 'center', gap: 2 },
   small: { fontSize: 12.5 },
-  input: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginVertical: 16 },
+  input: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginVertical: 16, minHeight: 72 },
   discard: { alignSelf: 'center', paddingVertical: 14 },
   note: { textAlign: 'center' },
 });
