@@ -7,10 +7,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect } from 'expo-router';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  BackHandler,
   I18nManager,
   KeyboardAvoidingView,
   Pressable,
@@ -251,6 +252,21 @@ export function StoryComposer() {
       { text: t('stories.discard'), style: 'destructive', onPress: () => (router.canGoBack() ? router.back() : router.replace('/')) },
     ]);
   };
+
+  // Android's Back (button or gesture) asks too, not only the arrow at the
+  // top: on the Redmi it threw a loaded photo away without a word.
+  const leaveRef = useRef(leave);
+  useEffect(() => {
+    leaveRef.current = leave;
+  });
+  useEffect(() => {
+    if (!picked) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      leaveRef.current();
+      return true;
+    });
+    return () => sub.remove();
+  }, [picked]);
 
   // ---------- step 1: choose media ----------
   if (!picked) {
