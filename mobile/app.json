@@ -132,6 +132,7 @@
       "expo-router",
       "./plugins/withRtlSupport",
       "./plugins/withMinSdk26",
+      "./plugins/withShareExtensionDisplayName",
       [
         "expo-splash-screen",
         {
@@ -193,7 +194,7 @@
       [
         "expo-share-intent",
         {
-          "iosShareExtensionName": "FLYP",
+          "iosShareExtensionName": "FLYPShare",
           "iosActivationRules": {
             "NSExtensionActivationSupportsImageWithMaxCount": 1,
             "NSExtensionActivationSupportsMovieWithMaxCount": 1
