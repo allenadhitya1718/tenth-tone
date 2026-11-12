@@ -73,35 +73,6 @@ jobs:
         run: |
           echo "iOS fingerprint: \`$(npx expo-updates fingerprint:generate --platform ios | node -p 'JSON.parse(require("fs").readFileSync(0)).hash')\`" | tee -a "$GITHUB_STEP_SUMMARY"
 
-      # One-off (12 Nov 2026): the share extension (com.flyp.social.share-extension)
-      # needs its own provisioning profile, and EAS only creates one when someone
-      # answers its prompts. expect answers yes to each confirmation and takes the
-      # default of any choice. Once the profile exists this finds nothing to do;
-      # remove the step after one successful build.
-      - name: Set up signing for every target
-        env:
-          EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc_api_key.p8
-          EXPO_ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
-          EXPO_ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          EXPO_APPLE_TEAM_TYPE: COMPANY_OR_ORGANIZATION
-          FLYP_IOS_COMM_NOTIFS: ${{ vars.FLYP_IOS_COMM_NOTIFS }}
-        run: |
-          cat > "$RUNNER_TEMP/creds.exp" <<'EXP'
-          set timeout 600
-          log_user 1
-          spawn eas credentials:configure-build --platform ios --profile production
-          expect {
-            -nocase -re {\(y/n\)} { send "y\r"; exp_continue }
-            -re {›\s*$} { send "\r"; exp_continue }
-            timeout { puts "timed out waiting for eas"; exit 1 }
-            eof
-          }
-          catch wait result
-          exit [lindex $result 3]
-          EXP
-          expect "$RUNNER_TEMP/creds.exp"
-
       - name: Build IPA
         env:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc_api_key.p8
