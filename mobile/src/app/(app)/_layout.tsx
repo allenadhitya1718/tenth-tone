@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack, usePathname, type Href } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
 import { fetchBirthDateStrict, settingsKeys } from '@/api/settings';
@@ -50,11 +50,19 @@ export default function AppLayout() {
   // as an event, not a link, so +native-intent never sees it and FLYP just
   // opened on Home with the photo dropped (found testing on the Redmi). Open
   // the Share screen whenever one is waiting (after sign-in too).
-  const { hasShareIntent } = useShareIntentContext();
-  const pathNow = usePathname();
+  // Once per share: a new share opens the screen; going back does not.
+  const { hasShareIntent, shareIntent } = useShareIntentContext();
+  const shareKey = hasShareIntent ? (shareIntent.files?.[0]?.path ?? shareIntent.text ?? 'share') : null;
+  const openedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (hasShareIntent && pathNow !== '/share') router.push('/share' as Href);
-  }, [hasShareIntent, pathNow]);
+    if (!shareKey) {
+      openedFor.current = null;
+      return;
+    }
+    if (openedFor.current === shareKey) return;
+    openedFor.current = shareKey;
+    router.push('/share' as Href);
+  }, [shareKey]);
 
   // An account without a birthday is asked for it once, right after signing
   // in (owner request): Apple / phone sign-in and accounts from the earlier

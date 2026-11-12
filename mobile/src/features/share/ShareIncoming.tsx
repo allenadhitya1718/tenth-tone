@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import type * as ImagePicker from 'expo-image-picker';
 import { router, type Href } from 'expo-router';
 import { useShareIntentContext } from 'expo-share-intent';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -27,6 +27,10 @@ export function ShareIncoming() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const { shareIntent, resetShareIntent } = useShareIntentContext();
+  // Leaving this screen any way (Back, the gesture, Cancel) clears the
+  // shared file. Without this, Back brought the Share screen straight back
+  // and a later share showed the old photo (found on the Redmi).
+  useEffect(() => () => resetShareIntent(), [resetShareIntent]);
   const [choosingChat, setChoosingChat] = useState(false);
 
   const file = shareIntent?.files?.[0] ?? null;
