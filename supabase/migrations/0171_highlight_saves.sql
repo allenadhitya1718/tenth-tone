@@ -23,7 +23,7 @@ grant select, insert, delete on public.highlight_saves to authenticated;
 drop policy if exists "highlight saves read own" on public.highlight_saves;
 create policy "highlight saves read own" on public.highlight_saves
   for select to authenticated
-  using (user_id = auth.uid());
+  using (user_id = (select auth.uid()));
 
 -- Only for yourself, and only a highlight you can see (the live_highlights
 -- read policy applies inside the check: hidden or blocked ones fail).
@@ -31,14 +31,14 @@ drop policy if exists "highlight saves insert own" on public.highlight_saves;
 create policy "highlight saves insert own" on public.highlight_saves
   for insert to authenticated
   with check (
-    user_id = auth.uid()
+    user_id = (select auth.uid())
     and exists (select 1 from public.live_highlights h where h.id = highlight_id)
   );
 
 drop policy if exists "highlight saves delete own" on public.highlight_saves;
 create policy "highlight saves delete own" on public.highlight_saves
   for delete to authenticated
-  using (user_id = auth.uid());
+  using (user_id = (select auth.uid()));
 
 commit;
 
