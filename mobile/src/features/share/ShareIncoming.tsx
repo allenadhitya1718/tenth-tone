@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import { File as FileFs, Paths } from 'expo-file-system';
 import { Image } from 'expo-image';
 import type * as ImagePicker from 'expo-image-picker';
 import { router, type Href } from 'expo-router';
@@ -38,9 +39,32 @@ export function ShareIncoming() {
   const isImage = !!file?.mimeType?.startsWith('image/');
 
   // The picker's asset shape, which the story composer and the chat take.
+  // A private copy with a unique name for every share. Shared files land
+  // in the cache under their own name (often "image.jpg"), so a second share
+  // with the same name kept the same path, and the image cache showed the
+  // EARLIER photo while the new one would be sent (found on the Redmi).
+  const [nonce] = useState(() => Date.now());
+  const sourceUri = file ? (file.path.startsWith('/') ? `file://${file.path}` : file.path) : null;
+  const copy = useQuery({
+    queryKey: ['share-copy', nonce, sourceUri],
+    enabled: !!sourceUri && (isVideo || isImage),
+    gcTime: 0,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const name = (file?.fileName || 'shared').replace(/[^\w.-]/g, '_');
+      const dest = new FileFs(Paths.cache, `share-${nonce}-${name}`);
+      try {
+        await new FileFs(sourceUri!).copy(dest);
+        return dest.uri;
+      } catch {
+        return sourceUri!; // never worse than before
+      }
+    },
+  });
+
   const asset = useMemo<ImagePicker.ImagePickerAsset | null>(() => {
-    if (!file || (!isVideo && !isImage)) return null;
-    const uri = file.path.startsWith('/') ? `file://${file.path}` : file.path;
+    if (!file || (!isVideo && !isImage) || !copy.data) return null;
+    const uri = copy.data;
     return {
       uri,
       type: isVideo ? 'video' : 'image',
@@ -51,7 +75,7 @@ export function ShareIncoming() {
       fileName: file.fileName,
       duration: file.duration ?? null,
     } as ImagePicker.ImagePickerAsset;
-  }, [file, isVideo, isImage]);
+  }, [file, isVideo, isImage, copy.data]);
 
   const chats = useQuery({ queryKey: chatKeys.chats(), queryFn: fetchChats, enabled: choosingChat });
   const rows = useMemo(
@@ -88,6 +112,14 @@ export function ShareIncoming() {
   };
 
   const header = <TopBar title={t('sendTo.in.title')} />;
+
+  if (!asset && copy.isLoading) {
+    return (
+      <Screen header={header}>
+        <ActivityIndicator style={{ marginTop: 80 }} color={colors.primary} />
+      </Screen>
+    );
+  }
 
   if (!asset) {
     return (
