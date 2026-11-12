@@ -32,14 +32,12 @@ import {
   unfollow,
 } from '@/api/profiles';
 import { fetchUserHighlights, highlightKeys, type LiveHighlight } from '@/api/highlights';
-import { fetchUserSounds, type Sound, soundKeys } from '@/api/sounds';
-import { fetchDrafts, fetchSavedVideos, fetchUserVideos, videoKeys, type VideoTile } from '@/api/videos';
+import { fetchDrafts, fetchSavedVideos, videoKeys, type VideoTile } from '@/api/videos';
 import { tagKeys } from '@/api/tags';
 import { showAlert } from '@/components/Dialog';
 import { NotFoundState, goBackOrHome } from '@/components/NotFoundState';
 import { Button } from '@/components/ui';
 import { DraftSheet } from '@/features/drafts/DraftSheet';
-import { useDeleteVideo } from '@/features/feed/useDeleteVideo';
 import { ProfilePlacesMap } from '@/features/map/ProfilePlacesMap';
 import { formatCount } from '@/features/feed/format';
 import { HighlightCard } from '@/features/highlights/HighlightCard';
@@ -51,10 +49,11 @@ import { ProfileStoryAvatar } from '@/features/stories/ProfileStoryAvatar';
 import { atHandle } from '@/lib/handle';
 import { useTheme } from '@/providers/ThemeProvider';
 
-type Tab = 'highlights' | 'videos' | 'audio' | 'map' | 'saved' | 'drafts';
+type Tab = 'highlights' | 'map' | 'saved' | 'drafts';
 
-// One screen for your own profile and everyone else's. Client note 28: a
-// profile shows audio and maps as well as videos.
+// One screen for your own profile and everyone else's: highlights, places on
+// the map and (your own) saved posts. No Videos or Audio tab: there is no
+// posting any more (client, Nov 2026).
 // `pushed`: opened over another screen (/user/<id>), not the Profile tab, so
 // it needs a back button even when it is your own profile.
 export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: boolean; pushed?: boolean }) {
@@ -66,18 +65,11 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
   const [tab, setTab] = useState<Tab>('highlights');
   // Client note 2: a draft opens its own sheet, never the For You feed.
   const [openDraft, setOpenDraft] = useState<VideoTile | null>(null);
-  // Long-press on one of your own posts offers Delete video.
-  const del = useDeleteVideo();
 
   const profile = useQuery({ queryKey: profileKeys.profile(userId), queryFn: () => fetchProfile(userId) });
   // No Drafts tab: posting videos was removed (client change, Nov 2026).
-  const tabs: Tab[] = isMe ? ['highlights', 'videos', 'audio', 'map', 'saved'] : ['highlights', 'videos', 'audio', 'map'];
+  const tabs: Tab[] = isMe ? ['highlights', 'map', 'saved'] : ['highlights', 'map'];
 
-  const videos = useQuery({
-    queryKey: videoKeys.userVideos(userId),
-    queryFn: () => fetchUserVideos(userId),
-    enabled: tab === 'videos',
-  });
   const saved = useQuery({ queryKey: videoKeys.saved(), queryFn: fetchSavedVideos, enabled: isMe && tab === 'saved' });
   const drafts = useQuery({ queryKey: videoKeys.drafts(), queryFn: fetchDrafts, enabled: isMe && tab === 'drafts' });
   const highlights = useQuery({
@@ -85,13 +77,8 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
     queryFn: () => fetchUserHighlights(userId),
     enabled: tab === 'highlights',
   });
-  const sounds = useQuery({
-    queryKey: soundKeys.byUser(userId),
-    queryFn: () => fetchUserSounds(userId),
-    enabled: tab === 'audio',
-  });
 
-  const grid = tab === 'videos' ? videos : tab === 'saved' ? saved : tab === 'drafts' ? drafts : null;
+  const grid = tab === 'saved' ? saved : tab === 'drafts' ? drafts : null;
   const tile = Math.floor((width - 4) / 3);
 
   // A link to a person who does not exist (or is not visible to you).
@@ -119,11 +106,10 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
     </>
   );
 
-  const refreshing = profile.isRefetching || !!grid?.isRefetching || sounds.isRefetching || highlights.isRefetching;
+  const refreshing = profile.isRefetching || !!grid?.isRefetching || highlights.isRefetching;
   const onRefresh = () => {
     void profile.refetch();
     if (grid) void grid.refetch();
-    if (tab === 'audio') void sounds.refetch();
     if (tab === 'highlights') void highlights.refetch();
     if (tab === 'map') void qc.invalidateQueries({ queryKey: tagKeys.profilePlaces(userId) });
   };
@@ -166,19 +152,11 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
             <Pressable
               style={{ width: tile, height: tile * 1.33, backgroundColor: colors.bg3 }}
               onPress={() => (tab === 'drafts' ? setOpenDraft(item) : router.push(`/video/${item.id}`))}
-              onLongPress={isMe && tab === 'videos' ? () => del.confirm(item.id) : undefined}
-              disabled={del.busyId === item.id}
-              accessibilityHint={isMe && tab === 'videos' ? t('fix4.deleteHint') : undefined}
               accessibilityRole="button"
               accessibilityLabel={tab === 'drafts' ? t('drafts.open') : undefined}
             >
               {item.thumbnail && !/\.(mp4|mov|webm)(\?|$)/i.test(item.thumbnail) ? (
                 <Image source={{ uri: item.thumbnail }} style={StyleSheet.absoluteFill} contentFit="cover" />
-              ) : null}
-              {del.busyId === item.id ? (
-                <View style={[StyleSheet.absoluteFill, styles.deleting]}>
-                  <ActivityIndicator color="#fff" />
-                </View>
               ) : null}
               {item.is_pinned ? <Text style={styles.pinned}>{t('profile.pinned')}</Text> : null}
               <View style={styles.views}>
@@ -189,22 +167,14 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
           )}
         />
       ) : (
-        <FlatList<Sound>
-          key={`list-${tab}`}
-          data={tab === 'audio' ? (sounds.data ?? []) : []}
-          keyExtractor={(s) => s.id}
+        // The map: a header-only list, so the profile scrolls the same way.
+        <FlatList<never>
+          key="map"
+          data={[]}
+          renderItem={() => null}
           ListHeaderComponent={header}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            tab === 'audio' && sounds.isLoading ? (
-              <Spinner />
-            ) : tab === 'map' ? (
-              <ProfilePlacesMap userId={userId} isMe={isMe} height={Math.round(width * 1.15)} />
-            ) : (
-              <Empty icon={TAB_ICON[tab]} text={t(`profile.empty_audio${isMe ? '_me' : ''}`)} />
-            )
-          }
-          renderItem={({ item }) => <SoundRow sound={item} />}
+          ListEmptyComponent={<ProfilePlacesMap userId={userId} isMe={isMe} height={Math.round(width * 1.15)} />}
         />
       )}
       {isMe ? <DraftSheet draft={openDraft} onClose={() => setOpenDraft(null)} /> : null}
@@ -214,8 +184,6 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
 
 const TAB_ICON: Record<Tab, keyof typeof Ionicons.glyphMap> = {
   highlights: 'mic-outline',
-  videos: 'grid-outline',
-  audio: 'musical-notes-outline',
   map: 'map-outline',
   saved: 'bookmark-outline',
   drafts: 'document-text-outline',
@@ -465,26 +433,6 @@ function Stat({ n, label, onPress }: { n: number | undefined; label: string; onP
   );
 }
 
-function SoundRow({ sound }: { sound: Sound }) {
-  const { t } = useTranslation();
-  const { colors } = useTheme();
-  return (
-    <Pressable style={styles.soundRow} onPress={() => router.push(`/sound/${sound.id}`)} accessibilityRole="button">
-      <View style={[styles.soundCover, { backgroundColor: colors.bg3 }]}>
-        {sound.cover_url ? <Image source={{ uri: sound.cover_url }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
-        <Ionicons name="musical-notes" size={20} color="#fff" />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.soundTitle, { color: colors.text }]} numberOfLines={1}>
-          {sound.title ?? ''}
-        </Text>
-        <Text style={{ color: colors.muted, fontSize: 13 }}>{t('profile.soundUses', { count: Number(sound.usage_count ?? 0) })}</Text>
-      </View>
-      <Ionicons name={I18nManager.isRTL ? 'chevron-back' : 'chevron-forward'} size={18} color={colors.muted} />
-    </Pressable>
-  );
-}
-
 function Empty({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
   const { colors } = useTheme();
   return (
@@ -526,12 +474,8 @@ const styles = StyleSheet.create({
   action: { flex: 1, height: 44 },
   tabs: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
   tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 10, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  deleting: { backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   pinned: { position: 'absolute', top: 6, start: 6, backgroundColor: '#ff2d55', color: '#fff', fontSize: 10, fontWeight: '800', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
   views: { position: 'absolute', bottom: 6, start: 6, flexDirection: 'row', alignItems: 'center', gap: 3 },
   viewsText: { color: '#fff', fontSize: 12, fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3 },
-  soundRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10 },
-  soundCover: { width: 52, height: 52, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  soundTitle: { fontSize: 15, fontWeight: '700' },
   empty: { alignItems: 'center', gap: 10, paddingHorizontal: 40, paddingVertical: 50 },
 });

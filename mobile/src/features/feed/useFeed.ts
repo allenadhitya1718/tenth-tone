@@ -8,9 +8,10 @@ const PAGE = 20;
 
 // One page per fetch, offset paging like the web app. The first page paints
 // from cache when you come back to the feed and refreshes behind it.
-export function useFeed(tab: FeedTab) {
+export function useFeed(tab: FeedTab, enabled = true) {
   return useInfiniteQuery({
     queryKey: videoKeys.feed(tab),
+    enabled,
     initialPageParam: 0,
     queryFn: ({ pageParam }) => fetchFeed({ tab, limit: PAGE, offset: pageParam }),
     getNextPageParam: (last, pages) => (last.length < PAGE ? undefined : pages.length * PAGE),

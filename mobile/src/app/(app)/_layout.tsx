@@ -80,8 +80,8 @@ export default function AppLayout() {
         options={{ presentation: Platform.OS === 'ios' ? 'fullScreenModal' : 'card', animation: 'slide_from_bottom' }}
       />
       <Stack.Screen name="map" options={{ animation: 'slide_from_bottom' }} />
-      {/* A highlight plays full screen, sliding up like a music player. */}
-      <Stack.Screen name="highlight/[id]" options={{ animation: 'slide_from_bottom', contentStyle: { backgroundColor: '#000421' } }} />
+      {/* /highlight/<id> only redirects into the For You feed. */}
+      <Stack.Screen name="highlight/[id]" options={{ animation: 'none', contentStyle: { backgroundColor: '#000421' } }} />
       <Stack.Screen name="confirm-birthday" options={{ gestureEnabled: false }} />
       <Stack.Screen name="call/[id]" options={CALL_SCREEN} />
       <Stack.Screen name="call/dial" options={CALL_SCREEN} />

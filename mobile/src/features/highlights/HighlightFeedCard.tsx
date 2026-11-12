@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,11 +7,19 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { countHighlightPlay, type LiveHighlight } from '@/api/highlights';
+import { countHighlightPlay, deleteHighlight, highlightKeys, type LiveHighlight } from '@/api/highlights';
+import { showAlert } from '@/components/Dialog';
+import { showToast } from '@/components/Toast';
 import { go, isImageUrl, userPath } from '@/features/discover/nav';
 import { formatClock } from '@/features/stories/SoundPicker';
+import { useAuth } from '@/providers/AuthProvider';
 
 import { clipByKey, HighlightCover, highlightCoverUri } from './HighlightCover';
+
+// Highlights deleted in this session: a pinned one (opened from the profile)
+// is then dropped and the feed shows, instead of "this highlight is gone".
+const deletedIds = new Set<string>();
+export const highlightDeletedHere = (id: string) => deletedIds.has(id);
 
 type Props = {
   item: LiveHighlight;
@@ -26,13 +35,34 @@ type Props = {
 // A live highlight as one page of the Home feed (For You, Following), in the
 // same frame as a video: the live's cover blurred behind, the cover in the
 // middle, the host and title at the bottom, and the minute playing while the
-// page is on screen. Tap to pause; with sound off, a tap turns it on.
+// page is on screen. Tap to pause; with sound off, a tap turns it on. The
+// host can delete their own from here.
 export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height, active, near, muted, onToggleMute }: Props) {
   const { t } = useTranslation();
   const host = item.host?.name || item.host?.handle || '';
   const cover = highlightCoverUri(item.cover_url, item.host?.avatar_url);
   const avatar = isImageUrl(item.host?.avatar_url) ? item.host!.avatar_url : null;
   const [paused, setPaused] = useState(false);
+  const qc = useQueryClient();
+  const { session } = useAuth();
+  const isMine = session?.user.id === item.host_id;
+  const remove = () =>
+    showAlert(t('live.highlight.deleteTitle'), t('live.highlight.deleteBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('live.highlight.delete'),
+        style: 'destructive',
+        onPress: () => {
+          deleteHighlight(item.id)
+            .then(() => {
+              deletedIds.add(item.id);
+              void qc.invalidateQueries({ queryKey: highlightKeys.all });
+              showToast(t('live.highlight.deleted'));
+            })
+            .catch(() => showAlert(t('live.errors.title'), t('live.errors.generic')));
+        },
+      },
+    ]);
   // Leaving the page forgets a pause, as videos do.
   const [wasActive, setWasActive] = useState(active);
   if (wasActive !== active) {
@@ -111,6 +141,12 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
           <Text style={styles.meta}>{formatClock(item.duration_ms / 1000)}</Text>
         </View>
       </View>
+
+      {isMine ? (
+        <Pressable onPress={remove} style={styles.delete} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('live.highlight.delete')}>
+          <Ionicons name="trash-outline" size={22} color="#fff" />
+        </Pressable>
+      ) : null}
 
       {near ? <Sound item={item} active={active && !paused} muted={muted} /> : null}
     </Pressable>
@@ -203,7 +239,18 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   mutedText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  caption: { position: 'absolute', start: 12, end: 24, bottom: 22, gap: 4 },
+  caption: { position: 'absolute', start: 12, end: 56, bottom: 22, gap: 4 },
+  delete: {
+    position: 'absolute',
+    end: 12,
+    bottom: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   who: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', maxWidth: '100%' },
   whoAvatar: { width: 30, height: 30, borderRadius: 15, borderWidth: 1.5, borderColor: '#fff' },
   avatarEmpty: { backgroundColor: '#1e56d6', alignItems: 'center', justifyContent: 'center' },

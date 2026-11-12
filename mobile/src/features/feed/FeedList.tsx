@@ -14,12 +14,12 @@ import {
   View,
 } from 'react-native';
 
-import { fetchFollowingHighlights, fetchRecentHighlights, highlightKeys, type LiveHighlight } from '@/api/highlights';
+import { fetchHighlight, fetchRecentHighlights, highlightKeys, type LiveHighlight } from '@/api/highlights';
 import { fetchProfile, profileKeys } from '@/api/profiles';
 import type { Video } from '@/api/types';
-import { type FeedTab, fetchVideo, videoKeys } from '@/api/videos';
+import { type FeedTab, fetchVideo } from '@/api/videos';
 import { NotFoundState } from '@/components/NotFoundState';
-import { HighlightFeedCard } from '@/features/highlights/HighlightFeedCard';
+import { HighlightFeedCard, highlightDeletedHere } from '@/features/highlights/HighlightFeedCard';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -30,18 +30,21 @@ import { VideoCard } from './VideoCard';
 type ViewToken = { isViewable: boolean; index?: number | null };
 
 // A page of the feed: a video, or a live highlight (lives are audio, and
-// permanent posts are gone, so highlights are most of what there is).
+// permanent posts are gone). For You is highlights only (client, Nov 2026);
+// Following keeps the videos of the people you follow.
 type FeedItem = { kind: 'video'; id: string; at: number; v: Video } | { kind: 'highlight'; id: string; at: number; h: LiveHighlight };
 const asVideo = (v: Video): FeedItem => ({ kind: 'video', id: v.id, at: Date.parse(v.created_at) || 0, v });
 const asHighlight = (h: LiveHighlight): FeedItem => ({ kind: 'highlight', id: h.id, at: Date.parse(h.created_at) || 0, h });
 
-// A video to show first, ahead of the normal feed (`at` changes on every
-// open, so the same clip can be pinned again).
-export type Pin = { id: string; at: string };
+// A video or a highlight to show first, ahead of the normal feed (`at`
+// changes on every open, so the same clip can be pinned again). Grid tiles,
+// notifications and links open clips this way, so a swipe carries on into
+// the feed, as on Reels.
+export type Pin = { kind: 'video' | 'highlight'; id: string; at: string };
 
-// One tab of the home feed: a vertical pager of full-height clips, videos
-// and live highlights together, newest first (For You: everyone's
-// highlights; Following: those of people you follow). It snaps
+// One tab of the home feed: a vertical pager of full-height clips (For You:
+// everyone's highlights, newest first; Following: videos of the people you
+// follow). It snaps
 // every `height` with interval momentum off, so any flick, however light,
 // or a drag past half way moves exactly one clip, as on Reels / TikTok.
 // (pagingEnabled on Android only turned the page on a hard fling, and a
@@ -65,19 +68,29 @@ export function FeedList({
   const { t } = useTranslation();
   // A pinned clip the user has just deleted is dropped (the normal feed
   // shows) rather than turning into "Video not found".
-  const pin = pinProp && !wasDeletedHere(pinProp.id) ? pinProp : undefined;
-  const q = useFeed(tab);
+  const pin =
+    pinProp && !(pinProp.kind === 'video' ? wasDeletedHere(pinProp.id) : highlightDeletedHere(pinProp.id)) ? pinProp : undefined;
+  const forYou = tab === 'foryou';
+  // For You: highlights. Following: videos (their query stays off on For You).
+  const q = useFeed(tab, !forYou);
   const [index, setIndex] = useState(0);
   const list = useRef<FlatList<FeedItem>>(null);
-  // A failure here only leaves highlights out; the videos still show.
   const hl = useQuery({
-    queryKey: tab === 'following' ? highlightKeys.following() : highlightKeys.recent(),
-    queryFn: () => (tab === 'following' ? fetchFollowingHighlights() : fetchRecentHighlights(50)),
+    queryKey: highlightKeys.recent(),
+    queryFn: () => fetchRecentHighlights(50),
+    enabled: forYou,
     staleTime: 30_000,
   });
-  const pinned = useQuery({
-    queryKey: videoKeys.video(pin?.id ?? ''),
-    queryFn: () => fetchVideo(pin!.id),
+  const pinned = useQuery<FeedItem | null>({
+    queryKey: ['feed-pin', pin?.kind, pin?.id],
+    queryFn: async () => {
+      if (pin!.kind === 'highlight') {
+        const h = await fetchHighlight(pin!.id);
+        return h ? asHighlight(h) : null;
+      }
+      const v = await fetchVideo(pin!.id);
+      return v ? asVideo(v) : null;
+    },
     enabled: !!pin,
   });
   const feed = q.data?.pages;
@@ -88,23 +101,21 @@ export function FeedList({
   const followsSomeone = useQuery({
     queryKey: profileKeys.profile(me ?? ''),
     queryFn: () => fetchProfile(me),
-    enabled: tab === 'following' && !!me && q.isSuccess && !(feed?.some((p) => p.length) ?? false) && !hl.data?.length,
+    enabled: tab === 'following' && !!me && q.isSuccess && !(feed?.some((p) => p.length) ?? false),
     select: (p) => (p?.following_count ?? 0) > 0,
   });
   const videos = useMemo(() => {
-    const first = pin && pinned.data?.id === pin.id ? pinned.data : null;
-    const rest = [...(feed?.flat() ?? []).filter((v) => v.id !== first?.id).map(asVideo), ...(hl.data ?? []).map(asHighlight)].sort(
-      (a, b) => b.at - a.at,
-    );
-    // A pinned video stays first.
-    return first ? [asVideo(first), ...rest] : rest;
-  }, [feed, hl.data, pin, pinned.data]);
+    const first = pin && pinned.data?.kind === pin.kind && pinned.data.id === pin.id ? pinned.data : null;
+    const all = forYou ? (hl.data ?? []).map(asHighlight) : (feed?.flat() ?? []).map(asVideo);
+    const rest = all.filter((x) => !(first && x.kind === first.kind && x.id === first.id)).sort((a, b) => b.at - a.at);
+    // A pinned clip stays first.
+    return first ? [first, ...rest] : rest;
+  }, [forYou, feed, hl.data, pin, pinned.data]);
 
-  // While there are only a few videos, For You loops: once the server has
-  // nothing more (no next page), the same videos follow again instead of the
-  // "all caught up" card. With enough videos the server keeps sending new
-  // pages (0108/0157) and this never kicks in. Following still ends.
-  const looping = tab === 'foryou' && !!q.data && !q.hasNextPage && videos.length > 0;
+  // For You loops: after the last highlight the same ones follow again
+  // instead of the "all caught up" card. Following still ends.
+  const looping = forYou && hl.isSuccess && videos.length > 0;
+  const hasMore = !forYou && q.hasNextPage;
   const [rounds, setRounds] = useState(1);
   const items = useMemo(() => {
     if (!looping) return videos;
@@ -162,11 +173,9 @@ export function FeedList({
     [height, focused, index, muted, onToggleMute],
   );
 
-  // Videos and highlights load separately; wait for both, so the feed is
-  // not re-sorted under the viewer when the second one arrives (on the
-  // Redmi's slow 4G the video showed first, then the highlight slid in).
-  // A failed highlight query is not loading, so it never blocks the videos.
-  if (q.isLoading || hl.isLoading || height === 0 || (pin && pinned.isLoading)) {
+  // Wait for the pinned clip too, so the feed is not re-sorted under the
+  // viewer when it arrives.
+  if ((forYou ? hl.isLoading : q.isLoading) || height === 0 || (pin && pinned.isLoading)) {
     return (
       <View style={[styles.center, { height }]}>
         <ActivityIndicator color="#fff" />
@@ -174,21 +183,25 @@ export function FeedList({
     );
   }
 
-  // A link to a video that is gone (or never existed): say so, with a way
+  // A link to a clip that is gone (or never existed): say so, with a way
   // out, instead of silently showing the normal feed.
   if (pin && pinned.isSuccess && !pinned.data) {
     return (
       <View style={{ height, backgroundColor: '#000' }}>
-        <NotFoundState dark embedded icon="videocam-off-outline" title={t('fix4.notFoundVideoTitle')} body={t('fix4.notFoundVideoBody')} />
+        {pin.kind === 'highlight' ? (
+          <NotFoundState dark embedded icon="mic-off-outline" title={t('live.highlight.gone')} />
+        ) : (
+          <NotFoundState dark embedded icon="videocam-off-outline" title={t('fix4.notFoundVideoTitle')} body={t('fix4.notFoundVideoBody')} />
+        )}
       </View>
     );
   }
 
-  if (q.isError) {
+  if (forYou ? hl.isError : q.isError) {
     return (
       <View style={[styles.center, { height }]}>
         <Text style={styles.msg}>{t('feed.error')}</Text>
-        <Button title={t('feed.retry')} onPress={() => q.refetch()} style={{ paddingHorizontal: 28 }} />
+        <Button title={t('feed.retry')} onPress={() => void (forYou ? hl.refetch() : q.refetch())} style={{ paddingHorizontal: 28 }} />
       </View>
     );
   }
@@ -235,7 +248,7 @@ export function FeedList({
       removeClippedSubviews
       onEndReachedThreshold={2}
       onEndReached={() => {
-        if (q.hasNextPage) {
+        if (hasMore) {
           if (!q.isFetchingNextPage) void q.fetchNextPage();
         } else if (looping) {
           setRounds((r) => Math.min(r + 1, 50));
@@ -244,7 +257,7 @@ export function FeedList({
       // A full-height last page, so a swipe past the final video always lands
       // somewhere and says why there is nothing more (like Instagram).
       ListFooterComponent={
-        q.hasNextPage || looping ? undefined : (
+        hasMore || looping ? undefined : (
           <View style={[styles.center, { height }]}>
             <Ionicons name="checkmark-circle-outline" size={56} color="#fff" />
             <Text style={styles.endTitle}>{t('feed.caughtUpTitle')}</Text>
@@ -255,12 +268,11 @@ export function FeedList({
       }
       refreshControl={
         <RefreshControl
-          refreshing={q.isRefetching && !q.isFetchingNextPage}
+          refreshing={forYou ? hl.isRefetching : q.isRefetching && !q.isFetchingNextPage}
           onRefresh={() => {
             setIndex(0);
             setRounds(1);
-            void q.refetch();
-            void hl.refetch();
+            void (forYou ? hl.refetch() : q.refetch());
           }}
           tintColor="#fff"
           colors={['#1e56d6']}
