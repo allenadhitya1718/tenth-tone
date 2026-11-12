@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,7 +7,15 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { countHighlightPlay, deleteHighlight, highlightKeys, type LiveHighlight } from '@/api/highlights';
+import {
+  countHighlightPlay,
+  deleteHighlight,
+  fetchSavedHighlightIds,
+  highlightKeys,
+  type LiveHighlight,
+  saveHighlight,
+  unsaveHighlight,
+} from '@/api/highlights';
 import { showAlert } from '@/components/Dialog';
 import { showToast } from '@/components/Toast';
 import { go, isImageUrl, userPath } from '@/features/discover/nav';
@@ -35,8 +43,8 @@ type Props = {
 // A live highlight as one page of the Home feed (For You, Following), in the
 // same frame as a video: the live's cover blurred behind, the cover in the
 // middle, the host and title at the bottom, and the minute playing while the
-// page is on screen. Tap to pause; with sound off, a tap turns it on. The
-// host can delete their own from here.
+// page is on screen. Tap to pause; with sound off, a tap turns it on.
+// Anyone can save it (the profile's Saved tab); the host can delete their own.
 export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height, active, near, muted, onToggleMute }: Props) {
   const { t } = useTranslation();
   const host = item.host?.name || item.host?.handle || '';
@@ -46,6 +54,26 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
   const qc = useQueryClient();
   const { session } = useAuth();
   const isMine = session?.user.id === item.host_id;
+  // One shared list of saved ids for every card. Before 0171 is applied the
+  // query fails and the bookmark stays hidden.
+  const savedIds = useQuery({ queryKey: highlightKeys.savedIds(), queryFn: fetchSavedHighlightIds, staleTime: 60_000, retry: false });
+  const saved = savedIds.data?.has(item.id) ?? false;
+  const saveM = useMutation({
+    mutationFn: (next: boolean) => (next ? saveHighlight(item.id) : unsaveHighlight(item.id)),
+    onMutate: (next) => {
+      qc.setQueryData<Set<string>>(highlightKeys.savedIds(), (old) => {
+        const ids = new Set(old);
+        if (next) ids.add(item.id);
+        else ids.delete(item.id);
+        return ids;
+      });
+    },
+    onError: () => {
+      void qc.invalidateQueries({ queryKey: highlightKeys.savedIds() });
+      showAlert(t('live.errors.title'), t('live.errors.generic'));
+    },
+    onSettled: () => void qc.invalidateQueries({ queryKey: highlightKeys.saved(), exact: true }),
+  });
   const remove = () =>
     showAlert(t('live.highlight.deleteTitle'), t('live.highlight.deleteBody'), [
       { text: t('common.cancel'), style: 'cancel' },
@@ -142,11 +170,25 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
         </View>
       </View>
 
-      {isMine ? (
-        <Pressable onPress={remove} style={styles.delete} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('live.highlight.delete')}>
-          <Ionicons name="trash-outline" size={22} color="#fff" />
-        </Pressable>
-      ) : null}
+      <View style={styles.side} pointerEvents="box-none">
+        {savedIds.isSuccess ? (
+          <Pressable
+            onPress={() => saveM.mutate(!saved)}
+            style={styles.sideBtn}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityState={{ selected: saved }}
+            accessibilityLabel={t(saved ? 'feed.unsave' : 'feed.save')}
+          >
+            <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={22} color={saved ? '#ffc83d' : '#fff'} />
+          </Pressable>
+        ) : null}
+        {isMine ? (
+          <Pressable onPress={remove} style={styles.sideBtn} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('live.highlight.delete')}>
+            <Ionicons name="trash-outline" size={22} color="#fff" />
+          </Pressable>
+        ) : null}
+      </View>
 
       {near ? <Sound item={item} active={active && !paused} muted={muted} /> : null}
     </Pressable>
@@ -240,10 +282,8 @@ const styles = StyleSheet.create({
   },
   mutedText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   caption: { position: 'absolute', start: 12, end: 56, bottom: 22, gap: 4 },
-  delete: {
-    position: 'absolute',
-    end: 12,
-    bottom: 22,
+  side: { position: 'absolute', end: 12, bottom: 22, gap: 14, alignItems: 'center' },
+  sideBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,

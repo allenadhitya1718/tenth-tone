@@ -498,6 +498,7 @@
       "deleteBody": "Keşfet'ten ve profilinden kaldırılacak.",
       "deleted": "Öne çıkan an silindi",
       "gone": "Bu öne çıkan an kullanılamıyor.",
+      "savedEmpty": "Tekrar dinlemek için Sana Özel'deki öne çıkanları kaydet (yer imi). Burada görünürler.",
       "by": "{{name}} adlı kişinin canlı yayınından",
       "busiest": "En hareketli bölümden başlar: en çok yorum ve tepki. Çubuklar yayının nerede hareketlendiğini gösterir.",
       "toBusiest": "En hareketli bölüme dön",

@@ -34,6 +34,8 @@ export const highlightKeys = {
   following: () => ['highlights', 'following'] as const,
   byUser: (userId: string) => ['highlights', 'user', userId] as const,
   one: (id: string) => ['highlights', 'one', id] as const,
+  saved: () => ['highlights', 'saved'] as const,
+  savedIds: () => ['highlights', 'saved', 'ids'] as const,
 };
 
 // Every column (so `kind` comes along once 0170 adds it, and nothing breaks
@@ -192,6 +194,45 @@ export async function postVoiceClip({ audio, durationMs, title, cover }: PostVoi
 
 export async function deleteHighlight(id: string): Promise<void> {
   must(await supabase.rpc('delete_live_highlight', { p_id: id }));
+}
+
+// ---------- saved highlights (0171) ----------
+// Private to the person who saved them; backs the profile's Saved tab.
+
+/** Ids of the highlights I saved, for the bookmark on each feed card. */
+export async function fetchSavedHighlightIds(): Promise<Set<string>> {
+  const me = await uid();
+  if (!me) return new Set();
+  const data = must(await supabase.from('highlight_saves').select('highlight_id').eq('user_id', me).limit(1000));
+  return new Set(((data ?? []) as { highlight_id: Uuid }[]).map((r) => r.highlight_id));
+}
+
+/** The highlights I saved, newest save first. */
+export async function fetchSavedHighlights(limit = 60): Promise<LiveHighlight[]> {
+  const me = await uid();
+  if (!me) return [];
+  const data = must(
+    await supabase
+      .from('highlight_saves')
+      .select(`created_at, highlight:live_highlights!highlight_saves_highlight_id_fkey ( ${COLS} )`)
+      .eq('user_id', me)
+      .order('created_at', { ascending: false })
+      .limit(limit),
+  );
+  // A highlight hidden or blocked since it was saved comes back null.
+  return ((data ?? []) as unknown as { highlight: LiveHighlight | null }[]).map((r) => r.highlight).filter((h): h is LiveHighlight => !!h);
+}
+
+export async function saveHighlight(id: string): Promise<void> {
+  const me = await uid();
+  if (!me) throw new ApiError('not_signed_in');
+  must(await supabase.from('highlight_saves').upsert({ user_id: me, highlight_id: id }, { ignoreDuplicates: true }));
+}
+
+export async function unsaveHighlight(id: string): Promise<void> {
+  const me = await uid();
+  if (!me) throw new ApiError('not_signed_in');
+  must(await supabase.from('highlight_saves').delete().eq('user_id', me).eq('highlight_id', id));
 }
 
 /** Once per person per hour on the server; fire and forget. */

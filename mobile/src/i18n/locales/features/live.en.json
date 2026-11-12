@@ -519,6 +519,7 @@
       "deleteBody": "It will be removed from Explore and your profile.",
       "deleted": "Highlight deleted",
       "gone": "This highlight isn't available.",
+      "savedEmpty": "Save highlights in For You (the bookmark) to hear them again. They appear here.",
       "by": "From {{name}}'s live",
       "busiest": "Starts on the busiest part: the most comments and reactions. The bars show where the live got busy.",
       "toBusiest": "Back to the busiest part",

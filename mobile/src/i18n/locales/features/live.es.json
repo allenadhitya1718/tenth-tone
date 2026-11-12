@@ -506,6 +506,7 @@
       "deleteBody": "Se quitará de Explorar y de tu perfil.",
       "deleted": "Destacado borrado",
       "gone": "Este destacado no está disponible.",
+      "savedEmpty": "Guarda destacados en Para ti (el marcador) para volver a escucharlos. Aparecerán aquí.",
       "by": "Del directo de {{name}}",
       "busiest": "Empieza en la parte más animada: más comentarios y reacciones. Las barras muestran dónde se animó el directo.",
       "toBusiest": "Volver a la parte más animada",

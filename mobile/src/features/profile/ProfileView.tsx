@@ -31,8 +31,8 @@ import {
   profileKeys,
   unfollow,
 } from '@/api/profiles';
-import { fetchUserHighlights, highlightKeys, type LiveHighlight } from '@/api/highlights';
-import { fetchDrafts, fetchSavedVideos, videoKeys, type VideoTile } from '@/api/videos';
+import { fetchSavedHighlights, fetchUserHighlights, highlightKeys, type LiveHighlight } from '@/api/highlights';
+import { fetchDrafts, videoKeys, type VideoTile } from '@/api/videos';
 import { tagKeys } from '@/api/tags';
 import { showAlert } from '@/components/Dialog';
 import { NotFoundState, goBackOrHome } from '@/components/NotFoundState';
@@ -52,7 +52,7 @@ import { useTheme } from '@/providers/ThemeProvider';
 type Tab = 'highlights' | 'map' | 'saved' | 'drafts';
 
 // One screen for your own profile and everyone else's: highlights, places on
-// the map and (your own) saved posts. No Videos or Audio tab: there is no
+// the map and (your own) saved highlights (0171). No Videos or Audio tab: there is no
 // posting any more (client, Nov 2026).
 // `pushed`: opened over another screen (/user/<id>), not the Profile tab, so
 // it needs a back button even when it is your own profile.
@@ -70,15 +70,17 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
   // No Drafts tab: posting videos was removed (client change, Nov 2026).
   const tabs: Tab[] = isMe ? ['highlights', 'map', 'saved'] : ['highlights', 'map'];
 
-  const saved = useQuery({ queryKey: videoKeys.saved(), queryFn: fetchSavedVideos, enabled: isMe && tab === 'saved' });
   const drafts = useQuery({ queryKey: videoKeys.drafts(), queryFn: fetchDrafts, enabled: isMe && tab === 'drafts' });
   const highlights = useQuery({
     queryKey: highlightKeys.byUser(userId),
     queryFn: () => fetchUserHighlights(userId),
     enabled: tab === 'highlights',
   });
+  // Saved: highlights you bookmarked in the feed (only on your own profile).
+  const saved = useQuery({ queryKey: highlightKeys.saved(), queryFn: () => fetchSavedHighlights(), enabled: isMe && tab === 'saved' });
+  const hlList = tab === 'saved' ? saved : highlights;
 
-  const grid = tab === 'saved' ? saved : tab === 'drafts' ? drafts : null;
+  const grid = tab === 'drafts' ? drafts : null;
   const tile = Math.floor((width - 4) / 3);
 
   // A link to a person who does not exist (or is not visible to you).
@@ -106,20 +108,20 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
     </>
   );
 
-  const refreshing = profile.isRefetching || !!grid?.isRefetching || highlights.isRefetching;
+  const refreshing = profile.isRefetching || !!grid?.isRefetching || hlList.isRefetching;
   const onRefresh = () => {
     void profile.refetch();
     if (grid) void grid.refetch();
-    if (tab === 'highlights') void highlights.refetch();
+    if (tab === 'highlights' || tab === 'saved') void hlList.refetch();
     if (tab === 'map') void qc.invalidateQueries({ queryKey: tagKeys.profilePlaces(userId) });
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-      {tab === 'highlights' ? (
+      {tab === 'highlights' || tab === 'saved' ? (
         <FlatList<LiveHighlight>
-          key="highlights"
-          data={highlights.data ?? []}
+          key={tab}
+          data={hlList.data ?? []}
           numColumns={2}
           keyExtractor={(h) => h.id}
           ListHeaderComponent={header}
@@ -127,13 +129,20 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
           contentContainerStyle={styles.hlList}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            highlights.isLoading ? <Spinner /> : <Empty icon={TAB_ICON.highlights} text={t(`profile.empty_highlights${isMe ? '_me' : ''}`)} />
+            hlList.isLoading ? (
+              <Spinner />
+            ) : (
+              <Empty
+                icon={TAB_ICON[tab]}
+                text={tab === 'saved' ? t('live.highlight.savedEmpty') : t(`profile.empty_highlights${isMe ? '_me' : ''}`)}
+              />
+            )
           }
           renderItem={({ item, index }) => (
             <>
               <HighlightCard item={item} />
               {/* Keep a lone last card half width. */}
-              {index === (highlights.data?.length ?? 0) - 1 && index % 2 === 0 ? <View style={{ flex: 1 }} /> : null}
+              {index === (hlList.data?.length ?? 0) - 1 && index % 2 === 0 ? <View style={{ flex: 1 }} /> : null}
             </>
           )}
         />

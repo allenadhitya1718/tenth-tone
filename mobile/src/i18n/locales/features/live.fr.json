@@ -506,6 +506,7 @@
       "deleteBody": "Il sera retiré d'Explorer et de votre profil.",
       "deleted": "Extrait supprimé",
       "gone": "Cet extrait n'est pas disponible.",
+      "savedEmpty": "Enregistre des extraits dans Pour toi (le signet) pour les réécouter. Ils apparaissent ici.",
       "by": "Du live de {{name}}",
       "busiest": "Commence au passage le plus animé : le plus de commentaires et de réactions. Les barres montrent où le live s’est animé.",
       "toBusiest": "Revenir au passage le plus animé",
