@@ -516,7 +516,8 @@
       "followingQuietTitle": "你关注的人暂时没有新内容",
       "followingQuiet": "他们从直播保存精彩片段后会显示在这里。去“探索”发现更多。",
       "toExplore": "前往探索"
-    }
+    },
+    "followingNoLive": "你关注的人现在都没有在直播。"
   },
   "voice": {
     "title": "语音片段",

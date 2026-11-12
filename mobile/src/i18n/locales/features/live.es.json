@@ -532,7 +532,8 @@
       "followingQuietTitle": "Nada nuevo de la gente que sigues",
       "followingQuiet": "Cuando guarden un momento de un directo, aparecerá aquí. Descubre más en Explorar.",
       "toExplore": "Ir a Explorar"
-    }
+    },
+    "followingNoLive": "Nadie a quien sigues está en directo ahora."
   },
   "voice": {
     "title": "Clip de voz",

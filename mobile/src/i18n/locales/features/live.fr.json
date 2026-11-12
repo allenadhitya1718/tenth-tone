@@ -532,7 +532,8 @@
       "followingQuietTitle": "Rien de nouveau de vos abonnements",
       "followingQuiet": "Quand ils enregistrent un moment fort d’un live, il apparaît ici. Découvrez-en plus dans Explorer.",
       "toExplore": "Aller à Explorer"
-    }
+    },
+    "followingNoLive": "Personne que vous suivez n’est en live."
   },
   "voice": {
     "title": "Clip vocal",

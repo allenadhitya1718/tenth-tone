@@ -524,7 +524,8 @@
       "followingQuietTitle": "Takip ettiklerinden yeni bir şey yok",
       "followingQuiet": "Bir canlı yayından öne çıkan kaydettiklerinde burada görünür. Keşfet'te daha fazlasını bul.",
       "toExplore": "Keşfet'e git"
-    }
+    },
+    "followingNoLive": "Takip ettiklerinden şu an canlı yayında olan yok."
   },
   "voice": {
     "title": "Ses klibi",

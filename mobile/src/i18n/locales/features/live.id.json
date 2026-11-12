@@ -516,7 +516,8 @@
       "followingQuietTitle": "Belum ada yang baru dari yang kamu ikuti",
       "followingQuiet": "Saat mereka menyimpan sorotan dari live, itu muncul di sini. Temukan lebih banyak di Jelajahi.",
       "toExplore": "Ke Jelajahi"
-    }
+    },
+    "followingNoLive": "Tidak ada yang kamu ikuti sedang live."
   },
   "voice": {
     "title": "Klip suara",

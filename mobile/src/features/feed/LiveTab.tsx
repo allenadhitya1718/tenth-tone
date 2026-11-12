@@ -6,13 +6,16 @@ import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { fetchLiveStreams, liveKeys, type LiveStreamSummary } from '@/api/live';
+import { fetchFollowingIds } from '@/api/profiles';
 import { Button } from '@/components/ui';
 
 import { formatCount } from './format';
 
 // The third home tab: who is live right now. The web app sent this tab to
 // a separate page; here it swipes in like the other two (client note 24).
-export function LiveTab({ height, focused }: { height: number; focused: boolean }) {
+// followingOnly: Home → Following, lives from people you follow (owner,
+// Nov 2026: highlights are in For You, Following shows these lives).
+export function LiveTab({ height, focused, followingOnly }: { height: number; focused: boolean; followingOnly?: boolean }) {
   const { t } = useTranslation();
   const q = useQuery({
     queryKey: liveKeys.list(),
@@ -20,30 +23,36 @@ export function LiveTab({ height, focused }: { height: number; focused: boolean 
     enabled: focused,
     refetchInterval: focused ? 20_000 : false,
   });
+  const follows = useQuery({ queryKey: ['follows', 'ids'], queryFn: fetchFollowingIds, enabled: focused && !!followingOnly, staleTime: 60_000 });
+  const streams = followingOnly ? (q.data ?? []).filter((s) => !!s.host?.id && !!follows.data?.has(s.host.id)) : (q.data ?? []);
 
   return (
     <View style={[styles.wrap, { height }]}>
       <FlatList
-        data={q.data ?? []}
+        data={streams}
         keyExtractor={(s) => s.id}
         numColumns={2}
         contentContainerStyle={styles.list}
         columnWrapperStyle={{ gap: 10 }}
         refreshControl={<RefreshControl refreshing={q.isRefetching} onRefresh={() => void q.refetch()} tintColor="#fff" />}
         ListEmptyComponent={
-          q.isLoading ? (
+          q.isLoading || (followingOnly && follows.isLoading) ? (
             <ActivityIndicator color="#fff" style={{ marginTop: 80 }} />
           ) : (
             <View style={styles.empty}>
               <Ionicons name="radio-outline" size={44} color="#98a3c7" />
-              <Text style={styles.emptyText}>{t('feed.noLive')}</Text>
+              <Text style={styles.emptyText}>{t(followingOnly ? 'live.followingNoLive' : 'feed.noLive')}</Text>
             </View>
           )
         }
         renderItem={({ item }) => <LiveCard stream={item} />}
       />
       <View style={styles.goLive}>
-        <Button title={t('feed.goLive')} onPress={() => router.push('/live/start')} />
+        {followingOnly ? (
+          <Button title={t('live.highlight.toExplore')} onPress={() => router.navigate('/discover')} />
+        ) : (
+          <Button title={t('feed.goLive')} onPress={() => router.push('/live/start')} />
+        )}
       </View>
     </View>
   );

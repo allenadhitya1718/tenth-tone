@@ -545,7 +545,8 @@
       "followingQuietTitle": "Nothing new from people you follow",
       "followingQuiet": "When they save a highlight from a live, it shows up here. Find more in Explore.",
       "toExplore": "Go to Explore"
-    }
+    },
+    "followingNoLive": "Nobody you follow is live right now."
   },
   "voice": {
     "title": "Voice clip",

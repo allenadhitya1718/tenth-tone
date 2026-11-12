@@ -246,6 +246,14 @@ export async function unfollow(userId: Uuid): Promise<true> {
   return true;
 }
 
+/** Everyone I follow, as a set of ids (Home → Following's lives). */
+export async function fetchFollowingIds(): Promise<Set<Uuid>> {
+  const me = await uid();
+  if (!me) return new Set();
+  const data = must(await supabase.from('follows').select('followed_id').eq('follower_id', me).limit(5000));
+  return new Set(((data ?? []) as { followed_id: Uuid }[]).map((r) => r.followed_id));
+}
+
 export async function isFollowing(userId: Uuid | null | undefined): Promise<boolean> {
   if (!userId) return false;
   const me = await uid();

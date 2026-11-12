@@ -82,7 +82,8 @@ export function HomeFeed({ pin }: { pin?: Pin }) {
         }}
       >
         <View key="following">
-          <FeedList tab="following" height={height} focused={screenFocused && page === 0} muted={muted} onToggleMute={toggleMute} />
+          {/* Following: lives from people you follow (owner, Nov 2026). */}
+          <LiveTab height={height} focused={screenFocused && page === 0} followingOnly />
         </View>
         <View key="live">
           <LiveTab height={height} focused={screenFocused && page === LIVE_PAGE} />
