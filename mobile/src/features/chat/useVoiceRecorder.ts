@@ -37,8 +37,8 @@ export type RecorderEvents = {
 // finger slides away. Every step is guarded: a release can arrive while the
 // recorder is still preparing (or while the permission dialog is up), and a
 // cancel and a release can both arrive for one press.
-export function useVoiceRecorder(events: RecorderEvents) {
-  const recorder = useAudioRecorder(VOICE_PRESET);
+export function useVoiceRecorder(events: RecorderEvents, preset: RecordingOptions = VOICE_PRESET) {
+  const recorder = useAudioRecorder(preset);
   const state = useAudioRecorderState(recorder, 250);
   const [recording, setRecording] = useState(false);
   const phase = useRef<Phase>('idle');

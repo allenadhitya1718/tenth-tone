@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { router, Stack, usePathname } from 'expo-router';
+import { router, Stack, usePathname, type Href } from 'expo-router';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { fetchBirthDateStrict, settingsKeys } from '@/api/settings';
 import { cleanupRecordings } from '@/features/live/liveRecording';
 import { recoverPendingCamera } from '@/lib/pendingCamera';
+import { useShareIntentContext } from 'expo-share-intent';
 
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -44,6 +45,16 @@ export default function AppLayout() {
   useEffect(() => {
     void recoverPendingCamera();
   }, []);
+
+  // A photo or video shared into FLYP from another app. On Android it arrives
+  // as an event, not a link, so +native-intent never sees it and FLYP just
+  // opened on Home with the photo dropped (found testing on the Redmi). Open
+  // the Share screen whenever one is waiting (after sign-in too).
+  const { hasShareIntent } = useShareIntentContext();
+  const pathNow = usePathname();
+  useEffect(() => {
+    if (hasShareIntent && pathNow !== '/share') router.push('/share' as Href);
+  }, [hasShareIntent, pathNow]);
 
   // An account without a birthday is asked for it once, right after signing
   // in (owner request): Apple / phone sign-in and accounts from the earlier

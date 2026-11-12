@@ -102,6 +102,11 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
             style={[styles.tabBtn, tab === k && { borderBottomColor: colors.text }]}
           >
             <Ionicons name={TAB_ICON[k]} size={22} color={tab === k ? colors.text : colors.muted} />
+            {/* A word under each icon: on the Redmi the mic icon alone did not
+                say "Highlights". */}
+            <Text style={[styles.tabLabel, { color: tab === k ? colors.text : colors.muted }]} numberOfLines={1}>
+              {t(`profile.tab_${k}`)}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -340,7 +345,7 @@ function ProfileHeader({
         <View style={styles.stats}>
           <Stat n={profile?.following_count} label={t('profile.following')} onPress={() => router.push(`/list/following/${userId}`)} />
           <Stat n={profile?.followers_count} label={t('profile.followers')} onPress={() => router.push(`/list/followers/${userId}`)} />
-          <Stat n={profile?.likes_count} label={t('profile.likes')} />
+          {/* No Likes count: it counted likes on video posts, which are gone. */}
         </View>
 
         {profile?.bio ? <Text style={[styles.bio, { color: colors.text }]}>{profile.bio}</Text> : null}
@@ -482,7 +487,8 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 10, marginTop: 14, alignSelf: 'stretch' },
   action: { flex: 1, height: 44 },
   tabs: { flexDirection: 'row', borderBottomWidth: StyleSheet.hairlineWidth },
-  tabBtn: { flex: 1, alignItems: 'center', paddingVertical: 10, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabBtn: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 8, borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabLabel: { fontSize: 11.5, fontWeight: '700' },
   pinned: { position: 'absolute', top: 6, start: 6, backgroundColor: '#ff2d55', color: '#fff', fontSize: 10, fontWeight: '800', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
   views: { position: 'absolute', bottom: 6, start: 6, flexDirection: 'row', alignItems: 'center', gap: 3 },
   viewsText: { color: '#fff', fontSize: 12, fontWeight: '700', textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 3 },

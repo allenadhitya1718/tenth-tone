@@ -374,8 +374,10 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
             )
           ) : null}
 
-          {/* Move the part (5 s at a time) ... */}
-          <View style={styles.controls}>
+          {/* Move the part (5 s at a time). Left to right like the timeline in
+              every language: in Arabic the mirrored row put the forward
+              button on the left (found testing on the Redmi). */}
+          <View style={[styles.controls, styles.ltr]}>
             <Pressable onPress={() => nudge(-STEP_S)} style={[styles.round, { backgroundColor: colors.bg2 }]} accessibilityLabel={t('live.highlight.back5')} hitSlop={6}>
               <Ionicons name="play-back" size={20} color={colors.text} />
             </Pressable>
@@ -388,7 +390,7 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
               <Ionicons name="play-forward" size={20} color={colors.text} />
             </Pressable>
           </View>
-          {/* ... and change its length (5 s to 1 minute). */}
+          {/* ... and change its length (5 s to 2 minutes). */}
           <View style={styles.controls}>
             <Pressable
               onPress={() => changeLength(-STEP_S)}
@@ -584,6 +586,7 @@ const styles = StyleSheet.create({
   playhead: { position: 'absolute', top: 0, bottom: 0, width: 2, backgroundColor: '#fff' },
   barLabels: { direction: 'ltr', flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, marginBottom: 14 },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  ltr: { direction: 'ltr' },
   round: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   times: { alignItems: 'center', gap: 2 },
   small: { fontSize: 12.5 },

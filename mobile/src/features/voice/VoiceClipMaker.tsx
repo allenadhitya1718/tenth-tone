@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { type RecordingOptions, RecordingPresets, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import * as ImagePicker from 'expo-image-picker';
 import { type Href, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ApiError } from '@/api/client';
 import { highlightKeys, postVoiceClip } from '@/api/highlights';
@@ -26,6 +26,18 @@ const MAX_S = 5 * 60; // the recorder stops itself at five minutes
 const MIN_MS = 5000; // the server's minimum (0170)
 const MAX_CAPTION = 150;
 
+// Speech quality, small files: a 5-minute clip must stay under the upload
+// limit. The Redmi ignored a plain AAC 64 kbps request and recorded at
+// ~192 kbps (370 KB for 15 s, ~7.4 MB for 5 minutes). HE-AAC on Android is
+// built for low-bitrate speech; 48 kbps mono is ~1.8 MB for 5 minutes.
+const VOICE_CLIP_PRESET: RecordingOptions = {
+  ...RecordingPresets.HIGH_QUALITY,
+  sampleRate: 32000,
+  numberOfChannels: 1,
+  bitRate: 48000,
+  android: { outputFormat: 'mpeg4', audioEncoder: 'he_aac' },
+};
+
 // A voice clip (0170): the person records up to five minutes in the app,
 // listens back, picks a background photo, adds a caption and posts. It is
 // shown with live highlights in Explore, Home and on their profile.
@@ -36,7 +48,11 @@ export function VoiceClipMaker() {
   const qc = useQueryClient();
   const { session } = useAuth();
   const me = session?.user.id;
-  const mine = useQuery({ queryKey: profileKeys.profile(me ?? ''), queryFn: () => fetchProfile(me), enabled: !!me });
+  const mine = useQuery({
+    queryKey: profileKeys.profile(me ?? ''),
+    queryFn: () => fetchProfile(me),
+    enabled: !!me,
+  });
   const myName = mine.data?.name || mine.data?.handle || '';
   const myPhoto = isImageUrl(mine.data?.avatar_url) ? mine.data!.avatar_url! : null;
 
@@ -46,23 +62,29 @@ export function VoiceClipMaker() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const rec = useVoiceRecorder({
-    onDone: (media, ms) => {
-      if (ms < MIN_MS) {
-        showAlert(t('voice.tooShortTitle'), t('voice.tooShort'));
-        return;
-      }
-      setClip({ media, ms });
+  const rec = useVoiceRecorder(
+    {
+      onDone: (media, ms) => {
+        if (ms < MIN_MS) {
+          showAlert(t('voice.tooShortTitle'), t('voice.tooShort'));
+          return;
+        }
+        setClip({ media, ms });
+      },
+      onTooShort: () => showAlert(t('voice.tooShortTitle'), t('voice.tooShort')),
+      onPermissionAsked: () => showToast(t('voice.tapAgain'), 'mic-outline'),
+      onPermissionDenied: () =>
+        showAlert(t('voice.micTitle'), t('voice.micBody'), [
+          { text: t('voice.cancel'), style: 'cancel' },
+          {
+            text: t('voice.openSettings'),
+            onPress: () => void Linking.openSettings(),
+          },
+        ]),
+      onError: () => showAlert(t('voice.errorTitle'), t('voice.recordFailed')),
     },
-    onTooShort: () => showAlert(t('voice.tooShortTitle'), t('voice.tooShort')),
-    onPermissionAsked: () => showToast(t('voice.tapAgain'), 'mic-outline'),
-    onPermissionDenied: () =>
-      showAlert(t('voice.micTitle'), t('voice.micBody'), [
-        { text: t('voice.cancel'), style: 'cancel' },
-        { text: t('voice.openSettings'), onPress: () => void Linking.openSettings() },
-      ]),
-    onError: () => showAlert(t('voice.errorTitle'), t('voice.recordFailed')),
-  });
+    VOICE_CLIP_PRESET,
+  );
 
   // Listening back to the recording.
   const player = useAudioPlayer(clip ? { uri: clip.media.uri } : null);
@@ -92,10 +114,20 @@ export function VoiceClipMaker() {
 
   async function pickCover() {
     try {
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
       if (res.canceled || !res.assets[0]) return;
       const a = res.assets[0];
-      setCover({ uri: a.uri, mimeType: a.mimeType ?? 'image/jpeg', size: a.fileSize ?? null, name: a.fileName ?? null });
+      setCover({
+        uri: a.uri,
+        mimeType: a.mimeType ?? 'image/jpeg',
+        size: a.fileSize ?? null,
+        name: a.fileName ?? null,
+      });
     } catch {
       showAlert(t('voice.errorTitle'), t('live.highlight.coverPickFailed'));
     }
@@ -149,7 +181,12 @@ export function VoiceClipMaker() {
           <Text style={[styles.timer, { color: colors.text }]}>{`⁦${formatClock(elapsedS)} / ${formatClock(MAX_S)}⁩`}</Text>
           <Pressable
             onPress={() => (rec.recording ? rec.finish() : void rec.begin())}
-            style={[styles.mic, { backgroundColor: rec.recording ? colors.danger : colors.primary }]}
+            style={[
+              styles.mic,
+              {
+                backgroundColor: rec.recording ? colors.danger : colors.primary,
+              },
+            ]}
             accessibilityRole="button"
             accessibilityLabel={rec.recording ? t('voice.stop') : t('voice.record')}
           >
@@ -161,7 +198,12 @@ export function VoiceClipMaker() {
         </View>
       ) : (
         <View style={[styles.listenRow, { backgroundColor: colors.bg2, borderColor: colors.border }]}>
-          <Pressable onPress={togglePlay} style={[styles.playBtn, { backgroundColor: colors.primary }]} accessibilityRole="button" accessibilityLabel={status.playing ? t('live.highlight.pause') : t('live.highlight.play')}>
+          <Pressable
+            onPress={togglePlay}
+            style={[styles.playBtn, { backgroundColor: colors.primary }]}
+            accessibilityRole="button"
+            accessibilityLabel={status.playing ? t('live.highlight.pause') : t('live.highlight.play')}
+          >
             <Ionicons name={status.playing ? 'pause' : 'play'} size={22} color="#fff" style={status.playing ? undefined : { marginStart: 3 }} />
           </Pressable>
           <View style={{ flex: 1, gap: 2 }}>
@@ -179,7 +221,14 @@ export function VoiceClipMaker() {
         onChangeText={(v) => setTitle(v.slice(0, MAX_CAPTION))}
         placeholder={t('live.highlight.titlePh')}
         placeholderTextColor={colors.muted}
-        style={[styles.input, { color: colors.text, backgroundColor: colors.bg2, borderColor: colors.border }]}
+        style={[
+          styles.input,
+          {
+            color: colors.text,
+            backgroundColor: colors.bg2,
+            borderColor: colors.border,
+          },
+        ]}
         maxLength={MAX_CAPTION}
         editable={!busy}
         multiline
@@ -213,23 +262,72 @@ export function VoiceClipMaker() {
         disabled={!clip || busy}
         loading={busy}
       />
-      {busy ? <ActivityIndicator style={{ marginTop: 8 }} color={colors.primary} /> : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  stage: { height: 200, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  shade: { position: 'absolute', top: 0, bottom: 0, start: 0, end: 0, backgroundColor: 'rgba(0,4,33,0.45)' },
+  stage: {
+    height: 200,
+    borderRadius: 18,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  shade: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    start: 0,
+    end: 0,
+    backgroundColor: 'rgba(0,4,33,0.45)',
+  },
   art: { width: 128, height: 128, borderRadius: 16, overflow: 'hidden' },
   recordBox: { alignItems: 'center', gap: 14, marginBottom: 18 },
   timer: { fontSize: 28, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  mic: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
-  listenRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, marginBottom: 6 },
-  playBtn: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
+  mic: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listenRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 6,
+  },
+  playBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   small: { fontSize: 13 },
-  input: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginVertical: 14, minHeight: 72 },
-  coverRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, padding: 10, marginBottom: 16 },
+  input: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    marginVertical: 14,
+    minHeight: 72,
+  },
+  coverRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 16,
+  },
   coverThumb: { width: 52, height: 52, borderRadius: 10, overflow: 'hidden' },
   coverBtn: { paddingHorizontal: 6, paddingVertical: 6 },
 });
