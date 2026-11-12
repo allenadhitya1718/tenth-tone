@@ -544,7 +544,9 @@
       "followingNone": "Highlights from the lives of people you follow show up in this tab.",
       "followingQuietTitle": "Nothing new from people you follow",
       "followingQuiet": "When they save a highlight from a live, it shows up here. Find more in Explore.",
-      "toExplore": "Go to Explore"
+      "toExplore": "Go to Explore",
+      "savedToast": "Saved. Find it in your profile under Saved.",
+      "unsavedToast": "Removed from Saved"
     },
     "followingNoLive": "Nobody you follow is live right now."
   },

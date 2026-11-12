@@ -57,9 +57,9 @@ export default function TabsLayout() {
           tabPress: (e) => {
             e.preventDefault();
             showAlert(t('tabs.create'), undefined, [
-              { text: t('stories.addStory'), onPress: () => router.push('/stories/new') },
-              { text: t('feed.goLive'), onPress: () => router.push('/live/start') },
-              { text: t('voice.createOption'), onPress: () => router.push('/voice/new' as Href) },
+              { text: t('stories.addStory'), icon: 'add-circle-outline', onPress: () => router.push('/stories/new') },
+              { text: t('feed.goLive'), icon: 'radio-outline', onPress: () => router.push('/live/start') },
+              { text: t('voice.createOption'), icon: 'mic-outline', onPress: () => router.push('/voice/new' as Href) },
               { text: t('common.cancel'), style: 'cancel' },
             ]);
           },

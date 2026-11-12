@@ -515,7 +515,9 @@
       "followingNone": "Sorotan dari live orang yang kamu ikuti muncul di tab ini.",
       "followingQuietTitle": "Belum ada yang baru dari yang kamu ikuti",
       "followingQuiet": "Saat mereka menyimpan sorotan dari live, itu muncul di sini. Temukan lebih banyak di Jelajahi.",
-      "toExplore": "Ke Jelajahi"
+      "toExplore": "Ke Jelajahi",
+      "savedToast": "Disimpan. Temukan di profilmu, bagian Disimpan.",
+      "unsavedToast": "Dihapus dari Disimpan"
     },
     "followingNoLive": "Tidak ada yang kamu ikuti sedang live."
   },

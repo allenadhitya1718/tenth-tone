@@ -523,7 +523,9 @@
       "followingNone": "Takip ettiklerinin canlı yayınlarından öne çıkanlar bu sekmede görünür.",
       "followingQuietTitle": "Takip ettiklerinden yeni bir şey yok",
       "followingQuiet": "Bir canlı yayından öne çıkan kaydettiklerinde burada görünür. Keşfet'te daha fazlasını bul.",
-      "toExplore": "Keşfet'e git"
+      "toExplore": "Keşfet'e git",
+      "savedToast": "Kaydedildi. Profilinde Kaydedilenler'de bulabilirsin.",
+      "unsavedToast": "Kaydedilenlerden çıkarıldı"
     },
     "followingNoLive": "Takip ettiklerinden şu an canlı yayında olan yok."
   },

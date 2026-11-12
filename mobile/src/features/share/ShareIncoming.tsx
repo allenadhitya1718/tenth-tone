@@ -6,7 +6,7 @@ import { router, type Href } from 'expo-router';
 import { useShareIntentContext } from 'expo-share-intent';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { chatKeys, fetchChats } from '@/api/chat';
 import { showAlert } from '@/components/Dialog';
@@ -140,7 +140,7 @@ export function ShareIncoming() {
                   <Text style={[styles.rowTitle, { color: colors.text }]} numberOfLines={1}>
                     {item.title}
                   </Text>
-                  <Ionicons name="send" size={18} color={colors.primary} />
+                  <Ionicons name="send" size={18} color={colors.primary} style={I18nManager.isRTL ? { transform: [{ scaleX: -1 }] } : undefined} />
                 </Pressable>
               )}
             />

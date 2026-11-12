@@ -68,6 +68,8 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
         return ids;
       });
     },
+    // Say what happened and where it went (it was only a colour change).
+    onSuccess: (_d, next) => showToast(t(next ? 'live.highlight.savedToast' : 'live.highlight.unsavedToast'), next ? 'bookmark' : 'bookmark-outline'),
     onError: () => {
       void qc.invalidateQueries({ queryKey: highlightKeys.savedIds() });
       showAlert(t('live.errors.title'), t('live.errors.generic'));

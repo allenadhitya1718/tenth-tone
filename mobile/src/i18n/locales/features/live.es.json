@@ -531,7 +531,9 @@
       "followingNone": "Aquí aparecen los momentos de los directos de la gente que sigues.",
       "followingQuietTitle": "Nada nuevo de la gente que sigues",
       "followingQuiet": "Cuando guarden un momento de un directo, aparecerá aquí. Descubre más en Explorar.",
-      "toExplore": "Ir a Explorar"
+      "toExplore": "Ir a Explorar",
+      "savedToast": "Guardado. Lo encontrarás en tu perfil, en Guardados.",
+      "unsavedToast": "Quitado de Guardados"
     },
     "followingNoLive": "Nadie a quien sigues está en directo ahora."
   },

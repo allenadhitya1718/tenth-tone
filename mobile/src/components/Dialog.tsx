@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,11 +18,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/providers/ThemeProvider';
 
+// A menu row may carry an icon (shown in the bottom-sheet menu only), so a
+// menu scans at a glance: e.g. the Create (+) menu.
+export type DialogButton = AlertButton & { icon?: keyof typeof Ionicons.glyphMap };
+
 type Dialog = {
   id: number;
   title: string;
   message?: string;
-  buttons: AlertButton[];
+  buttons: DialogButton[];
   options?: AlertOptions;
 };
 
@@ -40,7 +45,7 @@ type Dialog = {
 let push: ((d: Dialog) => void) | null = null;
 let nextId = 1;
 
-export function showAlert(title: string, message?: string, buttons?: AlertButton[], options?: AlertOptions) {
+export function showAlert(title: string, message?: string, buttons?: DialogButton[], options?: AlertOptions) {
   if (!push) {
     // The root has not mounted yet (or has unmounted): never drop a message.
     Alert.alert(title, message, buttons, options);
@@ -100,9 +105,9 @@ export function DialogHost() {
     return () => clearTimeout(timer);
   }, [current, attempt, close]);
 
-  const buttons: AlertButton[] = current?.buttons.length ? current.buttons : [{ text: t('common.ok') }];
+  const buttons: DialogButton[] = current?.buttons.length ? current.buttons : [{ text: t('common.ok') }];
 
-  const press = (b: AlertButton) => close(b.onPress ? () => b.onPress?.() : undefined);
+  const press = (b: DialogButton) => close(b.onPress ? () => b.onPress?.() : undefined);
 
   const dismiss = () => {
     if (!current) return;
@@ -171,9 +176,18 @@ export function DialogHost() {
                     accessibilityRole="button"
                     accessibilityLabel={b.text ?? t('common.ok')}
                   >
-                    <Text style={[styles.optionText, { color: destructive ? colors.danger : colors.text }]} numberOfLines={2}>
-                      {b.text ?? t('common.ok')}
-                    </Text>
+                    {b.icon ? (
+                      <View style={styles.optionRow}>
+                        <Ionicons name={b.icon} size={22} color={destructive ? colors.danger : colors.primary} />
+                        <Text style={[styles.optionText, styles.optionTextIcon, { color: destructive ? colors.danger : colors.text }]} numberOfLines={2}>
+                          {b.text ?? t('common.ok')}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={[styles.optionText, { color: destructive ? colors.danger : colors.text }]} numberOfLines={2}>
+                        {b.text ?? t('common.ok')}
+                      </Text>
+                    )}
                   </Pressable>
                 );
               })}
@@ -311,6 +325,8 @@ const styles = StyleSheet.create({
   option: { minHeight: 56, justifyContent: 'center', paddingHorizontal: 20, borderTopWidth: StyleSheet.hairlineWidth },
   optionFirst: { borderTopWidth: 0 },
   optionText: { fontSize: 17, fontWeight: '500', textAlign: 'center' },
+  optionRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  optionTextIcon: { flex: 1, textAlign: 'auto' },
   sheetCancel: {
     minHeight: 56,
     borderRadius: 20,

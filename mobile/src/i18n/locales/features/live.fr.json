@@ -531,7 +531,9 @@
       "followingNone": "Les moments forts des lives des personnes que vous suivez apparaissent ici.",
       "followingQuietTitle": "Rien de nouveau de vos abonnements",
       "followingQuiet": "Quand ils enregistrent un moment fort d’un live, il apparaît ici. Découvrez-en plus dans Explorer.",
-      "toExplore": "Aller à Explorer"
+      "toExplore": "Aller à Explorer",
+      "savedToast": "Enregistré. Retrouvez-le dans votre profil, onglet Favoris.",
+      "unsavedToast": "Retiré des Favoris"
     },
     "followingNoLive": "Personne que vous suivez n’est en live."
   },
