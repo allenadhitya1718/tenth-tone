@@ -4,14 +4,13 @@ import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Image } from 'expo-image';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, usePreventRemove } from 'expo-router';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  BackHandler,
   I18nManager,
   KeyboardAvoidingView,
   Pressable,
@@ -244,29 +243,13 @@ export function StoryComposer() {
     }
   }
 
+  // Leaving asks first while a photo or video is loaded (useDiscardGuard).
+  useDiscardGuard(!!picked && !busy);
   const leave = () => {
     if (busy) return;
-    if (!picked) return router.canGoBack() ? router.back() : router.replace('/');
-    showAlert(t('stories.discardQ'), undefined, [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('stories.discard'), style: 'destructive', onPress: () => (router.canGoBack() ? router.back() : router.replace('/')) },
-    ]);
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
   };
-
-  // Android's Back (button or gesture) asks too, not only the arrow at the
-  // top: on the Redmi it threw a loaded photo away without a word.
-  const leaveRef = useRef(leave);
-  useEffect(() => {
-    leaveRef.current = leave;
-  });
-  useEffect(() => {
-    if (!picked) return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      leaveRef.current();
-      return true;
-    });
-    return () => sub.remove();
-  }, [picked]);
 
   // ---------- step 1: choose media ----------
   if (!picked) {
@@ -603,3 +586,25 @@ const styles = StyleSheet.create({
   bar: { height: 6, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: 6 },
 });
+
+// Asks "Discard this story?" before the composer closes while something is
+// loaded, whichever way the person leaves: the top arrow, Android's Back, or
+// the iOS swipe (on the Redmi, Back threw a shared photo away without a
+// word). A confirmed Discard goes through without asking again.
+function useDiscardGuard(active: boolean) {
+  const { t } = useTranslation();
+  const [discarded, setDiscarded] = useState(false);
+  usePreventRemove(active && !discarded, ({ repeat }) => {
+    showAlert(t('stories.discardQ'), undefined, [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('stories.discard'),
+        style: 'destructive',
+        onPress: () => {
+          setDiscarded(true);
+          repeat();
+        },
+      },
+    ]);
+  });
+}
