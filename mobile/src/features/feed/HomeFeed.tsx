@@ -22,14 +22,34 @@ export function HomeFeed({ pin }: { pin?: Pin }) {
   const insets = useSafeAreaInsets();
   // Leaving the Home tab must stop the clip; coming back resumes it.
   const [screenFocused, setScreenFocused] = useState(true);
+  const pager = useRef<PagerView>(null);
+  // A clip opened from a profile, a notification or a link lands on For You.
+  // A fresh Home starts there; an existing one turns to it once Home is on
+  // screen: a setPage while the tab is still hidden behind the profile moved
+  // the pager's state but not the view (Poco F6, 12 Nov: For You played
+  // under the Live tab).
+  const pinKey = pin ? `${pin.id}:${pin.at}` : '';
+  const shownPin = useRef(pinKey);
+  const focusedRef = useRef(false);
+  const [page, setPage] = useState(pinKey ? FOR_YOU_PAGE : LIVE_PAGE);
+  const showPin = useCallback(() => {
+    if (!pinKey || shownPin.current === pinKey || !focusedRef.current) return;
+    shownPin.current = pinKey;
+    setPage(FOR_YOU_PAGE);
+    requestAnimationFrame(() => pager.current?.setPageWithoutAnimation(FOR_YOU_PAGE));
+  }, [pinKey]);
   useFocusEffect(
     useCallback(() => {
+      focusedRef.current = true;
       setScreenFocused(true);
-      return () => setScreenFocused(false);
-    }, []),
+      showPin();
+      return () => {
+        focusedRef.current = false;
+        setScreenFocused(false);
+      };
+    }, [showPin]),
   );
-  const pager = useRef<PagerView>(null);
-  const [page, setPage] = useState(LIVE_PAGE);
+  useEffect(showPin, [showPin]);
   const [height, setHeight] = useState(0);
   const [muted, setMuted] = useState(false);
   const toggleMute = useCallback(() => setMuted((m) => !m), []);
@@ -37,12 +57,6 @@ export function HomeFeed({ pin }: { pin?: Pin }) {
   function go(i: number) {
     pager.current?.setPage(i);
   }
-
-  // A video opened from a profile, a notification or a link lands on For You.
-  const pinKey = pin ? `${pin.id}:${pin.at}` : '';
-  useEffect(() => {
-    if (pinKey) pager.current?.setPage(FOR_YOU_PAGE);
-  }, [pinKey]);
 
   return (
     // While a sheet route (comments, share...) is open over the feed this
@@ -60,7 +74,7 @@ export function HomeFeed({ pin }: { pin?: Pin }) {
       <PagerView
         ref={pager}
         style={StyleSheet.absoluteFill}
-        initialPage={LIVE_PAGE}
+        initialPage={pinKey ? FOR_YOU_PAGE : LIVE_PAGE}
         layoutDirection={I18nManager.isRTL ? 'rtl' : 'ltr'}
         onPageSelected={(e) => {
           setPage(e.nativeEvent.position);
