@@ -160,7 +160,7 @@ export function ShareIncoming() {
         <View style={styles.chatList}>
           <View style={styles.chatHead}>
             <Pressable onPress={() => setChoosingChat(false)} hitSlop={10} accessibilityRole="button" accessibilityLabel={t('sendTo.in.back')}>
-              <Ionicons name="chevron-back" size={24} color={colors.text} />
+              <Ionicons name={I18nManager.isRTL ? 'chevron-forward' : 'chevron-back'} size={24} color={colors.text} />
             </Pressable>
             <AppText style={{ fontWeight: '800' }}>{t('sendTo.in.pickChat')}</AppText>
           </View>
@@ -202,7 +202,7 @@ function Choice({ icon, title, sub, onPress }: { icon: keyof typeof Ionicons.gly
         <AppText style={{ fontWeight: '800' }}>{title}</AppText>
         <Text style={[styles.small, { color: colors.muted }]}>{sub}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+      <Ionicons name={I18nManager.isRTL ? 'chevron-back' : 'chevron-forward'} size={20} color={colors.muted} />
     </Pressable>
   );
 }
