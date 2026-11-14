@@ -10,7 +10,7 @@
 --    create functions are left as they are, so older app versions keep
 --    working unchanged.
 --
--- Safe to re-run.
+-- Safe to re-run. Applied to FLYP (vfkwipvinmnybilcrdzr) on 15 Nov 2026.
 
 begin;
 
