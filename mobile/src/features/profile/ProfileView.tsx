@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -49,7 +49,7 @@ import { ProfileStoryAvatar } from '@/features/stories/ProfileStoryAvatar';
 import { atHandle } from '@/lib/handle';
 import { useTheme } from '@/providers/ThemeProvider';
 
-type Tab = 'highlights' | 'map' | 'saved' | 'drafts';
+type Tab = 'highlights' | 'voice' | 'map' | 'saved' | 'drafts';
 
 // One screen for your own profile and everyone else's: highlights, places on
 // the map and (your own) saved highlights (0171). No Videos or Audio tab: there is no
@@ -68,17 +68,29 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
 
   const profile = useQuery({ queryKey: profileKeys.profile(userId), queryFn: () => fetchProfile(userId) });
   // No Drafts tab: posting videos was removed (client change, Nov 2026).
-  const tabs: Tab[] = isMe ? ['highlights', 'map', 'saved'] : ['highlights', 'map'];
-
-  const drafts = useQuery({ queryKey: videoKeys.drafts(), queryFn: fetchDrafts, enabled: isMe && tab === 'drafts' });
+  // Highlights (cut from lives) and voice clips (recorded in the app) come
+  // in one list and are split here into two tabs (owner, 14 Nov 2026). On
+  // someone else's profile the Voice tab shows only when they have one.
   const highlights = useQuery({
     queryKey: highlightKeys.byUser(userId),
     queryFn: () => fetchUserHighlights(userId),
-    enabled: tab === 'highlights',
   });
+  const liveClips = (highlights.data ?? []).filter((h) => h.kind !== 'voice');
+  const voiceClips = (highlights.data ?? []).filter((h) => h.kind === 'voice');
+  const showVoice = isMe || voiceClips.length > 0;
+  const tabs: Tab[] = [
+    'highlights',
+    ...(showVoice ? (['voice'] as const) : []),
+    'map',
+    ...(isMe ? (['saved'] as const) : []),
+  ];
+
+  const drafts = useQuery({ queryKey: videoKeys.drafts(), queryFn: fetchDrafts, enabled: isMe && tab === 'drafts' });
   // Saved: highlights you bookmarked in the feed (only on your own profile).
   const saved = useQuery({ queryKey: highlightKeys.saved(), queryFn: () => fetchSavedHighlights(), enabled: isMe && tab === 'saved' });
   const hlList = tab === 'saved' ? saved : highlights;
+  const hlData = tab === 'saved' ? (saved.data ?? []) : tab === 'voice' ? voiceClips : liveClips;
+  const isHlTab = tab === 'highlights' || tab === 'voice' || tab === 'saved';
 
   const grid = tab === 'drafts' ? drafts : null;
   const tile = Math.floor((width - 4) / 3);
@@ -87,6 +99,8 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
   if (!isMe && profile.isSuccess && !profile.data) {
     return <NotFoundState icon="person-outline" title={t('fix4.notFoundUserTitle')} body={t('fix4.notFoundUserBody')} />;
   }
+
+  const tabLabel = (k: Tab) => (k === 'voice' ? t('voice.tab') : t(`profile.tab_${k}`));
 
   const header = (
     <>
@@ -98,14 +112,14 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
             onPress={() => setTab(k)}
             accessibilityRole="tab"
             accessibilityState={{ selected: tab === k }}
-            accessibilityLabel={t(`profile.tab_${k}`)}
+            accessibilityLabel={tabLabel(k)}
             style={[styles.tabBtn, tab === k && { borderBottomColor: colors.text }]}
           >
             <Ionicons name={TAB_ICON[k]} size={22} color={tab === k ? colors.text : colors.muted} />
             {/* A word under each icon: on the Redmi the mic icon alone did not
                 say "Highlights". */}
             <Text style={[styles.tabLabel, { color: tab === k ? colors.text : colors.muted }]} numberOfLines={1}>
-              {t(`profile.tab_${k}`)}
+              {tabLabel(k)}
             </Text>
           </Pressable>
         ))}
@@ -117,16 +131,16 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
   const onRefresh = () => {
     void profile.refetch();
     if (grid) void grid.refetch();
-    if (tab === 'highlights' || tab === 'saved') void hlList.refetch();
+    if (isHlTab) void hlList.refetch();
     if (tab === 'map') void qc.invalidateQueries({ queryKey: tagKeys.profilePlaces(userId) });
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-      {tab === 'highlights' || tab === 'saved' ? (
+      {isHlTab ? (
         <FlatList<LiveHighlight>
           key={tab}
-          data={hlList.data ?? []}
+          data={hlData}
           numColumns={2}
           keyExtractor={(h) => h.id}
           ListHeaderComponent={header}
@@ -139,7 +153,14 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
             ) : (
               <Empty
                 icon={TAB_ICON[tab]}
-                text={tab === 'saved' ? t('live.highlight.savedEmpty') : t(`profile.empty_highlights${isMe ? '_me' : ''}`)}
+                text={
+                  tab === 'saved'
+                    ? t('live.highlight.savedEmpty')
+                    : tab === 'voice'
+                      ? t(isMe ? 'voice.profileEmptyMe' : 'voice.profileEmpty')
+                      : t(`profile.empty_highlights${isMe ? '_me' : ''}`)
+                }
+                action={tab === 'voice' && isMe ? { label: t('voice.createOption'), onPress: () => router.push('/voice/new' as Href) } : undefined}
               />
             )
           }
@@ -147,7 +168,7 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
             <>
               <HighlightCard item={item} />
               {/* Keep a lone last card half width. */}
-              {index === (hlList.data?.length ?? 0) - 1 && index % 2 === 0 ? <View style={{ flex: 1 }} /> : null}
+              {index === hlData.length - 1 && index % 2 === 0 ? <View style={{ flex: 1 }} /> : null}
             </>
           )}
         />
@@ -197,7 +218,8 @@ export function ProfileView({ userId, isMe, pushed }: { userId: string; isMe: bo
 }
 
 const TAB_ICON: Record<Tab, keyof typeof Ionicons.glyphMap> = {
-  highlights: 'mic-outline',
+  highlights: 'radio-outline',
+  voice: 'mic-outline',
   map: 'map-outline',
   saved: 'bookmark-outline',
   drafts: 'document-text-outline',
@@ -447,12 +469,21 @@ function Stat({ n, label, onPress }: { n: number | undefined; label: string; onP
   );
 }
 
-function Empty({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
+function Empty({
+  icon,
+  text,
+  action,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  text: string;
+  action?: { label: string; onPress: () => void };
+}) {
   const { colors } = useTheme();
   return (
     <View style={styles.empty}>
       <Ionicons name={icon} size={40} color={colors.muted2} />
       <Text style={{ color: colors.muted, textAlign: 'center', fontSize: 14, lineHeight: 20 }}>{text}</Text>
+      {action ? <Button title={action.label} onPress={action.onPress} /> : null}
     </View>
   );
 }

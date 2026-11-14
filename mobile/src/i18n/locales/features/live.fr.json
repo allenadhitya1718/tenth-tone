@@ -533,7 +533,12 @@
       "followingQuiet": "Quand ils enregistrent un moment fort d’un live, il apparaît ici. Découvrez-en plus dans Explorer.",
       "toExplore": "Aller à Explorer",
       "savedToast": "Enregistré. Retrouvez-le dans votre profil, onglet Favoris.",
-      "unsavedToast": "Retiré des Favoris"
+      "unsavedToast": "Retiré des Favoris",
+      "fitLabel": "Format de la couverture",
+      "fit_square": "Carré",
+      "fit_tall": "Vertical",
+      "fit_wide": "Horizontal",
+      "fit_full": "Plein écran"
     },
     "followingNoLive": "Personne que vous suivez n’est en live."
   },
@@ -563,6 +568,9 @@
     "errorTitle": "Un problème est survenu",
     "recordFailed": "Impossible de démarrer l’enregistrement. Réessayez.",
     "chip": "Clip vocal",
-    "by": "Clip vocal de {{name}}"
+    "by": "Clip vocal de {{name}}",
+    "tab": "Voix",
+    "profileEmpty": "Aucun clip vocal pour l'instant",
+    "profileEmptyMe": "Enregistrez votre voix avec une photo et partagez-la. Vos clips vocaux s'affichent ici."
   }
 }

@@ -16,7 +16,7 @@ import { showToast } from '@/components/Toast';
 import { AppText, Button, Screen, TopBar } from '@/components/ui';
 import { useVoiceRecorder } from '@/features/chat/useVoiceRecorder';
 import { isImageUrl } from '@/features/discover/nav';
-import { HighlightCover } from '@/features/highlights/HighlightCover';
+import { type CoverFit, CoverFitPicker, coverPickOptions, HighlightCover } from '@/features/highlights/HighlightCover';
 import { formatClock } from '@/features/stories/SoundPicker';
 import { reportError } from '@/lib/errorReport';
 import { useAuth } from '@/providers/AuthProvider';
@@ -59,6 +59,7 @@ export function VoiceClipMaker() {
   const [clip, setClip] = useState<{ media: LocalMedia; ms: number } | null>(null);
   const [title, setTitle] = useState('');
   const [cover, setCover] = useState<LocalMedia | null>(null);
+  const [coverFit, setCoverFit] = useState<CoverFit>('square');
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -116,8 +117,7 @@ export function VoiceClipMaker() {
     try {
       const res = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
+        ...coverPickOptions(coverFit),
         quality: 0.8,
       });
       if (res.canceled || !res.assets[0]) return;
@@ -139,7 +139,7 @@ export function VoiceClipMaker() {
     player.pause();
     setProgress(0);
     try {
-      const posted = await postVoiceClip({ audio: clip.media, durationMs: clip.ms, title, cover }, setProgress);
+      const posted = await postVoiceClip({ audio: clip.media, durationMs: clip.ms, title, cover, coverFit }, setProgress);
       void qc.invalidateQueries({ queryKey: highlightKeys.all });
       showToast(t('voice.posted'));
       router.replace(`/highlight/${posted.id}` as Href);
@@ -169,11 +169,13 @@ export function VoiceClipMaker() {
     <Screen header={header}>
       {/* The picture that goes with the voice, as it will be posted. */}
       <View style={[styles.stage, { backgroundColor: colors.bg2 }]}>
-        <HighlightCover uri={shownCover} hostName={myName} blurRadius={18} />
-        <View style={styles.shade} />
-        <View style={styles.art}>
-          <HighlightCover uri={shownCover} hostName={myName} compact />
-        </View>
+        <HighlightCover uri={shownCover} hostName={myName} blurRadius={coverFit === 'full' ? undefined : 18} />
+        <View style={[styles.shade, coverFit === 'full' && styles.shadeLight]} />
+        {coverFit === 'full' ? null : (
+          <View style={[styles.art, PREVIEW_ART[coverFit]]}>
+            <HighlightCover uri={shownCover} hostName={myName} compact />
+          </View>
+        )}
       </View>
 
       {!clip ? (
@@ -255,6 +257,9 @@ export function VoiceClipMaker() {
           <Text style={{ color: colors.primary, fontWeight: '800' }}>{t('live.highlight.coverChange')}</Text>
         </Pressable>
       </View>
+      <View style={styles.fitBox}>
+        <CoverFitPicker value={coverFit} onChange={setCoverFit} disabled={busy} />
+      </View>
 
       <Button
         title={busy ? `${t('voice.posting')} ${progress ? Math.round(progress * 100) + '%' : ''}`.trim() : t('voice.post')}
@@ -330,4 +335,13 @@ const styles = StyleSheet.create({
   },
   coverThumb: { width: 52, height: 52, borderRadius: 10, overflow: 'hidden' },
   coverBtn: { paddingHorizontal: 6, paddingVertical: 6 },
+  shadeLight: { backgroundColor: 'rgba(0,4,33,0.2)' },
+  fitBox: { marginTop: -16, marginBottom: 16 },
 });
+
+// The cover card in the preview, in the shape it will have once posted.
+const PREVIEW_ART: Record<Exclude<CoverFit, 'full'>, { width: number; height: number }> = {
+  square: { width: 112, height: 112 },
+  tall: { width: 90, height: 120 },
+  wide: { width: 176, height: 99 },
+};

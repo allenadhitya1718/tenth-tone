@@ -533,7 +533,12 @@
       "followingQuiet": "Cuando guarden un momento de un directo, aparecerá aquí. Descubre más en Explorar.",
       "toExplore": "Ir a Explorar",
       "savedToast": "Guardado. Lo encontrarás en tu perfil, en Guardados.",
-      "unsavedToast": "Quitado de Guardados"
+      "unsavedToast": "Quitado de Guardados",
+      "fitLabel": "Formato de la portada",
+      "fit_square": "Cuadrado",
+      "fit_tall": "Vertical",
+      "fit_wide": "Horizontal",
+      "fit_full": "Pantalla completa"
     },
     "followingNoLive": "Nadie a quien sigues está en directo ahora."
   },
@@ -563,6 +568,9 @@
     "errorTitle": "Algo salió mal",
     "recordFailed": "No se pudo empezar a grabar. Inténtalo de nuevo.",
     "chip": "Clip de voz",
-    "by": "Clip de voz de {{name}}"
+    "by": "Clip de voz de {{name}}",
+    "tab": "Voz",
+    "profileEmpty": "Aún no hay clips de voz",
+    "profileEmptyMe": "Graba tu voz con una foto y compártela. Tus clips de voz aparecen aquí."
   }
 }

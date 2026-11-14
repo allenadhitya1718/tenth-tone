@@ -15,7 +15,7 @@ import { fetchLiveStream, liveKeys } from '@/api/live';
 import { showAlert } from '@/components/Dialog';
 import { showToast } from '@/components/Toast';
 import { AppText, Button, Screen, TopBar } from '@/components/ui';
-import { HighlightCover } from '@/features/highlights/HighlightCover';
+import { type CoverFit, CoverFitPicker, coverPickOptions, HighlightCover } from '@/features/highlights/HighlightCover';
 import { isImageUrl } from '@/features/discover/nav';
 import { formatClock } from '@/features/stories/SoundPicker';
 import { aacDurationMs, NotAacError, trimAac } from '@/lib/aacTrim';
@@ -176,13 +176,14 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
   // The cover: a photo picked here, else the live's cover, else the host's
   // profile photo, else the FLYP card with their name (HighlightCover).
   const [pickedCover, setPickedCover] = useState<LocalMedia | null>(null);
+  const [coverFit, setCoverFit] = useState<CoverFit>('square');
   const liveCover = isImageUrl(live.data?.thumbnail) ? live.data!.thumbnail : null;
   const profileCover = isImageUrl(live.data?.host?.avatar_url) ? live.data!.host!.avatar_url : null;
   const cover = pickedCover?.uri ?? liveCover ?? profileCover;
   const coverSource = pickedCover ? 'coverChosen' : liveCover ? 'coverFromLive' : profileCover ? 'coverFromProfile' : 'coverBrand';
   async function pickCover() {
     try {
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 });
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], ...coverPickOptions(coverFit), quality: 0.8 });
       if (res.canceled || !res.assets[0]) return;
       const a = res.assets[0];
       setPickedCover({ uri: a.uri, mimeType: a.mimeType ?? 'image/jpeg', size: a.fileSize ?? null, name: a.fileName ?? null });
@@ -207,6 +208,7 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
           startMs: startS * 1000,
           durationMs: cut.durationMs,
           cover: pickedCover,
+          coverFit,
         },
         setProgress,
       );
@@ -289,14 +291,16 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
         accessibilityLabel={playingMinute ? t('live.highlight.pause') : t('live.highlight.playPart')}
         style={[styles.cover, { backgroundColor: colors.bg2 }]}
       >
-        <HighlightCover uri={cover} hostName={hostName} blurRadius={18} />
-        <View style={styles.coverShade} />
+        <HighlightCover uri={cover} hostName={hostName} blurRadius={coverFit === 'full' ? undefined : 18} />
+        <View style={[styles.coverShade, coverFit === 'full' && styles.coverShadeLight]} />
         {/* The picture that goes with the audio, as it will be posted, and
             the play button beside it (never on top of it). */}
         <View style={styles.previewRow}>
-          <View style={styles.coverArt}>
-            <HighlightCover uri={cover} hostName={hostName} compact />
-          </View>
+          {coverFit === 'full' ? null : (
+            <View style={[styles.coverArt, PREVIEW_ART[coverFit]]}>
+              <HighlightCover uri={cover} hostName={hostName} compact />
+            </View>
+          )}
           <View style={styles.playBig}>
             {trimming ? (
               <ActivityIndicator color="#fff" />
@@ -450,6 +454,9 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
           <Text style={{ color: colors.primary, fontWeight: '800' }}>{t('live.highlight.coverChange')}</Text>
         </Pressable>
       </View>
+      <View style={styles.fitBox}>
+        <CoverFitPicker value={coverFit} onChange={setCoverFit} disabled={busy} />
+      </View>
 
       <Button
         title={busy ? `${t('live.highlight.posting')} ${progress ? Math.round(progress * 100) + '%' : ''}`.trim() : t('live.highlight.post')}
@@ -530,12 +537,21 @@ function createTrimPan(box: DragBox, v: TrimView, a: TrimActions): PanResponderI
   });
 }
 
+// The cover card in the preview, in the shape it will have once posted.
+const PREVIEW_ART: Record<Exclude<CoverFit, 'full'>, { width: number; height: number }> = {
+  square: { width: 112, height: 112 },
+  tall: { width: 90, height: 120 },
+  wide: { width: 176, height: 99 },
+};
+
 const styles = StyleSheet.create({
   empty: { alignItems: 'center', gap: 12, marginTop: 80, paddingHorizontal: 24 },
   cover: { height: 220, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   coverShade: { position: 'absolute', top: 0, bottom: 0, start: 0, end: 0, backgroundColor: 'rgba(0,4,33,0.45)' },
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: 22, marginBottom: 44 },
   coverArt: { width: 112, height: 112, borderRadius: 14, overflow: 'hidden' },
+  coverShadeLight: { backgroundColor: 'rgba(0,4,33,0.2)' },
+  fitBox: { marginTop: -16, marginBottom: 16 },
   coverRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -517,7 +517,12 @@
       "followingQuiet": "他们从直播保存精彩片段后会显示在这里。去“探索”发现更多。",
       "toExplore": "前往探索",
       "savedToast": "已收藏。可在个人主页的“收藏”中找到。",
-      "unsavedToast": "已从收藏中移除"
+      "unsavedToast": "已从收藏中移除",
+      "fitLabel": "封面版式",
+      "fit_square": "方形",
+      "fit_tall": "竖版",
+      "fit_wide": "横版",
+      "fit_full": "全屏"
     },
     "followingNoLive": "你关注的人现在都没有在直播。"
   },
@@ -547,6 +552,9 @@
     "errorTitle": "出了点问题",
     "recordFailed": "无法开始录制，请重试。",
     "chip": "语音片段",
-    "by": "{{name}} 的语音片段"
+    "by": "{{name}} 的语音片段",
+    "tab": "语音",
+    "profileEmpty": "还没有语音片段",
+    "profileEmptyMe": "配一张照片录下你的声音并分享。你的语音片段会显示在这里。"
   }
 }

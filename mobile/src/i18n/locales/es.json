@@ -257,7 +257,7 @@
     "soundUses_other": "Usado {{count}} veces",
     "tab_highlights": "Destacados",
     "empty_highlights": "Aún no hay destacados",
-    "empty_highlights_me": "Haz un directo y recorta tu mejor minuto como destacado."
+    "empty_highlights_me": "Haz un directo y recorta tus 2 mejores minutos como destacado."
   },
   "camera": {
     "permTitle": "Permite el acceso a la cámara y al micrófono",

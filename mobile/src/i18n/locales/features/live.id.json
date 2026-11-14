@@ -517,7 +517,12 @@
       "followingQuiet": "Saat mereka menyimpan sorotan dari live, itu muncul di sini. Temukan lebih banyak di Jelajahi.",
       "toExplore": "Ke Jelajahi",
       "savedToast": "Disimpan. Temukan di profilmu, bagian Disimpan.",
-      "unsavedToast": "Dihapus dari Disimpan"
+      "unsavedToast": "Dihapus dari Disimpan",
+      "fitLabel": "Tata letak sampul",
+      "fit_square": "Persegi",
+      "fit_tall": "Tegak",
+      "fit_wide": "Lebar",
+      "fit_full": "Layar penuh"
     },
     "followingNoLive": "Tidak ada yang kamu ikuti sedang live."
   },
@@ -547,6 +552,9 @@
     "errorTitle": "Terjadi kesalahan",
     "recordFailed": "Tidak bisa mulai merekam. Coba lagi.",
     "chip": "Klip suara",
-    "by": "Klip suara {{name}}"
+    "by": "Klip suara {{name}}",
+    "tab": "Suara",
+    "profileEmpty": "Belum ada klip suara",
+    "profileEmptyMe": "Rekam suaramu dengan foto lalu bagikan. Klip suaramu muncul di sini."
   }
 }

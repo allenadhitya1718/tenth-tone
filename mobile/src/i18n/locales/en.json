@@ -266,7 +266,7 @@
     "soundUses_other": "Used {{count}} times",
     "tab_highlights": "Highlights",
     "empty_highlights": "No highlights yet",
-    "empty_highlights_me": "Go live, then trim your best minute into a highlight."
+    "empty_highlights_me": "Go live, then trim your best 2 minutes into a highlight."
   },
   "camera": {
     "permTitle": "Allow camera and microphone",

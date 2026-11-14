@@ -525,7 +525,12 @@
       "followingQuiet": "Bir canlı yayından öne çıkan kaydettiklerinde burada görünür. Keşfet'te daha fazlasını bul.",
       "toExplore": "Keşfet'e git",
       "savedToast": "Kaydedildi. Profilinde Kaydedilenler'de bulabilirsin.",
-      "unsavedToast": "Kaydedilenlerden çıkarıldı"
+      "unsavedToast": "Kaydedilenlerden çıkarıldı",
+      "fitLabel": "Kapak düzeni",
+      "fit_square": "Kare",
+      "fit_tall": "Dikey",
+      "fit_wide": "Yatay",
+      "fit_full": "Tam ekran"
     },
     "followingNoLive": "Takip ettiklerinden şu an canlı yayında olan yok."
   },
@@ -555,6 +560,9 @@
     "errorTitle": "Bir sorun oluştu",
     "recordFailed": "Kayıt başlatılamadı. Tekrar dene.",
     "chip": "Ses klibi",
-    "by": "{{name}} adlı kişinin ses klibi"
+    "by": "{{name}} adlı kişinin ses klibi",
+    "tab": "Ses",
+    "profileEmpty": "Henüz ses klibi yok",
+    "profileEmptyMe": "Sesini bir fotoğrafla kaydet ve paylaş. Ses kliplerin burada görünür."
   }
 }

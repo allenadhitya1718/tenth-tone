@@ -22,6 +22,8 @@ export type LiveHighlight = {
   title: string | null;
   audio_url: string;
   cover_url: string | null;
+  /** How the cover is shown (0173); missing before it is applied = square. */
+  cover_fit?: 'square' | 'tall' | 'wide' | 'full';
   duration_ms: number;
   plays_count: number;
   created_at: Iso;
@@ -108,7 +110,22 @@ export type PostHighlightInput = {
   /** A photo the host picked for the cover; none = the live's cover, else
    *  their profile photo (decided by the server). */
   cover?: LocalMedia | null;
+  coverFit?: CoverFitValue;
 };
+
+export type CoverFitValue = 'square' | 'tall' | 'wide' | 'full';
+
+// The layout is set just after posting (0173). Before 0173 is applied the
+// function is missing: the clip stays square, and posting still succeeds.
+async function applyCoverFit(row: LiveHighlight, fit: CoverFitValue | undefined): Promise<LiveHighlight> {
+  if (!fit || fit === 'square') return row;
+  const { error } = await supabase.rpc('set_highlight_cover_fit', { p_id: row.id, p_fit: fit });
+  if (error) {
+    console.warn('set_highlight_cover_fit:', error.message);
+    return row;
+  }
+  return { ...row, cover_fit: fit };
+}
 
 // The server before 0169 has no p_cover_url: PostgREST answers that no
 // function matches. The highlight is then posted with the default cover.
@@ -117,7 +134,7 @@ function isMissingCoverArg(e: unknown): boolean {
   return err?.code === 'PGRST202' || /create_live_highlight/.test(err?.message ?? '');
 }
 
-export async function postHighlight({ liveId, audio, title, startMs, durationMs, cover }: PostHighlightInput, onProgress?: (p: number) => void) {
+export async function postHighlight({ liveId, audio, title, startMs, durationMs, cover, coverFit }: PostHighlightInput, onProgress?: (p: number) => void) {
   const clean = title?.trim() || null;
   if (clean) {
     const verdict = await checkText('live_title', clean);
@@ -146,7 +163,7 @@ export async function postHighlight({ liveId, audio, title, startMs, durationMs,
     let { data, error } = await supabase.rpc('create_live_highlight', coverUrl ? { ...args, p_cover_url: coverUrl } : args);
     if (error && coverUrl && isMissingCoverArg(error)) ({ data, error } = await supabase.rpc('create_live_highlight', args));
     if (error) throw asHighlightError(error);
-    return data as unknown as LiveHighlight;
+    return await applyCoverFit(data as unknown as LiveHighlight, coverFit);
   } catch (e) {
     throw asHighlightError(e);
   }
@@ -159,11 +176,12 @@ export type PostVoiceClipInput = {
   title?: string | null;
   /** A background photo; none = the person's profile photo (server). */
   cover?: LocalMedia | null;
+  coverFit?: CoverFitValue;
 };
 
 /** A voice clip recorded in the app, up to 5 minutes (0170). Shown with
  *  highlights in Explore, Home and on the profile. */
-export async function postVoiceClip({ audio, durationMs, title, cover }: PostVoiceClipInput, onProgress?: (p: number) => void) {
+export async function postVoiceClip({ audio, durationMs, title, cover, coverFit }: PostVoiceClipInput, onProgress?: (p: number) => void) {
   const clean = title?.trim() || null;
   if (clean) {
     const verdict = await checkText('live_title', clean);
@@ -186,7 +204,7 @@ export async function postVoiceClip({ audio, durationMs, title, cover }: PostVoi
       p_cover_url: coverUrl,
     });
     if (error) throw asHighlightError(error);
-    return data as unknown as LiveHighlight;
+    return await applyCoverFit(data as unknown as LiveHighlight, coverFit);
   } catch (e) {
     throw asHighlightError(e);
   }

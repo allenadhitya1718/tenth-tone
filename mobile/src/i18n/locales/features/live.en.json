@@ -546,7 +546,12 @@
       "followingQuiet": "When they save a highlight from a live, it shows up here. Find more in Explore.",
       "toExplore": "Go to Explore",
       "savedToast": "Saved. Find it in your profile under Saved.",
-      "unsavedToast": "Removed from Saved"
+      "unsavedToast": "Removed from Saved",
+      "fitLabel": "Cover layout",
+      "fit_square": "Square",
+      "fit_tall": "Tall",
+      "fit_wide": "Wide",
+      "fit_full": "Full screen"
     },
     "followingNoLive": "Nobody you follow is live right now."
   },
@@ -576,6 +581,9 @@
     "errorTitle": "Something went wrong",
     "recordFailed": "Couldn't start recording. Try again.",
     "chip": "Voice clip",
-    "by": "{{name}}'s voice clip"
+    "by": "{{name}}'s voice clip",
+    "tab": "Voice",
+    "profileEmpty": "No voice clips yet",
+    "profileEmptyMe": "Record your voice with a photo and share it. Your voice clips show here."
   }
 }

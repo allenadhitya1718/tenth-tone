@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import {
   countHighlightPlay,
@@ -22,7 +22,7 @@ import { go, isImageUrl, userPath } from '@/features/discover/nav';
 import { formatClock } from '@/features/stories/SoundPicker';
 import { useAuth } from '@/providers/AuthProvider';
 
-import { clipByKey, HighlightCover, highlightCoverUri } from './HighlightCover';
+import { clipByKey, coverArtSize, coverFitOf, HighlightCover, highlightCoverUri } from './HighlightCover';
 
 // Highlights deleted in this session: a pinned one (opened from the profile)
 // is then dropped and the feed shows, instead of "this highlight is gone".
@@ -49,6 +49,12 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
   const { t } = useTranslation();
   const host = item.host?.name || item.host?.handle || '';
   const cover = highlightCoverUri(item.cover_url, item.host?.avatar_url);
+  // The layout the host chose (0173): a card in the middle, or the photo
+  // filling the page.
+  const fit = coverFitOf(item.cover_fit);
+  const full = fit === 'full';
+  const { width: pageW } = useWindowDimensions();
+  const artSize = coverArtSize(fit, pageW, height);
   const avatar = isImageUrl(item.host?.avatar_url) ? item.host!.avatar_url : null;
   const [paused, setPaused] = useState(false);
   const qc = useQueryClient();
@@ -126,8 +132,13 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
       accessibilityLabel={`${item.title || t(clipByKey(item.kind), { name: host })}, ${formatClock(item.duration_ms / 1000)}`}
       accessibilityHint={muted ? t('feed.tapForSound') : undefined}
     >
-      {cover ? <Image source={{ uri: cover }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={30} recyclingKey={item.id} /> : null}
-      <View style={styles.shade} />
+      {full ? (
+        <HighlightCover uri={cover} hostName={host} recyclingKey={item.id} />
+      ) : cover ? (
+        <Image source={{ uri: cover }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={30} recyclingKey={item.id} />
+      ) : null}
+      <View style={[styles.shade, full && styles.shadeLight]} />
+      {full ? <LinearGradient pointerEvents="none" colors={['rgba(0,0,0,0.45)', 'transparent']} style={styles.topShade} /> : null}
       <LinearGradient pointerEvents="none" colors={['transparent', 'rgba(0,0,0,0.65)']} style={styles.bottomShade} />
 
       <View style={styles.middle} pointerEvents="none">
@@ -135,8 +146,8 @@ export const HighlightFeedCard = memo(function HighlightFeedCard({ item, height,
           <Ionicons name="mic" size={12} color="#fff" />
           <Text style={styles.chipText}>{item.kind === 'voice' ? t('voice.chip') : t('live.highlight.feedChip')}</Text>
         </View>
-        <View style={styles.art}>
-          <HighlightCover uri={cover} hostName={host} recyclingKey={item.id} />
+        <View style={[styles.art, full ? styles.artFull : artSize]}>
+          {full ? null : <HighlightCover uri={cover} hostName={host} recyclingKey={item.id} />}
           <Animated.View style={[styles.pausedMark, { opacity: flash }]}>
             <Ionicons name={flashIcon} size={34} color="#fff" style={flashIcon === 'play' ? { marginStart: 4 } : undefined} />
           </Animated.View>
@@ -241,6 +252,10 @@ function Sound({ item, active, muted }: { item: LiveHighlight; active: boolean; 
 const styles = StyleSheet.create({
   card: { width: '100%', backgroundColor: '#000421', overflow: 'hidden' },
   shade: { position: 'absolute', top: 0, bottom: 0, start: 0, end: 0, backgroundColor: 'rgba(0,4,33,0.55)' },
+  // Full-screen cover: only a light veil, so the photo is the page.
+  shadeLight: { backgroundColor: 'rgba(0,4,33,0.08)' },
+  topShade: { position: 'absolute', top: 0, left: 0, right: 0, height: 140 },
+  artFull: { backgroundColor: 'transparent', width: 240, height: 240 },
   bottomShade: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%' },
   middle: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, paddingBottom: 60 },
   chip: {

@@ -1,8 +1,11 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { isImageUrl } from '@/features/discover/nav';
+import { useTheme } from '@/providers/ThemeProvider';
 
 // A highlight's picture: its cover (the photo the host chose, else the
 // live's cover, else the host's profile photo), or, when there is none, a
@@ -71,7 +74,98 @@ export function highlightCoverUri(cover: string | null | undefined, hostAvatar: 
   return null;
 }
 
+// ---------- cover layout (0173) ----------
+// How the cover is shown on the highlight's page (owner, 14 Nov 2026): a
+// square in the middle (the old look), a tall or a wide card, or the photo
+// filling the whole page.
+export type CoverFit = 'square' | 'tall' | 'wide' | 'full';
+export const COVER_FITS: CoverFit[] = ['square', 'tall', 'wide', 'full'];
+
+/** A row's cover_fit; anything unknown (or missing before 0173) is 'square'. */
+export function coverFitOf(v: unknown): CoverFit {
+  return COVER_FITS.includes(v as CoverFit) ? (v as CoverFit) : 'square';
+}
+
+/** Width / height of the photo for a layout (also the crop when picking it). */
+export const COVER_ASPECT: Record<CoverFit, [number, number]> = { square: [1, 1], tall: [3, 4], wide: [16, 9], full: [9, 16] };
+
+/** The picker's crop. iOS only crops square, so other layouts skip the crop
+ *  there (the photo is centred and filled instead). */
+export function coverPickOptions(fit: CoverFit): { allowsEditing: boolean; aspect?: [number, number] } {
+  if (Platform.OS === 'ios' && fit !== 'square') return { allowsEditing: false };
+  return { allowsEditing: true, aspect: COVER_ASPECT[fit] };
+}
+
+/** The size of the cover card in the middle of a page `pageW` wide (not
+ *  used for 'full', which fills the page). */
+export function coverArtSize(fit: CoverFit, pageW: number, pageH: number): { width: number; height: number } {
+  if (fit === 'wide') {
+    const width = Math.min(pageW - 32, 520);
+    return { width, height: Math.round((width * 9) / 16) };
+  }
+  if (fit === 'tall') {
+    const height = Math.min(Math.round(pageH * 0.5), Math.round(((pageW - 96) * 4) / 3));
+    return { width: Math.round((height * 3) / 4), height };
+  }
+  const side = Math.min(240, pageW - 64);
+  return { width: side, height: side };
+}
+
+const FIT_ICON: Record<CoverFit, keyof typeof Ionicons.glyphMap> = {
+  square: 'square-outline',
+  tall: 'phone-portrait-outline',
+  wide: 'tablet-landscape-outline',
+  full: 'expand-outline',
+};
+
+/** Four choices in a row, each an icon and a word, on the maker screens. */
+export function CoverFitPicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: CoverFit;
+  onChange: (f: CoverFit) => void;
+  disabled?: boolean;
+}) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  return (
+    <View style={styles.fitWrap}>
+      <Text style={[styles.fitLabel, { color: colors.muted }]}>{t('live.highlight.fitLabel')}</Text>
+      <View style={styles.fitRow} accessibilityRole="radiogroup">
+        {COVER_FITS.map((f) => {
+          const on = f === value;
+          return (
+            <Pressable
+              key={f}
+              onPress={() => onChange(f)}
+              disabled={disabled}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: on, disabled }}
+              style={[
+                styles.fitBtn,
+                { borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.primary + '22' : colors.bg2 },
+              ]}
+            >
+              <Ionicons name={FIT_ICON[f]} size={20} color={on ? colors.primary : colors.text} />
+              <Text style={[styles.fitText, { color: on ? colors.primary : colors.text }]} numberOfLines={1}>
+                {t(`live.highlight.fit_${f}`)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  fitWrap: { gap: 6, marginTop: 10 },
+  fitLabel: { fontSize: 13, fontWeight: '700' },
+  fitRow: { flexDirection: 'row', gap: 8 },
+  fitBtn: { flex: 1, alignItems: 'center', gap: 3, paddingVertical: 8, borderRadius: 12, borderWidth: 1.5 },
+  fitText: { fontSize: 11.5, fontWeight: '700' },
   brand: { alignItems: 'center', justifyContent: 'center', gap: 10, overflow: 'hidden' },
   logo: { width: '62%', aspectRatio: 472 / 230 },
   logoSmall: { width: '70%', aspectRatio: 472 / 230 },
