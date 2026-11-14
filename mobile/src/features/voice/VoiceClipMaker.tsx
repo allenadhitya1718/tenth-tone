@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { type RecordingOptions, RecordingPresets, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import * as ImagePicker from 'expo-image-picker';
 import { type Href, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +15,8 @@ import { showToast } from '@/components/Toast';
 import { AppText, Button, Screen, TopBar } from '@/components/ui';
 import { useVoiceRecorder } from '@/features/chat/useVoiceRecorder';
 import { isImageUrl } from '@/features/discover/nav';
-import { type CoverFit, CoverFitPicker, coverPickOptions, HighlightCover } from '@/features/highlights/HighlightCover';
+import { useCoverEditing } from '@/features/highlights/CoverEditor';
+import { type CoverFit, CoverFitPicker, HighlightCover } from '@/features/highlights/HighlightCover';
 import { formatClock } from '@/features/stories/SoundPicker';
 import { reportError } from '@/lib/errorReport';
 import { useAuth } from '@/providers/AuthProvider';
@@ -55,11 +55,12 @@ export function VoiceClipMaker() {
   });
   const myName = mine.data?.name || mine.data?.handle || '';
   const myPhoto = isImageUrl(mine.data?.avatar_url) ? mine.data!.avatar_url! : null;
+  // Picking opens the cover editor (move, zoom, filters, text).
+  const ce = useCoverEditing(myPhoto, t('voice.errorTitle'));
+  const coverFit: CoverFit = ce.fit;
 
   const [clip, setClip] = useState<{ media: LocalMedia; ms: number } | null>(null);
   const [title, setTitle] = useState('');
-  const [cover, setCover] = useState<LocalMedia | null>(null);
-  const [coverFit, setCoverFit] = useState<CoverFit>('square');
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -113,33 +114,13 @@ export function VoiceClipMaker() {
       },
     ]);
 
-  async function pickCover() {
-    try {
-      const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        ...coverPickOptions(coverFit),
-        quality: 0.8,
-      });
-      if (res.canceled || !res.assets[0]) return;
-      const a = res.assets[0];
-      setCover({
-        uri: a.uri,
-        mimeType: a.mimeType ?? 'image/jpeg',
-        size: a.fileSize ?? null,
-        name: a.fileName ?? null,
-      });
-    } catch {
-      showAlert(t('voice.errorTitle'), t('live.highlight.coverPickFailed'));
-    }
-  }
-
   async function post() {
     if (!clip || busy) return;
     setBusy(true);
     player.pause();
     setProgress(0);
     try {
-      const posted = await postVoiceClip({ audio: clip.media, durationMs: clip.ms, title, cover, coverFit }, setProgress);
+      const posted = await postVoiceClip({ audio: clip.media, durationMs: clip.ms, title, cover: ce.cover, coverFit }, setProgress);
       void qc.invalidateQueries({ queryKey: highlightKeys.all });
       showToast(t('voice.posted'));
       router.replace(`/highlight/${posted.id}` as Href);
@@ -160,8 +141,8 @@ export function VoiceClipMaker() {
     }
   }
 
-  const shownCover = cover?.uri ?? myPhoto;
-  const coverSource = cover ? 'coverChosen' : myPhoto ? 'coverFromProfile' : 'coverBrand';
+  const shownCover = ce.shownUri;
+  const coverSource = ce.cover ? 'coverChosen' : myPhoto ? 'coverFromProfile' : 'coverBrand';
   const elapsedS = rec.recording ? rec.durationMs / 1000 : 0;
   const header = <TopBar title={t('voice.title')} />;
 
@@ -247,26 +228,32 @@ export function VoiceClipMaker() {
           <Text style={[styles.small, { color: colors.muted }]} numberOfLines={2}>
             {t(`live.highlight.${coverSource}`)}
           </Text>
+          {ce.cover ? (
+            <Pressable onPress={ce.reset} disabled={busy} hitSlop={6} accessibilityRole="button">
+              <Text style={[styles.small, { color: colors.muted, fontWeight: '700', textDecorationLine: 'underline' }]}>{t('live.highlight.coverReset')}</Text>
+            </Pressable>
+          ) : null}
         </View>
-        {cover ? (
-          <Pressable onPress={() => setCover(null)} disabled={busy} hitSlop={8} accessibilityRole="button" style={styles.coverBtn}>
-            <Text style={[styles.small, { color: colors.muted, fontWeight: '700' }]}>{t('live.highlight.coverReset')}</Text>
+        {ce.canEdit ? (
+          <Pressable onPress={ce.editCurrent} disabled={busy || ce.rendering} hitSlop={8} accessibilityRole="button" style={styles.coverBtn}>
+            <Text style={{ color: colors.primary, fontWeight: '800' }}>{t('coverEditor.edit')}</Text>
           </Pressable>
         ) : null}
-        <Pressable onPress={() => void pickCover()} disabled={busy} hitSlop={8} accessibilityRole="button" style={styles.coverBtn}>
+        <Pressable onPress={() => void ce.choosePhoto()} disabled={busy || ce.rendering} hitSlop={8} accessibilityRole="button" style={styles.coverBtn}>
           <Text style={{ color: colors.primary, fontWeight: '800' }}>{t('live.highlight.coverChange')}</Text>
         </Pressable>
       </View>
       <View style={styles.fitBox}>
-        <CoverFitPicker value={coverFit} onChange={setCoverFit} disabled={busy} />
+        <CoverFitPicker value={coverFit} onChange={(f) => void ce.setFit(f)} disabled={busy || ce.rendering} />
       </View>
 
       <Button
         title={busy ? `${t('voice.posting')} ${progress ? Math.round(progress * 100) + '%' : ''}`.trim() : t('voice.post')}
         onPress={() => void post()}
-        disabled={!clip || busy}
+        disabled={!clip || busy || ce.rendering}
         loading={busy}
       />
+      {ce.editor}
     </Screen>
   );
 }

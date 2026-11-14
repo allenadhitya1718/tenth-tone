@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { Platform, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { isImageUrl } from '@/features/discover/nav';
 import { useTheme } from '@/providers/ThemeProvider';
@@ -86,15 +86,8 @@ export function coverFitOf(v: unknown): CoverFit {
   return COVER_FITS.includes(v as CoverFit) ? (v as CoverFit) : 'square';
 }
 
-/** Width / height of the photo for a layout (also the crop when picking it). */
+/** Width / height of the cover for a layout (the editor's frame). */
 export const COVER_ASPECT: Record<CoverFit, [number, number]> = { square: [1, 1], tall: [3, 4], wide: [16, 9], full: [9, 16] };
-
-/** The picker's crop. iOS only crops square, so other layouts skip the crop
- *  there (the photo is centred and filled instead). */
-export function coverPickOptions(fit: CoverFit): { allowsEditing: boolean; aspect?: [number, number] } {
-  if (Platform.OS === 'ios' && fit !== 'square') return { allowsEditing: false };
-  return { allowsEditing: true, aspect: COVER_ASPECT[fit] };
-}
 
 /** The size of the cover card in the middle of a page `pageW` wide (not
  *  used for 'full', which fills the page). */

@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Directory, File, Paths } from 'expo-file-system';
-import * as ImagePicker from 'expo-image-picker';
 import { type Href, router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,12 +9,12 @@ import { ActivityIndicator, PanResponder, type PanResponderInstance, Pressable, 
 
 import { ApiError } from '@/api/client';
 import { highlightKeys, postHighlight } from '@/api/highlights';
-import type { LocalMedia } from '@/api/upload';
 import { fetchLiveStream, liveKeys } from '@/api/live';
 import { showAlert } from '@/components/Dialog';
 import { showToast } from '@/components/Toast';
 import { AppText, Button, Screen, TopBar } from '@/components/ui';
-import { type CoverFit, CoverFitPicker, coverPickOptions, HighlightCover } from '@/features/highlights/HighlightCover';
+import { useCoverEditing } from '@/features/highlights/CoverEditor';
+import { type CoverFit, CoverFitPicker, HighlightCover } from '@/features/highlights/HighlightCover';
 import { isImageUrl } from '@/features/discover/nav';
 import { formatClock } from '@/features/stories/SoundPicker';
 import { aacDurationMs, NotAacError, trimAac } from '@/lib/aacTrim';
@@ -175,22 +174,13 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
   const hostName = live.data?.host?.name || live.data?.host?.handle || '';
   // The cover: a photo picked here, else the live's cover, else the host's
   // profile photo, else the FLYP card with their name (HighlightCover).
-  const [pickedCover, setPickedCover] = useState<LocalMedia | null>(null);
-  const [coverFit, setCoverFit] = useState<CoverFit>('square');
+  // Picking opens the cover editor (move, zoom, filters, text).
   const liveCover = isImageUrl(live.data?.thumbnail) ? live.data!.thumbnail : null;
   const profileCover = isImageUrl(live.data?.host?.avatar_url) ? live.data!.host!.avatar_url : null;
-  const cover = pickedCover?.uri ?? liveCover ?? profileCover;
-  const coverSource = pickedCover ? 'coverChosen' : liveCover ? 'coverFromLive' : profileCover ? 'coverFromProfile' : 'coverBrand';
-  async function pickCover() {
-    try {
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], ...coverPickOptions(coverFit), quality: 0.8 });
-      if (res.canceled || !res.assets[0]) return;
-      const a = res.assets[0];
-      setPickedCover({ uri: a.uri, mimeType: a.mimeType ?? 'image/jpeg', size: a.fileSize ?? null, name: a.fileName ?? null });
-    } catch {
-      showAlert(t('live.errors.title'), t('live.highlight.coverPickFailed'));
-    }
-  }
+  const ce = useCoverEditing(liveCover ?? profileCover, t('live.errors.title'));
+  const coverFit: CoverFit = ce.fit;
+  const cover = ce.shownUri;
+  const coverSource = ce.cover ? 'coverChosen' : liveCover ? 'coverFromLive' : profileCover ? 'coverFromProfile' : 'coverBrand';
 
   async function post() {
     if (!file || busy || windowS < MIN_S) return;
@@ -207,7 +197,7 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
           title,
           startMs: startS * 1000,
           durationMs: cut.durationMs,
-          cover: pickedCover,
+          cover: ce.cover,
           coverFit,
         },
         setProgress,
@@ -444,30 +434,36 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
           <Text style={[styles.small, { color: colors.muted }]} numberOfLines={2}>
             {t(`live.highlight.${coverSource}`)}
           </Text>
+          {ce.cover ? (
+            <Pressable onPress={ce.reset} disabled={busy} hitSlop={6} accessibilityRole="button">
+              <Text style={[styles.small, { color: colors.muted, fontWeight: '700', textDecorationLine: 'underline' }]}>{t('live.highlight.coverReset')}</Text>
+            </Pressable>
+          ) : null}
         </View>
-        {pickedCover ? (
-          <Pressable onPress={() => setPickedCover(null)} disabled={busy} hitSlop={8} accessibilityRole="button" style={styles.coverBtn}>
-            <Text style={[styles.small, { color: colors.muted, fontWeight: '700' }]}>{t('live.highlight.coverReset')}</Text>
+        {ce.canEdit ? (
+          <Pressable onPress={ce.editCurrent} disabled={busy || ce.rendering} hitSlop={8} accessibilityRole="button" style={styles.coverBtn}>
+            <Text style={{ color: colors.primary, fontWeight: '800' }}>{t('coverEditor.edit')}</Text>
           </Pressable>
         ) : null}
-        <Pressable onPress={() => void pickCover()} disabled={busy} hitSlop={8} accessibilityRole="button" style={styles.coverBtn}>
+        <Pressable onPress={() => void ce.choosePhoto()} disabled={busy || ce.rendering} hitSlop={8} accessibilityRole="button" style={styles.coverBtn}>
           <Text style={{ color: colors.primary, fontWeight: '800' }}>{t('live.highlight.coverChange')}</Text>
         </Pressable>
       </View>
       <View style={styles.fitBox}>
-        <CoverFitPicker value={coverFit} onChange={setCoverFit} disabled={busy} />
+        <CoverFitPicker value={coverFit} onChange={(f) => void ce.setFit(f)} disabled={busy || ce.rendering} />
       </View>
 
       <Button
         title={busy ? `${t('live.highlight.posting')} ${progress ? Math.round(progress * 100) + '%' : ''}`.trim() : t('live.highlight.post')}
         onPress={() => void post()}
-        disabled={!ready || busy || windowS < MIN_S}
+        disabled={!ready || busy || ce.rendering || windowS < MIN_S}
         loading={busy}
       />
       <Pressable onPress={discard} disabled={busy} style={styles.discard} accessibilityRole="button">
         <Text style={{ color: colors.danger, fontWeight: '600' }}>{t('live.highlight.discard')}</Text>
       </Pressable>
       <Text style={[styles.small, styles.note, { color: colors.muted }]}>{t('live.highlight.keepNote')}</Text>
+      {ce.editor}
     </Screen>
   );
 }
