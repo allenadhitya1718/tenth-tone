@@ -530,7 +530,10 @@
       "fit_square": "Kare",
       "fit_tall": "Dikey",
       "fit_wide": "Yatay",
-      "fit_full": "Tam ekran"
+      "fit_full": "Tam ekran",
+      "leaveTitle": "Paylaşmadan çıkılsın mı?",
+      "leaveBody": "Başlık ve kapak kaybolacak. Canlı yayın kaydı kalır, öne çıkan anı daha sonra yapabilirsin.",
+      "leave": "Çık"
     },
     "followingNoLive": "Takip ettiklerinden şu an canlı yayında olan yok."
   },
@@ -563,7 +566,10 @@
     "by": "{{name}} adlı kişinin ses klibi",
     "tab": "Ses",
     "profileEmpty": "Henüz ses klibi yok",
-    "profileEmptyMe": "Sesini bir fotoğrafla kaydet ve paylaş. Ses kliplerin burada görünür."
+    "profileEmptyMe": "Sesini bir fotoğrafla kaydet ve paylaş. Ses kliplerin burada görünür.",
+    "leaveTitle": "Bu ses klibi silinsin mi?",
+    "leaveBody": "Kaydın, açıklaman ve kapağın kaybolacak.",
+    "discard": "Sil"
   },
   "coverEditor": {
     "title": "Kapağı düzenle",
@@ -601,6 +607,12 @@
     "f_mono": "S/B",
     "f_fade": "Soluk",
     "f_vivid": "Canlı",
-    "f_vintage": "Eski"
+    "f_vintage": "Eski",
+    "color_white": "Beyaz",
+    "color_black": "Siyah",
+    "color_yellow": "Sarı",
+    "color_blue": "Mavi",
+    "color_pink": "Pembe",
+    "color_green": "Yeşil"
   }
 }

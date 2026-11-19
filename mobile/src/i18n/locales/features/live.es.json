@@ -538,7 +538,10 @@
       "fit_square": "Cuadrado",
       "fit_tall": "Vertical",
       "fit_wide": "Horizontal",
-      "fit_full": "Pantalla completa"
+      "fit_full": "Pantalla completa",
+      "leaveTitle": "¿Salir sin publicar?",
+      "leaveBody": "Se perderán el título y la portada. La grabación del directo se conserva, así que puedes crear el destacado después.",
+      "leave": "Salir"
     },
     "followingNoLive": "Nadie a quien sigues está en directo ahora."
   },
@@ -571,7 +574,10 @@
     "by": "Clip de voz de {{name}}",
     "tab": "Voz",
     "profileEmpty": "Aún no hay clips de voz",
-    "profileEmptyMe": "Graba tu voz con una foto y compártela. Tus clips de voz aparecen aquí."
+    "profileEmptyMe": "Graba tu voz con una foto y compártela. Tus clips de voz aparecen aquí.",
+    "leaveTitle": "¿Descartar este clip de voz?",
+    "leaveBody": "Se perderán tu grabación, el texto y la portada.",
+    "discard": "Descartar"
   },
   "coverEditor": {
     "title": "Editar portada",
@@ -609,6 +615,12 @@
     "f_mono": "B/N",
     "f_fade": "Desvaído",
     "f_vivid": "Vívido",
-    "f_vintage": "Retro"
+    "f_vintage": "Retro",
+    "color_white": "Blanco",
+    "color_black": "Negro",
+    "color_yellow": "Amarillo",
+    "color_blue": "Azul",
+    "color_pink": "Rosa",
+    "color_green": "Verde"
   }
 }

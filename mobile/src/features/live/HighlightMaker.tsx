@@ -19,6 +19,7 @@ import { isImageUrl } from '@/features/discover/nav';
 import { formatClock } from '@/features/stories/SoundPicker';
 import { aacDurationMs, NotAacError, trimAac } from '@/lib/aacTrim';
 import { reportError } from '@/lib/errorReport';
+import { useLeaveGuard } from '@/lib/useLeaveGuard';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -231,6 +232,14 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
     }
   }
 
+  // Back asks first when a title or cover would be lost (the live's
+  // recording stays either way, until "Delete recording").
+  const [leaving, setLeaving] = useState(false);
+  useEffect(() => {
+    if (leaving) router.back();
+  }, [leaving]);
+  useLeaveGuard(!!(ce.cover || title.trim()) && !busy && !leaving, t('live.highlight.leaveTitle'), t('live.highlight.leaveBody'), t('live.highlight.leave'), stop);
+
   function discard() {
     showAlert(t('live.highlight.discardTitle'), t('live.highlight.discardBody'), [
       { text: t('common.cancel'), style: 'cancel' },
@@ -240,7 +249,8 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
         onPress: () => {
           stop();
           deleteRecordings(liveId);
-          router.back();
+          // Leaves once the guard below is off (no second question).
+          setLeaving(true);
         },
       },
     ]);
@@ -281,12 +291,12 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
         accessibilityLabel={playingMinute ? t('live.highlight.pause') : t('live.highlight.playPart')}
         style={[styles.cover, { backgroundColor: colors.bg2 }]}
       >
-        <HighlightCover uri={cover} hostName={hostName} blurRadius={coverFit === 'full' ? undefined : 18} />
-        <View style={[styles.coverShade, coverFit === 'full' && styles.coverShadeLight]} />
+        <HighlightCover uri={cover} hostName={hostName} blurRadius={18} />
+        <View style={styles.coverShade} />
         {/* The picture that goes with the audio, as it will be posted, and
             the play button beside it (never on top of it). */}
         <View style={styles.previewRow}>
-          {coverFit === 'full' ? null : (
+          {(
             <View style={[styles.coverArt, PREVIEW_ART[coverFit]]}>
               <HighlightCover uri={cover} hostName={hostName} compact />
             </View>
@@ -534,10 +544,12 @@ function createTrimPan(box: DragBox, v: TrimView, a: TrimActions): PanResponderI
 }
 
 // The cover card in the preview, in the shape it will have once posted.
-const PREVIEW_ART: Record<Exclude<CoverFit, 'full'>, { width: number; height: number }> = {
+const PREVIEW_ART: Record<CoverFit, { width: number; height: number }> = {
   square: { width: 112, height: 112 },
   tall: { width: 90, height: 120 },
   wide: { width: 176, height: 99 },
+  // Full screen: a phone-shaped card, so the whole picture (and its words) shows.
+  full: { width: 90, height: 160 },
 };
 
 const styles = StyleSheet.create({

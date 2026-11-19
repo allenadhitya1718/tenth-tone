@@ -538,7 +538,10 @@
       "fit_square": "Carré",
       "fit_tall": "Vertical",
       "fit_wide": "Horizontal",
-      "fit_full": "Plein écran"
+      "fit_full": "Plein écran",
+      "leaveTitle": "Quitter sans publier ?",
+      "leaveBody": "Le titre et la couverture seront perdus. L'enregistrement du live est conservé, vous pourrez créer l'extrait plus tard.",
+      "leave": "Quitter"
     },
     "followingNoLive": "Personne que vous suivez n’est en live."
   },
@@ -571,7 +574,10 @@
     "by": "Clip vocal de {{name}}",
     "tab": "Voix",
     "profileEmpty": "Aucun clip vocal pour l'instant",
-    "profileEmptyMe": "Enregistrez votre voix avec une photo et partagez-la. Vos clips vocaux s'affichent ici."
+    "profileEmptyMe": "Enregistrez votre voix avec une photo et partagez-la. Vos clips vocaux s'affichent ici.",
+    "leaveTitle": "Abandonner ce clip vocal ?",
+    "leaveBody": "Votre enregistrement, la légende et la couverture seront perdus.",
+    "discard": "Abandonner"
   },
   "coverEditor": {
     "title": "Modifier la couverture",
@@ -609,6 +615,12 @@
     "f_mono": "N&B",
     "f_fade": "Délavé",
     "f_vivid": "Vif",
-    "f_vintage": "Rétro"
+    "f_vintage": "Rétro",
+    "color_white": "Blanc",
+    "color_black": "Noir",
+    "color_yellow": "Jaune",
+    "color_blue": "Bleu",
+    "color_pink": "Rose",
+    "color_green": "Vert"
   }
 }

@@ -483,7 +483,7 @@ function Empty({
     <View style={styles.empty}>
       <Ionicons name={icon} size={40} color={colors.muted2} />
       <Text style={{ color: colors.muted, textAlign: 'center', fontSize: 14, lineHeight: 20 }}>{text}</Text>
-      {action ? <Button title={action.label} onPress={action.onPress} /> : null}
+      {action ? <Button title={action.label} onPress={action.onPress} style={{ paddingHorizontal: 28, marginTop: 4 }} /> : null}
     </View>
   );
 }

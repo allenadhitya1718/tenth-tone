@@ -522,7 +522,10 @@
       "fit_square": "Persegi",
       "fit_tall": "Tegak",
       "fit_wide": "Lebar",
-      "fit_full": "Layar penuh"
+      "fit_full": "Layar penuh",
+      "leaveTitle": "Keluar tanpa memposting?",
+      "leaveBody": "Judul dan sampul akan hilang. Rekaman live tetap ada, jadi kamu bisa membuat sorotan nanti.",
+      "leave": "Keluar"
     },
     "followingNoLive": "Tidak ada yang kamu ikuti sedang live."
   },
@@ -555,7 +558,10 @@
     "by": "Klip suara {{name}}",
     "tab": "Suara",
     "profileEmpty": "Belum ada klip suara",
-    "profileEmptyMe": "Rekam suaramu dengan foto lalu bagikan. Klip suaramu muncul di sini."
+    "profileEmptyMe": "Rekam suaramu dengan foto lalu bagikan. Klip suaramu muncul di sini.",
+    "leaveTitle": "Buang klip suara ini?",
+    "leaveBody": "Rekaman, keterangan, dan sampulmu akan hilang.",
+    "discard": "Buang"
   },
   "coverEditor": {
     "title": "Edit sampul",
@@ -593,6 +599,12 @@
     "f_mono": "H&P",
     "f_fade": "Pudar",
     "f_vivid": "Cerah",
-    "f_vintage": "Klasik"
+    "f_vintage": "Klasik",
+    "color_white": "Putih",
+    "color_black": "Hitam",
+    "color_yellow": "Kuning",
+    "color_blue": "Biru",
+    "color_pink": "Merah muda",
+    "color_green": "Hijau"
   }
 }

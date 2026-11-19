@@ -551,7 +551,10 @@
       "fit_square": "Square",
       "fit_tall": "Tall",
       "fit_wide": "Wide",
-      "fit_full": "Full screen"
+      "fit_full": "Full screen",
+      "leaveTitle": "Leave without posting?",
+      "leaveBody": "Your title and cover will be lost. The live's recording stays, so you can make the highlight later.",
+      "leave": "Leave"
     },
     "followingNoLive": "Nobody you follow is live right now."
   },
@@ -584,7 +587,10 @@
     "by": "{{name}}'s voice clip",
     "tab": "Voice",
     "profileEmpty": "No voice clips yet",
-    "profileEmptyMe": "Record your voice with a photo and share it. Your voice clips show here."
+    "profileEmptyMe": "Record your voice with a photo and share it. Your voice clips show here.",
+    "leaveTitle": "Discard this voice clip?",
+    "leaveBody": "Your recording, caption and cover will be lost.",
+    "discard": "Discard"
   },
   "coverEditor": {
     "title": "Edit cover",
@@ -622,6 +628,12 @@
     "f_mono": "B&W",
     "f_fade": "Fade",
     "f_vivid": "Vivid",
-    "f_vintage": "Vintage"
+    "f_vintage": "Vintage",
+    "color_white": "White",
+    "color_black": "Black",
+    "color_yellow": "Yellow",
+    "color_blue": "Blue",
+    "color_pink": "Pink",
+    "color_green": "Green"
   }
 }

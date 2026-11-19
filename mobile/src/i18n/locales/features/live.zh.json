@@ -522,7 +522,10 @@
       "fit_square": "方形",
       "fit_tall": "竖版",
       "fit_wide": "横版",
-      "fit_full": "全屏"
+      "fit_full": "全屏",
+      "leaveTitle": "不发布就离开？",
+      "leaveBody": "标题和封面将会丢失。直播录音会保留，你可以稍后再制作精彩片段。",
+      "leave": "离开"
     },
     "followingNoLive": "你关注的人现在都没有在直播。"
   },
@@ -555,7 +558,10 @@
     "by": "{{name}} 的语音片段",
     "tab": "语音",
     "profileEmpty": "还没有语音片段",
-    "profileEmptyMe": "配一张照片录下你的声音并分享。你的语音片段会显示在这里。"
+    "profileEmptyMe": "配一张照片录下你的声音并分享。你的语音片段会显示在这里。",
+    "leaveTitle": "放弃这个语音片段？",
+    "leaveBody": "你的录音、说明和封面将会丢失。",
+    "discard": "放弃"
   },
   "coverEditor": {
     "title": "编辑封面",
@@ -593,6 +599,12 @@
     "f_mono": "黑白",
     "f_fade": "褪色",
     "f_vivid": "鲜艳",
-    "f_vintage": "复古"
+    "f_vintage": "复古",
+    "color_white": "白色",
+    "color_black": "黑色",
+    "color_yellow": "黄色",
+    "color_blue": "蓝色",
+    "color_pink": "粉色",
+    "color_green": "绿色"
   }
 }

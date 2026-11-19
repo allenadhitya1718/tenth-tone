@@ -19,6 +19,7 @@ import { useCoverEditing } from '@/features/highlights/CoverEditor';
 import { type CoverFit, CoverFitPicker, HighlightCover } from '@/features/highlights/HighlightCover';
 import { formatClock } from '@/features/stories/SoundPicker';
 import { reportError } from '@/lib/errorReport';
+import { useLeaveGuard } from '@/lib/useLeaveGuard';
 import { useAuth } from '@/providers/AuthProvider';
 import { useTheme } from '@/providers/ThemeProvider';
 
@@ -141,6 +142,11 @@ export function VoiceClipMaker() {
     }
   }
 
+  // Back, the arrow or a swipe asks first while there is something to lose.
+  useLeaveGuard(!!(clip || rec.recording || ce.cover || title.trim()) && !busy, t('voice.leaveTitle'), t('voice.leaveBody'), t('voice.discard'), () =>
+    player.pause(),
+  );
+
   const shownCover = ce.shownUri;
   const coverSource = ce.cover ? 'coverChosen' : myPhoto ? 'coverFromProfile' : 'coverBrand';
   const elapsedS = rec.recording ? rec.durationMs / 1000 : 0;
@@ -150,9 +156,9 @@ export function VoiceClipMaker() {
     <Screen header={header}>
       {/* The picture that goes with the voice, as it will be posted. */}
       <View style={[styles.stage, { backgroundColor: colors.bg2 }]}>
-        <HighlightCover uri={shownCover} hostName={myName} blurRadius={coverFit === 'full' ? undefined : 18} />
-        <View style={[styles.shade, coverFit === 'full' && styles.shadeLight]} />
-        {coverFit === 'full' ? null : (
+        <HighlightCover uri={shownCover} hostName={myName} blurRadius={18} />
+        <View style={styles.shade} />
+        {(
           <View style={[styles.art, PREVIEW_ART[coverFit]]}>
             <HighlightCover uri={shownCover} hostName={myName} compact />
           </View>
@@ -327,8 +333,10 @@ const styles = StyleSheet.create({
 });
 
 // The cover card in the preview, in the shape it will have once posted.
-const PREVIEW_ART: Record<Exclude<CoverFit, 'full'>, { width: number; height: number }> = {
+const PREVIEW_ART: Record<CoverFit, { width: number; height: number }> = {
   square: { width: 112, height: 112 },
   tall: { width: 90, height: 120 },
   wide: { width: 176, height: 99 },
+  // Full screen: a phone-shaped card, so the whole picture (and its words) shows.
+  full: { width: 90, height: 160 },
 };

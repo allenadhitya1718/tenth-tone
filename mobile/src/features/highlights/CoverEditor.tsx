@@ -2,7 +2,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Canvas, Picture, Skia, type SkImage } from '@shopify/react-native-skia';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ComponentRef, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -54,6 +54,22 @@ const TOOLS: { k: Tool; icon: keyof typeof Ionicons.glyphMap }[] = [
 ];
 
 let nextId = 1;
+
+const THUMB = 58;
+const COLOR_NAME: Record<string, string> = {
+  '#ffffff': 'white',
+  '#000000': 'black',
+  '#ffc83d': 'yellow',
+  '#1e56d6': 'blue',
+  '#ff4d6d': 'pink',
+  '#2ecc71': 'green',
+};
+function makeThumb(img: SkImage, e: CoverEdit) {
+  const rec = Skia.PictureRecorder();
+  const c = rec.beginRecording(Skia.XYWHRect(0, 0, THUMB, THUMB));
+  drawCover(c, img, e, THUMB, THUMB, null);
+  return rec.finishRecordingAsPicture();
+}
 
 export function CoverEditor({
   source,
@@ -113,7 +129,8 @@ export function CoverEditor({
   // The frame: the layout's shape, as big as fits above the tools.
   const [aw, ah] = COVER_ASPECT[fit];
   const maxW = sw - 32;
-  const maxH = Math.max(220, sh * 0.52);
+  // Top bar, tool panel, tool tabs and the phone's bars take about 380.
+  const maxH = Math.max(220, sh - 380);
   const W = Math.round(Math.min(maxW, (maxH * aw) / ah));
   const H = Math.round((W * ah) / aw);
 
@@ -124,6 +141,15 @@ export function CoverEditor({
     bounds.current = drawCover(c, img, edit, W, H, selected);
     return rec.finishRecordingAsPicture();
   }, [img, edit, W, H, selected]);
+
+  // A small picture of the photo in each filter (turned and flipped as now,
+  // without words), drawn only while the Filters tool is open.
+  const thumbs = useMemo(() => {
+    const out: Partial<Record<(typeof FILTERS)[number], ReturnType<typeof makeThumb>>> = {};
+    if (tool !== 'filters' || !img) return out;
+    for (const f of FILTERS) out[f] = makeThumb(img, { ...NEW_EDIT, rot: edit.rot, flip: edit.flip, filter: f });
+    return out;
+  }, [tool, img, edit.rot, edit.flip]);
 
   const dirty = JSON.stringify(edit) !== JSON.stringify(initial);
   const leave = () => {
@@ -304,10 +330,20 @@ export function CoverEditor({
                     key={f}
                     onPress={() => patch({ filter: f })}
                     accessibilityRole="radio"
+                    accessibilityLabel={t(`coverEditor.f_${f}`)}
                     accessibilityState={{ selected: edit.filter === f }}
-                    style={[styles.chip, edit.filter === f && styles.chipOn]}
+                    style={styles.filterItem}
                   >
-                    <Text style={[styles.chipText, edit.filter === f && styles.chipTextOn]}>{t(`coverEditor.f_${f}`)}</Text>
+                    <View style={[styles.filterThumb, edit.filter === f && styles.filterThumbOn]}>
+                      {thumbs[f] ? (
+                        <Canvas style={{ width: THUMB, height: THUMB }}>
+                          <Picture picture={thumbs[f]!} />
+                        </Canvas>
+                      ) : null}
+                    </View>
+                    <Text style={[styles.chipText, edit.filter === f && styles.chipTextOn]} numberOfLines={1}>
+                      {t(`coverEditor.f_${f}`)}
+                    </Text>
                   </Pressable>
                 ))}
               </ScrollView>
@@ -325,7 +361,7 @@ export function CoverEditor({
                       key={c}
                       onPress={() => patchText(sel.id, { color: c })}
                       accessibilityRole="radio"
-                      accessibilityLabel={c}
+                      accessibilityLabel={t(`coverEditor.color_${COLOR_NAME[c] ?? 'white'}`)}
                       accessibilityState={{ selected: sel.color === c }}
                       style={[styles.swatch, { backgroundColor: c }, sel.color === c && styles.swatchOn]}
                       hitSlop={4}
@@ -372,6 +408,7 @@ export function CoverEditor({
                   if (k !== 'text') setSelected(null);
                 }}
                 accessibilityRole="tab"
+                accessibilityLabel={t(`coverEditor.tool_${k}`)}
                 accessibilityState={{ selected: tool === k }}
                 style={styles.toolTab}
               >
@@ -433,23 +470,17 @@ function ToolButton({ icon, label, onPress, on }: { icon: keyof typeof Ionicons.
   );
 }
 
-/** -1..1 with 0 in the middle. Drag or tap along it; double-tap resets. */
+/** -1..1 with 0 in the middle. Drag or tap along it; double-tap resets.
+ *  Plain touch responder (the gesture-handler version did not respond
+ *  inside the Modal on the Redmi). */
 function Slider({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   const [w, setW] = useState(1);
-  const set = (x: number) => onChange(Math.max(-1, Math.min(1, (x / w) * 2 - 1)));
-  const g = useMemo(() => {
-    const pan = Gesture.Pan()
-      .runOnJS(true)
-      .minDistance(0)
-      .onBegin((e) => set(e.x))
-      .onUpdate((e) => set(e.x));
-    const reset = Gesture.Tap()
-      .numberOfTaps(2)
-      .runOnJS(true)
-      .onEnd(() => onChange(0));
-    return Gesture.Exclusive(reset, pan);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [w, onChange]);
+  const track = useRef<ComponentRef<typeof View>>(null);
+  const left = useRef(0);
+  const lastTap = useRef(0);
+  const moved = useRef(false);
+  const measure = () => track.current?.measureInWindow((x) => (left.current = x));
+  const set = (pageX: number) => onChange(Math.max(-1, Math.min(1, ((pageX - left.current) / w) * 2 - 1)));
   const pct = (value + 1) / 2;
   return (
     <View
@@ -465,13 +496,34 @@ function Slider({ label, value, onChange }: { label: string; value: number; onCh
         <Text style={styles.sliderLabel}>{label}</Text>
         <Text style={styles.sliderValue}>{value > 0 ? `+${Math.round(value * 100)}` : Math.round(value * 100)}</Text>
       </View>
-      <GestureDetector gesture={g}>
-        <View style={styles.trackHit} onLayout={(e) => setW(Math.max(1, e.nativeEvent.layout.width))}>
-          <View style={styles.track} />
-          <View style={[styles.trackMid]} />
-          <View style={[styles.knob, { left: pct * w - 11 }]} />
-        </View>
-      </GestureDetector>
+      <View
+        ref={track}
+        style={styles.trackHit}
+        onLayout={(e) => {
+          setW(Math.max(1, e.nativeEvent.layout.width));
+          measure();
+        }}
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderTerminationRequest={() => false}
+        onResponderGrant={(e) => {
+          moved.current = false;
+          set(e.nativeEvent.pageX);
+        }}
+        onResponderMove={(e) => {
+          moved.current = true;
+          set(e.nativeEvent.pageX);
+        }}
+        onResponderRelease={() => {
+          const now = Date.now();
+          if (!moved.current && now - lastTap.current < 320) onChange(0);
+          lastTap.current = now;
+        }}
+      >
+        <View style={styles.track} pointerEvents="none" />
+        <View style={styles.trackMid} pointerEvents="none" />
+        <View style={[styles.knob, { left: pct * w - 11 }]} pointerEvents="none" />
+      </View>
     </View>
   );
 }
@@ -569,12 +621,16 @@ const styles = StyleSheet.create({
   title: { color: '#fff', fontSize: 16, fontWeight: '800' },
   stage: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   failed: { color: '#fff', textAlign: 'center', paddingHorizontal: 32 },
-  panel: { minHeight: 132, paddingHorizontal: 16, paddingTop: 12, justifyContent: 'center' },
+  // One height for every tool, so the photo never jumps when switching.
+  panel: { height: 196, paddingHorizontal: 16, paddingTop: 8, justifyContent: 'center' },
   row: { flexDirection: 'row', justifyContent: 'center', gap: 12 },
   toolBtn: { alignItems: 'center', gap: 4, minWidth: 84, paddingVertical: 8, paddingHorizontal: 8, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.08)' },
   toolBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   hint: { color: 'rgba(255,255,255,0.6)', fontSize: 12.5, textAlign: 'center' },
-  chips: { gap: 8, paddingHorizontal: 4 },
+  chips: { gap: 10, paddingHorizontal: 4, alignItems: 'flex-start' },
+  filterItem: { alignItems: 'center', gap: 6, width: THUMB + 8 },
+  filterThumb: { width: THUMB + 6, height: THUMB + 6, borderRadius: 12, overflow: 'hidden', borderWidth: 3, borderColor: 'transparent', backgroundColor: '#121c4a' },
+  filterThumbOn: { borderColor: '#5b8cff' },
   chip: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1.5, borderColor: 'transparent' },
   chipOn: { borderColor: '#5b8cff', backgroundColor: 'rgba(91,140,255,0.2)' },
   chipText: { color: 'rgba(255,255,255,0.85)', fontWeight: '700' },

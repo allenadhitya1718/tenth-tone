@@ -135,6 +135,7 @@ export function CoverFitPicker({
               onPress={() => onChange(f)}
               disabled={disabled}
               accessibilityRole="radio"
+              accessibilityLabel={t(`live.highlight.fit_${f}`)}
               accessibilityState={{ selected: on, disabled }}
               style={[
                 styles.fitBtn,
