@@ -63,6 +63,10 @@ export function VoiceClipMaker() {
   const [clip, setClip] = useState<{ media: LocalMedia; ms: number } | null>(null);
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);
+  const [postedId, setPostedId] = useState<string | null>(null);
+  useEffect(() => {
+    if (postedId) router.replace(`/highlight/${postedId}` as Href);
+  }, [postedId]);
   const [progress, setProgress] = useState(0);
 
   const rec = useVoiceRecorder(
@@ -124,7 +128,9 @@ export function VoiceClipMaker() {
       const posted = await postVoiceClip({ audio: clip.media, durationMs: clip.ms, title, cover: ce.cover, coverFit }, setProgress);
       void qc.invalidateQueries({ queryKey: highlightKeys.all });
       showToast(t('voice.posted'));
-      router.replace(`/highlight/${posted.id}` as Href);
+      // Opens it once the leave guard is off (else Back-guard asked "Discard?"
+      // right after a successful post, phone test 25 Nov 2026).
+      setPostedId(posted.id);
     } catch (e) {
       reportError('handled', e, true, 'voice-post');
       const code = e instanceof ApiError ? e.code : null;
@@ -143,7 +149,7 @@ export function VoiceClipMaker() {
   }
 
   // Back, the arrow or a swipe asks first while there is something to lose.
-  useLeaveGuard(!!(clip || rec.recording || ce.cover || title.trim()) && !busy, t('voice.leaveTitle'), t('voice.leaveBody'), t('voice.discard'), () =>
+  useLeaveGuard(!!(clip || rec.recording || ce.cover || title.trim()) && !busy && !postedId, t('voice.leaveTitle'), t('voice.leaveBody'), t('voice.discard'), () =>
     player.pause(),
   );
 

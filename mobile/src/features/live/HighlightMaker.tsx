@@ -90,6 +90,10 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
   const [trimming, setTrimming] = useState(false);
   const [title, setTitle] = useState('');
   const [busy, setBusy] = useState(false);
+  const [postedId, setPostedId] = useState<string | null>(null);
+  useEffect(() => {
+    if (postedId) router.replace(`/highlight/${postedId}` as Href);
+  }, [postedId]);
   const [progress, setProgress] = useState(0);
   const [barW, setBarW] = useState(0);
 
@@ -206,7 +210,9 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
       void qc.invalidateQueries({ queryKey: highlightKeys.all });
       showToast(t('live.highlight.posted'));
       // Straight to the new highlight, so the host hears what they posted.
-      router.replace(`/highlight/${posted.id}` as Href);
+      // Opens it once the leave guard is off (else Back-guard asked "Discard?"
+      // right after a successful post, phone test 25 Nov 2026).
+      setPostedId(posted.id);
     } catch (e) {
       // The alert is generic; the real reason goes to the error log (0164).
       reportError('handled', e, true, 'highlight-post');
@@ -238,7 +244,7 @@ export function HighlightMaker({ liveId }: { liveId: string }) {
   useEffect(() => {
     if (leaving) router.back();
   }, [leaving]);
-  useLeaveGuard(!!(ce.cover || title.trim()) && !busy && !leaving, t('live.highlight.leaveTitle'), t('live.highlight.leaveBody'), t('live.highlight.leave'), stop);
+  useLeaveGuard(!!(ce.cover || title.trim()) && !busy && !leaving && !postedId, t('live.highlight.leaveTitle'), t('live.highlight.leaveBody'), t('live.highlight.leave'), stop);
 
   function discard() {
     showAlert(t('live.highlight.discardTitle'), t('live.highlight.discardBody'), [
